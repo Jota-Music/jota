@@ -1,0 +1,102 @@
+import type { Song } from "@/lib/music/model";
+import { togglePlayPause } from "@/lib/music/views/stores/audio";
+import {
+    applyRemoteSeek,
+    applyRoomPlaybackFromPeer,
+} from "@/lib/music/views/stores/player";
+import { playerSkeletonOn, shareSnapshot } from "@/lib/music/views/stores/queue";
+import type { RoomState } from "@/lib/shared/api/room";
+import { patchRoom, roomState, rotateGuestRoomIfForbidden } from "@/lib/shared/api/room";
+import { ws } from "@/lib/shared/api/socket";
+
+let prevRoomId = roomState.peek().id;
+roomState.subscribe(() => {
+    const id = roomState.value.id;
+    if (id === prevRoomId) return;
+    prevRoomId = id;
+    playerSkeletonOn.value = true;
+});
+
+ws.on("room-forbidden", () => {
+    rotateGuestRoomIfForbidden();
+});
+
+ws.on("join-denied", () => {
+    rotateGuestRoomIfForbidden();
+});
+
+ws.on("kicked", () => {
+    rotateGuestRoomIfForbidden();
+});
+
+ws.on("joined", ({ data }) => {
+    const patch: Partial<Omit<RoomState, "id">> = {
+        youAreOwner: !!data?.youAreOwner,
+    };
+    const v = data?.visibility;
+    if (v === "public" || v === "private") {
+        patch.visibility = v;
+    }
+    const n = data?.headcount;
+    if (typeof n === "number" && Number.isFinite(n) && n >= 0) {
+        patch.guests = n;
+    }
+    patchRoom(patch);
+    if (data?.youAreOwner) shareSnapshot();
+    playerSkeletonOn.value = !(data?.youAreOwner || data?.awaitingSnapshot === false);
+});
+
+ws.on("room-count", ({ data }) => {
+    const n = data?.count;
+    if (typeof n === "number" && Number.isFinite(n) && n >= 0) {
+        patchRoom({ guests: n });
+    }
+});
+
+ws.on("visibility", ({ data }) => {
+    const v = data?.visibility;
+    if (v === "public" || v === "private") {
+        patchRoom({ visibility: v });
+    }
+
+    console.log("Room visibility is now", v);
+});
+
+ws.on("request-snapshot", () => {
+    shareSnapshot();
+});
+
+ws.on("toggle", async () => {
+    await togglePlayPause();
+});
+
+interface SnapshotPayload {
+    queue: Song[];
+    index: number;
+    playing: boolean;
+    position?: number;
+}
+
+interface SnapshotMessage {
+    data: SnapshotPayload;
+}
+
+ws.on("snapshot", (message: SnapshotMessage) => {
+    const { queue: q, index, playing, position } = message.data;
+    playerSkeletonOn.value = false;
+    void applyRoomPlaybackFromPeer(q, index, playing, position);
+});
+
+interface SeekMessage {
+    data: { position: number };
+}
+
+ws.on("seek", (message: SeekMessage) => {
+    const p = message.data?.position;
+    if (typeof p !== "number" || !Number.isFinite(p)) return;
+    void applyRemoteSeek(p);
+});
+
+ws.on("error", ({ data }) => {
+    console.error("Error from server:", data);
+}   );

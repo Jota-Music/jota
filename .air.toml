@@ -1,0 +1,2 @@
+[build]
+exclude_dir = ["client/node_modules"]

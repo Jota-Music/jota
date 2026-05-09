@@ -1,0 +1,30 @@
+{
+  "name": "client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "preview:host": "vite preview --host"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.9.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@tanstack/preact-query": "^5.99.0",
+    "@tanstack/react-virtual": "^3.13.23",
+    "fast-average-color": "^9.5.2",
+    "lucide-preact": "^1.8.0",
+    "preact": "^10.29.1",
+    "tailwindcss": "^4.2.2",
+    "wouter-preact": "^3.9.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.13",
+    "@preact/preset-vite": "^2.10.5",
+    "@types/node": "^24.12.2",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.4"
+  }
+}
