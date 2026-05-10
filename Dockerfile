@@ -58,6 +58,6 @@ RUN apk add --no-cache yt-dlp || pip3 install --break-system-packages --no-cache
 
 COPY --from=backend /app/server .
 
-EXPOSE 3001
+EXPOSE 3000
 
 CMD ["./server"]
