@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  envDir: "../",
   server: {
     allowedHosts: [
       "localhost",
