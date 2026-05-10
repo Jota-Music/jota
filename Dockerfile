@@ -5,15 +5,13 @@ FROM oven/bun:1 AS frontend
 
 WORKDIR /app/client
 
-# Build args (Dokploy los inyecta aquí)
 ARG VITE_API_URL
 ARG VITE_WS_URL
 
-# Convertimos a ENV para Vite build
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 
-COPY client/package.json client/bun.lockb* ./
+COPY client/package.json client/bun.lock ./
 RUN bun install --frozen-lockfile
 
 COPY client .
@@ -31,10 +29,9 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY . .
-
-# Frontend ya compilado
 COPY --from=frontend /app/client/dist ./client/dist
+COPY main.go .
+COPY internal/ ./internal/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w -extldflags '-static'" -o server .
@@ -47,7 +44,6 @@ FROM alpine:3.20
 
 WORKDIR /app
 
-# Runtime deps
 RUN apk add --no-cache \
     ca-certificates \
     ffmpeg \
