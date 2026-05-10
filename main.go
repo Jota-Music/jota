@@ -29,7 +29,7 @@ func main() {
 	}))
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://127.0.0.1:3000"},
+		AllowOrigins: enviroment.AllowedOrigins,
 		AllowMethods: []string{
 			"GET",
 			"POST",
