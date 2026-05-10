@@ -32,9 +32,11 @@ COPY --from=frontend /app/client/dist ./client/dist
 COPY main.go .
 COPY internal/ ./internal/
 
-ARG TARGETOS=linux
-ARG TARGETARCH=amd64
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 \
+    GOOS=${TARGETOS:-$(go env GOOS)} \
+    GOARCH=${TARGETARCH:-$(go env GOARCH)} \
     go build -trimpath -ldflags="-s -w" -o server .
 
 
