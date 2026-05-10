@@ -8,15 +8,14 @@ WORKDIR /app/client
 ARG VITE_API_URL
 ARG VITE_WS_URL
 
-ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_WS_URL=$VITE_WS_URL
-
 COPY client/package.json client/bun.lock ./
 RUN bun install --frozen-lockfile
 
 COPY client .
 
-RUN bun run build
+RUN VITE_API_URL=${VITE_API_URL:-http://localhost:3000} \
+    VITE_WS_URL=${VITE_WS_URL:-ws://localhost:3000/ws} \
+    bun run build
 
 
 # =========================
@@ -33,8 +32,10 @@ COPY --from=frontend /app/client/dist ./client/dist
 COPY main.go .
 COPY internal/ ./internal/
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags="-s -w -extldflags '-static'" -o server .
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -trimpath -ldflags="-s -w" -o server .
 
 
 # =========================
