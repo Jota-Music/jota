@@ -1,5 +1,4 @@
 import { post } from "@/lib/shared/api";
-import { API_URL } from "@/lib/shared/api/env";
 import { computed, signal } from "@preact/signals";
 
 const AUTH_SYNC_BRIDGE_ID = "jota:auth-sync";
@@ -40,7 +39,7 @@ interface MeResponse {
 
 export async function syncAuth(): Promise<void> {
   try {
-    const url = new URL("/api/auth/me", API_URL);
+    const url = new URL("/api/auth/me", location.origin);
     const res = await fetch(url, {
       method: "GET",
       credentials: "include",

@@ -1,5 +1,3 @@
-import { API_URL } from "@/lib/shared/api/env";
-
 type Headers = Record<string, string>;
 
 interface GetParams {
@@ -30,7 +28,7 @@ export async function get<T>(
   params: GetParams = {},
 ): Promise<T> {
   try {
-    const url = new URL(`/api${route}`, API_URL);
+    const url = new URL(`/api${route}`, location.origin);
 
     if (params.query) {
       Object.entries(params.query).forEach(([key, value]) => {
@@ -61,7 +59,7 @@ export async function post<T>(
   params: PostParams = {},
 ): Promise<T> {
   try {
-    const url = new URL(`/api${route}`, API_URL);
+    const url = new URL(`/api${route}`, location.origin);
 
     const response = await fetch(url, {
       method: "POST",

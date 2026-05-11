@@ -1,199 +1,277 @@
-import { WS_URL } from "@/lib/shared/api/env";
 import { roomState, setRoomId } from "@/lib/shared/api/room";
 
-type Listener = (data: any) => void;
+type ListenerPayload = {
+  action: string;
+  params?: unknown;
+  [key: string]: unknown;
+};
 
-type Outbound = { action: string; params?: any };
+type Listener<T = ListenerPayload> = (data: T) => void;
+
+type Outbound = {
+  action: string;
+  params?: unknown;
+};
 
 export {
-    goToMyHomeRoom,
-    homeRoomEnforced,
-    joinRoomById,
-    patchRoom,
-    roomState,
-    rotateGuestRoomIfForbidden,
-    setRoomId
+  goToMyHomeRoom,
+  homeRoomEnforced,
+  joinRoomById,
+  patchRoom,
+  roomState,
+  rotateGuestRoomIfForbidden,
+  setRoomId,
 } from "@/lib/shared/api/room";
 export type { RoomState, RoomVisibility } from "@/lib/shared/api/room";
 
 class WebSocketClient {
-    private socket: WebSocket | null = null;
-    private listeners = new Map<string, Set<Listener>>();
+  private socket: WebSocket | null = null;
 
-    private reconnectTimeout: number | null = null;
+  private listeners = new Map<string, Set<Listener>>();
 
-    private outbox: Outbound[] = [];
+  private reconnectTimeout: number | null = null;
 
-    private prevSubscribedRoomId = roomState.peek().id;
+  private outbox: Outbound[] = [];
 
-    // flags to avoid race conditions
-    private isManuallyClosed = false;
-    private isRoomChanging = false;
+  private prevSubscribedRoomId = roomState.peek().id;
 
-    constructor() {
-        this.connect();
+  // flags to avoid race conditions
+  private isManuallyClosed = false;
 
-        roomState.subscribe(() => {
-            const id = roomState.value.id;
-            if (id === this.prevSubscribedRoomId) return;
-            this.prevSubscribedRoomId = id;
-            this.handleRoomChange();
-        });
-    }
+  private isRoomChanging = false;
 
-    private get room() {
-        return roomState.value.id;
-    }
+  constructor() {
+    this.connect();
 
-    private buildUrl(room: string) {
-        return `${WS_URL}/${room}`;
-    }
+    roomState.subscribe(() => {
+      const id = roomState.value.id;
 
-    private connect() {
-        const sock = new WebSocket(this.buildUrl(this.room));
-        this.socket = sock;
+      if (id === this.prevSubscribedRoomId) {
+        return;
+      }
 
-        sock.addEventListener("open", () => {
-            if (this.socket !== sock) return;
-            console.log("WebSocket connected");
-            this.send("join");
-            this.flushOutbox();
+      this.prevSubscribedRoomId = id;
 
-            if (this.reconnectTimeout) {
-                clearTimeout(this.reconnectTimeout);
-                this.reconnectTimeout = null;
-            }
-        });
+      this.handleRoomChange();
+    });
+  }
 
-        sock.addEventListener("message", (event) => {
-            if (this.socket !== sock) return;
-            try {
-                const data = JSON.parse(event.data);
-                console.log("WebSocket message received:", data.action, data);
+  private get room(): string {
+    return roomState.value.id;
+  }
 
-                const set = this.listeners.get(data.action);
-                if (!set) {
-                    console.log("No listeners for action:", data.action);
-                    return;
-                }
+  private buildUrl(room: string): string {
+    const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${location.host}/ws/${room}`;
+  }
 
-                for (const cb of set) {
-                    cb(data);
-                }
-            } catch (err) {
-                console.error("Invalid WS message", err);
-            }
-        });
+  private connect(): void {
+    const sock = new WebSocket(this.buildUrl(this.room));
 
-        sock.addEventListener("close", () => {
-            if (this.socket !== sock) return;
-            console.log("WebSocket closed");
+    this.socket = sock;
 
-            this.socket = null;
-            if (!this.isRoomChanging) {
-                this.outbox = [];
-            }
+    sock.addEventListener("open", () => {
+      if (this.socket !== sock) {
+        return;
+      }
 
-            // prevent unwanted reconnects
-            if (this.isManuallyClosed || this.isRoomChanging) return;
+      console.log("WebSocket connected");
 
-            this.scheduleReconnect();
-        });
+      this.send("join");
 
-        sock.addEventListener("error", () => {
-            if (this.socket !== sock) return;
-            console.log("WebSocket error");
-            sock.close();
-        });
-    }
+      this.flushOutbox();
 
-    private scheduleReconnect() {
-        if (this.reconnectTimeout) return;
+      if (this.reconnectTimeout !== null) {
+        clearTimeout(this.reconnectTimeout);
 
-        this.reconnectTimeout = window.setTimeout(() => {
-            console.log("Reconnecting WebSocket...");
-            this.reconnectTimeout = null;
-            this.connect();
-        }, 5000);
-    }
+        this.reconnectTimeout = null;
+      }
+    });
 
-    private handleRoomChange() {
-        localStorage.setItem("room", this.room);
+    sock.addEventListener("message", (event: MessageEvent<string>) => {
+      if (this.socket !== sock) {
+        return;
+      }
 
-        this.isRoomChanging = true;
+      try {
+        const data: ListenerPayload = JSON.parse(event.data);
 
+        console.log("WebSocket message received:", data.action, data);
+
+        const set = this.listeners.get(data.action);
+
+        if (!set) {
+          console.log("No listeners for action:", data.action);
+
+          return;
+        }
+
+        for (const cb of set) {
+          cb(data);
+        }
+      } catch (err) {
+        console.error("Invalid WS message", err);
+      }
+    });
+
+    sock.addEventListener("close", () => {
+      if (this.socket !== sock) {
+        return;
+      }
+
+      console.log("WebSocket closed");
+
+      this.socket = null;
+
+      if (!this.isRoomChanging) {
         this.outbox = [];
-        this.sendLeaveNow();
+      }
 
-        this.isManuallyClosed = true;
-        this.socket?.close();
+      // prevent unwanted reconnects
+      if (this.isManuallyClosed || this.isRoomChanging) {
+        return;
+      }
 
-        this.isManuallyClosed = false;
+      this.scheduleReconnect();
+    });
 
-        this.isRoomChanging = false;
+    sock.addEventListener("error", () => {
+      if (this.socket !== sock) {
+        return;
+      }
 
-        this.connect();
+      console.log("WebSocket error");
+
+      sock.close();
+    });
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectTimeout !== null) {
+      return;
     }
 
-    setRoom(newRoom: string) {
-        if (!newRoom || newRoom === this.room) return;
-        setRoomId(newRoom);
+    this.reconnectTimeout = window.setTimeout(() => {
+      console.log("Reconnecting WebSocket...");
+
+      this.reconnectTimeout = null;
+
+      this.connect();
+    }, 5000);
+  }
+
+  private handleRoomChange(): void {
+    localStorage.setItem("room", this.room);
+
+    this.isRoomChanging = true;
+
+    this.outbox = [];
+
+    this.sendLeaveNow();
+
+    this.isManuallyClosed = true;
+
+    this.socket?.close();
+
+    this.isManuallyClosed = false;
+
+    this.isRoomChanging = false;
+
+    this.connect();
+  }
+
+  setRoom(newRoom: string): void {
+    if (!newRoom || newRoom === this.room) {
+      return;
     }
 
-    private sendLeaveNow() {
-        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
-        this.socket.send(JSON.stringify({ action: "leave", params: undefined }));
+    setRoomId(newRoom);
+  }
+
+  private sendLeaveNow(): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      return;
     }
 
-    private flushOutbox() {
-        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
-        const pending = this.outbox;
-        this.outbox = [];
-        for (const msg of pending) {
-            this.socket.send(JSON.stringify(msg));
-        }
+    this.socket.send(
+      JSON.stringify({
+        action: "leave",
+        params: undefined,
+      }),
+    );
+  }
+
+  private flushOutbox(): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      return;
     }
 
-    send(action: string, params?: any) {
-        if (action === "leave") {
-            if (this.socket?.readyState === WebSocket.OPEN) {
-                this.socket.send(JSON.stringify({ action, params }));
-            }
-            return;
-        }
+    const pending = this.outbox;
 
-        const msg: Outbound = { action, params };
-        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-            this.outbox.push(msg);
-            return;
-        }
-        this.socket.send(JSON.stringify(msg));
+    this.outbox = [];
+
+    for (const msg of pending) {
+      this.socket.send(JSON.stringify(msg));
+    }
+  }
+
+  send(action: string, params?: unknown): void {
+    if (action === "leave") {
+      if (this.socket?.readyState === WebSocket.OPEN) {
+        this.socket.send(
+          JSON.stringify({
+            action,
+            params,
+          }),
+        );
+      }
+
+      return;
     }
 
-    on(action: string, cb: Listener) {
-        if (!this.listeners.has(action)) {
-            this.listeners.set(action, new Set());
-        }
+    const msg: Outbound = {
+      action,
+      params,
+    };
 
-        this.listeners.get(action)!.add(cb);
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      this.outbox.push(msg);
+
+      return;
     }
 
-    off(action: string, cb: Listener) {
-        const set = this.listeners.get(action);
-        if (!set) return;
+    this.socket.send(JSON.stringify(msg));
+  }
 
-        set.delete(cb);
-
-        if (set.size === 0) {
-            this.listeners.delete(action);
-        }
+  on<T = ListenerPayload>(action: string, cb: Listener<T>): void {
+    if (!this.listeners.has(action)) {
+      this.listeners.set(action, new Set());
     }
 
-    close() {
-        this.send("leave");
-        this.isManuallyClosed = true;
-        this.socket?.close();
+    (this.listeners.get(action) as Set<Listener<T>>).add(cb);
+  }
+
+  off<T = ListenerPayload>(action: string, cb: Listener<T>): void {
+    const set = this.listeners.get(action);
+
+    if (!set) {
+      return;
     }
+
+    (set as Set<Listener<T>>).delete(cb);
+
+    if (set.size === 0) {
+      this.listeners.delete(action);
+    }
+  }
+
+  close(): void {
+    this.send("leave");
+
+    this.isManuallyClosed = true;
+
+    this.socket?.close();
+  }
 }
 
 export const ws = new WebSocketClient();

@@ -10,11 +10,15 @@ export default defineConfig({
   },
   envDir: "../",
   server: {
-    allowedHosts: [
-      "localhost",
-      "127.0.0.1",
-      "jota.loca.lt",
-      "https://jota.loca.lt",
-    ],
+    proxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
+      "/ws": {
+        target: "ws://localhost:3001",
+        ws: true,
+      },
+    },
   },
 });

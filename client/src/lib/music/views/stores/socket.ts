@@ -29,7 +29,7 @@ ws.on("kicked", () => {
     rotateGuestRoomIfForbidden();
 });
 
-ws.on("joined", ({ data }) => {
+ws.on("joined", ({ data }: { data: { youAreOwner?: boolean; visibility?: string; headcount?: number; awaitingSnapshot?: boolean } }) => {
     const patch: Partial<Omit<RoomState, "id">> = {
         youAreOwner: !!data?.youAreOwner,
     };
@@ -46,14 +46,14 @@ ws.on("joined", ({ data }) => {
     playerSkeletonOn.value = !(data?.youAreOwner || data?.awaitingSnapshot === false);
 });
 
-ws.on("room-count", ({ data }) => {
+ws.on("room-count", ({ data }: { data: { count?: number } }) => {
     const n = data?.count;
     if (typeof n === "number" && Number.isFinite(n) && n >= 0) {
         patchRoom({ guests: n });
     }
 });
 
-ws.on("visibility", ({ data }) => {
+ws.on("visibility", ({ data }: { data: { visibility?: string } }) => {
     const v = data?.visibility;
     if (v === "public" || v === "private") {
         patchRoom({ visibility: v });
