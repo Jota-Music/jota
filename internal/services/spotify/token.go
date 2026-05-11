@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 )
 
 type userToken struct {
@@ -56,18 +57,32 @@ func (s *SpotifyService) invalidateToken() {
 }
 
 func (s *SpotifyService) getTokenFromRemote() (*userToken, error) {
-	u := launcher.New().
+	u, err := launcher.New().
 		Leakless(false).
 		Headless(true).
-		MustLaunch()
+		Set("no-sandbox").
+		Set("disable-setuid-sandbox").
+		Set("disable-dev-shm-usage").
+		Launch()
+	if err != nil {
+		return nil, fmt.Errorf("launch browser: %w", err)
+	}
 
-	browser := rod.New().ControlURL(u).MustConnect()
-	defer browser.MustClose()
+	browser := rod.New().ControlURL(u)
+	if err := browser.Connect(); err != nil {
+		return nil, fmt.Errorf("connect browser: %w", err)
+	}
+	defer browser.Close()
 
-	page := browser.MustPage("https://open.spotify.com")
+	page, err := browser.Page(proto.TargetCreateTarget{
+		URL: "https://open.spotify.com",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create page: %w", err)
+	}
 
 	router := page.HijackRequests()
-	defer router.MustStop()
+	defer router.Stop()
 
 	done := make(chan string, 1)
 
@@ -84,7 +99,9 @@ func (s *SpotifyService) getTokenFromRemote() (*userToken, error) {
 
 	go router.Run()
 
-	page.MustWaitLoad()
+	if err := page.WaitLoad(); err != nil {
+		return nil, fmt.Errorf("wait page load: %w", err)
+	}
 
 	select {
 	case body := <-done:
