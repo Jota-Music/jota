@@ -7,6 +7,7 @@ require (
 	github.com/go-rod/rod v0.116.3-0.20260217045937-1cd7eb98e9d3
 	github.com/gofiber/contrib/v3/websocket v1.1.0
 	github.com/gofiber/fiber/v3 v3.1.0
+	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.50.0
 )
 
@@ -22,7 +23,6 @@ require (
 	github.com/gofiber/utils/v2 v2.0.2 // indirect
 	github.com/google/flatbuffers v25.2.10+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.21 // indirect
