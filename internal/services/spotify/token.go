@@ -57,7 +57,13 @@ func (s *SpotifyService) invalidateToken() {
 }
 
 func (s *SpotifyService) getTokenFromRemote() (*userToken, error) {
+	bin, ok := launcher.LookPath()
+	if !ok {
+		bin = launcher.NewBrowser().MustGet()
+	}
+
 	u, err := launcher.New().
+		Bin(bin).
 		Leakless(false).
 		Headless(true).
 		Set("no-sandbox").
