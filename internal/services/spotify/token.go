@@ -57,19 +57,24 @@ func (s *SpotifyService) invalidateToken() {
 }
 
 func (s *SpotifyService) getTokenFromRemote() (*userToken, error) {
-	bin, ok := launcher.LookPath()
-	if !ok {
-		bin = launcher.NewBrowser().MustGet()
-	}
-
 	u, err := launcher.New().
-		Bin(bin).
 		Leakless(false).
 		Headless(true).
 		Set("no-sandbox").
 		Set("disable-setuid-sandbox").
 		Set("disable-dev-shm-usage").
 		Launch()
+	if err != nil {
+		bin := launcher.NewBrowser().MustGet()
+		u, err = launcher.New().
+			Bin(bin).
+			Leakless(false).
+			Headless(true).
+			Set("no-sandbox").
+			Set("disable-setuid-sandbox").
+			Set("disable-dev-shm-usage").
+			Launch()
+	}
 	if err != nil {
 		return nil, fmt.Errorf("launch browser: %w", err)
 	}
