@@ -59,7 +59,7 @@ RUN apk add --no-cache \
     python3 \
     py3-pip
 
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
+RUN wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp \
     && chmod +x /usr/local/bin/yt-dlp
 
 ENV ROD_BROWSER=/usr/bin/chromium-browser
