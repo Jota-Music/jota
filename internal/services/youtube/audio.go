@@ -49,12 +49,16 @@ func useYTDLP(youtubeId string) (string, error) {
 		YOUTUBE_URL+youtubeId,
 	)
 
-	out, err := cmd.Output()
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("yt-dlp: %s | %w", strings.TrimSpace(stderr.String()), err)
 	}
 
-	return strings.TrimSpace(string(out)), nil
+	return strings.TrimSpace(stdout.String()), nil
 }
 
 // ===========================
