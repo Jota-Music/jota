@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -57,32 +58,52 @@ func (s *SpotifyService) invalidateToken() {
 }
 
 func (s *SpotifyService) getTokenFromRemote() (*userToken, error) {
-	u, err := launcher.New().
-		Leakless(false).
-		Headless(true).
-		Set("no-sandbox").
-		Set("disable-setuid-sandbox").
-		Set("disable-dev-shm-usage").
-		Launch()
-	if err != nil {
-		bin := launcher.NewBrowser().MustGet()
-		u, err = launcher.New().
-			Bin(bin).
+	var browser *rod.Browser
+
+	browserInstance := os.Getenv("BROWSER_INSTANCE")
+
+	// =========================
+	// REMOTE MANAGER MODE
+	// =========================
+	if browserInstance != "" {
+		l := launcher.MustNewManaged(browserInstance)
+
+		browser = rod.New().Client(l.MustClient())
+	} else {
+		// =========================
+		// LOCAL MODE
+		// =========================
+		u, err := launcher.New().
 			Leakless(false).
 			Headless(true).
 			Set("no-sandbox").
 			Set("disable-setuid-sandbox").
 			Set("disable-dev-shm-usage").
 			Launch()
-	}
-	if err != nil {
-		return nil, fmt.Errorf("launch browser: %w", err)
+
+		if err != nil {
+			bin := launcher.NewBrowser().MustGet()
+			u, err = launcher.New().
+				Bin(bin).
+				Leakless(false).
+				Headless(true).
+				Set("no-sandbox").
+				Set("disable-setuid-sandbox").
+				Set("disable-dev-shm-usage").
+				Launch()
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("launch browser: %w", err)
+		}
+
+		browser = rod.New().ControlURL(u)
 	}
 
-	browser := rod.New().ControlURL(u)
 	if err := browser.Connect(); err != nil {
 		return nil, fmt.Errorf("connect browser: %w", err)
 	}
+
 	defer browser.Close()
 
 	page, err := browser.Page(proto.TargetCreateTarget{
@@ -122,7 +143,7 @@ func (s *SpotifyService) getTokenFromRemote() (*userToken, error) {
 
 		var resp userToken
 		if err := json.Unmarshal([]byte(body), &resp); err != nil {
-			return nil, fmt.Errorf("failed to parse token response '%s' %w", err.Error(), err)
+			return nil, fmt.Errorf("failed to parse token response: %w", err)
 		}
 
 		return &resp, nil
