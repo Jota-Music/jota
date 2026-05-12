@@ -2,9 +2,12 @@ package ws_controller
 
 import (
 	"encoding/json"
+	"sync"
 
 	"github.com/gofiber/contrib/v3/websocket"
 )
+
+var connMu sync.Map
 
 // type Message[T any] struct {
 // 	From   From   `json:"from"`
@@ -50,6 +53,9 @@ const (
 )
 
 func Send[T any](c *websocket.Conn, from From, action string, data T) {
+	mu, _ := connMu.LoadOrStore(c, &sync.Mutex{})
+	mu.(*sync.Mutex).Lock()
+	defer mu.(*sync.Mutex).Unlock()
 	c.WriteJSON(Response[T]{
 		From:   from,
 		Action: action,
@@ -58,6 +64,9 @@ func Send[T any](c *websocket.Conn, from From, action string, data T) {
 }
 
 func SendError(c *websocket.Conn, action string, e string) {
+	mu, _ := connMu.LoadOrStore(c, &sync.Mutex{})
+	mu.(*sync.Mutex).Lock()
+	defer mu.(*sync.Mutex).Unlock()
 	c.WriteJSON(SocketErrorResponse{
 		Success: false,
 		Error:   e,
