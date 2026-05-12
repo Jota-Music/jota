@@ -58,15 +58,17 @@ func GetSong(id, search string) (string, error) {
 		ytSearch := fmt.Sprintf("ytsearch1:%s", search)
 		cmd := exec.Command("yt-dlp", "--skip-download", "--print", "%(id)s", ytSearch)
 
-		var out bytes.Buffer
-		cmd.Stdout = &out
-		cmd.Stderr = &out
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 
-		if err := cmd.Run(); err == nil {
-			output := strings.TrimSpace(out.String())
-			if output != "" {
-				videoId = output
-			}
+		if err := cmd.Run(); err != nil {
+			return "", fmt.Errorf("yt-dlp failed: %s", strings.TrimSpace(stderr.String()))
+		}
+
+		output := strings.TrimSpace(stdout.String())
+		if output != "" && !strings.Contains(stderr.String(), "ERROR") {
+			videoId = output
 		}
 	}
 
