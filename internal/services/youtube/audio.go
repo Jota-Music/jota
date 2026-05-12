@@ -44,7 +44,7 @@ func useYTDLP(youtubeId string) (string, error) {
 	cmd := exec.CommandContext(
 		ctx,
 		bin,
-		"--cookies-from-browser", "chromium",
+		"--js-runtimes", "node",
 		"-f", "bestaudio[ext=m4a]",
 		"-g",
 		YOUTUBE_URL+youtubeId,
