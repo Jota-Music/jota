@@ -13,11 +13,6 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 )
 
-type StreamInfo struct {
-	URL       string
-	ExpiresAt int64
-}
-
 func getStreamURLViaBrowser(youtubeId string) (*StreamInfo, error) {
 	browserInstance := os.Getenv("BROWSER_INSTANCE")
 
@@ -104,14 +99,13 @@ func extractStreamURL(body string) string {
 		return ""
 	}
 	section := parts[1]
-	// Look for url in formats array
 	if idx := strings.Index(section, "adaptiveFormats"); idx > 0 {
 		segment := section[idx:]
 		if urlIdx := strings.Index(segment, `"url":"`); urlIdx > 0 && urlIdx < 500 {
 			start := urlIdx + 6
 			end := strings.Index(segment[start:], `"`)
 			if end > 0 {
-				return strings.ReplaceAll(segment[start:start+end], "\\u002F", "/")
+				return strings.ReplaceAll(segment[start:start+end], `\u002F`, "/")
 			}
 		}
 	}
