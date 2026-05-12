@@ -59,7 +59,8 @@ RUN apk add --no-cache \
     python3 \
     py3-pip
 
-RUN pip install --break-system-packages yt-dlp
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
+    && chmod +x /usr/local/bin/yt-dlp
 
 ENV ROD_BROWSER=/usr/bin/chromium-browser
 ENV CHROME_BIN=/usr/bin/chromium-browser
