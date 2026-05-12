@@ -5,12 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"jota/server/internal/kv"
+	"net/url"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
 
 var youtubeSourceBucket = kv.UseBucket("youtube-source")
+
+const YOUTUBE_URL = "https://www.youtube.com/watch?v="
 
 type Audio struct {
 	Url      string `json:"url"`
@@ -18,9 +22,106 @@ type Audio struct {
 	ExpireAt int64  `json:"expireAt"`
 }
 
+func Run(args ...string) ([]byte, error) {
+	bin, err := Ensure()
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := exec.Command(bin, args...)
+	return cmd.CombinedOutput()
+}
+
+func useYTDLP(youtubeId string) (string, error) {
+	bin, err := Ensure()
+	if err != nil {
+		return "", err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(
+		ctx,
+		bin,
+		"-f", "bestaudio[ext=m4a]",
+		"-g",
+		YOUTUBE_URL+youtubeId,
+	)
+
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
+
+type ExpireAndDuration struct {
+	ExpireAt int64
+	Duration int
+}
+
+func getExpireAndDurationFromURL(raw string) (*ExpireAndDuration, bool) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return nil, false
+	}
+
+	q := u.Query()
+
+	durStr := q.Get("dur")
+	if durStr == "" {
+		return nil, false
+	}
+
+	durFloat, err := strconv.ParseFloat(durStr, 64)
+	if err != nil {
+		return nil, false
+	}
+
+	expireStr := q.Get("expire")
+	if expireStr == "" {
+		return nil, false
+	}
+
+	expireInt, err := strconv.ParseInt(expireStr, 10, 64)
+	if err != nil {
+		return nil, false
+	}
+
+	return &ExpireAndDuration{
+		ExpireAt: expireInt,
+		Duration: int(durFloat),
+	}, true
+}
+
+func ttlFromExpire(expireAt int64) (time.Duration, bool) {
+	now := time.Now().UTC().Unix()
+
+	ttl := expireAt - now
+	if ttl <= 0 {
+		return 0, false
+	}
+
+	ttl -= 30
+	if ttl <= 0 {
+		return 0, false
+	}
+
+	return time.Duration(ttl) * time.Second, true
+}
+
+func audioCacheStillValid(a *Audio) bool {
+	if a == nil || a.Url == "" || a.ExpireAt <= 0 {
+		return false
+	}
+	now := time.Now().UTC().Unix()
+	return a.ExpireAt > now+30
+}
+
 func GetAudio(youtubeId string) (*Audio, error) {
-	youtubeId = strings.TrimSpace(youtubeId)
-	if youtubeId == "" {
+	if strings.TrimSpace(youtubeId) == "" {
 		return nil, fmt.Errorf("youtube id is empty")
 	}
 
@@ -33,20 +134,25 @@ func GetAudio(youtubeId string) (*Audio, error) {
 		return nil, fmt.Errorf("youtube audio cache read: %w", err)
 	}
 
-	streamURL, err := getStreamURL(youtubeId)
+	streamURL, err := useYTDLP(youtubeId)
 	if err != nil {
 		return nil, err
 	}
 
-	ttl := time.Duration(streamURL.ExpiresAt-time.Now().Unix()-30) * time.Second
-	if ttl <= 0 {
+	info, ok := getExpireAndDurationFromURL(streamURL)
+	if !ok {
+		return nil, errors.New("failed to parse stream url metadata")
+	}
+
+	ttl, ok := ttlFromExpire(info.ExpireAt)
+	if !ok {
 		return nil, errors.New("stream already expired")
 	}
 
 	audio := Audio{
-		Url:      streamURL.URL,
-		Duration: streamURL.Duration,
-		ExpireAt: streamURL.ExpiresAt,
+		Url:      streamURL,
+		Duration: info.Duration,
+		ExpireAt: info.ExpireAt,
 	}
 
 	if err := youtubeSourceBucket.SetObject(youtubeId, audio, ttl); err != nil {
@@ -56,58 +162,6 @@ func GetAudio(youtubeId string) (*Audio, error) {
 	return &audio, nil
 }
 
-func audioCacheStillValid(a *Audio) bool {
-	if a == nil || a.Url == "" || a.ExpireAt <= 0 {
-		return false
-	}
-	return a.ExpireAt > time.Now().Unix()+30
-}
-
 func SetYoutubeId(id string, youtubeId string) error {
 	return youtubeSourceBucket.SetString(id, youtubeId)
-}
-
-type StreamInfo struct {
-	URL       string
-	Duration  int
-	ExpiresAt int64
-}
-
-func getStreamURL(youtubeId string) (*StreamInfo, error) {
-	info, err := getStreamURLViaBrowser(youtubeId)
-	if err == nil && info.URL != "" {
-		return info, nil
-	}
-
-	return getStreamURLViaYTDLP(youtubeId)
-}
-
-func getStreamURLViaYTDLP(youtubeId string) (*StreamInfo, error) {
-	bin, err := Ensure()
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(
-		ctx,
-		bin,
-		"--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-		"-f", "bestaudio[ext=m4a]/bestaudio",
-		"--print", "%(url)s",
-		fmt.Sprintf("https://www.youtube.com/watch?v=%s", youtubeId),
-	)
-
-	var stdout, stderr strings.Builder
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err = cmd.Run()
-	if err != nil {
-		return nil, fmt.Errorf("yt-dlp: %s | %w", strings.TrimSpace(stderr.String()), err)
-	}
-
-	return &StreamInfo{URL: strings.TrimSpace(stdout.String())}, nil
 }
