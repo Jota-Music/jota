@@ -56,11 +56,10 @@ RUN apk add --no-cache \
     ttf-freefont \
     ca-certificates \
     ffmpeg \
-    wget
+    python3 \
+    py3-pip
 
-RUN wget -O /usr/local/bin/yt-dlp \
-    https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux \
-    && chmod +x /usr/local/bin/yt-dlp
+RUN pip install --break-system-packages yt-dlp
 
 ENV ROD_BROWSER=/usr/bin/chromium-browser
 ENV CHROME_BIN=/usr/bin/chromium-browser
