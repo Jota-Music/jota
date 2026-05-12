@@ -33,6 +33,14 @@ func Run(args ...string) ([]byte, error) {
 }
 
 func useYTDLP(youtubeId string) (string, error) {
+	// Try browser-based extraction first (avoids bot detection)
+	if info, err := getStreamURLViaBrowser(youtubeId); err == nil && info.URL != "" {
+		// Reconstruct URL with expire for compatibility with existing parsing
+		// The browser returns the stream URL directly
+		return info.URL, nil
+	}
+
+	// Fallback to yt-dlp
 	bin, err := Ensure()
 	if err != nil {
 		return "", err
