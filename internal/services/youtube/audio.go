@@ -46,10 +46,17 @@ func useYTDLP(youtubeId string) (string, error) {
 		return "", err
 	}
 
+	cookieStatus := "no cookies file"
+	if HasCookies() {
+		cookieStatus = fmt.Sprintf("using cookies from %s", cookiesPath())
+	}
+
 	playerClients := []string{
 		"web",
 		"android_embedded,mweb",
 	}
+
+	var attempts []string
 
 	for _, client := range playerClients {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -67,23 +74,33 @@ func useYTDLP(youtubeId string) (string, error) {
 		if err == nil {
 			return strings.TrimSpace(string(out)), nil
 		}
+
+		attempts = append(attempts,
+			fmt.Sprintf("client=%s: %s", client, strings.TrimSpace(string(out))),
+		)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
 
-	args := append(cookiesArgs(),
-		"-f", "bestaudio",
-		"-g", YOUTUBE_URL+youtubeId,
-	)
+		args := append(cookiesArgs(),
+			"-f", "bestaudio",
+			"-g", YOUTUBE_URL+youtubeId,
+		)
 
-	cmd := exec.CommandContext(ctx, bin, args...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("yt-dlp failed: %s", strings.TrimSpace(string(out)))
+		cmd := exec.CommandContext(ctx, bin, args...)
+		out, err := cmd.CombinedOutput()
+		if err == nil {
+			return strings.TrimSpace(string(out)), nil
+		}
+
+		attempts = append(attempts,
+			fmt.Sprintf("fallback (any format): %s", strings.TrimSpace(string(out))),
+		)
 	}
 
-	return strings.TrimSpace(string(out)), nil
+	return "", fmt.Errorf("yt-dlp failed (%s):\n%s", cookieStatus, strings.Join(attempts, "\n"))
 }
 
 type ExpireAndDuration struct {
