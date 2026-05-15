@@ -13,11 +13,10 @@ import (
 )
 
 func cookiesArgs() []string {
-	args := []string{"--js-runtimes", "node"}
 	if HasCookies() {
-		args = append(args, "--cookies", cookiesPath())
+		return []string{"--cookies", cookiesPath()}
 	}
-	return args
+	return nil
 }
 
 var youtubeSourceBucket = kv.UseBucket("youtube-source")
@@ -40,80 +39,25 @@ func Run(args ...string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
-func extractYtError(output string) string {
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		if strings.HasPrefix(line, "ERROR:") {
-			return strings.TrimSpace(strings.TrimPrefix(line, "ERROR:"))
-		}
-	}
-	if len(lines) > 0 {
-		return strings.TrimSpace(lines[len(lines)-1])
-	}
-	return output
-}
-
-const userAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.147 Mobile Safari/537.36"
-
 func useYTDLP(youtubeId string) (string, error) {
 	bin, err := Ensure()
 	if err != nil {
 		return "", err
 	}
 
-	strategies := []struct {
-		client  string
-		headers bool
-		cookies bool
-	}{
-		{client: "android", headers: true},
-		{client: "android", headers: true, cookies: true},
-		{client: "ios", headers: true, cookies: true},
-		{client: "web", cookies: true},
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	args := append(cookiesArgs(), "-f", "bestaudio[ext=m4a]", "-g", YOUTUBE_URL+youtubeId)
+
+	cmd := exec.CommandContext(ctx, bin, args...)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("%s", strings.TrimSpace(string(out)))
 	}
 
-	var lastErr string
-
-	for _, s := range strategies {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-
-		args := []string{
-			"--no-update",
-			"--user-agent", userAgent,
-			"--extractor-args", fmt.Sprintf("youtube:player_client=%s", s.client),
-			"-f", "bestaudio[ext=m4a]",
-			"-g", YOUTUBE_URL+youtubeId,
-		}
-
-		if s.cookies && HasCookies() {
-			args = append(args, "--cookies", cookiesPath())
-		}
-
-		if s.headers {
-			args = append(args,
-				"--add-header", "Accept-Language: en-US,en;q=0.9",
-				"--add-header", "Origin: https://www.youtube.com",
-			)
-		}
-
-		cmd := exec.CommandContext(ctx, bin, args...)
-		out, err := cmd.CombinedOutput()
-		cancel()
-
-		if err == nil {
-			return strings.TrimSpace(string(out)), nil
-		}
-
-		lastErr = extractYtError(string(out))
-	}
-
-	msg := fmt.Sprintf("can't get audio: %s", lastErr)
-
-	if !HasCookies() {
-		msg += " (upload cookies via POST /api/user/cookies/)"
-	}
-
-	return "", errors.New(msg)
+	return strings.TrimSpace(string(out)), nil
 }
 
 type ExpireAndDuration struct {

@@ -1,10 +1,8 @@
 package youtube
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func cookiesPath() string {
@@ -18,45 +16,4 @@ func HasCookies() bool {
 
 func CookiesPath() string {
 	return cookiesPath()
-}
-
-var youtubeAuthCookies = []string{
-	"__Secure-3PSID",
-	"SAPISID",
-	"APISID",
-	"HSID",
-	"SSID",
-	"__Secure-3PAPISID",
-}
-
-func CookieStatus() string {
-	info, err := os.Stat(cookiesPath())
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "no cookies file at storage/cookies.txt"
-		}
-		return fmt.Sprintf("cookies file error: %v", err)
-	}
-
-	if info.Size() == 0 {
-		return "cookies file at storage/cookies.txt is empty"
-	}
-
-	data, err := os.ReadFile(cookiesPath())
-	if err != nil {
-		return fmt.Sprintf("cookies file unreadable: %v", err)
-	}
-
-	var found []string
-	for _, name := range youtubeAuthCookies {
-		if strings.Contains(string(data), name) {
-			found = append(found, name)
-		}
-	}
-
-	if len(found) == 0 {
-		return fmt.Sprintf("no YouTube auth cookies found (expected: %s)", strings.Join(youtubeAuthCookies, ", "))
-	}
-
-	return fmt.Sprintf("using cookies: %s", strings.Join(found, ", "))
 }
