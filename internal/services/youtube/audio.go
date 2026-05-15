@@ -53,36 +53,48 @@ func extractYtError(output string) string {
 	return output
 }
 
+const userAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.147 Mobile Safari/537.36"
+
 func useYTDLP(youtubeId string) (string, error) {
 	bin, err := Ensure()
 	if err != nil {
 		return "", err
 	}
 
-	attempts := []struct {
+	strategies := []struct {
 		client  string
+		headers bool
 		cookies bool
 	}{
-		{client: "android"},
-		{client: "ios"},
+		{client: "android", headers: true},
+		{client: "android", headers: true, cookies: true},
+		{client: "ios", headers: true, cookies: true},
 		{client: "web", cookies: true},
 	}
 
 	var lastErr string
 
-	for _, a := range attempts {
+	for _, s := range strategies {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 
-		baseArgs := []string{"--js-runtimes", "node"}
-		if a.cookies && HasCookies() {
-			baseArgs = append(baseArgs, "--cookies", cookiesPath())
-		}
-
-		args := append(baseArgs,
-			"--extractor-args", fmt.Sprintf("youtube:player_client=%s", a.client),
+		args := []string{
+			"--no-update",
+			"--user-agent", userAgent,
+			"--extractor-args", fmt.Sprintf("youtube:player_client=%s", s.client),
 			"-f", "bestaudio[ext=m4a]",
 			"-g", YOUTUBE_URL+youtubeId,
-		)
+		}
+
+		if s.cookies && HasCookies() {
+			args = append(args, "--cookies", cookiesPath())
+		}
+
+		if s.headers {
+			args = append(args,
+				"--add-header", "Accept-Language: en-US,en;q=0.9",
+				"--add-header", "Origin: https://www.youtube.com",
+			)
+		}
 
 		cmd := exec.CommandContext(ctx, bin, args...)
 		out, err := cmd.CombinedOutput()
@@ -95,30 +107,10 @@ func useYTDLP(youtubeId string) (string, error) {
 		lastErr = extractYtError(string(out))
 	}
 
-	{
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-
-		args := append([]string{"--js-runtimes", "node"},
-			"-f", "bestaudio",
-			"-g", YOUTUBE_URL+youtubeId,
-		)
-
-		cmd := exec.CommandContext(ctx, bin, args...)
-		out, err := cmd.CombinedOutput()
-		if err == nil {
-			return strings.TrimSpace(string(out)), nil
-		}
-
-		lastErr = extractYtError(string(out))
-	}
-
 	msg := fmt.Sprintf("can't get audio: %s", lastErr)
 
 	if !HasCookies() {
 		msg += " (upload cookies via POST /api/user/cookies/)"
-	} else if strings.Contains(lastErr, "Sign in") {
-		msg += " (cookies found but rejected — re-export from a browser logged into YouTube)"
 	}
 
 	return "", errors.New(msg)
