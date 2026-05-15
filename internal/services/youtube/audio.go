@@ -12,6 +12,13 @@ import (
 	"time"
 )
 
+func cookiesArgs() []string {
+	if HasCookies() {
+		return []string{"--cookies", cookiesPath()}
+	}
+	return nil
+}
+
 var youtubeSourceBucket = kv.UseBucket("youtube-source")
 
 const YOUTUBE_URL = "https://www.youtube.com/watch?v="
@@ -28,7 +35,7 @@ func Run(args ...string) ([]byte, error) {
 		return nil, err
 	}
 
-	cmd := exec.Command(bin, args...)
+	cmd := exec.Command(bin, append(cookiesArgs(), args...)...)
 	return cmd.CombinedOutput()
 }
 
@@ -41,13 +48,9 @@ func useYTDLP(youtubeId string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(
-		ctx,
-		bin,
-		"-f", "bestaudio[ext=m4a]",
-		"-g",
-		YOUTUBE_URL+youtubeId,
-	)
+	args := append(cookiesArgs(), "-f", "bestaudio[ext=m4a]", "-g", YOUTUBE_URL+youtubeId)
+
+	cmd := exec.CommandContext(ctx, bin, args...)
 
 	out, err := cmd.Output()
 	if err != nil {

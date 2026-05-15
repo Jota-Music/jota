@@ -20,6 +20,7 @@ import {
     LockKeyholeOpen,
     LogIn,
     LogOut,
+    Settings,
     Turntable,
     Undo2,
     Users,
@@ -156,13 +157,18 @@ export function Header({
                             <LogIn class="size-4 text-zinc-400" />
                         </Link>
                     ) : (
-                        <button
-                            onClick={() => logOut()}
-                            type="button"
-                            class="cursor-pointer"
-                        >
-                            <LogOut class="size-4 text-zinc-400 hover:text-zinc-100" />
-                        </button>
+                        <>
+                            <Link href="/settings">
+                                <Settings class="size-4 text-zinc-400 hover:text-zinc-100" />
+                            </Link>
+                            <button
+                                onClick={() => logOut()}
+                                type="button"
+                                class="cursor-pointer"
+                            >
+                                <LogOut class="size-4 text-zinc-400 hover:text-zinc-100" />
+                            </button>
+                        </>
                     )}
                 </div>
             </div>

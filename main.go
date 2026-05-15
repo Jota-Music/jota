@@ -8,6 +8,7 @@ import (
 
 	"jota/server/internal/api/handler"
 	"jota/server/internal/env"
+	"jota/server/internal/repositories"
 
 	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/gofiber/fiber/v3"
@@ -20,6 +21,15 @@ var clientFolder embed.FS
 
 func main() {
 	enviroment := env.Load()
+
+	if enviroment.SuperUsername != "" && enviroment.SuperPassword != "" {
+		_, err := repositories.Use.Auth.NewUser(enviroment.SuperUsername, enviroment.SuperPassword)
+		if err != nil {
+			log.Println("super user setup:", err)
+		} else {
+			log.Println("super user created:", enviroment.SuperUsername)
+		}
+	}
 
 	app := fiber.New()
 

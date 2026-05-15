@@ -8,7 +8,9 @@ import (
 )
 
 type Config struct {
-	Port string
+	Port          string
+	SuperUsername string
+	SuperPassword string
 }
 
 func Load() Config {
@@ -17,7 +19,9 @@ func Load() Config {
 	}
 
 	return Config{
-		Port: getPort(),
+		Port:          getPort(),
+		SuperUsername: os.Getenv("SUPER_USERNAME"),
+		SuperPassword: os.Getenv("SUPER_PASSWORD"),
 	}
 }
 
