@@ -46,14 +46,12 @@ func useYTDLP(youtubeId string) (string, error) {
 		return "", err
 	}
 
-	cookieStatus := "no cookies file"
-	if HasCookies() {
-		cookieStatus = fmt.Sprintf("using cookies from %s", cookiesPath())
-	}
+	cookieStatus := CookieStatus()
 
 	playerClients := []string{
 		"web",
-		"android_embedded,mweb",
+		"android",
+		"ios",
 	}
 
 	var attempts []string
@@ -100,7 +98,17 @@ func useYTDLP(youtubeId string) (string, error) {
 		)
 	}
 
-	return "", fmt.Errorf("yt-dlp failed (%s):\n%s", cookieStatus, strings.Join(attempts, "\n"))
+	msg := fmt.Sprintf("yt-dlp failed (%s)", cookieStatus)
+
+	if !HasCookies() {
+		msg += "\nUpload your YouTube cookies via POST /api/user/cookies/ with a cookies.txt file exported from your logged-in browser (use a browser extension like 'Get cookies.txt')"
+	} else {
+		msg += "\nCookies file exists but YouTube rejected it. The cookies may be expired or invalid. Try re-exporting cookies.txt from your browser while logged into YouTube."
+	}
+
+	msg += "\n\nAttempts:\n" + strings.Join(attempts, "\n")
+
+	return "", errors.New(msg)
 }
 
 type ExpireAndDuration struct {
