@@ -52,9 +52,9 @@ func useYTDLP(youtubeId string) (string, error) {
 
 	cmd := exec.CommandContext(ctx, bin, args...)
 
-	out, err := cmd.Output()
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("yt-dlp failed: %s", strings.TrimSpace(string(out)))
 	}
 
 	return strings.TrimSpace(string(out)), nil
