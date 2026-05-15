@@ -55,9 +55,14 @@ func GetSong(id, search string) (string, error) {
 	}
 
 	if videoId == "" {
+		bin, err := Ensure()
+		if err != nil {
+			return "", fmt.Errorf("yt-dlp not found: %w", err)
+		}
+
 		ytSearch := fmt.Sprintf("ytsearch1:%s", search)
 		args := append(cookiesArgs(), "--skip-download", "--print", "%(id)s", ytSearch)
-		cmd := exec.Command("yt-dlp", args...)
+		cmd := exec.Command(bin, args...)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout

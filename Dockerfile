@@ -56,12 +56,10 @@ RUN apk add --no-cache \
     ttf-freefont \
     ca-certificates \
     ffmpeg \
-    python3 \
-    py3-pip \
     nodejs \
     npm
 
-RUN python3 -m pip install --break-system-packages yt-dlp
+RUN apk add --no-cache py3-pip python3 && python3 -m pip install --break-system-packages yt-dlp && apk del py3-pip
 
 ENV ROD_BROWSER=/usr/bin/chromium-browser
 ENV CHROME_BIN=/usr/bin/chromium-browser
