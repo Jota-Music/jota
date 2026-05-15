@@ -46,13 +46,38 @@ func useYTDLP(youtubeId string) (string, error) {
 		return "", err
 	}
 
+	playerClients := []string{
+		"web",
+		"android_embedded,mweb",
+	}
+
+	for _, client := range playerClients {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+
+		args := append(cookiesArgs(),
+			"--extractor-args", fmt.Sprintf("youtube:player_client=%s", client),
+			"-f", "bestaudio[ext=m4a]",
+			"-g", YOUTUBE_URL+youtubeId,
+		)
+
+		cmd := exec.CommandContext(ctx, bin, args...)
+		out, err := cmd.CombinedOutput()
+		cancel()
+
+		if err == nil {
+			return strings.TrimSpace(string(out)), nil
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	args := append(cookiesArgs(), "-f", "bestaudio[ext=m4a]", "-g", YOUTUBE_URL+youtubeId)
+	args := append(cookiesArgs(),
+		"-f", "bestaudio",
+		"-g", YOUTUBE_URL+youtubeId,
+	)
 
 	cmd := exec.CommandContext(ctx, bin, args...)
-
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("yt-dlp failed: %s", strings.TrimSpace(string(out)))
