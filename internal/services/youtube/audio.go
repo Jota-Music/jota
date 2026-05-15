@@ -40,6 +40,12 @@ func Run(args ...string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
+type ytAttempt struct {
+	client  string
+	cookies bool
+	output  string
+}
+
 func useYTDLP(youtubeId string) (string, error) {
 	bin, err := Ensure()
 	if err != nil {
@@ -48,19 +54,24 @@ func useYTDLP(youtubeId string) (string, error) {
 
 	cookieStatus := CookieStatus()
 
-	playerClients := []string{
-		"web",
-		"android",
-		"ios",
+	attempts := []ytAttempt{
+		{client: "android", cookies: false},
+		{client: "ios", cookies: false},
+		{client: "web", cookies: true},
 	}
 
-	var attempts []string
+	var results []string
 
-	for _, client := range playerClients {
+	for _, a := range attempts {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 
-		args := append(cookiesArgs(),
-			"--extractor-args", fmt.Sprintf("youtube:player_client=%s", client),
+		baseArgs := []string{"--js-runtimes", "node"}
+		if a.cookies && HasCookies() {
+			baseArgs = append(baseArgs, "--cookies", cookiesPath())
+		}
+
+		args := append(baseArgs,
+			"--extractor-args", fmt.Sprintf("youtube:player_client=%s", a.client),
 			"-f", "bestaudio[ext=m4a]",
 			"-g", YOUTUBE_URL+youtubeId,
 		)
@@ -73,16 +84,18 @@ func useYTDLP(youtubeId string) (string, error) {
 			return strings.TrimSpace(string(out)), nil
 		}
 
-		attempts = append(attempts,
-			fmt.Sprintf("client=%s: %s", client, strings.TrimSpace(string(out))),
-		)
+		label := fmt.Sprintf("client=%s", a.client)
+		if a.cookies {
+			label += "+cookies"
+		}
+		results = append(results, fmt.Sprintf("%s: %s", label, strings.TrimSpace(string(out))))
 	}
 
 	{
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
-		args := append(cookiesArgs(),
+		args := append([]string{"--js-runtimes", "node"},
 			"-f", "bestaudio",
 			"-g", YOUTUBE_URL+youtubeId,
 		)
@@ -93,20 +106,18 @@ func useYTDLP(youtubeId string) (string, error) {
 			return strings.TrimSpace(string(out)), nil
 		}
 
-		attempts = append(attempts,
-			fmt.Sprintf("fallback (any format): %s", strings.TrimSpace(string(out))),
-		)
+		results = append(results, fmt.Sprintf("fallback (any format): %s", strings.TrimSpace(string(out))))
 	}
 
 	msg := fmt.Sprintf("yt-dlp failed (%s)", cookieStatus)
 
 	if !HasCookies() {
-		msg += "\nUpload your YouTube cookies via POST /api/user/cookies/ with a cookies.txt file exported from your logged-in browser (use a browser extension like 'Get cookies.txt')"
+		msg += "\nUpload YouTube cookies via POST /api/user/cookies/ (export cookies.txt from your logged-in browser)"
 	} else {
-		msg += "\nCookies file exists but YouTube rejected it. The cookies may be expired or invalid. Try re-exporting cookies.txt from your browser while logged into YouTube."
+		msg += "\nCookies present but YouTube rejected all clients. Try re-exporting from a browser logged into YouTube."
 	}
 
-	msg += "\n\nAttempts:\n" + strings.Join(attempts, "\n")
+	msg += "\n\nAttempts:\n" + strings.Join(results, "\n")
 
 	return "", errors.New(msg)
 }
