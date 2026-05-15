@@ -13,10 +13,11 @@ import (
 )
 
 func cookiesArgs() []string {
+	args := []string{"--js-runtimes", "node"}
 	if HasCookies() {
-		return []string{"--cookies", cookiesPath()}
+		args = append(args, "--cookies", cookiesPath())
 	}
-	return nil
+	return args
 }
 
 var youtubeSourceBucket = kv.UseBucket("youtube-source")
