@@ -66,6 +66,8 @@ ENV CHROME_BIN=/usr/bin/chromium-browser
 
 COPY --from=backend /app/server .
 
+RUN mkdir -p storage
+
 EXPOSE 3001
 
 CMD ["./server"]
