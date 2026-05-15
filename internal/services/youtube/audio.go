@@ -12,8 +12,75 @@ import (
 	"time"
 )
 
+func isBotError(out string) bool {
+	return strings.Contains(out, "Sign in to confirm") || strings.Contains(out, "bot")
+}
+
+func isPrivateError(out string) bool {
+	return strings.Contains(out, "Private video") || strings.Contains(out, "private")
+}
+
+func isUnavailableError(out string) bool {
+	return strings.Contains(out, "Video unavailable") || strings.Contains(out, "This video is not available")
+}
+
+func isAgeRestrictedError(out string) bool {
+	return strings.Contains(out, "age") || strings.Contains(out, "Age") || strings.Contains(out, "confirm your age")
+}
+
+func isGeoBlockedError(out string) bool {
+	return strings.Contains(out, "blocked") || strings.Contains(out, "not available in your country")
+}
+
+func formatYTDLPError(out string) string {
+	lines := strings.Split(out, "\n")
+	var clean []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "WARNING:") {
+			continue
+		}
+		clean = append(clean, line)
+	}
+
+	errMsg := strings.Join(clean, "; ")
+
+	switch {
+	case isBotError(out):
+		return fmt.Sprintf("YouTube is blocking the request. %s", botHelp())
+	case isPrivateError(out):
+		return "This video is private."
+	case isUnavailableError(out):
+		return "This video is unavailable."
+	case isAgeRestrictedError(out):
+		return "This video is age-restricted."
+	case isGeoBlockedError(out):
+		return "This video is not available in your region."
+	default:
+		if errMsg != "" {
+			return errMsg
+		}
+		return "Failed to fetch audio from YouTube."
+	}
+}
+
+func botHelp() string {
+	if HasCookies() {
+		return "Your cookies may be expired. Upload fresh cookies via POST /api/user/cookies."
+	}
+	return "Upload YouTube cookies via POST /api/user/cookies to authenticate. See https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies"
+}
+
 func cookiesArgs() []string {
-	args := []string{"--js-runtimes", "node", "--remote-components", "ejs:github"}
+	args := []string{
+		"--js-runtimes", "node",
+		"--remote-components", "ejs:github",
+		"--extractor-retries", "3",
+		"--throttled-rate", "100K",
+	}
 	if HasCookies() {
 		args = append(args, "--cookies", cookiesPath())
 	}
@@ -46,7 +113,7 @@ func useYTDLP(youtubeId string) (string, error) {
 		return "", err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	args := append(cookiesArgs(), "-f", "bestaudio[ext=m4a]", "-g", YOUTUBE_URL+youtubeId)
@@ -55,7 +122,7 @@ func useYTDLP(youtubeId string) (string, error) {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("%s", strings.TrimSpace(string(out)))
+		return "", errors.New(formatYTDLPError(string(out)))
 	}
 
 	return strings.TrimSpace(string(out)), nil

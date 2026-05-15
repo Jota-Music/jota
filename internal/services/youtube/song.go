@@ -66,7 +66,16 @@ func GetSong(id, search string) (string, error) {
 		cmd.Stderr = &stderr
 
 		if err := cmd.Run(); err != nil {
-			return "", fmt.Errorf("search failed: %s", strings.TrimSpace(stderr.String()))
+			searchErr := strings.TrimSpace(stderr.String())
+			switch {
+			case strings.Contains(searchErr, "Sign in to confirm") || strings.Contains(searchErr, "bot"):
+				if HasCookies() {
+					return "", fmt.Errorf("YouTube search blocked — cookies may be expired. Upload fresh cookies via POST /api/user/cookies")
+				}
+				return "", fmt.Errorf("YouTube search blocked — upload cookies via POST /api/user/cookies. See https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies")
+			default:
+				return "", fmt.Errorf("search failed: %s", searchErr)
+			}
 		}
 
 		output := strings.TrimSpace(stdout.String())
