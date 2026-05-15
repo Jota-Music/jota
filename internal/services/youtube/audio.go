@@ -13,7 +13,7 @@ import (
 )
 
 func cookiesArgs() []string {
-	args := []string{"--js-runtimes", "node"}
+	args := []string{"--js-runtimes", "node", "--remote-components", "ejs:github"}
 	if HasCookies() {
 		args = append(args, "--cookies", cookiesPath())
 	}
