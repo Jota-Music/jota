@@ -44,7 +44,7 @@ func CookieStatus() string {
 
 	data, err := os.ReadFile(cookiesPath())
 	if err != nil {
-		return fmt.Sprintf("cookies file at storage/cookies.txt (%d bytes, unreadable: %v)", info.Size(), err)
+		return fmt.Sprintf("cookies file unreadable: %v", err)
 	}
 
 	var found []string
@@ -55,8 +55,8 @@ func CookieStatus() string {
 	}
 
 	if len(found) == 0 {
-		return fmt.Sprintf("cookies file at storage/cookies.txt (%d bytes) - WARNING: no YouTube auth cookies found (expected one of: %s)", info.Size(), strings.Join(youtubeAuthCookies, ", "))
+		return fmt.Sprintf("no YouTube auth cookies found (expected: %s)", strings.Join(youtubeAuthCookies, ", "))
 	}
 
-	return fmt.Sprintf("using cookies from storage/cookies.txt (%d bytes, auth cookies: %s)", info.Size(), strings.Join(found, ", "))
+	return fmt.Sprintf("using cookies: %s", strings.Join(found, ", "))
 }

@@ -40,10 +40,17 @@ func Run(args ...string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
-type ytAttempt struct {
-	client  string
-	cookies bool
-	output  string
+func extractYtError(output string) string {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "ERROR:") {
+			return strings.TrimSpace(strings.TrimPrefix(line, "ERROR:"))
+		}
+	}
+	if len(lines) > 0 {
+		return strings.TrimSpace(lines[len(lines)-1])
+	}
+	return output
 }
 
 func useYTDLP(youtubeId string) (string, error) {
@@ -52,15 +59,16 @@ func useYTDLP(youtubeId string) (string, error) {
 		return "", err
 	}
 
-	cookieStatus := CookieStatus()
-
-	attempts := []ytAttempt{
-		{client: "android", cookies: false},
-		{client: "ios", cookies: false},
+	attempts := []struct {
+		client  string
+		cookies bool
+	}{
+		{client: "android"},
+		{client: "ios"},
 		{client: "web", cookies: true},
 	}
 
-	var results []string
+	var lastErr string
 
 	for _, a := range attempts {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -84,11 +92,7 @@ func useYTDLP(youtubeId string) (string, error) {
 			return strings.TrimSpace(string(out)), nil
 		}
 
-		label := fmt.Sprintf("client=%s", a.client)
-		if a.cookies {
-			label += "+cookies"
-		}
-		results = append(results, fmt.Sprintf("%s: %s", label, strings.TrimSpace(string(out))))
+		lastErr = extractYtError(string(out))
 	}
 
 	{
@@ -106,18 +110,16 @@ func useYTDLP(youtubeId string) (string, error) {
 			return strings.TrimSpace(string(out)), nil
 		}
 
-		results = append(results, fmt.Sprintf("fallback (any format): %s", strings.TrimSpace(string(out))))
+		lastErr = extractYtError(string(out))
 	}
 
-	msg := fmt.Sprintf("yt-dlp failed (%s)", cookieStatus)
+	msg := fmt.Sprintf("can't get audio: %s", lastErr)
 
 	if !HasCookies() {
-		msg += "\nUpload YouTube cookies via POST /api/user/cookies/ (export cookies.txt from your logged-in browser)"
-	} else {
-		msg += "\nCookies present but YouTube rejected all clients. Try re-exporting from a browser logged into YouTube."
+		msg += " (upload cookies via POST /api/user/cookies/)"
+	} else if strings.Contains(lastErr, "Sign in") {
+		msg += " (cookies found but rejected — re-export from a browser logged into YouTube)"
 	}
-
-	msg += "\n\nAttempts:\n" + strings.Join(results, "\n")
 
 	return "", errors.New(msg)
 }
@@ -187,7 +189,7 @@ func audioCacheStillValid(a *Audio) bool {
 
 func GetAudio(youtubeId string) (*Audio, error) {
 	if strings.TrimSpace(youtubeId) == "" {
-		return nil, fmt.Errorf("youtube id is empty")
+		return nil, errors.New("no video ID provided")
 	}
 
 	var cached Audio
@@ -196,7 +198,7 @@ func GetAudio(youtubeId string) (*Audio, error) {
 		return &cached, nil
 	}
 	if err != nil && !errors.Is(err, kv.KeyNotFoundError) {
-		return nil, fmt.Errorf("youtube audio cache read: %w", err)
+		return nil, fmt.Errorf("cache error: %w", err)
 	}
 
 	streamURL, err := useYTDLP(youtubeId)
@@ -206,12 +208,12 @@ func GetAudio(youtubeId string) (*Audio, error) {
 
 	info, ok := getExpireAndDurationFromURL(streamURL)
 	if !ok {
-		return nil, errors.New("failed to parse stream url metadata")
+		return nil, errors.New("bad stream response from YouTube")
 	}
 
 	ttl, ok := ttlFromExpire(info.ExpireAt)
 	if !ok {
-		return nil, errors.New("stream already expired")
+		return nil, errors.New("stream URL expired before it could be cached")
 	}
 
 	audio := Audio{
@@ -221,7 +223,7 @@ func GetAudio(youtubeId string) (*Audio, error) {
 	}
 
 	if err := youtubeSourceBucket.SetObject(youtubeId, audio, ttl); err != nil {
-		return nil, fmt.Errorf("youtube audio cache write: %w", err)
+		return nil, fmt.Errorf("cache write error: %w", err)
 	}
 
 	return &audio, nil
