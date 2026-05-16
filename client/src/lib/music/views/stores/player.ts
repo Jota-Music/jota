@@ -17,13 +17,38 @@ import {
 	broadcastSeek,
 	currentIndex,
 	queue,
+	shareNewTrack,
 	shareSnapshot,
 } from "@/lib/music/views/stores/queue";
 import { ws } from "@/lib/shared/api/socket";
+import { signal } from "@preact/signals";
+
+export const waitingForConsensus = signal(false);
 
 const SAME_TRACK_SEEK_EPS_S = 0.4;
 
 let remotePlaybackTail: Promise<void> = Promise.resolve();
+
+let _resolvePlay: (() => void) | null = null;
+
+export function handlePlay() {
+	waitingForConsensus.value = false;
+	_resolvePlay?.();
+	_resolvePlay = null;
+}
+
+function waitForPlay(): Promise<void> {
+	return new Promise((resolve) => {
+		const timeout = setTimeout(() => {
+			if (_resolvePlay === resolve) _resolvePlay = null;
+			resolve();
+		}, 30000);
+		_resolvePlay = () => {
+			clearTimeout(timeout);
+			resolve();
+		};
+	});
+}
 
 function enqueueRemotePlayback(fn: () => void | Promise<void>): Promise<void> {
 	const p = remotePlaybackTail.catch(() => {}).then(fn);
@@ -156,10 +181,6 @@ async function reconcileQueueAndPlayback(
 	const syncId = newPlayerId();
 	setPlayerToken(syncId);
 
-	if (source === "local") {
-		shareSnapshot({ position: 0, playing: true });
-	}
-
 	const startSeconds =
 		source === "remote" &&
 		remotePosition !== undefined &&
@@ -170,6 +191,10 @@ async function reconcileQueueAndPlayback(
 	await prepareSong(song, startSeconds);
 
 	if (source === "local") {
+		shareNewTrack(song.id, { position: 0, playing: true });
+		ws.send("ready");
+		waitingForConsensus.value = true;
+		await waitForPlay();
 		syncIfCurrentPlayer(syncId);
 	} else if (remotePlaying !== undefined && consumePlayerToken(syncId)) {
 		syncPlayerFromServer(remotePlaying);
@@ -177,8 +202,16 @@ async function reconcileQueueAndPlayback(
 }
 
 async function applyQueueState(nextQueue: Song[], nextIndex: number) {
+	const prevId = currentSong.value?.id ?? null;
+	const song =
+		nextIndex >= 0 && nextIndex < nextQueue.length
+			? nextQueue[nextIndex]
+			: null;
+	const sameTrack = prevId != null && song != null && prevId === song.id;
+
 	await reconcileQueueAndPlayback(nextQueue, nextIndex, "local", undefined);
-	shareSnapshot();
+
+	if (sameTrack) shareSnapshot();
 }
 
 export function applyRoomPlaybackFromPeer(
@@ -196,6 +229,48 @@ export function applyRoomPlaybackFromPeer(
 			position,
 		),
 	);
+}
+
+export function handleRemoteNewTrack(
+	nextQueue: Song[],
+	nextIndex: number,
+	playing: boolean,
+	position?: number,
+): Promise<void> {
+	return enqueueRemotePlayback(async () => {
+		queue.value = nextQueue;
+		currentIndex.value = nextIndex;
+
+		const song =
+			nextIndex >= 0 && nextIndex < nextQueue.length
+				? nextQueue[nextIndex]
+				: null;
+		if (!song) {
+			stopPlayer();
+			return;
+		}
+
+		const syncId = newPlayerId();
+		setPlayerToken(syncId);
+
+		const startSeconds =
+			position !== undefined && Number.isFinite(position)
+				? Math.max(0, position)
+				: undefined;
+
+		await prepareSong(song, startSeconds);
+
+		ws.send("ready");
+
+		waitingForConsensus.value = true;
+		await waitForPlay();
+
+		if (consumePlayerToken(syncId)) {
+			syncPlayerFromServer(playing);
+		}
+
+		preloadUpcomingSongs(nextQueue, nextIndex);
+	});
 }
 
 function newPlayerId() {
@@ -350,12 +425,18 @@ export async function playAt(i: number): Promise<void> {
 	currentIndex.value = i;
 	setPlayerToken(syncId);
 
-	shareSnapshot({ position: 0, playing: true });
+	const song = q[i];
 
-	await prepareSong(q[i]);
+	shareNewTrack(song.id, { position: 0, playing: true });
+
+	await prepareSong(song);
+
+	ws.send("ready");
+	waitingForConsensus.value = true;
+	await waitForPlay();
 
 	syncIfCurrentPlayer(syncId);
-	shareSnapshot();
+	preloadUpcomingSongs(q, i);
 }
 
 /**

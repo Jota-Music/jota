@@ -3,6 +3,8 @@ import { remoteTogglePlayPause } from "@/lib/music/views/stores/audio";
 import {
 	applyRemoteSeek,
 	applyRoomPlaybackFromPeer,
+	handlePlay,
+	handleRemoteNewTrack,
 } from "@/lib/music/views/stores/player";
 import {
 	playerSkeletonOn,
@@ -116,6 +118,27 @@ ws.on("seek", (message: SeekMessage) => {
 	const p = message.data?.position;
 	if (typeof p !== "number" || !Number.isFinite(p)) return;
 	void applyRemoteSeek(p);
+});
+
+interface NewTrackPayload {
+	queue: Song[];
+	index: number;
+	playing: boolean;
+	position?: number;
+}
+
+interface NewTrackMessage {
+	data: NewTrackPayload;
+}
+
+ws.on("new-track", (message: NewTrackMessage) => {
+	const { queue: q, index, playing, position } = message.data;
+	playerSkeletonOn.value = false;
+	void handleRemoteNewTrack(q, index, playing, position);
+});
+
+ws.on("play", () => {
+	handlePlay();
 });
 
 ws.on("error", ({ data }) => {

@@ -13,6 +13,7 @@ import {
     prevSong,
     seekFromLocalControl,
     toggleSong,
+    waitingForConsensus,
 } from "@/lib/music/views/stores/player";
 import { currentIndex, queue } from "@/lib/music/views/stores/queue";
 import {
@@ -83,7 +84,7 @@ export function usePlayer() {
     cover,
 
     // state
-    isLoading: isLoading.value,
+    isLoading: isLoading.value || waitingForConsensus.value,
     isPlaying: isPlaying.value,
     progress: progress.value,
     duration: audioDuration.value,

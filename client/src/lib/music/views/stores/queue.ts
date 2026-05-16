@@ -20,6 +20,16 @@ export function shareSnapshot(o?: { position?: number; playing?: boolean }) {
     });
 }
 
+export function shareNewTrack(trackId: string, o?: { position?: number; playing?: boolean }) {
+    ws.send("new-track", {
+        queue: queue.value,
+        index: currentIndex.value,
+        playing: o?.playing !== undefined ? o.playing : isPlaying.value,
+        position: o?.position !== undefined ? o.position : getPlaybackSeconds(),
+        trackId,
+    });
+}
+
 export function broadcastSeek(position: number) {
     ws.send("seek", { position });
 }
