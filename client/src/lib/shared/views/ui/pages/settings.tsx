@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/preact-query";
 import { Check, Upload, Trash2, X } from "lucide-preact";
 import { useCallback, useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
+import useMeta from "@/lib/shared/views/hooks/use-meta";
 
 async function getCookiesStatus(): Promise<{ configured: boolean }> {
   const res = await fetch("/api/user/cookies", {
@@ -33,6 +34,7 @@ async function deleteCookies(): Promise<void> {
 }
 
 function SettingsPage() {
+  useMeta("Jota | Settings", "Configure your Jota settings");
   const [, setLocation] = useLocation();
   const phase = authPhase.value;
 

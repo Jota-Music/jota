@@ -4,9 +4,14 @@ import getUserPlaylists, {
   type PlaylistSummary,
 } from "@/lib/music/app/get-user-playlists";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
+import useMeta from "@/lib/shared/views/hooks/use-meta";
 
 export function UserPage() {
   const { user } = useParams<{ user: string }>();
+  useMeta(
+    `Jota | ${user}'s playlists`,
+    `Browse playlists shared by ${user} on Jota`,
+  );
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["user-playlists", user],
