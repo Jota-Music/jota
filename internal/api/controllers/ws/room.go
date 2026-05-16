@@ -15,6 +15,9 @@ type Room struct {
 	Owner   *websocket.Conn
 	Guests  []*websocket.Conn
 	Private bool
+
+	pendingTrackId string
+	readyConns     map[*websocket.Conn]bool
 }
 
 var rooms = make(map[string]*Room)
@@ -92,11 +95,21 @@ func Leave(c *websocket.Conn, roomId string) {
 
 	wasOwner := room.Owner != nil && room.Owner == c
 
+	if room.pendingTrackId != "" {
+		delete(room.readyConns, c)
+	}
+
 	for i, guest := range room.Guests {
 		if guest == c {
 			room.Guests = append(room.Guests[:i], room.Guests[i+1:]...)
 			break
 		}
+	}
+
+	if room.pendingTrackId != "" && len(room.readyConns) == len(room.Guests) && len(room.Guests) > 0 {
+		room.pendingTrackId = ""
+		room.readyConns = nil
+		notifyRoom(roomId, "play", struct{}{})
 	}
 
 	if !wasOwner {
@@ -157,6 +170,29 @@ func canControlVisibility(c *websocket.Conn, roomId string, room *Room, sessionC
 	}
 	sessionName, sessErr := session.ValidateAndTouch(sessionCookie)
 	return sessErr == nil && sessionName == roomId
+}
+
+func TrackNewSong(c *websocket.Conn, roomId string, trackId string) {
+	room := rooms[roomId]
+	if room == nil {
+		return
+	}
+	room.pendingTrackId = trackId
+	room.readyConns = make(map[*websocket.Conn]bool)
+}
+
+func ConnReady(c *websocket.Conn, roomId string) {
+	room := rooms[roomId]
+	if room == nil || room.pendingTrackId == "" {
+		return
+	}
+	room.readyConns[c] = true
+
+	if len(room.readyConns) == len(room.Guests) {
+		room.pendingTrackId = ""
+		room.readyConns = nil
+		notifyRoom(roomId, "play", struct{}{})
+	}
 }
 
 func SetRoomVisibility(c *websocket.Conn, roomId string, private bool, sessionCookie string) {

@@ -95,6 +95,33 @@ func WS(app *fiber.App) {
 					continue
 				}
 				ws_controller.Seek(c, room, p.Position)
+			case "new-track":
+				log.Printf("ws: new-track (room %s)", room)
+				var p struct {
+					Queue    []music.Song `json:"queue"`
+					Index    int          `json:"index"`
+					Playing  bool         `json:"playing"`
+					Position *float64     `json:"position,omitempty"`
+					TrackId  string       `json:"trackId"`
+				}
+				if err := json.Unmarshal(msg.Params, &p); err != nil {
+					log.Printf("ws: new-track bad params (room %s): %v", room, err)
+					continue
+				}
+				sn := ws_controller.SnapshotData{
+					Queue:    make([]any, len(p.Queue)),
+					Index:    p.Index,
+					Playing:  p.Playing,
+					Position: p.Position,
+				}
+				for i := range p.Queue {
+					sn.Queue[i] = p.Queue[i]
+				}
+				ws_controller.Broadcast(c, room, "new-track", sn)
+				ws_controller.TrackNewSong(c, room, p.TrackId)
+			case "ready":
+				log.Printf("ws: ready (room %s)", room)
+				ws_controller.ConnReady(c, room)
 			case "set-visibility":
 				var p struct {
 					Visibility string `json:"visibility"`
