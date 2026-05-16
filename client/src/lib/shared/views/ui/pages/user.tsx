@@ -38,7 +38,7 @@ export function UserPage() {
         ) : playlists.length === 0 ? (
           <div class="p-4 rounded-md">No se encontraron playlists.</div>
         ) : (
-          <div class="grid grid-cols-2 lg:grid-cols-3 gap-8">
+          <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
             {playlists.map((p: PlaylistSummary) => (
               <Link key={p.id} href={`/playlist/${p.id}`}>
                 <div class="rounded-md overflow-hidden cursor-pointer">
