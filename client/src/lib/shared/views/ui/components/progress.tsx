@@ -19,6 +19,10 @@ function Progress({
     const trackRef = useRef<HTMLDivElement>(null);
     const [dragging, setDragging] = useState(false);
 
+    function getClientX(e: MouseEvent | TouchEvent): number {
+        return "touches" in e ? e.touches[0].clientX : e.clientX;
+    }
+
     function update(clientX: number) {
         if (!trackRef.current) return;
 
@@ -31,27 +35,32 @@ function Progress({
         onChange?.(scaledValue);
     }
 
-    function onMouseDown(e: MouseEvent) {
+    function onPointerDown(e: MouseEvent | TouchEvent) {
         setDragging(true);
-        update(e.clientX);
+        update(getClientX(e));
     }
 
-    function onMouseMove(e: MouseEvent) {
+    function onPointerMove(e: MouseEvent | TouchEvent) {
         if (!dragging) return;
-        update(e.clientX);
+        e.preventDefault();
+        update(getClientX(e));
     }
 
-    function onMouseUp() {
+    function onPointerUp() {
         setDragging(false);
     }
 
     useEffect(() => {
-        window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mouseup", onMouseUp);
+        window.addEventListener("mousemove", onPointerMove);
+        window.addEventListener("mouseup", onPointerUp);
+        window.addEventListener("touchmove", onPointerMove, { passive: false });
+        window.addEventListener("touchend", onPointerUp);
 
         return () => {
-            window.removeEventListener("mousemove", onMouseMove);
-            window.removeEventListener("mouseup", onMouseUp);
+            window.removeEventListener("mousemove", onPointerMove);
+            window.removeEventListener("mouseup", onPointerUp);
+            window.removeEventListener("touchmove", onPointerMove);
+            window.removeEventListener("touchend", onPointerUp);
         };
     }, [dragging]);
 
@@ -64,13 +73,13 @@ function Progress({
     return (
         <div
             ref={trackRef}
-            onMouseDown={onMouseDown}
+            onMouseDown={onPointerDown}
+            onTouchStart={onPointerDown}
             class={cn(
-                "relative h-2 w-full cursor-pointer select-none rounded-full bg-neutral-300",
+                "relative h-2 w-full cursor-pointer select-none rounded-full bg-neutral-300 touch-none",
                 className
             )}
         >
-            {/* Fill */}
             <div
                 class="absolute left-0 top-0 h-full bg-current rounded-full"
                 style={{
@@ -78,7 +87,6 @@ function Progress({
                 }}
             />
 
-            {/* Thumb */}
             <div
                 class={cn(
                     "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-current transition-transform",
