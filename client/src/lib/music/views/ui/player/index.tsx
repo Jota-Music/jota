@@ -271,7 +271,7 @@ export function Player() {
 		return playerSkeletonOn.value ? <PlayerSkeleton /> : null;
 	}
 
-	const { song, cover, isLoading, isPlaying, toggleSong } = player;
+	const { song, cover, isLoading, isPlaying, toggleSong, progress, duration, seek } = player;
 
 	return (
 		<>
@@ -281,6 +281,16 @@ export function Player() {
 
 			{!playerModalOpen.value && (
 				<div class="block md:hidden fixed bottom-0 left-0 right-0 z-40 bg-stone-950 border-t border-white/10">
+					<div class="px-0 pt-1 text-(--dominant-color)">
+						<Progress
+							value={progress}
+							max={duration}
+							min={0}
+							onChange={seek}
+							class="h-[3px] w-full rounded-none border-0 bg-neutral-800"
+						/>
+					</div>
+
 					<button
 						type="button"
 						onClick={() => {
