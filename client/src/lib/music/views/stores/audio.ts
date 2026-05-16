@@ -7,23 +7,23 @@ const VOLUME_STORAGE_KEY = "audio-volume";
 const MUTED_STORAGE_KEY = "audio-muted";
 
 function parseStoredVolume(raw: string | null): number {
-    if (raw === null) return 1;
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 1) {
-        return parsed;
-    }
-    return 1;
+	if (raw === null) return 1;
+	const parsed = Number(raw);
+	if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 1) {
+		return parsed;
+	}
+	return 1;
 }
 
 function parseStoredMuted(raw: string | null): boolean {
-    if (raw === null) return false;
-    if (raw === "1" || raw === "true") return true;
-    if (raw === "0" || raw === "false") return false;
-    return false;
+	if (raw === null) return false;
+	if (raw === "1" || raw === "true") return true;
+	if (raw === "0" || raw === "false") return false;
+	return false;
 }
 
 function checkTabMute(): boolean {
-    return muted.value || !isMainTab.value;
+	return muted.value || !isMainTab.value;
 }
 
 /* -------------------------------------------------
@@ -35,7 +35,13 @@ let audio: HTMLAudioElement | null = null;
 let onTrackEndedCallback: (() => void) | null = null;
 
 export function setOnTrackEnded(fn: () => void) {
-    onTrackEndedCallback = fn;
+	onTrackEndedCallback = fn;
+}
+
+let _broadcastToggle: (() => void) | null = null;
+
+export function setBroadcastToggle(fn: (() => void) | null) {
+	_broadcastToggle = fn;
 }
 
 /* -------------------------------------------------
@@ -43,17 +49,17 @@ export function setOnTrackEnded(fn: () => void) {
 -------------------------------------------------- */
 
 function getInitialVolume() {
-    if (typeof window !== "undefined") {
-        return parseStoredVolume(localStorage.getItem(VOLUME_STORAGE_KEY));
-    }
-    return 1;
+	if (typeof window !== "undefined") {
+		return parseStoredVolume(localStorage.getItem(VOLUME_STORAGE_KEY));
+	}
+	return 1;
 }
 
 function getInitialMuted() {
-    if (typeof window !== "undefined") {
-        return parseStoredMuted(localStorage.getItem(MUTED_STORAGE_KEY));
-    }
-    return false;
+	if (typeof window !== "undefined") {
+		return parseStoredMuted(localStorage.getItem(MUTED_STORAGE_KEY));
+	}
+	return false;
 }
 
 export const isLoading = signal(false);
@@ -74,119 +80,120 @@ export const currentSong = signal<Song | null>(null);
 -------------------------------------------------- */
 
 function waitUntilBufferedEnough(el: HTMLAudioElement): Promise<void> {
-    if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-        return Promise.resolve();
-    }
-    return new Promise((resolve, reject) => {
-        const done = () => {
-            el.removeEventListener("canplaythrough", onReady);
-            el.removeEventListener("canplay", onReady);
-            el.removeEventListener("error", onErr);
-        };
-        const onReady = () => {
-            done();
-            resolve();
-        };
-        const onErr = () => {
-            done();
-            reject(new Error("audio load error"));
-        };
-        el.addEventListener("canplaythrough", onReady, { once: true });
-        el.addEventListener("canplay", onReady, { once: true });
-        el.addEventListener("error", onErr, { once: true });
-    });
+	if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+		return Promise.resolve();
+	}
+	return new Promise((resolve, reject) => {
+		const done = () => {
+			el.removeEventListener("canplaythrough", onReady);
+			el.removeEventListener("canplay", onReady);
+			el.removeEventListener("error", onErr);
+		};
+		const onReady = () => {
+			done();
+			resolve();
+		};
+		const onErr = () => {
+			done();
+			reject(new Error("audio load error"));
+		};
+		el.addEventListener("canplaythrough", onReady, { once: true });
+		el.addEventListener("canplay", onReady, { once: true });
+		el.addEventListener("error", onErr, { once: true });
+	});
 }
 
-function clampStartSeconds(instance: HTMLAudioElement, seconds: number): number {
-    if (!Number.isFinite(seconds) || seconds < 0) return 0;
-    const d = instance.duration;
-    if (Number.isFinite(d) && d > 0) {
-        const eps = 0.05;
-        return Math.min(seconds, Math.max(0, d - eps));
-    }
-    return seconds;
+function clampStartSeconds(
+	instance: HTMLAudioElement,
+	seconds: number,
+): number {
+	if (!Number.isFinite(seconds) || seconds < 0) return 0;
+	const d = instance.duration;
+	if (Number.isFinite(d) && d > 0) {
+		const eps = 0.05;
+		return Math.min(seconds, Math.max(0, d - eps));
+	}
+	return seconds;
 }
 
 async function loadSongIntoPlayer(
-    song: Song,
-    autostart: boolean,
-    startSeconds?: number,
+	song: Song,
+	autostart: boolean,
+	startSeconds?: number,
 ) {
-    currentSong.value = song;
+	currentSong.value = song;
 
-    audioDuration.value = 0;
+	audioDuration.value = 0;
 
-    isLoading.value = true;
+	isLoading.value = true;
 
-    const data = await AudioCache.get(song);
+	const data = await AudioCache.get(song);
 
-    if (audio) {
-        audio.pause();
-        audio.src = "";
-        audio.load();
-        audio = null;
-    }
+	if (audio) {
+		audio.pause();
+		audio.src = "";
+		audio.load();
+		audio = null;
+	}
 
-    const instance = new Audio(data.url);
-    audio = instance;
+	const instance = new Audio(data.url);
+	audio = instance;
 
-    instance.preload = "auto";
-    instance.volume = volume.value;
-    instance.muted = checkTabMute();
-    instance.currentTime = 0;
+	instance.preload = "auto";
+	instance.volume = volume.value;
+	instance.muted = checkTabMute();
+	instance.currentTime = 0;
 
-    bindEvents(instance);
+	bindEvents(instance);
 
-    const d0 = instance.duration;
-    if (Number.isFinite(d0) && d0 > 0) {
-        audioDuration.value = d0;
-    }
+	const d0 = instance.duration;
+	if (Number.isFinite(d0) && d0 > 0) {
+		audioDuration.value = d0;
+	}
 
-    const wantsStart =
-        startSeconds != null &&
-        Number.isFinite(startSeconds) &&
-        startSeconds > 0;
+	const wantsStart =
+		startSeconds != null && Number.isFinite(startSeconds) && startSeconds > 0;
 
-    if (autostart) {
-        if (wantsStart) {
-            await waitUntilBufferedEnough(instance);
-            const t = clampStartSeconds(instance, startSeconds);
-            instance.currentTime = t;
-            progress.value = t;
-        }
-        try {
-            await instance.play();
-            isPlaying.value = true;
-        } catch {
-            isPlaying.value = false;
-        }
-    } else {
-        isPlaying.value = false;
-        await waitUntilBufferedEnough(instance);
-        if (wantsStart) {
-            const t = clampStartSeconds(instance, startSeconds);
-            instance.currentTime = t;
-            progress.value = t;
-        }
-    }
+	if (autostart) {
+		if (wantsStart) {
+			await waitUntilBufferedEnough(instance);
+			const t = clampStartSeconds(instance, startSeconds);
+			instance.currentTime = t;
+			progress.value = t;
+		}
+		try {
+			await instance.play();
+			isPlaying.value = true;
+		} catch {
+			isPlaying.value = false;
+		}
+	} else {
+		isPlaying.value = false;
+		await waitUntilBufferedEnough(instance);
+		if (wantsStart) {
+			const t = clampStartSeconds(instance, startSeconds);
+			instance.currentTime = t;
+			progress.value = t;
+		}
+	}
 
-    isLoading.value = false;
+	isLoading.value = false;
 }
 
 export async function play(song: Song, startSeconds?: number) {
-    await loadSongIntoPlayer(song, true, startSeconds);
+	await loadSongIntoPlayer(song, true, startSeconds);
 }
 
 export async function prepareSong(song: Song, startSeconds?: number) {
-    await loadSongIntoPlayer(song, false, startSeconds);
+	await loadSongIntoPlayer(song, false, startSeconds);
 }
 
 export function getPlaybackSeconds(): number {
-    if (audio && Number.isFinite(audio.currentTime)) {
-        return Math.max(0, audio.currentTime);
-    }
-    const p = progress.value;
-    return Number.isFinite(p) ? Math.max(0, p) : 0;
+	if (audio && Number.isFinite(audio.currentTime)) {
+		return Math.max(0, audio.currentTime);
+	}
+	const p = progress.value;
+	return Number.isFinite(p) ? Math.max(0, p) : 0;
 }
 
 /* -------------------------------------------------
@@ -194,86 +201,102 @@ export function getPlaybackSeconds(): number {
 -------------------------------------------------- */
 
 export function pause() {
-    audio?.pause();
+	audio?.pause();
+	_broadcastToggle?.();
 }
 
 function setPlayerPosition(seconds: number) {
-    if (!Number.isFinite(seconds)) return;
-    if (audio) {
-        audio.currentTime = seconds;
-    }
-    progress.value = seconds;
+	if (!Number.isFinite(seconds)) return;
+	if (audio) {
+		audio.currentTime = seconds;
+	}
+	progress.value = seconds;
 }
 
 export function seek(time: number) {
-    setPlayerPosition(time);
+	setPlayerPosition(time);
 }
 
 export function socketSeek(time: number) {
-    setPlayerPosition(time);
+	setPlayerPosition(time);
 }
 
 export function setVolume(value: number) {
-    const v = Math.max(0, Math.min(1, value));
-    volume.value = v;
-    if (audio) audio.volume = v;
-    if (typeof window !== "undefined") {
-        try {
-            localStorage.setItem(VOLUME_STORAGE_KEY, String(v));
-        } catch {
-            // ignore storage errors
-        }
-    }
+	const v = Math.max(0, Math.min(1, value));
+	volume.value = v;
+	if (audio) audio.volume = v;
+	if (typeof window !== "undefined") {
+		try {
+			localStorage.setItem(VOLUME_STORAGE_KEY, String(v));
+		} catch {
+			// ignore storage errors
+		}
+	}
 }
 
 export function setMuted(value: boolean) {
-    muted.value = value;
-    if (audio) audio.muted = checkTabMute();
-    if (typeof window !== "undefined") {
-        try {
-            localStorage.setItem(MUTED_STORAGE_KEY, value ? "1" : "0");
-        } catch {
-            // ignore storage errors
-        }
-    }
+	muted.value = value;
+	if (audio) audio.muted = checkTabMute();
+	if (typeof window !== "undefined") {
+		try {
+			localStorage.setItem(MUTED_STORAGE_KEY, value ? "1" : "0");
+		} catch {
+			// ignore storage errors
+		}
+	}
 }
 
 export async function togglePlayPause(): Promise<boolean> {
-    if (!audio) return false;
-    if (audio.paused) {
-        try {
-            await audio.play();
-        } catch {
-            return false;
-        }
-    } else {
-        audio.pause();
-    }
-    return !audio.paused;
+	if (!audio) return false;
+	if (audio.paused) {
+		try {
+			await audio.play();
+		} catch {
+			return false;
+		}
+	} else {
+		audio.pause();
+	}
+	_broadcastToggle?.();
+	return !audio.paused;
+}
+
+export async function remoteTogglePlayPause(): Promise<boolean> {
+	if (!audio) return false;
+	if (audio.paused) {
+		try {
+			await audio.play();
+		} catch {
+			return false;
+		}
+	} else {
+		audio.pause();
+	}
+	return !audio.paused;
 }
 
 export function syncPlayerFromServer(playing: boolean) {
-    if (audio) {
-        if (playing) {
-            void audio.play().catch(() => { });
-        } else {
-            audio.pause();
-        }
-    }
-    isPlaying.value = playing;
+	if (audio) {
+		if (playing) {
+			void audio.play().catch(() => {});
+		} else {
+			audio.pause();
+		}
+	}
+	isPlaying.value = playing;
 }
 
 export function stopPlayer() {
-    if (audio) {
-        audio.pause();
-        audio.src = "";
-        audio.load();
-        audio = null;
-    }
-    currentSong.value = null;
-    progress.value = 0;
-    audioDuration.value = 0;
-    isPlaying.value = false;
+	if (audio) {
+		audio.pause();
+		audio.src = "";
+		audio.load();
+		audio = null;
+	}
+	currentSong.value = null;
+	progress.value = 0;
+	audioDuration.value = 0;
+	isPlaying.value = false;
 }
 
 /* -------------------------------------------------
@@ -281,52 +304,52 @@ export function stopPlayer() {
 -------------------------------------------------- */
 
 function bindEvents(a: HTMLAudioElement) {
-    const syncDuration = () => {
-        const d = a.duration;
-        audioDuration.value = Number.isFinite(d) && d > 0 ? d : 0;
-    };
+	const syncDuration = () => {
+		const d = a.duration;
+		audioDuration.value = Number.isFinite(d) && d > 0 ? d : 0;
+	};
 
-    a.addEventListener("loadedmetadata", syncDuration);
-    a.addEventListener("durationchange", syncDuration);
+	a.addEventListener("loadedmetadata", syncDuration);
+	a.addEventListener("durationchange", syncDuration);
 
-    a.onplay = () => {
-        isPlaying.value = true;
-    };
+	a.onplay = () => {
+		isPlaying.value = true;
+	};
 
-    a.onpause = () => {
-        isPlaying.value = false;
-    };
+	a.onpause = () => {
+		isPlaying.value = false;
+	};
 
-    a.ontimeupdate = () => {
-        progress.value = a.currentTime;
-    };
+	a.ontimeupdate = () => {
+		progress.value = a.currentTime;
+	};
 
-    a.onended = () => {
-        progress.value = 0;
-        onTrackEndedCallback?.();
-    };
+	a.onended = () => {
+		progress.value = 0;
+		onTrackEndedCallback?.();
+	};
 }
 
 export function toggleMute() {
-    setMuted(!muted.value);
+	setMuted(!muted.value);
 }
 
 effect(() => {
-    muted.value;
-    isMainTab.value;
-    if (audio) audio.muted = checkTabMute();
+	muted.value;
+	isMainTab.value;
+	if (audio) audio.muted = checkTabMute();
 });
 
 if (typeof window !== "undefined") {
-    window.addEventListener("storage", (e: StorageEvent) => {
-        if (e.storageArea !== localStorage) return;
-        if (e.key === VOLUME_STORAGE_KEY) {
-            const v = parseStoredVolume(e.newValue);
-            volume.value = v;
-            if (audio) audio.volume = v;
-        } else if (e.key === MUTED_STORAGE_KEY) {
-            muted.value = parseStoredMuted(e.newValue);
-            if (audio) audio.muted = checkTabMute();
-        }
-    });
+	window.addEventListener("storage", (e: StorageEvent) => {
+		if (e.storageArea !== localStorage) return;
+		if (e.key === VOLUME_STORAGE_KEY) {
+			const v = parseStoredVolume(e.newValue);
+			volume.value = v;
+			if (audio) audio.volume = v;
+		} else if (e.key === MUTED_STORAGE_KEY) {
+			muted.value = parseStoredMuted(e.newValue);
+			if (audio) audio.muted = checkTabMute();
+		}
+	});
 }
