@@ -43,7 +43,9 @@ export async function get<T>(
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch ${route}: ${response.statusText}`);
+      const body = await response.text().catch(() => "");
+      const detail = body || response.statusText;
+      throw new Error(`Failed to fetch ${route}: ${detail}`);
     }
 
     return response.json() as T;
@@ -69,7 +71,9 @@ export async function post<T>(
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to post ${route}: ${response.statusText}`);
+      const body = await response.text().catch(() => "");
+      const detail = body || response.statusText;
+      throw new Error(`Failed to post ${route}: ${detail}`);
     }
 
     return response.json() as T;

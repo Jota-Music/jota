@@ -6,6 +6,7 @@ import {
 	handlePlay,
 	handleRemoteNewTrack,
 } from "@/lib/music/views/stores/player";
+import { addError } from "@/lib/shared/views/stores/errors";
 import {
 	playerSkeletonOn,
 	shareSnapshot,
@@ -27,14 +28,17 @@ roomState.subscribe(() => {
 });
 
 ws.on("room-forbidden", () => {
+	addError("Room is no longer accessible");
 	rotateGuestRoomIfForbidden();
 });
 
 ws.on("join-denied", () => {
+	addError("Could not join room — access denied");
 	rotateGuestRoomIfForbidden();
 });
 
 ws.on("kicked", () => {
+	addError("You have been removed from the room");
 	rotateGuestRoomIfForbidden();
 });
 

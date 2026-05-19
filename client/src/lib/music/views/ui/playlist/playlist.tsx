@@ -162,8 +162,15 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	if (isError) {
 		return (
-			<div className="flex min-h-0 flex-1 flex-col p-4 text-sm text-red-400">
-				Error loading playlist
+			<div className="flex min-h-0 flex-1 flex-col items-start gap-3 p-4 text-sm">
+				<p className="text-red-400">Failed to load playlist</p>
+				<button
+					onClick={handleRefresh}
+					disabled={refreshing.value}
+					className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50 transition-colors cursor-pointer"
+				>
+					Retry
+				</button>
 			</div>
 		);
 	}

@@ -1,10 +1,14 @@
 import { signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Link, useParams } from "wouter-preact";
-import { RefreshCw } from "lucide-preact";
+import { Heart, RefreshCw } from "lucide-preact";
 import getUserPlaylists, {
   type PlaylistSummary,
 } from "@/lib/music/app/get-user-playlists";
+import {
+  followedUsers,
+  toggleFollow,
+} from "@/lib/shared/views/stores/follows";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
 
@@ -39,7 +43,18 @@ export function UserPage() {
   if (isError) {
     return (
       <DefaultLayout>
-        <div class="p-6 text-sm rounded-md">Error loading playlists</div>
+        <div class="flex flex-col items-start gap-3 p-6 text-sm">
+          <p class="text-red-400">Failed to load playlists for @{user}</p>
+          <button
+            onClick={() => {
+              queryClient.removeQueries({ queryKey: ["user-playlists", user] });
+              queryClient.fetchQuery({ queryKey: ["user-playlists", user], queryFn: () => getUserPlaylists(user ?? "", true) });
+            }}
+            class="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
       </DefaultLayout>
     );
   }
@@ -51,6 +66,26 @@ export function UserPage() {
           <h2 class="text-xl font-semibold leading-tight">
             Playlists de {user}
           </h2>
+          <button
+            onClick={() => toggleFollow(user ?? "")}
+            class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white ${
+              followedUsers.value.includes(user ?? "")
+                ? "text-red-400"
+                : "text-zinc-400"
+            }`}
+            aria-label={
+              followedUsers.value.includes(user ?? "")
+                ? "Unfollow user"
+                : "Follow user"
+            }
+          >
+            <Heart
+              size={14}
+              class={
+                followedUsers.value.includes(user ?? "") ? "fill-current" : ""
+              }
+            />
+          </button>
           <button
             onClick={handleRefresh}
             disabled={refreshing.value}

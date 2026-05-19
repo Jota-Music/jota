@@ -1,6 +1,7 @@
 import { effect, signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
+import { addError } from "@/lib/shared/views/stores/errors";
 import { isMainTab } from "@/lib/shared/views/ui/hooks/tabs";
 
 const VOLUME_STORAGE_KEY = "audio-volume";
@@ -166,6 +167,7 @@ async function loadSongIntoPlayer(
 			isPlaying.value = true;
 		} catch {
 			isPlaying.value = false;
+			addError("Playback failed — check your connection or try a different song");
 		}
 	} else {
 		isPlaying.value = false;
@@ -252,6 +254,7 @@ export async function togglePlayPause(): Promise<boolean> {
 		try {
 			await audio.play();
 		} catch {
+			addError("Playback failed — check your connection");
 			return false;
 		}
 	} else {
@@ -267,6 +270,7 @@ export async function remoteTogglePlayPause(): Promise<boolean> {
 		try {
 			await audio.play();
 		} catch {
+			addError("Playback failed — check your connection");
 			return false;
 		}
 	} else {
@@ -278,7 +282,9 @@ export async function remoteTogglePlayPause(): Promise<boolean> {
 export function syncPlayerFromServer(playing: boolean) {
 	if (audio) {
 		if (playing) {
-			void audio.play().catch(() => {});
+			void audio.play().catch(() => {
+				addError("Playback failed — check your connection");
+			});
 		} else {
 			audio.pause();
 		}
