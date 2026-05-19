@@ -66,13 +66,19 @@ func (s *SpotifyService) getTokenFromRemote() (*userToken, error) {
 	// REMOTE MANAGER MODE
 	// =========================
 	if browserInstance != "" {
-		l := launcher.MustNewManaged(browserInstance)
+		l, err := launcher.NewManaged(browserInstance)
+		if err != nil {
+			log.Printf("spotify: remote browser manager at %s: %v, falling back to local mode", browserInstance, err)
+		} else {
+			l.Set("disable-http2")
+			browser = rod.New().Client(l.MustClient())
+		}
+	}
 
-		browser = rod.New().Client(l.MustClient())
-	} else {
-		// =========================
-		// LOCAL MODE
-		// =========================
+	// =========================
+	// LOCAL MODE (fallback)
+	// =========================
+	if browser == nil {
 		u, err := launcher.New().
 			Leakless(false).
 			Headless(true).

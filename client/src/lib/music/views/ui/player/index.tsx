@@ -285,7 +285,7 @@ function DraggableSheet({
 		function onPointerDown(e: PointerEvent) {
 			const target = e.target as HTMLElement;
 			if (target.closest("button, input, a, select, textarea, form, [role='slider'], [role='button'], [role='link'], [class*='touch-none']")) return;
-			if (content.scrollTop > 0) return;
+			if (content!.scrollTop > 0) return;
 
 			isDragging.current = true;
 			dragStartY.current = e.clientY;
@@ -293,7 +293,7 @@ function DraggableSheet({
 			translateY.current = 0;
 			if (sheetRef.current) sheetRef.current.style.transition = "none";
 			if (backdropRef.current) backdropRef.current.style.transition = "none";
-			content.setPointerCapture(e.pointerId);
+			content!.setPointerCapture(e.pointerId);
 		}
 
 		content.addEventListener("pointerdown", onPointerDown);
