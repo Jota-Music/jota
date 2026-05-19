@@ -174,6 +174,54 @@ function DraggableSheet({
 	const CLOSE_THRESHOLD = 120;
 	const FLING_VELOCITY = 0.5;
 
+	function closeSheet() {
+		if (sheetRef.current) {
+			sheetRef.current.style.transition = "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)";
+			sheetRef.current.style.transform = "translateY(100%)";
+		}
+		if (backdropRef.current) {
+			backdropRef.current.style.transition = "opacity 0.25s ease";
+			backdropRef.current.style.opacity = "0";
+		}
+		setTimeout(() => {
+			onCloseRef.current();
+			translateY.current = 0;
+		}, 280);
+	}
+
+	function snapBack() {
+		if (sheetRef.current) {
+			sheetRef.current.style.transition =
+				"transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)";
+			sheetRef.current.style.transform = "translateY(0)";
+		}
+		if (backdropRef.current) {
+			backdropRef.current.style.transition = "opacity 0.4s ease";
+			backdropRef.current.style.opacity = "1";
+		}
+	}
+
+	// Entry animation
+	useEffect(() => {
+		const sheet = sheetRef.current;
+		const backdrop = backdropRef.current;
+		if (!sheet || !backdrop) return;
+
+		sheet.style.transition = "none";
+		sheet.style.transform = "translateY(100%)";
+		backdrop.style.transition = "none";
+		backdrop.style.opacity = "0";
+
+		void sheet.offsetHeight;
+
+		requestAnimationFrame(() => {
+			sheet.style.transition = "transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)";
+			sheet.style.transform = "translateY(0)";
+			backdrop.style.transition = "opacity 0.3s ease";
+			backdrop.style.opacity = "1";
+		});
+	}, []);
+
 	function endDrag(e: PointerEvent) {
 		isDragging.current = false;
 
@@ -182,28 +230,9 @@ function DraggableSheet({
 		const shouldClose = translateY.current > CLOSE_THRESHOLD || velocity > FLING_VELOCITY;
 
 		if (shouldClose) {
-			if (sheetRef.current) {
-				sheetRef.current.style.transition = "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)";
-				sheetRef.current.style.transform = "translateY(100%)";
-			}
-			if (backdropRef.current) {
-				backdropRef.current.style.transition = "opacity 0.25s ease";
-				backdropRef.current.style.opacity = "0";
-			}
-			setTimeout(() => {
-				onCloseRef.current();
-				translateY.current = 0;
-			}, 280);
+			closeSheet();
 		} else {
-			if (sheetRef.current) {
-				sheetRef.current.style.transition =
-					"transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)";
-				sheetRef.current.style.transform = "translateY(0)";
-			}
-			if (backdropRef.current) {
-				backdropRef.current.style.transition = "opacity 0.4s ease";
-				backdropRef.current.style.opacity = "1";
-			}
+			snapBack();
 		}
 	}
 
@@ -283,7 +312,7 @@ function DraggableSheet({
 			<div
 				ref={backdropRef}
 				class="absolute inset-0 bg-black/60"
-				onClick={onClose}
+				onClick={closeSheet}
 			/>
 			<div
 				ref={sheetRef}
@@ -345,13 +374,13 @@ export function Player() {
 				<FullPlayerContent {...player} />
 			</div>
 
-			{!playerModalOpen.value && (
-				<div
-					class="block md:hidden fixed bottom-0 left-0 right-0 z-40 bg-stone-950 border-t border-white/10"
-					onPointerDown={onBarPointerDown}
-					onPointerMove={onBarPointerMove}
-					onPointerUp={onBarPointerUp}
-				>
+			<div
+				class="block md:hidden fixed bottom-0 left-0 right-0 z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out"
+				style={`transform: translateY(${playerModalOpen.value ? '100%' : '0'})`}
+				onPointerDown={onBarPointerDown}
+				onPointerMove={onBarPointerMove}
+				onPointerUp={onBarPointerUp}
+			>
 					<div class="px-0 pt-1 text-(--dominant-color)">
 						<Progress
 							value={progress}
@@ -418,7 +447,6 @@ export function Player() {
 						</div>
 					</div>
 				</div>
-			)}
 
 			{playerModalOpen.value && (
 				<DraggableSheet onClose={() => { playerModalOpen.value = false; }}>
