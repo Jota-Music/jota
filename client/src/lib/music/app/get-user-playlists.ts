@@ -14,9 +14,12 @@ export type PlaylistSummary =
 
 export default async function getUserPlaylists(
   user: string,
+  revalidate?: boolean,
 ): Promise<PlaylistSummary[]> {
   try {
-    const playlists = await get<PlaylistSummary[]>(`/music/playlists/${user}`);
+    const playlists = await get<PlaylistSummary[]>(`/music/playlists/${user}`, {
+      query: revalidate ? { revalidate: "1" } : undefined,
+    });
 
     return playlists;
   } catch (error) {

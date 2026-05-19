@@ -20,9 +20,11 @@ export default async function getPlaylist(
     }
 }
 
-export async function getFullPlaylist(id: string): Promise<Playlist> {
+export async function getFullPlaylist(id: string, revalidate?: boolean): Promise<Playlist> {
     try {
-        const response = await get<Playlist>(`/music/playlist/full/${id}`);
+        const response = await get<Playlist>(`/music/playlist/full/${id}`, {
+            query: revalidate ? { revalidate: "1" } : undefined,
+        });
         return response;
     } catch (error) {
         console.error(error);

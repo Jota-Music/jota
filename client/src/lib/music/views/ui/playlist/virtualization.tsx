@@ -126,7 +126,7 @@ export function Virtualization({ songs }: Props) {
 											e.stopPropagation();
 											enqueue(song);
 										}}
-										class="rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-amber-300"
+										class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-amber-300"
 									>
 										<ListPlus size={18} strokeWidth={2} />
 									</button>

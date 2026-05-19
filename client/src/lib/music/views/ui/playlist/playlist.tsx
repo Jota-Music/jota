@@ -1,6 +1,6 @@
 import { computed, effect, signal } from "@preact/signals";
-import { useQuery } from "@tanstack/preact-query";
-import { ArrowUpDown, Loader, Search } from "lucide-preact";
+import { useQuery, useQueryClient } from "@tanstack/preact-query";
+import { ArrowUpDown, Loader, RefreshCw, Search } from "lucide-preact";
 import { getFullPlaylist } from "@/lib/music/app/get-playlist";
 import type { Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
@@ -124,10 +124,23 @@ effect(() => {
 /* ------------------ Component ------------------ */
 
 export default function PlaylistPlain({ id }: { id: string }) {
+	const queryClient = useQueryClient();
+	const refreshing = signal(false);
+
 	const { data, isLoading, isError } = useQuery<PlaylistResponse>({
 		queryKey: ["playlist", id],
 		queryFn: () => getFullPlaylist(id),
 	});
+
+	async function handleRefresh() {
+		refreshing.value = true;
+		queryClient.removeQueries({ queryKey: ["playlist", id] });
+		await queryClient.fetchQuery({
+			queryKey: ["playlist", id],
+			queryFn: () => getFullPlaylist(id, true),
+		});
+		refreshing.value = false;
+	}
 
 	const songs = normalizeSongs(data);
 
@@ -160,7 +173,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
             {/* <pre>
                 {JSON.stringify(data, null, 2)}
             </pre> */}
-			<div className="grid grid-cols-[1fr_auto] gap-2">
+			<div className="grid grid-cols-[1fr_auto_auto] gap-2">
 				{/* search */}
 				<div className="relative flex-1">
 					<Search
@@ -198,6 +211,18 @@ export default function PlaylistPlain({ id }: { id: string }) {
 						<option value="duration-desc">Longest</option>
 					</select>
 				</div>
+
+				{/* refresh */}
+				<button
+					onClick={handleRefresh}
+					disabled={refreshing.value}
+					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
+				>
+					<RefreshCw
+						size={16}
+						class={refreshing.value ? "animate-spin" : ""}
+					/>
+				</button>
 			</div>
 
 			{isLoading ? (

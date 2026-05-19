@@ -1,5 +1,7 @@
-import { useQuery } from "@tanstack/preact-query";
+import { signal } from "@preact/signals";
+import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Link, useParams } from "wouter-preact";
+import { RefreshCw } from "lucide-preact";
 import getUserPlaylists, {
   type PlaylistSummary,
 } from "@/lib/music/app/get-user-playlists";
@@ -13,11 +15,24 @@ export function UserPage() {
     `Browse playlists shared by ${user} on Jota`,
   );
 
+  const queryClient = useQueryClient();
+  const refreshing = signal(false);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["user-playlists", user],
     queryFn: () => getUserPlaylists(user ?? ""),
     enabled: !!user,
   });
+
+  async function handleRefresh() {
+    refreshing.value = true;
+    queryClient.removeQueries({ queryKey: ["user-playlists", user] });
+    await queryClient.fetchQuery({
+      queryKey: ["user-playlists", user],
+      queryFn: () => getUserPlaylists(user ?? "", true),
+    });
+    refreshing.value = false;
+  }
 
   const playlists = data ?? [];
 
@@ -32,10 +47,20 @@ export function UserPage() {
   return (
     <DefaultLayout class="gap-6 h-full">
       <div class="flex flex-col gap-6 h-full">
-        <header>
+        <header class="flex items-center gap-3">
           <h2 class="text-xl font-semibold leading-tight">
             Playlists de {user}
           </h2>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing.value}
+            class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
+          >
+            <RefreshCw
+              size={14}
+              class={refreshing.value ? "animate-spin" : ""}
+            />
+          </button>
         </header>
 
         {isLoading ? (
