@@ -152,11 +152,11 @@ function CircularProgress({
 		} else if (onRing) {
 			document.body.style.cursor = "grab";
 		} else {
-			document.body.style.cursor = "default";
+			document.body.style.cursor = "";
 		}
 
 		return () => {
-			document.body.style.cursor = "default";
+			document.body.style.cursor = "";
 		};
 	}, [dragging, onRing]);
 
@@ -168,6 +168,7 @@ function CircularProgress({
 				className,
 			)}
 			style={style}
+			role="slider"
 			onPointerDown={onPointerDown}
 		>
 			{/* CENTER */}
