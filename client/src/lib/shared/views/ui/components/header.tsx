@@ -65,7 +65,7 @@ export function Header({
 
     const copyRoomId = useCallback(() => {
         if (!room) return;
-        navigator.clipboard.writeText(room);
+        navigator.clipboard.writeText(`${window.location.origin}/join/${room}`);
     }, [room]);
 
     // ✅ BACK CORRECTO
