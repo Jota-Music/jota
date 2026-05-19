@@ -1,7 +1,9 @@
 import { signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Loader, X } from "lucide-preact";
-import { Link, useLocation } from "wouter-preact";
+import { useLayoutEffect } from "preact/hooks";
+import { Link, useLocation, useRoute } from "wouter-preact";
+import { homeRoomEnforced, joinRoomById } from "@/lib/shared/api/room";
 import getUserPlaylists, {
 	type PlaylistSummary,
 } from "@/lib/music/app/get-user-playlists";
@@ -87,10 +89,18 @@ function FollowedUserSection({ user }: { user: string }) {
 
 export function MainPage() {
 	const [, setLocation] = useLocation();
+	const [, joinParams] = useRoute("/join/:room");
 	useMeta(
 		"Jota | Free music self-hosted service",
 		"Jota is a free, self-hosted music service. Stream your music anywhere, anytime.",
 	);
+
+	useLayoutEffect(() => {
+		if (joinParams?.room) {
+			homeRoomEnforced.value = false;
+			joinRoomById(joinParams.room);
+		}
+	}, [joinParams?.room]);
 
 	const handleSubmit = (e: Event) => {
 		e.preventDefault();

@@ -15,6 +15,7 @@ function Router() {
 				<Route path="/playlist/:id" component={PlaylistPage} />
 				<Route path="/register" component={RegisterPage} />
 				<Route path="/settings" component={SettingsPage} />
+				<Route path="/join/:room" component={MainPage} />
 				<Route path="/:user" component={UserPage} />
 				<Route path="/" component={MainPage} />
 				<Route>404: No such page!</Route>
