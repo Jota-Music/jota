@@ -1,6 +1,6 @@
 import { computed, effect, signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { ArrowUpDown, Loader, RefreshCw, Search } from "lucide-preact";
+import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
 import { getFullPlaylist } from "@/lib/music/app/get-playlist";
 import type { Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
@@ -187,8 +187,19 @@ export default function PlaylistPlain({ id }: { id: string }) {
 						onInput={(e) => {
 							search.value = getInputValue(e);
 						}}
-						className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
+						className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-9 text-sm text-white outline-none focus:border-zinc-600"
 					/>
+					{search.value && (
+						<button
+							onClick={() => {
+								search.value = "";
+							}}
+							className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
+							aria-label="Clear search"
+						>
+							<X size={14} />
+						</button>
+					)}
 				</div>
 
 				{/* order */}
