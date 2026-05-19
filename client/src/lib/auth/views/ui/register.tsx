@@ -6,10 +6,12 @@ import {
     logOut
 } from "@/lib/auth/views/stores/session";
 import { post } from "@/lib/shared/api";
+import { useLocation } from "wouter-preact";
 
 type Mode = "login" | "register";
 
 function Auth() {
+	const [, setLocation] = useLocation();
 	const [mode, setMode] = useState<Mode>("login");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -41,6 +43,7 @@ function Auth() {
 				});
 
 				logIn(res.user);
+				setLocation("/");
 			}
 		} catch (err: unknown) {
 			if (err instanceof Error) {
