@@ -60,35 +60,37 @@ export class AudioCache {
        GET (CACHE + DEDUPE)
     -------------------------------------------------- */
 
-    static async get(song: Song): Promise<CachedAudio> {
-        const cached = AudioCache.cache.get(song.id);
-        if (cached) {
-            AudioCache.touch(song.id);
-            return cached;
-        }
+	static async get(song: Song): Promise<CachedAudio> {
+		const cached = AudioCache.cache.get(song.id);
+		if (cached) {
+			AudioCache.touch(song.id);
+			return cached;
+		}
 
-        const existing = AudioCache.pending.get(song.id);
-        if (existing) return existing;
+		const existing = AudioCache.pending.get(song.id);
+		if (existing) return existing;
 
-        const request = getAudio(song).then((data) => {
-            const value: CachedAudio = {
-                url: data.url,
-                lastUsed: Date.now(),
-                youtube: data.youtube,
-            };
+		const request = getAudio(song)
+			.then((data) => {
+				const value: CachedAudio = {
+					url: data.url,
+					lastUsed: Date.now(),
+					youtube: data.youtube,
+				};
 
-            AudioCache.cache.set(song.id, value);
-            AudioCache.pending.delete(song.id);
+				AudioCache.cache.set(song.id, value);
+				AudioCache.enforceLimit();
 
-            AudioCache.enforceLimit();
+				return value;
+			})
+			.finally(() => {
+				AudioCache.pending.delete(song.id);
+			});
 
-            return value;
-        });
+		AudioCache.pending.set(song.id, request);
 
-        AudioCache.pending.set(song.id, request);
-
-        return request;
-    }
+		return request;
+	}
 
     /* -------------------------------------------------
        PRELOAD AUDIO

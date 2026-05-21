@@ -121,14 +121,22 @@ async function loadSongIntoPlayer(
 	song: Song,
 	autostart: boolean,
 	startSeconds?: number,
-) {
+): Promise<boolean> {
 	currentSong.value = song;
 
 	audioDuration.value = 0;
 
 	isLoading.value = true;
 
-	const data = await AudioCache.get(song);
+	let data: { url: string; youtube: string };
+	try {
+		data = await AudioCache.get(song);
+	} catch {
+		isLoading.value = false;
+		isPlaying.value = false;
+		addError("Failed to load audio — check your connection");
+		return false;
+	}
 
 	if (audio) {
 		audio.pause();
@@ -137,7 +145,16 @@ async function loadSongIntoPlayer(
 		audio = null;
 	}
 
-	const instance = new Audio(data.url);
+	let instance: HTMLAudioElement;
+	try {
+		instance = new Audio(data.url);
+	} catch {
+		isLoading.value = false;
+		isPlaying.value = false;
+		addError("Failed to create audio element");
+		return false;
+	}
+
 	audio = instance;
 
 	instance.preload = "auto";
@@ -157,7 +174,13 @@ async function loadSongIntoPlayer(
 
 	if (autostart) {
 		if (wantsStart) {
-			await waitUntilBufferedEnough(instance);
+			try {
+				await waitUntilBufferedEnough(instance);
+			} catch {
+				isLoading.value = false;
+				isPlaying.value = false;
+				return false;
+			}
 			const t = clampStartSeconds(instance, startSeconds);
 			instance.currentTime = t;
 			progress.value = t;
@@ -171,7 +194,13 @@ async function loadSongIntoPlayer(
 		}
 	} else {
 		isPlaying.value = false;
-		await waitUntilBufferedEnough(instance);
+		try {
+			await waitUntilBufferedEnough(instance);
+		} catch {
+			isLoading.value = false;
+			isPlaying.value = false;
+			return false;
+		}
 		if (wantsStart) {
 			const t = clampStartSeconds(instance, startSeconds);
 			instance.currentTime = t;
@@ -180,14 +209,15 @@ async function loadSongIntoPlayer(
 	}
 
 	isLoading.value = false;
+	return true;
 }
 
-export async function play(song: Song, startSeconds?: number) {
-	await loadSongIntoPlayer(song, true, startSeconds);
+export async function play(song: Song, startSeconds?: number): Promise<boolean> {
+	return await loadSongIntoPlayer(song, true, startSeconds);
 }
 
-export async function prepareSong(song: Song, startSeconds?: number) {
-	await loadSongIntoPlayer(song, false, startSeconds);
+export async function prepareSong(song: Song, startSeconds?: number): Promise<boolean> {
+	return await loadSongIntoPlayer(song, false, startSeconds);
 }
 
 export function getPlaybackSeconds(): number {
