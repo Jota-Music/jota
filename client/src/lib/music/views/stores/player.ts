@@ -20,6 +20,7 @@ import {
 	shareNewTrack,
 	shareSnapshot,
 } from "@/lib/music/views/stores/queue";
+import { addError } from "@/lib/shared/views/stores/errors";
 import { ws } from "@/lib/shared/api/socket";
 import { signal } from "@preact/signals";
 
@@ -29,24 +30,27 @@ const SAME_TRACK_SEEK_EPS_S = 0.4;
 
 let remotePlaybackTail: Promise<void> = Promise.resolve();
 
-let _resolvePlay: (() => void) | null = null;
+const playResolvers = new Set<() => void>();
 
 export function handlePlay() {
 	waitingForConsensus.value = false;
-	_resolvePlay?.();
-	_resolvePlay = null;
+	for (const fn of playResolvers) fn();
+	playResolvers.clear();
 }
 
 function waitForPlay(): Promise<void> {
 	return new Promise((resolve) => {
-		const timeout = setTimeout(() => {
-			if (_resolvePlay === resolve) _resolvePlay = null;
-			resolve();
-		}, 30000);
-		_resolvePlay = () => {
+		const wrapper = () => {
 			clearTimeout(timeout);
 			resolve();
 		};
+		const timeout = setTimeout(() => {
+			playResolvers.delete(wrapper);
+			waitingForConsensus.value = false;
+			addError("Consensus timeout — starting playback");
+			resolve();
+		}, 30000);
+		playResolvers.add(wrapper);
 	});
 }
 
@@ -188,7 +192,12 @@ async function reconcileQueueAndPlayback(
 			? Math.max(0, remotePosition)
 			: undefined;
 
-	await prepareSong(song, startSeconds);
+	const ok = await prepareSong(song, startSeconds);
+
+	if (!ok) {
+		stopPlayer();
+		return;
+	}
 
 	if (source === "local") {
 		shareNewTrack(song.id, { position: 0, playing: true });
@@ -236,6 +245,7 @@ export function handleRemoteNewTrack(
 	nextIndex: number,
 	playing: boolean,
 	position?: number,
+	generation?: string,
 ): Promise<void> {
 	return enqueueRemotePlayback(async () => {
 		queue.value = nextQueue;
@@ -258,9 +268,14 @@ export function handleRemoteNewTrack(
 				? Math.max(0, position)
 				: undefined;
 
-		await prepareSong(song, startSeconds);
+		const ok = await prepareSong(song, startSeconds);
 
-		ws.send("ready");
+		if (!ok) {
+			stopPlayer();
+			return;
+		}
+
+		ws.send("ready", { generation });
 
 		waitingForConsensus.value = true;
 		await waitForPlay();
@@ -429,7 +444,12 @@ export async function playAt(i: number): Promise<void> {
 
 	shareNewTrack(song.id, { position: 0, playing: true });
 
-	await prepareSong(song);
+	const ok = await prepareSong(song);
+
+	if (!ok) {
+		stopPlayer();
+		return;
+	}
 
 	ws.send("ready");
 	waitingForConsensus.value = true;

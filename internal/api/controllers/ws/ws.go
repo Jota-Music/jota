@@ -5,10 +5,11 @@ import (
 )
 
 type SnapshotData struct {
-	Queue    []any    `json:"queue"`
-	Index    int      `json:"index"`
-	Playing  bool     `json:"playing"`
-	Position *float64 `json:"position,omitempty"`
+	Queue      []any    `json:"queue"`
+	Index      int      `json:"index"`
+	Playing    bool     `json:"playing"`
+	Position   *float64 `json:"position,omitempty"`
+	Generation string   `json:"generation,omitempty"`
 }
 
 func Toggle(c *websocket.Conn, roomId string) {

@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/gofiber/contrib/v3/websocket"
+	"github.com/google/uuid"
 
 	"jota/server/internal/kv"
 	"jota/server/internal/repositories"
@@ -16,8 +17,9 @@ type Room struct {
 	Guests  []*websocket.Conn
 	Private bool
 
-	pendingTrackId string
-	readyConns     map[*websocket.Conn]bool
+	pendingTrackId  string
+	pendingGeneration string
+	readyConns      map[*websocket.Conn]bool
 }
 
 var rooms = make(map[string]*Room)
@@ -108,6 +110,7 @@ func Leave(c *websocket.Conn, roomId string) {
 
 	if room.pendingTrackId != "" && len(room.readyConns) == len(room.Guests) && len(room.Guests) > 0 {
 		room.pendingTrackId = ""
+		room.pendingGeneration = ""
 		room.readyConns = nil
 		notifyRoom(roomId, "play", struct{}{})
 	}
@@ -172,24 +175,33 @@ func canControlVisibility(c *websocket.Conn, roomId string, room *Room, sessionC
 	return sessErr == nil && sessionName == roomId
 }
 
-func TrackNewSong(c *websocket.Conn, roomId string, trackId string) {
+func TrackNewSong(c *websocket.Conn, roomId string, trackId string) string {
 	room := rooms[roomId]
 	if room == nil {
-		return
+		return ""
 	}
+	generation := uuid.NewString()
 	room.pendingTrackId = trackId
+	room.pendingGeneration = generation
 	room.readyConns = make(map[*websocket.Conn]bool)
+	return generation
 }
 
-func ConnReady(c *websocket.Conn, roomId string) {
+func ConnReady(c *websocket.Conn, roomId string, generation string) {
 	room := rooms[roomId]
 	if room == nil || room.pendingTrackId == "" {
 		return
 	}
+
+	if generation != "" && generation != room.pendingGeneration {
+		return
+	}
+
 	room.readyConns[c] = true
 
 	if len(room.readyConns) == len(room.Guests) {
 		room.pendingTrackId = ""
+		room.pendingGeneration = ""
 		room.readyConns = nil
 		notifyRoom(roomId, "play", struct{}{})
 	}

@@ -129,6 +129,7 @@ interface NewTrackPayload {
 	index: number;
 	playing: boolean;
 	position?: number;
+	generation?: string;
 }
 
 interface NewTrackMessage {
@@ -136,9 +137,9 @@ interface NewTrackMessage {
 }
 
 ws.on("new-track", (message: NewTrackMessage) => {
-	const { queue: q, index, playing, position } = message.data;
+	const { queue: q, index, playing, position, generation } = message.data;
 	playerSkeletonOn.value = false;
-	void handleRemoteNewTrack(q, index, playing, position);
+	void handleRemoteNewTrack(q, index, playing, position, generation);
 });
 
 ws.on("play", () => {
