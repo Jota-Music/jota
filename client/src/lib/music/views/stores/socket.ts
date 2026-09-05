@@ -6,7 +6,6 @@ import {
 	handlePlay,
 	handleRemoteNewTrack,
 } from "@/lib/music/views/stores/player";
-import { addError } from "@/lib/shared/views/stores/errors";
 import {
 	playerSkeletonOn,
 	shareSnapshot,
@@ -18,6 +17,7 @@ import {
 	rotateGuestRoomIfForbidden,
 } from "@/lib/shared/api/room";
 import { ws } from "@/lib/shared/api/socket";
+import { addError } from "@/lib/shared/views/stores/errors";
 
 let prevRoomId = roomState.peek().id;
 roomState.subscribe(() => {

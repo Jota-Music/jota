@@ -58,7 +58,12 @@ export default function SaveYoutubeId({
 						placeholder="YouTube ID"
 						class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1 text-sm text-white outline-none focus:border-zinc-600"
 						onBlur={(e) => {
-							if (e.relatedTarget && (e.target as HTMLElement).closest("form")?.contains(e.relatedTarget as HTMLElement)) {
+							if (
+								e.relatedTarget &&
+								(e.target as HTMLElement)
+									.closest("form")
+									?.contains(e.relatedTarget as HTMLElement)
+							) {
 								return;
 							}
 							setIsEditing(false);

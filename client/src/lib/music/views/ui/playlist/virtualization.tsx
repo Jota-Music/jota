@@ -56,7 +56,7 @@ export function Virtualization({ songs }: Props) {
 
 						return (
 							<button
-                                type="button"
+								type="button"
 								key={`${song.id}-${virtualRow.index}`}
 								data-id={song.id}
 								onClick={() => void playFromQueueSelection(songs, song)}

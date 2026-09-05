@@ -1,3 +1,4 @@
+import { signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 import {
 	audioDuration,
@@ -20,9 +21,8 @@ import {
 	shareNewTrack,
 	shareSnapshot,
 } from "@/lib/music/views/stores/queue";
-import { addError } from "@/lib/shared/views/stores/errors";
 import { ws } from "@/lib/shared/api/socket";
-import { signal } from "@preact/signals";
+import { addError } from "@/lib/shared/views/stores/errors";
 
 export const waitingForConsensus = signal(false);
 

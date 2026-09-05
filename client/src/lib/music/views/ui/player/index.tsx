@@ -176,7 +176,8 @@ function DraggableSheet({
 
 	function closeSheet() {
 		if (sheetRef.current) {
-			sheetRef.current.style.transition = "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)";
+			sheetRef.current.style.transition =
+				"transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)";
 			sheetRef.current.style.transform = "translateY(100%)";
 		}
 		if (backdropRef.current) {
@@ -226,8 +227,10 @@ function DraggableSheet({
 		isDragging.current = false;
 
 		const elapsed = (performance.now() - dragStartTime.current) / 1000;
-		const velocity = Math.abs(e.clientY - dragStartY.current) / Math.max(elapsed, 0.01) / 1000;
-		const shouldClose = translateY.current > CLOSE_THRESHOLD || velocity > FLING_VELOCITY;
+		const velocity =
+			Math.abs(e.clientY - dragStartY.current) / Math.max(elapsed, 0.01) / 1000;
+		const shouldClose =
+			translateY.current > CLOSE_THRESHOLD || velocity > FLING_VELOCITY;
 
 		if (shouldClose) {
 			closeSheet();
@@ -284,7 +287,12 @@ function DraggableSheet({
 
 		function onPointerDown(e: PointerEvent) {
 			const target = e.target as HTMLElement;
-			if (target.closest("button, input, a, select, textarea, form, [role='slider'], [role='button'], [role='link'], [class*='touch-none']")) return;
+			if (
+				target.closest(
+					"button, input, a, select, textarea, form, [role='slider'], [role='button'], [role='link'], [class*='touch-none']",
+				)
+			)
+				return;
 			if (content!.scrollTop > 0) return;
 
 			isDragging.current = true;
@@ -343,7 +351,20 @@ export function Player() {
 		return playerSkeletonOn.value ? <PlayerSkeleton /> : null;
 	}
 
-	const { song, cover, isLoading, isPlaying, toggleSong, progress, duration, seek, prevSong, nextSong, canPrev, canNext } = player;
+	const {
+		song,
+		cover,
+		isLoading,
+		isPlaying,
+		toggleSong,
+		progress,
+		duration,
+		seek,
+		prevSong,
+		nextSong,
+		canPrev,
+		canNext,
+	} = player;
 
 	const dragTracking = useRef({ startY: 0, active: false });
 
@@ -376,28 +397,30 @@ export function Player() {
 
 			<div
 				class="block md:hidden fixed bottom-0 left-0 right-0 z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out"
-				style={`transform: translateY(${playerModalOpen.value ? '100%' : '0'})`}
+				style={`transform: translateY(${playerModalOpen.value ? "100%" : "0"})`}
 				onPointerDown={onBarPointerDown}
 				onPointerMove={onBarPointerMove}
 				onPointerUp={onBarPointerUp}
 			>
-					<div class="px-0 pt-1 text-(--dominant-color)">
-						<Progress
-							value={progress}
-							max={duration}
-							min={0}
-							onChange={seek}
-							class="h-[3px] w-full rounded-none border-0 bg-neutral-800"
-						/>
-					</div>
+				<div class="px-0 pt-1 text-(--dominant-color)">
+					<Progress
+						value={progress}
+						max={duration}
+						min={0}
+						onChange={seek}
+						class="h-[3px] w-full rounded-none border-0 bg-neutral-800"
+					/>
+				</div>
 
-					<div class="flex items-center gap-3 w-full px-4 py-3">
-						<button
-							type="button"
-							onClick={() => { playerModalOpen.value = true; }}
-							class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
-						>
-							<div class="relative w-12 h-12 shrink-0">
+				<div class="flex items-center gap-3 w-full px-4 py-3">
+					<button
+						type="button"
+						onClick={() => {
+							playerModalOpen.value = true;
+						}}
+						class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+					>
+						<div class="relative w-12 h-12 shrink-0">
 							<img
 								src={cover}
 								alt={song.name}
@@ -406,50 +429,55 @@ export function Player() {
 								style="-webkit-user-drag: none"
 							/>
 							<div class="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10" />
-							</div>
+						</div>
 
-							<div class="flex-1 min-w-0 text-left">
-								<p class="text-white text-sm font-medium truncate">
-									{song.name}
-								</p>
-								<p class="text-white/60 text-xs truncate">
-									{song.artists.map((a) => a.name).join(", ")}
-								</p>
-							</div>
+						<div class="flex-1 min-w-0 text-left">
+							<p class="text-white text-sm font-medium truncate">{song.name}</p>
+							<p class="text-white/60 text-xs truncate">
+								{song.artists.map((a) => a.name).join(", ")}
+							</p>
+						</div>
+					</button>
+
+					<div
+						class="flex items-center gap-1 shrink-0"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<button
+							type="button"
+							disabled={!canPrev}
+							onClick={() => void prevSong()}
+							class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
+						>
+							<SkipBack size={20} class="fill-current" />
 						</button>
 
-						<div class="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-							<button
-								type="button"
-								disabled={!canPrev}
-								onClick={() => void prevSong()}
-								class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
-							>
-								<SkipBack size={20} class="fill-current" />
-							</button>
+						<Toggle
+							loading={isLoading}
+							playing={isPlaying}
+							onClick={() => void toggleSong()}
+							size={22}
+							class="bg-(--dominant-color)"
+						/>
 
-							<Toggle
-								loading={isLoading}
-								playing={isPlaying}
-								onClick={() => void toggleSong()}
-								size={22}
-								class="bg-(--dominant-color)"
-							/>
-
-							<button
-								type="button"
-								disabled={!canNext}
-								onClick={() => void nextSong()}
-								class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
-							>
-								<SkipForward size={20} class="fill-current" />
-							</button>
-						</div>
+						<button
+							type="button"
+							disabled={!canNext}
+							onClick={() => void nextSong()}
+							class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
+						>
+							<SkipForward size={20} class="fill-current" />
+						</button>
 					</div>
 				</div>
+			</div>
 
 			{playerModalOpen.value && (
-				<DraggableSheet onClose={() => { playerModalOpen.value = false; }}>
+				<DraggableSheet
+					onClose={() => {
+						playerModalOpen.value = false;
+					}}
+				>
 					<div class="pt-2">
 						<FullPlayerContent {...player} />
 					</div>

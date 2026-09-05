@@ -177,7 +177,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-4">
-            {/* <pre>
+			{/* <pre>
                 {JSON.stringify(data, null, 2)}
             </pre> */}
 			<div className="grid grid-cols-[1fr_auto_auto] gap-2">
@@ -236,10 +236,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 					disabled={refreshing.value}
 					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
 				>
-					<RefreshCw
-						size={16}
-						class={refreshing.value ? "animate-spin" : ""}
-					/>
+					<RefreshCw size={16} class={refreshing.value ? "animate-spin" : ""} />
 				</button>
 			</div>
 

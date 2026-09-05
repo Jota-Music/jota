@@ -190,7 +190,9 @@ async function loadSongIntoPlayer(
 			isPlaying.value = true;
 		} catch {
 			isPlaying.value = false;
-			addError("Playback failed — check your connection or try a different song");
+			addError(
+				"Playback failed — check your connection or try a different song",
+			);
 		}
 	} else {
 		isPlaying.value = false;
@@ -212,11 +214,17 @@ async function loadSongIntoPlayer(
 	return true;
 }
 
-export async function play(song: Song, startSeconds?: number): Promise<boolean> {
+export async function play(
+	song: Song,
+	startSeconds?: number,
+): Promise<boolean> {
 	return await loadSongIntoPlayer(song, true, startSeconds);
 }
 
-export async function prepareSong(song: Song, startSeconds?: number): Promise<boolean> {
+export async function prepareSong(
+	song: Song,
+	startSeconds?: number,
+): Promise<boolean> {
 	return await loadSongIntoPlayer(song, false, startSeconds);
 }
 
