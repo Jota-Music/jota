@@ -39,6 +39,8 @@ type SpotifyService struct {
 	sess *session.Session
 	done bool
 
+	clientID string
+
 	pendingMu sync.Mutex
 	pending   *pendingLogin
 }
@@ -50,8 +52,11 @@ type pendingLogin struct {
 	createdAt   time.Time
 }
 
-func NewSpotifyService() *SpotifyService {
-	return &SpotifyService{}
+func NewSpotifyService(clientID string) *SpotifyService {
+	if clientID == "" {
+		clientID = librespot.ClientIdHex
+	}
+	return &SpotifyService{clientID: clientID}
 }
 
 var spotifyOAuthScopes = []string{
@@ -187,7 +192,7 @@ func (s *SpotifyService) StartInteractiveLogin(redirectOrigin, publicURL, port s
 	}
 
 	oauthConf := &oauth2.Config{
-		ClientID:    librespot.ClientIdHex,
+		ClientID:    s.clientID,
 		RedirectURL: redirectBase + "/login",
 		Scopes:      spotifyOAuthScopes,
 		Endpoint:    spotifyoauth2.Endpoint,
@@ -237,7 +242,7 @@ func (s *SpotifyService) ResolveLogin(code string) (string, error) {
 	defer cancel()
 
 	oauthConf := &oauth2.Config{
-		ClientID:    librespot.ClientIdHex,
+		ClientID:    s.clientID,
 		RedirectURL: p.redirectURL,
 		Scopes:      spotifyOAuthScopes,
 		Endpoint:    spotifyoauth2.Endpoint,

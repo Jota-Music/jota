@@ -22,8 +22,8 @@ var clientFolder embed.FS
 
 func main() {
 	enviroment := env.Load()
+	repositories.Init(enviroment)
 
-	// Connect to Spotify BEFORE starting the server (like the reference).
 	spotifySvc := repositories.Use.Spotify
 	if err := spotifySvc.Connect(context.Background()); err != nil {
 		log.Printf("spotify: not connected at startup: %v", err)
