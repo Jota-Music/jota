@@ -15,7 +15,9 @@ export async function searchSpotify(
 	query: string,
 ): Promise<SearchResult[]> {
 	try {
-		const results = await get<SearchResult[]>(`/music/search/${type}/${encodeURIComponent(query)}`);
+		const results = await get<SearchResult[]>(
+			`/music/search/${type}/${encodeURIComponent(query)}`,
+		);
 		return results;
 	} catch (error) {
 		console.error(error);

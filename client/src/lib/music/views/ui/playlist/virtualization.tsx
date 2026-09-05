@@ -13,6 +13,7 @@ import {
 } from "@/lib/music/views/stores/player";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
+import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 
 type Props = {
 	songs: Song[];
@@ -113,7 +114,7 @@ export function Virtualization({ songs }: Props) {
 										</span>
 
 										<span className="truncate text-xs text-zinc-400">
-											{song.artists.map((a) => a.name).join(", ")}
+											<ArtistLinks artists={song.artists} />
 										</span>
 									</div>
 								</div>

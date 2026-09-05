@@ -124,6 +124,7 @@ async function loadSongIntoPlayer(
 ): Promise<boolean> {
 	currentSong.value = song;
 
+	progress.value = 0;
 	audioDuration.value = 0;
 
 	isLoading.value = true;

@@ -10,6 +10,7 @@ import { PlayerSkeleton } from "@/lib/music/views/ui/player/skeleton";
 import Toggle from "@/lib/music/views/ui/player/toggle";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { secondsToTime } from "@/lib/shared/utils/format";
+import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
 import Progress from "@/lib/shared/views/ui/components/progress";
 
@@ -102,7 +103,7 @@ function FullPlayerContent({
 				<h1 class="text-white text-xl font-semibold truncate">{song.name}</h1>
 
 				<p class="text-white text-sm opacity-70 truncate">
-					{song.artists.map((a) => a.name).join(", ")}
+					<ArtistLinks artists={song.artists} />
 				</p>
 
 				<SaveYoutubeId song={song} isPlaying={isPlaying} />
@@ -434,7 +435,7 @@ export function Player() {
 						<div class="flex-1 min-w-0 text-left">
 							<p class="text-white text-sm font-medium truncate">{song.name}</p>
 							<p class="text-white/60 text-xs truncate">
-								{song.artists.map((a) => a.name).join(", ")}
+								<ArtistLinks artists={song.artists} />
 							</p>
 						</div>
 					</button>

@@ -17,6 +17,7 @@ import { useQueuePanel } from "@/lib/music/views/hooks/use-queue";
 import { isLoading, isPlaying } from "@/lib/music/views/stores/audio";
 import { showQueue } from "@/lib/music/views/stores/queue";
 import { cn } from "@/lib/shared/utils/tw";
+import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 
 const ROW_PX = 64;
 const QUEUE_VIEW_LOOKBACK = 1;
@@ -309,7 +310,7 @@ function Queue() {
 												{song.name}
 											</p>
 											<p class="truncate text-[11px] text-zinc-500 sm:text-xs">
-												{song.artists.map((a) => a.name).join(", ")}
+												<ArtistLinks artists={song.artists} />
 											</p>
 										</div>
 
