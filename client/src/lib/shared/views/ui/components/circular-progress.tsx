@@ -169,6 +169,10 @@ function CircularProgress({
 			)}
 			style={style}
 			role="slider"
+			tabIndex={0}
+			aria-valuenow={value}
+			aria-valuemin={min}
+			aria-valuemax={max}
 			onPointerDown={onPointerDown}
 		>
 			{/* CENTER */}

@@ -14,7 +14,6 @@ import LoginPage from "@/lib/shared/views/ui/pages/login";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
 import { PlaylistPage } from "@/lib/shared/views/ui/pages/playlist";
 import { SearchPage } from "@/lib/shared/views/ui/pages/search";
-import SettingsPage from "@/lib/shared/views/ui/pages/settings";
 import { UserPage } from "@/lib/shared/views/ui/pages/user";
 
 const queryClient = new QueryClient();
@@ -77,7 +76,7 @@ function Router() {
 					<Route path="/artist/:id" component={ArtistPage} />
 					<Route path="/album/:id" component={AlbumPage} />
 					{/* TODO: re-enable settings route once the feature is needed again */}
-				{/* <Route path="/settings" component={SettingsPage} /> */}
+					{/* <Route path="/settings" component={SettingsPage} /> */}
 					<Route path="/join/:room" component={MainPage} />
 					<Route path="/search/:type/:query" component={SearchPage} />
 					<Route path="/login">

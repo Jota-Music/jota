@@ -19,7 +19,7 @@ export function PlayerSkeleton() {
 						<div class="absolute inset-0 bg-white/5 rounded-2xl shadow-lg opacity-40" />
 
 						<div class="absolute inset-0 w-max h-max flex items-center justify-center gap-6 m-auto">
-							<button class="p-1 rounded-full">
+							<button type="button" class="p-1 rounded-full">
 								<SkipBack size={25} class="text-white" />
 							</button>
 
@@ -31,7 +31,7 @@ export function PlayerSkeleton() {
 								class="bg-white/5"
 							/>
 
-							<button class="p-1 rounded-full">
+							<button type="button" class="p-1 rounded-full">
 								<SkipForward size={25} class="text-white" />
 							</button>
 						</div>
@@ -45,7 +45,7 @@ export function PlayerSkeleton() {
 					<span class="invisible">Album title</span>
 				</small>
 
-				<h1 class="text-white text-xl font-semibold truncate" aria-hidden>
+				<h1 class="text-white text-xl font-semibold truncate">
 					<span class="invisible">Song title</span>
 				</h1>
 
@@ -81,7 +81,7 @@ export function PlayerSkeleton() {
 
 					<VolumeControl />
 
-					<button class="rounded-md p-1">
+					<button type="button" class="rounded-md p-1">
 						<ListMusic size={25} class="text-white" />
 					</button>
 				</div>

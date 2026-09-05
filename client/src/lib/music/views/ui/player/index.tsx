@@ -162,7 +162,7 @@ function DraggableSheet({
 	onClose: () => void;
 }) {
 	const sheetRef = useRef<HTMLDivElement>(null);
-	const backdropRef = useRef<HTMLDivElement>(null);
+	const backdropRef = useRef<HTMLButtonElement>(null);
 	const handleRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLDivElement>(null);
 	const dragStartY = useRef(0);
@@ -294,7 +294,7 @@ function DraggableSheet({
 				)
 			)
 				return;
-			if (content!.scrollTop > 0) return;
+			if (content && content.scrollTop > 0) return;
 
 			isDragging.current = true;
 			dragStartY.current = e.clientY;
@@ -302,7 +302,7 @@ function DraggableSheet({
 			translateY.current = 0;
 			if (sheetRef.current) sheetRef.current.style.transition = "none";
 			if (backdropRef.current) backdropRef.current.style.transition = "none";
-			content!.setPointerCapture(e.pointerId);
+			content?.setPointerCapture(e.pointerId);
 		}
 
 		content.addEventListener("pointerdown", onPointerDown);
@@ -318,10 +318,12 @@ function DraggableSheet({
 
 	return (
 		<div class="fixed inset-0 z-50 md:hidden">
-			<div
+			<button
+				type="button"
 				ref={backdropRef}
-				class="absolute inset-0 bg-black/60"
+				class="absolute inset-0 cursor-default bg-black/60 border-0 p-0"
 				onClick={closeSheet}
+				aria-label="Close"
 			/>
 			<div
 				ref={sheetRef}
@@ -414,10 +416,16 @@ export function Player() {
 				</div>
 
 				<div class="flex items-center gap-3 w-full px-4 py-3">
-					<button
-						type="button"
+					<div
+						role="toolbar"
+						tabIndex={-1}
 						onClick={() => {
 							playerModalOpen.value = true;
+						}}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								playerModalOpen.value = true;
+							}
 						}}
 						class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
 					>
@@ -438,12 +446,9 @@ export function Player() {
 								<ArtistLinks artists={song.artists} />
 							</p>
 						</div>
-					</button>
+					</div>
 
-					<div
-						class="flex items-center gap-1 shrink-0"
-						onClick={(e) => e.stopPropagation()}
-					>
+					<div class="flex items-center gap-1 shrink-0">
 						<button
 							type="button"
 							disabled={!canPrev}

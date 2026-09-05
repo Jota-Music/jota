@@ -7,9 +7,11 @@ function Isotipo(props: SVGProps<SVGSVGElement>) {
 			xmlns="http://www.w3.org/2000/svg"
 			xmlSpace="preserve"
 			viewBox="-9.22 -9.13 146.78 216.78"
+			role="img"
+			aria-label="Jota"
 			className="fill-none stroke-current [stroke-linecap:round] [stroke-linejoin:round] [stroke-miterlimit:1.5]"
 			style={{
-				"--stroke-width": (props.strokeWidth ?? 13) + "px",
+				"--stroke-width": `${props.strokeWidth ?? 13}px`,
 			}}
 			{...props}
 		>

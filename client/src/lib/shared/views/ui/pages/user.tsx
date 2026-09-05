@@ -70,6 +70,7 @@ export function UserPage() {
 						Playlists de {user}
 					</h2>
 					<button
+						type="button"
 						onClick={() => toggleFollow(user ?? "")}
 						class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white ${
 							followedUsers.value.includes(user ?? "")
@@ -90,6 +91,7 @@ export function UserPage() {
 						/>
 					</button>
 					<button
+						type="button"
 						onClick={handleRefresh}
 						disabled={refreshing.value}
 						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"

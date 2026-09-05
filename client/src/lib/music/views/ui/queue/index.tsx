@@ -24,7 +24,7 @@ const QUEUE_VIEW_LOOKBACK = 1;
 
 function Queue() {
 	const panel = useQueuePanel();
-	const parentRef = useRef<HTMLDivElement>(null);
+	const parentRef = useRef<HTMLUListElement>(null);
 	const dragFrom = useSignal<number | null>(null);
 	const dragOver = useSignal<number | null>(null);
 
@@ -196,23 +196,24 @@ function Queue() {
 					</div>
 				</header>
 
-				<div
+				<ul
 					ref={parentRef}
 					class={cn(
 						"min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1",
 						dragFrom.value != null && "[&_button]:pointer-events-none",
 					)}
+					aria-label="Queue"
 					onDragOverCapture={handleDragOverCapture}
 					onDrop={handleDrop}
 					onDragEnd={handleDragEnd}
 				>
 					{songs.length === 0 ? (
-						<div class="flex min-h-40 flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-zinc-500">
-							<p>Cola vacía.</p>
+						<li class="flex min-h-40 list-none flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-zinc-500">
+							<p>Empty queue.</p>
 							<p class="text-xs text-zinc-600">
-								Elige una lista y pulsa un tema para empezar.
+								Pick a playlist and click a track to start.
 							</p>
-						</div>
+						</li>
 					) : (
 						<div
 							class="relative w-full"
@@ -241,11 +242,8 @@ function Queue() {
 									<div
 										key={virtualRow.key}
 										draggable={songs.length > 1}
-										title={
-											songs.length > 1
-												? "Arrastrar fila para reordenar"
-												: undefined
-										}
+										title={songs.length > 1 ? "Drag row to reorder" : undefined}
+										role="none"
 										class={cn(
 											"absolute left-0 flex w-full select-none items-center gap-1 border-b border-zinc-900/80 px-1 sm:gap-2 sm:px-2",
 											isCurrent ? "bg-zinc-900/50" : "hover:bg-zinc-900/30",
@@ -348,7 +346,7 @@ function Queue() {
 											<button
 												type="button"
 												draggable={false}
-												title="Quitar de la cola"
+												title="Remove from queue"
 												class="cursor-pointer rounded-md p-1.5 text-zinc-500 transition hover:bg-red-950/50 hover:text-red-300"
 												onClick={() => handleRemoveFromQueueClick(globalIndex)}
 											>
@@ -360,7 +358,7 @@ function Queue() {
 							})}
 						</div>
 					)}
-				</div>
+				</ul>
 			</div>
 		</div>
 	);

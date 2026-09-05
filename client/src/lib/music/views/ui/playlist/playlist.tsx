@@ -165,6 +165,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			<div className="flex min-h-0 flex-1 flex-col items-start gap-3 p-4 text-sm">
 				<p className="text-red-400">Failed to load playlist</p>
 				<button
+					type="button"
 					onClick={handleRefresh}
 					disabled={refreshing.value}
 					className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50 transition-colors cursor-pointer"
@@ -198,6 +199,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 					/>
 					{search.value && (
 						<button
+							type="button"
 							onClick={() => {
 								search.value = "";
 							}}
@@ -232,6 +234,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 				{/* refresh */}
 				<button
+					type="button"
 					onClick={handleRefresh}
 					disabled={refreshing.value}
 					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
