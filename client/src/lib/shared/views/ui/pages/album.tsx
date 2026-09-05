@@ -21,7 +21,7 @@ export function AlbumPage() {
 
 	const tracks = (data as Song[]) ?? [];
 	const cover = tracks[0]?.album?.covers?.[0];
-	const albumName = tracks[0]?.album?.title ?? "Álbum";
+	const albumName = tracks[0]?.album?.title ?? "Album";
 
 	return (
 		<DefaultLayout class="gap-4 h-full">
@@ -43,7 +43,7 @@ export function AlbumPage() {
 							{albumName}
 						</h2>
 						<p class="text-sm opacity-70 mt-1">
-							{tracks.length} canción{tracks.length === 1 ? "" : "es"}
+							{tracks.length} track{tracks.length === 1 ? "" : "s"}
 						</p>
 					</div>
 				</header>
@@ -57,7 +57,7 @@ export function AlbumPage() {
 						<Loader size={24} class="animate-spin" />
 					</div>
 				) : tracks.length === 0 ? (
-					<p class="text-sm text-zinc-500">No se encontraron canciones.</p>
+					<p class="text-sm text-zinc-500">No tracks found.</p>
 				) : (
 					<Virtualization songs={tracks} />
 				)}

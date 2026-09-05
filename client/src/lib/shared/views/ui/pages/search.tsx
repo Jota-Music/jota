@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/preact-query";
 import { Loader } from "lucide-preact";
 import { useLayoutEffect } from "preact/hooks";
 import { Link, useLocation, useRoute } from "wouter-preact";
-import { searchSpotify, type SearchResult } from "@/lib/music/app/search";
+import { type SearchResult, searchSpotify } from "@/lib/music/app/search";
 import type { Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
@@ -49,7 +49,7 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 					)}
 					{item.trackCount != null && (
 						<p class="text-xs text-zinc-500 truncate">
-							{item.trackCount} canción{item.trackCount === 1 ? "" : "es"}
+							{item.trackCount} track{item.trackCount === 1 ? "" : "s"}
 						</p>
 					)}
 				</div>
@@ -148,7 +148,7 @@ export function SearchPage() {
 			<div class="flex flex-col gap-6 h-full">
 				<header>
 					<h2 class="text-xl font-semibold leading-tight">
-						Playlists de {query}
+						Playlists by {query}
 					</h2>
 				</header>
 
@@ -158,7 +158,7 @@ export function SearchPage() {
 						Loading...
 					</div>
 				) : results.length === 0 ? (
-					<p class="text-sm text-zinc-500">No se encontraron playlists.</p>
+					<p class="text-sm text-zinc-500">No playlists found.</p>
 				) : (
 					<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
 						{results.map((item) => (
