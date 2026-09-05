@@ -48,13 +48,13 @@ type PlaylistSummary struct {
 
 // SearchResult represents a Spotify search result
 type SearchResult struct {
-	URI        string `json:"uri"`
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	CoverURL   string `json:"coverUrl,omitempty"`
+	URI        string   `json:"uri"`
+	Name       string   `json:"name"`
+	Type       string   `json:"type"`
+	CoverURL   string   `json:"coverUrl,omitempty"`
 	Artists    []string `json:"artists,omitempty"`
-	OwnerName  string `json:"ownerName,omitempty"`
-	TrackCount int32  `json:"trackCount,omitempty"`
+	OwnerName  string   `json:"ownerName,omitempty"`
+	TrackCount int32    `json:"trackCount,omitempty"`
 }
 
 // ArtistInfo represents an artist with their top tracks
@@ -67,16 +67,16 @@ type ArtistInfo struct {
 
 // ArtistDiscography represents an artist with their albums
 type ArtistDiscography struct {
-	Name   string          `json:"name"`
-	URI    string          `json:"uri"`
-	Albums []AlbumSummary  `json:"albums"`
+	Name   string         `json:"name"`
+	URI    string         `json:"uri"`
+	Albums []AlbumSummary `json:"albums"`
 }
 
 // AlbumSummary represents a lightweight album entry
 type AlbumSummary struct {
-	Id     string `json:"id"`
-	Name   string `json:"name"`
-	Year   int32  `json:"year"`
-	Cover  string `json:"cover,omitempty"`
-	Group  string `json:"group"`
+	Id    string `json:"id"`
+	Name  string `json:"name"`
+	Year  int32  `json:"year"`
+	Cover string `json:"cover,omitempty"`
+	Group string `json:"group"`
 }

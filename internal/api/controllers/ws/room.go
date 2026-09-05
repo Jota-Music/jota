@@ -17,9 +17,9 @@ type Room struct {
 	Guests  []*websocket.Conn
 	Private bool
 
-	pendingTrackId  string
+	pendingTrackId    string
 	pendingGeneration string
-	readyConns      map[*websocket.Conn]bool
+	readyConns        map[*websocket.Conn]bool
 }
 
 var rooms = make(map[string]*Room)

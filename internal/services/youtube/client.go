@@ -32,8 +32,8 @@ var (
 		OsVersion:   "26.5.23O471",
 	}
 
-	apiKeyMu     sync.RWMutex
-	apiKey       = defaultAPIKey
+	apiKeyMu      sync.RWMutex
+	apiKey        = defaultAPIKey
 	visitorDataMu sync.RWMutex
 	visitorData   string
 	lastFetch     time.Time

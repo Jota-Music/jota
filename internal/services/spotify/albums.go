@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	librespot "github.com/devgianlu/go-librespot"
-	"github.com/devgianlu/go-librespot/session"
 	extmetadatapb "github.com/devgianlu/go-librespot/proto/spotify/extendedmetadata"
 	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
+	"github.com/devgianlu/go-librespot/session"
 )
 
 type AlbumRef struct {
