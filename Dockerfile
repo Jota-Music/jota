@@ -22,6 +22,8 @@ RUN bun run build
 # =========================
 FROM golang:1.26-alpine AS backend
 
+RUN apk add --no-cache gcc musl-dev
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -35,7 +37,7 @@ COPY internal/ ./internal/
 COPY --from=frontend /app/client/dist ./client/dist
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build \
+    CGO_ENABLED=1 go build \
     -trimpath \
     -ldflags="-s -w" \
     -o server .
