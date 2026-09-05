@@ -8,11 +8,15 @@ import (
 )
 
 type Services struct {
-	Music *music.MusicRepository
-	Auth  *auth.AuthRepository
+	Music   *music.MusicRepository
+	Auth    *auth.AuthRepository
+	Spotify *spotify.SpotifyService
 }
 
+var spotifySvc = spotify.NewSpotifyService()
+
 var Use = Services{
-	Music: music.NewMusicRepository(spotify.NewSpotifyService()),
-	Auth:  auth.NewAuthRepository(user.NewUserService()),
+	Music:   music.NewMusicRepository(spotifySvc),
+	Auth:    auth.NewAuthRepository(user.NewUserService()),
+	Spotify: spotifySvc,
 }

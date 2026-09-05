@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"io/fs"
 	"log"
@@ -21,6 +22,13 @@ var clientFolder embed.FS
 
 func main() {
 	enviroment := env.Load()
+
+	// Connect to Spotify BEFORE starting the server (like the reference)
+	spotifySvc := repositories.Use.Spotify
+	if err := spotifySvc.Connect(context.Background()); err != nil {
+		log.Fatal("spotify: failed to connect:", err)
+	}
+	log.Printf("spotify: connected as %s", spotifySvc.Username())
 
 	if enviroment.SuperUsername != "" && enviroment.SuperPassword != "" {
 		_, err := repositories.Use.Auth.NewUser(enviroment.SuperUsername, enviroment.SuperPassword)
