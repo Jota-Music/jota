@@ -1,5 +1,6 @@
 import {
 	ArrowLeft,
+	ArrowRight,
 	ChevronDown,
 	Copy,
 	House,
@@ -15,9 +16,8 @@ import {
 import { useCallback, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import {
-	authPhase,
 	currentUser,
-	logOut,
+	disconnectSpotify,
 } from "@/lib/auth/views/stores/session";
 import {
 	goToMyHomeRoom,
@@ -45,22 +45,26 @@ export function Header({
 }) {
 	const [, setLocation] = useLocation();
 
-const [joinDraft, setJoinDraft] = useState("");
-const [openSettings, setOpenSettings] = useState(false);
-const [openSearch, setOpenSearch] = useState(false);
-const [searchDraft, setSearchDraft] = useState("");
-const [searchType, setSearchType] = useState<"user" | "track" | "album" | "playlist" | "artist">("user");
+	const [joinDraft, setJoinDraft] = useState("");
+	const [openSettings, setOpenSettings] = useState(false);
+	const [openSearch, setOpenSearch] = useState(false);
+	const [searchDraft, setSearchDraft] = useState("");
+	const [searchType, setSearchType] = useState<
+		"user" | "track" | "album" | "playlist" | "artist"
+	>("user");
 
-const onSearchSubmit = useCallback(
-	(e: Event) => {
-		e.preventDefault();
-		if (!searchDraft.trim()) return;
-		setLocation(`/search/${searchType}/${encodeURIComponent(searchDraft.trim())}`);
-		setSearchDraft("");
-		setOpenSearch(false);
-	},
-	[searchDraft, searchType, setLocation],
-);
+	const onSearchSubmit = useCallback(
+		(e: Event) => {
+			e.preventDefault();
+			if (!searchDraft.trim()) return;
+			setLocation(
+				`/search/${searchType}/${encodeURIComponent(searchDraft.trim())}`,
+			);
+			setSearchDraft("");
+			setOpenSearch(false);
+		},
+		[searchDraft, searchType, setLocation],
+	);
 
 	const onJoinSubmit = useCallback(
 		(e: Event) => {
@@ -73,7 +77,6 @@ const onSearchSubmit = useCallback(
 		[joinDraft],
 	);
 
-	const phase = authPhase.value;
 	const user = currentUser.value;
 
 	const { id: room, visibility: vis, guests, youAreOwner } = roomState.value;
@@ -152,45 +155,39 @@ const onSearchSubmit = useCallback(
 						</button>
 					</div>
 
-<button
-					type="button"
-					onClick={() => setOpenSettings((v) => !v)}
-					class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
-				>
-					<Turntable class="size-4" />
-				</button>
+					<button
+						type="button"
+						onClick={() => setOpenSettings((v) => !v)}
+						class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
+					>
+						<Turntable class="size-4" />
+					</button>
 
-<button
-				type="button"
-				onClick={() => setOpenSearch((v) => !v)}
-				class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
-			>
-				<Search class="size-4" />
-			</button>
-			</div>
+					<button
+						type="button"
+						onClick={() => setOpenSearch((v) => !v)}
+						class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
+					>
+						<Search class="size-4" />
+					</button>
+				</div>
 
 				<div class="flex items-center gap-2">
-					{phase === "guest" ? (
-						<>
-						</>
-					) : (
-						<>
-							<Link href="/settings">
-								<Settings class="size-4 text-zinc-400 hover:text-zinc-100" />
-							</Link>
-							<button
-								onClick={() => logOut()}
-								type="button"
-								class="cursor-pointer"
-							>
-								<LogOut class="size-4 text-zinc-400 hover:text-zinc-100" />
-							</button>
-						</>
-					)}
+					<Link href="/settings" class="hidden">
+						<Settings class="size-4 text-zinc-400 hover:text-zinc-100" />
+					</Link>
+					<button
+						onClick={() => void disconnectSpotify()}
+						type="button"
+						title="Disconnect Spotify"
+						class="cursor-pointer"
+					>
+						<LogOut class="size-4 text-zinc-400 hover:text-zinc-100" />
+					</button>
 				</div>
 			</div>
 
-{/* Room form */}
+			{/* Room form */}
 			<div
 				class={cn(
 					"mx-auto max-w-2xl overflow-hidden transition-all duration-200",
@@ -207,16 +204,19 @@ const onSearchSubmit = useCallback(
 							class="h-10 w-full rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-3 text-sm text-white outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 placeholder:text-zinc-600"
 							placeholder={room ?? "Room ID..."}
 							value={joinDraft}
-							onInput={(e) => setJoinDraft((e.target as HTMLInputElement).value)}
+							onInput={(e) =>
+								setJoinDraft((e.target as HTMLInputElement).value)
+							}
 						/>
 					</div>
 
 					<div class="flex items-center gap-2 w-full md:w-auto">
 						<button
-							class="flex-1 md:flex-none h-10 rounded-lg px-4 py-2 font-bold text-sm text-(--binary-color) bg-(--dominant-color) hover:opacity-75 transition-opacity cursor-pointer"
+							class="shrink-0 h-10 w-10 rounded-lg text-(--binary-color) bg-(--dominant-color) hover:opacity-75 cursor-pointer flex items-center justify-center transition-opacity"
 							type="submit"
+							title="Join"
 						>
-							Join
+							<ArrowRight class="size-4" />
 						</button>
 
 						<button
@@ -250,13 +250,17 @@ const onSearchSubmit = useCallback(
 			>
 				<form
 					onSubmit={onSearchSubmit}
-					class="flex flex-col md:flex-row md:items-stretch gap-2 px-2 md:px-0"
+					class="grid grid-cols-[1fr_max-content] gap-2 px-2 md:px-0"
 				>
 					<div class="flex-1 flex items-stretch h-10 rounded-lg border border-zinc-800 bg-zinc-950 overflow-hidden focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
 						<div class="relative shrink-0">
 							<select
 								value={searchType}
-								onChange={(e) => setSearchType((e.target as HTMLSelectElement).value as typeof searchType)}
+								onChange={(e) =>
+									setSearchType(
+										(e.target as HTMLSelectElement).value as typeof searchType,
+									)
+								}
 								class="h-full pl-3 pr-7 text-sm text-white outline-none appearance-none cursor-pointer bg-transparent border-r border-zinc-800"
 							>
 								{searchTypeOptions.map((opt) => (
@@ -268,12 +272,17 @@ const onSearchSubmit = useCallback(
 							<ChevronDown class="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-zinc-500 pointer-events-none" />
 						</div>
 						<div class="relative flex-1 flex items-center">
-							<Search class="absolute left-3 size-4 text-zinc-500 pointer-events-none" />
 							<input
-								class="h-full w-full bg-transparent pl-9 pr-3 text-sm text-white outline-none placeholder:text-zinc-600"
-								placeholder={searchType === "user" ? "Spotify username..." : `Spotify ${searchType.charAt(0).toUpperCase() + searchType.slice(1)} ID or URI...`}
+								class="h-full w-full bg-transparent pl-4 pr-3 text-sm text-white outline-none placeholder:text-zinc-600"
+								placeholder={
+									searchType === "user"
+										? "Spotify username..."
+										: `Spotify ${searchType.charAt(0).toUpperCase() + searchType.slice(1)} ID or URI...`
+								}
 								value={searchDraft}
-								onInput={(e) => setSearchDraft((e.target as HTMLInputElement).value)}
+								onInput={(e) =>
+									setSearchDraft((e.target as HTMLInputElement).value)
+								}
 							/>
 						</div>
 					</div>
