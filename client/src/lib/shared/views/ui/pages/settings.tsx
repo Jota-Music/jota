@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/preact-query";
-import { Check, Trash2, Upload, X } from "lucide-preact";
+import { Check, Loader, LogOut, Trash2, Upload, X } from "lucide-preact";
 import { useCallback, useState } from "preact/hooks";
-import { useLocation } from "wouter-preact";
-import { authPhase } from "@/lib/auth/views/stores/session";
+import {
+	disconnectSpotify,
+	spotifyUser,
+} from "@/lib/auth/views/stores/session";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
 import ClearLayout from "@/lib/shared/views/ui/layouts/clear";
 
@@ -35,8 +37,6 @@ async function deleteCookies(): Promise<void> {
 
 function SettingsPage() {
 	useMeta("Jota | Settings", "Configure your Jota settings");
-	const [, setLocation] = useLocation();
-	const phase = authPhase.value;
 
 	const [file, setFile] = useState<File | null>(null);
 	const [uploading, setUploading] = useState(false);
@@ -76,12 +76,6 @@ function SettingsPage() {
 			setDeleting(false);
 		}
 	}, [refetch]);
-
-	if (phase === "loading") return null;
-	if (phase === "guest") {
-		setLocation("/register", { replace: true });
-		return null;
-	}
 
 	return (
 		<ClearLayout class="gap-6">
@@ -133,10 +127,14 @@ function SettingsPage() {
 						type="button"
 						disabled={!file || uploading}
 						onClick={onUpload}
-						class="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+						title="Upload"
+						class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-700 text-white hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
 					>
-						<Upload class="size-4" />
-						{uploading ? "Uploading..." : "Upload"}
+						{uploading ? (
+							<Loader size={16} class="animate-spin" />
+						) : (
+							<Upload class="size-4" />
+						)}
 					</button>
 
 					{data?.configured && (
@@ -144,15 +142,34 @@ function SettingsPage() {
 							type="button"
 							disabled={deleting}
 							onClick={onDelete}
-							class="flex items-center gap-1.5 rounded-lg bg-red-900/60 px-4 py-2 text-sm font-bold text-red-200 hover:bg-red-800/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+							title="Remove"
+							class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-900/60 text-red-200 hover:bg-red-800/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
 						>
-							<Trash2 class="size-4" />
-							{deleting ? "Removing..." : "Remove"}
+							{deleting ? (
+								<Loader size={16} class="animate-spin" />
+							) : (
+								<Trash2 class="size-4" />
+							)}
 						</button>
 					)}
 				</div>
 
 				{error && <p class="text-xs text-red-400">{error}</p>}
+			</section>
+
+			<section class="space-y-3">
+				<h2 class="text-sm font-semibold text-zinc-300">Account</h2>
+				<p class="text-xs text-zinc-500">
+					Connected as {spotifyUser.value ?? "Spotify"}
+				</p>
+				<button
+					type="button"
+					onClick={() => void disconnectSpotify()}
+					class="flex items-center gap-1.5 rounded-lg bg-red-900/60 px-4 py-2 text-sm font-bold text-red-200 hover:bg-red-800/60 transition-colors cursor-pointer"
+				>
+					<LogOut class="size-4" />
+					Disconnect Spotify
+				</button>
 			</section>
 		</ClearLayout>
 	);

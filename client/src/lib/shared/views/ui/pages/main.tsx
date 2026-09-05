@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { Loader, X, Search, ChevronDown } from "lucide-preact";
+import { ChevronDown, Loader, RefreshCw, Search, X } from "lucide-preact";
 import { useLayoutEffect } from "preact/hooks";
 import { Link, useLocation, useRoute } from "wouter-preact";
 import {
@@ -14,10 +14,13 @@ import getUserPlaylists, {
 import { homeRoomEnforced, joinRoomById } from "@/lib/shared/api/room";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
 import { followedUsers } from "@/lib/shared/views/stores/follows";
+import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 const inputValue = signal("");
-const searchType = signal<"user" | "track" | "album" | "playlist" | "artist">("user");
+const searchType = signal<"user" | "track" | "album" | "playlist" | "artist">(
+	"user",
+);
 
 const searchTypeOptions = [
 	{ value: "user", label: "User" },
@@ -48,9 +51,10 @@ function FollowedUserSection({ user }: { user: string }) {
 								queryFn: () => getUserPlaylists(user, true),
 							});
 						}}
-						class="text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+						title="Retry"
+						class="text-red-400 hover:text-red-300 transition-colors cursor-pointer"
 					>
-						Retry
+						<RefreshCw size={14} />
 					</button>
 				</div>
 				<p class="text-xs text-red-400">Failed to load playlists</p>
@@ -85,10 +89,10 @@ function FollowedUserSection({ user }: { user: string }) {
 							<div class="rounded-md overflow-hidden cursor-pointer group">
 								<div class="flex flex-col gap-2">
 									<div class="aspect-square w-full overflow-hidden rounded-md">
-										<img
+										<PlaylistCover
 											src={"mosaic" in p ? p.mosaic : p.cover}
 											alt={p.name}
-											class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+											imgClass="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
 										/>
 									</div>
 									<h3 class="font-medium truncate text-sm text-zinc-300 group-hover:text-white transition-colors">
@@ -132,9 +136,10 @@ function MyPlaylistsSection() {
 								queryFn: () => getUserPlaylists(spotifyHandle, true),
 							});
 						}}
-						class="text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+						title="Retry"
+						class="text-red-400 hover:text-red-300 transition-colors cursor-pointer"
 					>
-						Retry
+						<RefreshCw size={14} />
 					</button>
 				</div>
 				<p class="text-xs text-red-400">Failed to load playlists</p>
@@ -163,9 +168,10 @@ function MyPlaylistsSection() {
 							queryFn: () => getUserPlaylists(spotifyHandle, true),
 						});
 					}}
-					class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+					title="Refresh"
+					class="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
 				>
-					Refresh
+					<RefreshCw size={14} />
 				</button>
 			</div>
 
@@ -183,10 +189,10 @@ function MyPlaylistsSection() {
 							<div class="rounded-md overflow-hidden cursor-pointer group">
 								<div class="flex flex-col gap-2">
 									<div class="aspect-square w-full overflow-hidden rounded-md">
-										<img
+										<PlaylistCover
 											src={"mosaic" in p ? p.mosaic : p.cover}
 											alt={p.name}
-											class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+											imgClass="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
 										/>
 									</div>
 									<h3 class="font-medium truncate text-sm text-zinc-300 group-hover:text-white transition-colors">
@@ -236,16 +242,19 @@ export function MainPage() {
 			<div class="flex flex-col gap-6 h-full">
 				<header>
 					<h2 class="text-xl font-semibold leading-tight">Jota</h2>
-					<p class="text-sm opacity-70 mt-1">Free music self-hosted music service</p>
+					<p class="text-sm opacity-70 mt-1">
+						Free music self-hosted music service
+					</p>
 				</header>
 
-<form onSubmit={handleSubmit} class="flex gap-2">
+				<form onSubmit={handleSubmit} class="flex gap-2">
 					<div class="flex-1 flex items-stretch h-10 rounded-lg border border-zinc-800 bg-zinc-950 overflow-hidden focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
 						<div class="relative shrink-0">
 							<select
 								value={searchType.value}
 								onChange={(e) => {
-									searchType.value = (e.target as HTMLSelectElement).value as typeof searchType.value;
+									searchType.value = (e.target as HTMLSelectElement)
+										.value as typeof searchType.value;
 								}}
 								class="h-full pl-3 pr-7 text-sm text-white outline-none appearance-none cursor-pointer bg-transparent border-r border-zinc-800"
 							>
@@ -258,15 +267,18 @@ export function MainPage() {
 							<ChevronDown class="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-zinc-500 pointer-events-none" />
 						</div>
 						<div class="relative flex-1 flex items-center">
-							<Search class="absolute left-3 size-4 text-zinc-500 pointer-events-none" />
 							<input
 								type="text"
-								placeholder={searchType.value === "user" ? "Spotify username..." : `Spotify ${searchType.value.charAt(0).toUpperCase() + searchType.value.slice(1)} ID or URI...`}
+								placeholder={
+									searchType.value === "user"
+										? "Spotify username..."
+										: `Spotify ${searchType.value.charAt(0).toUpperCase() + searchType.value.slice(1)} ID or URI...`
+								}
 								value={inputValue.value}
 								onInput={(e) => {
 									inputValue.value = (e.target as HTMLInputElement).value;
 								}}
-								class="h-full w-full bg-transparent pl-9 pr-9 text-sm text-white outline-none placeholder:text-zinc-600"
+								class="h-full w-full bg-transparent pl-4 pr-9 text-sm text-white outline-none placeholder:text-zinc-600"
 							/>
 							{inputValue.value && (
 								<button

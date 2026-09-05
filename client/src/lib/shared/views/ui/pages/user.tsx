@@ -7,6 +7,7 @@ import getUserPlaylists, {
 } from "@/lib/music/app/get-user-playlists";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
 import { followedUsers, toggleFollow } from "@/lib/shared/views/stores/follows";
+import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function UserPage() {
@@ -43,6 +44,7 @@ export function UserPage() {
 				<div class="flex flex-col items-start gap-3 p-6 text-sm">
 					<p class="text-red-400">Failed to load playlists for @{user}</p>
 					<button
+						type="button"
 						onClick={() => {
 							queryClient.removeQueries({ queryKey: ["user-playlists", user] });
 							queryClient.fetchQuery({
@@ -50,9 +52,10 @@ export function UserPage() {
 								queryFn: () => getUserPlaylists(user ?? "", true),
 							});
 						}}
-						class="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+						title="Retry"
+						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white transition-colors"
 					>
-						Retry
+						<RefreshCw size={14} />
 					</button>
 				</div>
 			</DefaultLayout>
@@ -111,10 +114,10 @@ export function UserPage() {
 										<h3 class="font-medium truncate">{p.name}</h3>
 
 										<div class="aspect-square w-full overflow-hidden rounded-md">
-											<img
+											<PlaylistCover
 												src={"mosaic" in p ? p.mosaic : p.cover}
 												alt={p.name}
-												class="w-full h-full object-cover"
+												imgClass="w-full h-full object-cover"
 											/>
 										</div>
 									</div>
