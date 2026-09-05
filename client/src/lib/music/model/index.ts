@@ -11,6 +11,7 @@ export interface Album {
 
 export interface Artist {
 	name: string;
+	id?: string;
 }
 
 export interface Song {
@@ -54,6 +55,7 @@ export interface AlbumSummary {
 export interface ArtistInfo {
 	name: string;
 	uri: string;
+	imageUrl?: string;
 	tracks: Song[];
 }
 

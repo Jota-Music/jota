@@ -3,7 +3,9 @@ import { get } from "@/lib/shared/api";
 
 export async function getArtist(uri: string): Promise<ArtistInfo> {
 	try {
-		const response = await get<ArtistInfo>(`/music/artist/${encodeURIComponent(uri)}`);
+		const response = await get<ArtistInfo>(
+			`/music/artist/${encodeURIComponent(uri)}`,
+		);
 		return response;
 	} catch (error) {
 		console.error(error);

@@ -22,6 +22,7 @@ type Album struct {
 }
 
 type Artist struct {
+	Id   string `json:"id,omitempty"`
 	Name string `json:"name"`
 }
 
@@ -58,9 +59,10 @@ type SearchResult struct {
 
 // ArtistInfo represents an artist with their top tracks
 type ArtistInfo struct {
-	Name   string `json:"name"`
-	URI    string `json:"uri"`
-	Tracks []Song `json:"tracks"`
+	Name     string `json:"name"`
+	URI      string `json:"uri"`
+	ImageURL string `json:"imageUrl,omitempty"`
+	Tracks   []Song `json:"tracks"`
 }
 
 // ArtistDiscography represents an artist with their albums

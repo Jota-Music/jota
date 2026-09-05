@@ -14,6 +14,7 @@ type Track struct {
 	URI         string
 	Name        string
 	Artists     []string
+	ArtistURIs  []string
 	Album       string
 	AlbumURI    string
 	CoverURL    string
@@ -35,10 +36,13 @@ func mergeTrackFromProto(t *Track, track *metadatapb.Track) {
 	if t.Name == "" {
 		t.Name = track.GetName()
 	}
-	if len(t.Artists) == 0 {
+	if len(t.Artists) == 0 && len(t.ArtistURIs) == 0 {
 		for _, a := range track.GetArtist() {
 			if name := a.GetName(); name != "" {
 				t.Artists = append(t.Artists, name)
+			}
+			if len(a.GetGid()) == 16 {
+				t.ArtistURIs = append(t.ArtistURIs, librespot.SpotifyIdFromGid(librespot.SpotifyIdTypeArtist, a.GetGid()).Uri())
 			}
 		}
 	}

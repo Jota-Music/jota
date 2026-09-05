@@ -172,10 +172,15 @@ func trackToSong(t Track) music.Song {
 	id := strings.TrimPrefix(t.URI, URITrackPrefix)
 
 	artists := make([]music.Artist, 0, len(t.Artists))
-	for _, a := range t.Artists {
-		if a != "" {
-			artists = append(artists, music.Artist{Name: a})
+	for i, a := range t.Artists {
+		if a == "" {
+			continue
 		}
+		artist := music.Artist{Name: a}
+		if i < len(t.ArtistURIs) {
+			artist.Id = strings.TrimPrefix(t.ArtistURIs[i], URIArtistPrefix)
+		}
+		artists = append(artists, artist)
 	}
 
 	covers := []string{}
@@ -236,9 +241,10 @@ func (s *SpotifyService) GetArtist(uri string) (music.ArtistInfo, error) {
 	}
 
 	return music.ArtistInfo{
-		Name:   info.Name,
-		URI:    info.URI,
-		Tracks: songs,
+		Name:     info.Name,
+		URI:      info.URI,
+		ImageURL: info.ImageURL,
+		Tracks:   songs,
 	}, nil
 }
 
