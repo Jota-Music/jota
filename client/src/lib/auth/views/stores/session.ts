@@ -109,3 +109,45 @@ export async function reconnectSpotify(): Promise<void> {
 		// best-effort
 	}
 }
+
+export async function disconnectSpotify(): Promise<void> {
+	try {
+		await fetch("/api/spotify/disconnect", {
+			method: "POST",
+			credentials: "include",
+		});
+	} catch {
+		// best-effort
+	}
+	await syncSpotifyStatus();
+}
+
+export async function loginSpotify(): Promise<string | null> {
+	try {
+		const res = await fetch("/api/spotify/login", {
+			method: "POST",
+			credentials: "include",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ origin: window.location.origin }),
+		});
+		if (!res.ok) return null;
+		const data = (await res.json()) as { url?: string };
+		return typeof data.url === "string" ? data.url : null;
+	} catch {
+		return null;
+	}
+}
+
+export async function loginSpotifyWithCode(code: string): Promise<boolean> {
+	try {
+		const res = await fetch("/api/spotify/login/callback", {
+			method: "POST",
+			credentials: "include",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ code }),
+		});
+		return res.ok;
+	} catch {
+		return false;
+	}
+}

@@ -15,6 +15,10 @@ func Auth(app *fiber.App) {
 	app.Get("/api/auth/me", session.Require(), auth_controller.Me)
 
 	app.Get("/api/spotify/status", auth_controller.SpotifyStatus)
+	app.Post("/api/spotify/login", auth_controller.SpotifyLogin)
+	app.Get("/api/spotify/login/callback", auth_controller.SpotifyLoginCallback)
+	app.Post("/api/spotify/login/callback", auth_controller.SpotifyLoginCallbackJSON)
+	app.Get("/login", auth_controller.SpotifyLoginCallback)
 	app.Post("/api/spotify/reconnect", auth_controller.SpotifyReconnect)
 	app.Post("/api/spotify/disconnect", auth_controller.SpotifyDisconnect)
 }
