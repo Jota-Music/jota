@@ -2,8 +2,8 @@ import "@/lib/music/views/stores/audio";
 
 import { useParams } from "wouter-preact";
 import PlaylistPlain from "@/lib/music/views/ui/playlist/playlist";
-import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
+import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function PlaylistPage() {
 	const { id } = useParams<{ id: string }>();

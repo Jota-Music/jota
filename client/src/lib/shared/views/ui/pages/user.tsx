@@ -1,129 +1,129 @@
 import { signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { Link, useParams } from "wouter-preact";
 import { Heart, RefreshCw } from "lucide-preact";
+import { Link, useParams } from "wouter-preact";
 import getUserPlaylists, {
-  type PlaylistSummary,
+	type PlaylistSummary,
 } from "@/lib/music/app/get-user-playlists";
-import {
-  followedUsers,
-  toggleFollow,
-} from "@/lib/shared/views/stores/follows";
-import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
+import { followedUsers, toggleFollow } from "@/lib/shared/views/stores/follows";
+import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function UserPage() {
-  const { user } = useParams<{ user: string }>();
-  useMeta(
-    `Jota | ${user}'s playlists`,
-    `Browse playlists shared by ${user} on Jota`,
-  );
+	const { user } = useParams<{ user: string }>();
+	useMeta(
+		`Jota | ${user}'s playlists`,
+		`Browse playlists shared by ${user} on Jota`,
+	);
 
-  const queryClient = useQueryClient();
-  const refreshing = signal(false);
+	const queryClient = useQueryClient();
+	const refreshing = signal(false);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["user-playlists", user],
-    queryFn: () => getUserPlaylists(user ?? ""),
-    enabled: !!user,
-  });
+	const { data, isLoading, isError } = useQuery({
+		queryKey: ["user-playlists", user],
+		queryFn: () => getUserPlaylists(user ?? ""),
+		enabled: !!user,
+	});
 
-  async function handleRefresh() {
-    refreshing.value = true;
-    queryClient.removeQueries({ queryKey: ["user-playlists", user] });
-    await queryClient.fetchQuery({
-      queryKey: ["user-playlists", user],
-      queryFn: () => getUserPlaylists(user ?? "", true),
-    });
-    refreshing.value = false;
-  }
+	async function handleRefresh() {
+		refreshing.value = true;
+		queryClient.removeQueries({ queryKey: ["user-playlists", user] });
+		await queryClient.fetchQuery({
+			queryKey: ["user-playlists", user],
+			queryFn: () => getUserPlaylists(user ?? "", true),
+		});
+		refreshing.value = false;
+	}
 
-  const playlists = data ?? [];
+	const playlists = data ?? [];
 
-  if (isError) {
-    return (
-      <DefaultLayout>
-        <div class="flex flex-col items-start gap-3 p-6 text-sm">
-          <p class="text-red-400">Failed to load playlists for @{user}</p>
-          <button
-            onClick={() => {
-              queryClient.removeQueries({ queryKey: ["user-playlists", user] });
-              queryClient.fetchQuery({ queryKey: ["user-playlists", user], queryFn: () => getUserPlaylists(user ?? "", true) });
-            }}
-            class="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            Retry
-          </button>
-        </div>
-      </DefaultLayout>
-    );
-  }
+	if (isError) {
+		return (
+			<DefaultLayout>
+				<div class="flex flex-col items-start gap-3 p-6 text-sm">
+					<p class="text-red-400">Failed to load playlists for @{user}</p>
+					<button
+						onClick={() => {
+							queryClient.removeQueries({ queryKey: ["user-playlists", user] });
+							queryClient.fetchQuery({
+								queryKey: ["user-playlists", user],
+								queryFn: () => getUserPlaylists(user ?? "", true),
+							});
+						}}
+						class="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+					>
+						Retry
+					</button>
+				</div>
+			</DefaultLayout>
+		);
+	}
 
-  return (
-    <DefaultLayout class="gap-6 h-full">
-      <div class="flex flex-col gap-6 h-full">
-        <header class="flex items-center gap-3">
-          <h2 class="text-xl font-semibold leading-tight">
-            Playlists de {user}
-          </h2>
-          <button
-            onClick={() => toggleFollow(user ?? "")}
-            class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white ${
-              followedUsers.value.includes(user ?? "")
-                ? "text-red-400"
-                : "text-zinc-400"
-            }`}
-            aria-label={
-              followedUsers.value.includes(user ?? "")
-                ? "Unfollow user"
-                : "Follow user"
-            }
-          >
-            <Heart
-              size={14}
-              class={
-                followedUsers.value.includes(user ?? "") ? "fill-current" : ""
-              }
-            />
-          </button>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing.value}
-            class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
-          >
-            <RefreshCw
-              size={14}
-              class={refreshing.value ? "animate-spin" : ""}
-            />
-          </button>
-        </header>
+	return (
+		<DefaultLayout class="gap-6 h-full">
+			<div class="flex flex-col gap-6 h-full">
+				<header class="flex items-center gap-3">
+					<h2 class="text-xl font-semibold leading-tight">
+						Playlists de {user}
+					</h2>
+					<button
+						onClick={() => toggleFollow(user ?? "")}
+						class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white ${
+							followedUsers.value.includes(user ?? "")
+								? "text-red-400"
+								: "text-zinc-400"
+						}`}
+						aria-label={
+							followedUsers.value.includes(user ?? "")
+								? "Unfollow user"
+								: "Follow user"
+						}
+					>
+						<Heart
+							size={14}
+							class={
+								followedUsers.value.includes(user ?? "") ? "fill-current" : ""
+							}
+						/>
+					</button>
+					<button
+						onClick={handleRefresh}
+						disabled={refreshing.value}
+						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
+					>
+						<RefreshCw
+							size={14}
+							class={refreshing.value ? "animate-spin" : ""}
+						/>
+					</button>
+				</header>
 
-        {isLoading ? (
-          <div class="p-4 rounded-md">Cargando playlists...</div>
-        ) : playlists.length === 0 ? (
-          <div class="p-4 rounded-md">No se encontraron playlists.</div>
-        ) : (
-          <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-            {playlists.map((p: PlaylistSummary) => (
-              <Link key={p.id} href={`/playlist/${p.id}`}>
-                <div class="rounded-md overflow-hidden cursor-pointer">
-                  <div class="flex flex-col gap-3">
-                    <h3 class="font-medium truncate">{p.name}</h3>
+				{isLoading ? (
+					<div class="p-4 rounded-md">Cargando playlists...</div>
+				) : playlists.length === 0 ? (
+					<div class="p-4 rounded-md">No se encontraron playlists.</div>
+				) : (
+					<div class="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+						{playlists.map((p: PlaylistSummary) => (
+							<Link key={p.id} href={`/playlist/${p.id}`}>
+								<div class="rounded-md overflow-hidden cursor-pointer">
+									<div class="flex flex-col gap-3">
+										<h3 class="font-medium truncate">{p.name}</h3>
 
-                    <div class="aspect-square w-full overflow-hidden rounded-md">
-                      <img
-                        src={"mosaic" in p ? p.mosaic : p.cover}
-                        alt={p.name}
-                        class="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </DefaultLayout>
-  );
+										<div class="aspect-square w-full overflow-hidden rounded-md">
+											<img
+												src={"mosaic" in p ? p.mosaic : p.cover}
+												alt={p.name}
+												class="w-full h-full object-cover"
+											/>
+										</div>
+									</div>
+								</div>
+							</Link>
+						))}
+					</div>
+				)}
+			</div>
+		</DefaultLayout>
+	);
 }

@@ -184,8 +184,8 @@ function CircularProgress({
 				viewBox={`0 0 ${safeSize} ${safeSize}`}
 				class="relative z-10 pointer-events-none"
 			>
-                <title>Circular Progress</title>
-                
+				<title>Circular Progress</title>
+
 				{/* Background */}
 				<circle
 					cx={center}
