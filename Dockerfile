@@ -22,7 +22,7 @@ RUN bun run build
 # =========================
 FROM golang:1.26-alpine AS backend
 
-RUN apk add --no-cache gcc musl-dev pkgconf
+RUN apk add --no-cache gcc musl-dev pkgconf libvorbis-dev flac-dev mpg123-dev alsa-lib-dev
 
 WORKDIR /app
 
