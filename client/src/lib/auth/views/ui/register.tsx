@@ -1,12 +1,7 @@
-import { useState } from "react";
-import type { User } from "@/lib/auth/views/model/user";
-import {
-    authPhase,
-    logIn,
-    logOut
-} from "@/lib/auth/views/stores/session";
-import { post } from "@/lib/shared/api";
+import { useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
+import { authPhase, logIn, logOut } from "@/lib/auth/views/stores/session";
+import { post } from "@/lib/shared/api";
 
 type Mode = "login" | "register";
 
@@ -16,12 +11,12 @@ function Auth() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		setError(null);
 		setLoading(true);
 
-		const formData = new FormData(e.currentTarget);
+		const formData = new FormData(e.currentTarget as HTMLFormElement);
 		const name = formData.get("name");
 		const pass = formData.get("pass");
 
@@ -30,7 +25,7 @@ function Auth() {
 
 		try {
 			if (mode === "register") {
-				await post<User>("/auth/register", {
+				await post("/auth/register", {
 					name: username,
 					pass: password,
 				});
@@ -58,12 +53,12 @@ function Auth() {
 
 	if (authPhase.value === "signedIn") {
 		return (
-			<div className="flex items-center justify-center px-4 h-full">
-				<div className="w-full max-w-xs">
+			<div class="flex items-center justify-center px-4 h-full">
+				<div class="w-full max-w-xs">
 					<button
 						type="button"
 						onClick={() => void logOut()}
-						className="w-full py-2 text-sm rounded-lg font-bold bg-(--dominant-color) text-(--binary-color) hover:brightness-75 cursor-pointer transition"
+						class="w-full py-2 text-sm rounded-lg font-bold bg-(--dominant-color) text-(--binary-color) hover:brightness-75 cursor-pointer transition"
 					>
 						Log out
 					</button>
@@ -73,13 +68,13 @@ function Auth() {
 	}
 
 	return (
-		<div className="flex items-center justify-center px-4 h-full">
-			<div className="w-full max-w-xs space-y-6">
-				<div className="flex gap-6 text-sm text-zinc-600">
+		<div class="flex items-center justify-center px-4 h-full">
+			<div class="w-full max-w-xs space-y-6">
+				<div class="flex gap-6 text-sm text-zinc-600">
 					<button
 						type="button"
 						onClick={() => setMode("login")}
-						className={
+						class={
 							"cursor-pointer " +
 							(mode === "login"
 								? "text-zinc-200"
@@ -92,7 +87,7 @@ function Auth() {
 					<button
 						type="button"
 						onClick={() => setMode("register")}
-						className={
+						class={
 							"cursor-pointer " +
 							(mode === "register"
 								? "text-zinc-200"
@@ -103,14 +98,22 @@ function Auth() {
 					</button>
 				</div>
 
-				{/* Form */}
-				<form onSubmit={handleSubmit} className="space-y-4">
+				<div class="relative">
+					<div class="absolute inset-0 flex items-center">
+						<div class="w-full border-t border-zinc-800" />
+					</div>
+					<div class="relative flex justify-center text-xs">
+						<span class="bg-zinc-950 px-2 text-zinc-600">or</span>
+					</div>
+				</div>
+
+				<form onSubmit={handleSubmit} class="space-y-4">
 					<input
 						type="text"
 						name="name"
 						placeholder="Username"
 						required
-						className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm text-white outline-none focus:border-zinc-600 transition"
+						class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm text-white outline-none focus:border-zinc-600 transition"
 					/>
 
 					<input
@@ -118,18 +121,18 @@ function Auth() {
 						name="pass"
 						placeholder="Password"
 						required
-						className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm text-white outline-none focus:border-zinc-600"
+						class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm text-white outline-none focus:border-zinc-600"
 					/>
 
 					<button
 						type="submit"
 						disabled={loading}
-						className="w-full py-2 text-sm rounded-lg font-bold bg-(--dominant-color) text-(--binary-color) hover:brightness-75 cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed"
+						class="w-full py-2 text-sm rounded-lg font-bold bg-(--dominant-color) text-(--binary-color) hover:brightness-75 cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed"
 					>
 						{loading ? "..." : mode === "login" ? "Sign in" : "Create account"}
 					</button>
 
-					{error && <p className="text-xs text-zinc-500">{error}</p>}
+					{error && <p class="text-xs text-zinc-500">{error}</p>}
 				</form>
 			</div>
 		</div>

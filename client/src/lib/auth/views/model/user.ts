@@ -1,4 +1,4 @@
 export interface User {
-    name: string;
-    pass: string;
-} 
+	name: string;
+	pass: string;
+}
