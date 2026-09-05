@@ -9,4 +9,6 @@ import "./style.tw.css";
 
 void syncAuth();
 
-render(<Router />, document.getElementById("app")!);
+const appRoot = document.getElementById("app");
+if (!appRoot) throw new Error("Missing #app root");
+render(<Router />, appRoot);

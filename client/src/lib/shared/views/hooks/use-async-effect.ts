@@ -1,8 +1,8 @@
 import { useEffect } from "preact/hooks";
 
 export default function useAsyncEffect(
-	callback: () => Promise<void | (() => void)>,
-	deps: any[],
+	callback: () => Promise<undefined | (() => void)>,
+	deps: ReadonlyArray<unknown>,
 ) {
 	useEffect(() => {
 		let cancelled = false;
