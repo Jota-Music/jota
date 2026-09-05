@@ -8,14 +8,15 @@ import (
 	"log"
 	"os/exec"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
 	"jota/server/internal/kv"
 
 	librespot "github.com/devgianlu/go-librespot"
-	"github.com/devgianlu/go-librespot/session"
 	devicespb "github.com/devgianlu/go-librespot/proto/spotify/connectstate/devices"
+	"github.com/devgianlu/go-librespot/session"
 	"golang.org/x/oauth2"
 	spotifyoauth2 "golang.org/x/oauth2/spotify"
 )
@@ -23,7 +24,6 @@ import (
 const (
 	credsKey     = "global"
 	bucketName   = "spotify-global"
-	callbackPort = 8090
 	loginTimeout = 5 * time.Minute
 )
 
@@ -35,9 +35,9 @@ type storedCreds struct {
 }
 
 type SpotifyService struct {
-	mu     sync.Mutex
-	sess   *session.Session
-	done   bool
+	mu   sync.Mutex
+	sess *session.Session
+	done bool
 
 	pendingMu sync.Mutex
 	pending   *pendingLogin
@@ -165,7 +165,11 @@ func (s *SpotifyService) Disconnect() error {
 // StartInteractiveLogin closes any existing session and returns the Spotify
 // authorize URL. The caller is expected to send the user there; once Spotify
 // redirects back to /login with a code, ResolveLogin completes the login.
-func (s *SpotifyService) StartInteractiveLogin(redirectOrigin, callbackPort string) (string, error) {
+//
+// publicURL is the externally-accessible origin of the app (e.g.
+// "https://jota.example.com"). When empty, falls back to
+// "http://127.0.0.1:port" for local development.
+func (s *SpotifyService) StartInteractiveLogin(redirectOrigin, publicURL, port string) (string, error) {
 	s.mu.Lock()
 	if s.sess != nil {
 		s.sess.Close()
@@ -174,9 +178,17 @@ func (s *SpotifyService) StartInteractiveLogin(redirectOrigin, callbackPort stri
 	s.done = false
 	s.mu.Unlock()
 
+	redirectBase := strings.TrimRight(publicURL, "/")
+	if redirectBase == "" {
+		if port == "" {
+			port = "3001"
+		}
+		redirectBase = "http://127.0.0.1:" + port
+	}
+
 	oauthConf := &oauth2.Config{
 		ClientID:    librespot.ClientIdHex,
-		RedirectURL: fmt.Sprintf("http://127.0.0.1:%s/login", callbackPort),
+		RedirectURL: redirectBase + "/login",
 		Scopes:      spotifyOAuthScopes,
 		Endpoint:    spotifyoauth2.Endpoint,
 	}
@@ -306,12 +318,12 @@ func (l *browserLogger) Infof(format string, args ...interface{}) {
 	}
 }
 
-func (l *browserLogger) Trace(...interface{})                  {}
-func (l *browserLogger) Debug(...interface{})                  {}
-func (l *browserLogger) Info(...interface{})                   {}
-func (l *browserLogger) Warn(...interface{})                   {}
-func (l *browserLogger) Error(...interface{})                  {}
+func (l *browserLogger) Trace(...interface{})                           {}
+func (l *browserLogger) Debug(...interface{})                           {}
+func (l *browserLogger) Info(...interface{})                            {}
+func (l *browserLogger) Warn(...interface{})                            {}
+func (l *browserLogger) Error(...interface{})                           {}
 func (l *browserLogger) WithField(string, interface{}) librespot.Logger { return l }
-func (l *browserLogger) WithError(error) librespot.Logger            { return l }
+func (l *browserLogger) WithError(error) librespot.Logger               { return l }
 
 var ErrNotConnected = errors.New("spotify is not connected")

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"html"
-	"os"
 	"strconv"
 
+	"jota/server/internal/env"
 	"jota/server/internal/repositories"
 	"jota/server/internal/services/spotify"
 
@@ -29,12 +29,8 @@ func SpotifyLogin(c fiber.Ctx) error {
 		body.Origin = string(c.Request().Header.Peek("Origin"))
 	}
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3001"
-	}
-
-	authURL, err := repositories.Use.Spotify.StartInteractiveLogin(body.Origin, port)
+	cfg := env.Load()
+	authURL, err := repositories.Use.Spotify.StartInteractiveLogin(body.Origin, cfg.PublicURL, cfg.Port)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
