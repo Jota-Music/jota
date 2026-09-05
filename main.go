@@ -5,7 +5,7 @@ import (
 	"embed"
 	"io/fs"
 	"log"
-	"time"
+	"strings"
 
 	"jota/server/internal/api/handler"
 	"jota/server/internal/env"
@@ -23,12 +23,13 @@ var clientFolder embed.FS
 func main() {
 	enviroment := env.Load()
 
-	// Connect to Spotify BEFORE starting the server (like the reference)
+	// Connect to Spotify BEFORE starting the server (like the reference).
 	spotifySvc := repositories.Use.Spotify
 	if err := spotifySvc.Connect(context.Background()); err != nil {
-		log.Fatal("spotify: failed to connect:", err)
+		log.Printf("spotify: not connected at startup: %v", err)
+	} else {
+		log.Printf("spotify: connected as %s", spotifySvc.Username())
 	}
-	log.Printf("spotify: connected as %s", spotifySvc.Username())
 
 	if enviroment.SuperUsername != "" && enviroment.SuperPassword != "" {
 		_, err := repositories.Use.Auth.NewUser(enviroment.SuperUsername, enviroment.SuperPassword)
@@ -68,14 +69,25 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Explicit caching: hashed assets are immutable; the app shell and the
+	// service worker must always be revalidated so updates arrive promptly.
+	app.Use(func(c fiber.Ctx) error {
+		switch path := c.Path(); {
+		case strings.HasPrefix(path, "/assets/"):
+			c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		case path == "/" || path == "/sw.js" || path == "/registerSW.js" || path == "/index.html" || path == "/manifest.webmanifest":
+			c.Set("Cache-Control", "no-cache")
+		}
+		return c.Next()
+	})
+
 	app.Use(static.New("", static.Config{
-		FS:            distFS,
-		Browse:        false,
-		CacheDuration: 10 * time.Second,
-		MaxAge:        3600,
+		FS:     distFS,
+		Browse: false,
 	}))
 
 	app.Get("/*", func(c fiber.Ctx) error {
+		c.Set("Cache-Control", "no-cache")
 		c.Path("/index.html")
 
 		return static.New("", static.Config{

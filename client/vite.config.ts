@@ -10,6 +10,9 @@ export default defineConfig({
 		preact(),
 		VitePWA({
 			registerType: "autoUpdate",
+			workbox: {
+				navigateFallbackDenylist: [/^\/login/],
+			},
 			manifest: {
 				display: "standalone",
 				display_override: ["window-controls-overlay"],
