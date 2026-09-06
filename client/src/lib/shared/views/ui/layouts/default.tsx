@@ -13,7 +13,7 @@ function DefaultLayout({
 }: PropsWithChildren & { className?: string; class?: string }) {
 	const hasPlayer = !!currentSong.value;
 	return (
-		<div class={cn("h-dvh flex flex-col", className, _class)}>
+		<div class={"h-dvh flex flex-col gap-4"}>
 			<div
 				class={cn(
 					"flex flex-col sticky top-0 z-50 bg-stone-950",
@@ -34,7 +34,7 @@ function DefaultLayout({
 
 			<Queue />
 
-			<main class="flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-2 md:px-0 mx-auto pb-24 md:pb-0">
+			<main class={cn("flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-2 md:px-0 mx-auto pb-24 md:pb-0", className)}>
 				{children}
 			</main>
 
