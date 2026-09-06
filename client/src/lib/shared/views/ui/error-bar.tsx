@@ -9,7 +9,7 @@ export function ErrorBar() {
 	}
 
 	return (
-		<div class="fixed bottom-0 left-0 right-0 z-[60] space-y-2 p-4 max-h-96 overflow-y-auto">
+		<div class="fixed bottom-0 left-0 right-0 z-60 space-y-2 p-4 max-h-96 overflow-y-auto">
 			{errors.value.map((error) => (
 				<div
 					key={error.id}

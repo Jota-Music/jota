@@ -1,12 +1,9 @@
 import type { Song } from "@/lib/music/model";
-import { get } from "@/lib/shared/api";
+import { GetAlbumTracks } from "@/wailsjs/go/app/App";
 
 export async function getAlbumTracks(uri: string): Promise<Song[]> {
 	try {
-		const response = await get<Song[]>(
-			`/music/album/${encodeURIComponent(uri)}`,
-		);
-		return response;
+		return (await GetAlbumTracks(uri)) as unknown as Song[];
 	} catch (error) {
 		console.error(error);
 		throw error;

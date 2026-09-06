@@ -45,12 +45,12 @@ export function Virtualization({ songs }: Props) {
 					Sin canciones
 				</div>
 			) : (
-				<div
-					className="relative w-full"
-					style={{
-						height: `${rowVirtualizer.getTotalSize()}px`,
-					}}
-				>
+			<div
+				className="relative w-full pb-3"
+				style={{
+					height: `${rowVirtualizer.getTotalSize()}px`,
+				}}
+			>
 					{rowVirtualizer.getVirtualItems().map((virtualRow) => {
 						const song = songs[virtualRow.index];
 						const isCurrent = song.id === current?.id;

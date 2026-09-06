@@ -16,6 +16,7 @@ export interface Artist {
 
 export interface Song {
 	id: string;
+	url: string;
 	name: string;
 	duration: number;
 	share: Share;
@@ -37,11 +38,18 @@ export interface Playlist {
 	page: Page;
 }
 
+export interface PlaylistSummary {
+	id: string;
+	name: string;
+	mosaic?: string;
+	cover?: string;
+}
+
 export interface Audio {
 	url: string;
 	duration: number;
-	ttl: number;
-	youtube: string;
+	expireAt: number;
+	videoId?: string;
 }
 
 export interface AlbumSummary {

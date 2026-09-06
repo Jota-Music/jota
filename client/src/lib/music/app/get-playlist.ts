@@ -1,5 +1,7 @@
 import type { Playlist } from "@/lib/music/model";
-import { get } from "@/lib/shared/api";
+import { GetFullPlaylist, GetPlaylist } from "@/wailsjs/go/app/App";
+
+export type { Playlist };
 
 export default async function getPlaylist(
 	id: string,
@@ -7,28 +9,16 @@ export default async function getPlaylist(
 	size: number = 15,
 ): Promise<Playlist> {
 	try {
-		const response = await get<Playlist>(`/music/playlist/${id}`, {
-			query: {
-				page: page.toString(),
-				size: size.toString(),
-			},
-		});
-		return response;
+		return (await GetPlaylist(id, page, size)) as unknown as Playlist;
 	} catch (error) {
 		console.error(error);
 		throw error;
 	}
 }
 
-export async function getFullPlaylist(
-	id: string,
-	revalidate?: boolean,
-): Promise<Playlist> {
+export async function getFullPlaylist(id: string): Promise<Playlist> {
 	try {
-		const response = await get<Playlist>(`/music/playlist/full/${id}`, {
-			query: revalidate ? { revalidate: "1" } : undefined,
-		});
-		return response;
+		return (await GetFullPlaylist(id)) as unknown as Playlist;
 	} catch (error) {
 		console.error(error);
 		throw error;

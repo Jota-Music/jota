@@ -2,7 +2,7 @@ package music
 
 type Song struct {
 	Id       string   `json:"id"`
-	Url      string   `json:"uri"`
+	Url      string   `json:"url"`
 	Name     string   `json:"name"`
 	Duration int      `json:"duration"`
 	Share    Share    `json:"share"`
@@ -17,7 +17,7 @@ type Share struct {
 
 type Album struct {
 	Title  string   `json:"title"`
-	Url    string   `json:"uri"`
+	Url    string   `json:"url"`
 	Covers []string `json:"covers"`
 }
 
@@ -38,7 +38,6 @@ type Playlist struct {
 	Page  Page   `json:"page"`
 }
 
-// PlaylistSummary represents a lightweight user playlist entry returned by Spotify
 type PlaylistSummary struct {
 	Id     string `json:"id"`
 	Name   string `json:"name"`
@@ -46,7 +45,6 @@ type PlaylistSummary struct {
 	Cover  string `json:"cover,omitempty"`
 }
 
-// SearchResult represents a Spotify search result
 type SearchResult struct {
 	URI        string   `json:"uri"`
 	Name       string   `json:"name"`
@@ -57,7 +55,6 @@ type SearchResult struct {
 	TrackCount int32    `json:"trackCount,omitempty"`
 }
 
-// ArtistInfo represents an artist with their top tracks
 type ArtistInfo struct {
 	Name     string `json:"name"`
 	URI      string `json:"uri"`
@@ -65,14 +62,12 @@ type ArtistInfo struct {
 	Tracks   []Song `json:"tracks"`
 }
 
-// ArtistDiscography represents an artist with their albums
 type ArtistDiscography struct {
 	Name   string         `json:"name"`
 	URI    string         `json:"uri"`
 	Albums []AlbumSummary `json:"albums"`
 }
 
-// AlbumSummary represents a lightweight album entry
 type AlbumSummary struct {
 	Id    string `json:"id"`
 	Name  string `json:"name"`

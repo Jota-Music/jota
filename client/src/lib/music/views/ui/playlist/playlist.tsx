@@ -137,7 +137,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		queryClient.removeQueries({ queryKey: ["playlist", id] });
 		await queryClient.fetchQuery({
 			queryKey: ["playlist", id],
-			queryFn: () => getFullPlaylist(id, true),
+			queryFn: () => getFullPlaylist(id),
 		});
 		refreshing.value = false;
 	}
@@ -177,10 +177,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	}
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col gap-4">
-			{/* <pre>
-                {JSON.stringify(data, null, 2)}
-            </pre> */}
+		<div className="flex min-h-0 flex-1 flex-col gap-4 pb-6">
 			<div className="grid grid-cols-[1fr_auto_auto] gap-2">
 				{/* search */}
 				<div className="relative flex-1">

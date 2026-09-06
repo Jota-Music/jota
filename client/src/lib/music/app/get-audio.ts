@@ -1,14 +1,23 @@
 import type { Audio, Song } from "@/lib/music/model";
-import { get, post } from "@/lib/shared/api";
+import { GetYouTubeAudio, SetYouTubeId } from "@/wailsjs/go/app/App";
 
-export async function getAudio(song: Song): Promise<Audio> {
+export type { Audio };
+
+export async function getAudio(
+	song: Song,
+): Promise<Audio & { youtube: string }> {
 	try {
-		const response = await get<Audio>(`/youtube/audio/${song.id}`, {
-			query: {
-				search: `${song.name} ${song.artists.map((artist) => artist.name).join(", ")}`,
-			},
-		});
-		return response;
+		const data = (await GetYouTubeAudio(
+			song.id,
+			`${song.name} ${song.artists.map((artist: { name: string }) => artist.name).join(", ")}`,
+		)) as unknown as Audio;
+		return {
+			url: data.url,
+			duration: data.duration,
+			expireAt: data.expireAt,
+			videoId: data.videoId,
+			youtube: data.videoId ?? song.id,
+		};
 	} catch (error) {
 		console.error(error);
 		throw error;
@@ -20,7 +29,7 @@ export async function updateYoutubeId(
 	youtubeId: string,
 ): Promise<void> {
 	try {
-		await post(`/music/link-youtube`, { id: songId, youtubeId });
+		await SetYouTubeId(songId, youtubeId);
 	} catch (error) {
 		console.error("Error updating YouTube ID:", error);
 		throw error;

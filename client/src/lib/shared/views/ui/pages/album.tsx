@@ -24,44 +24,42 @@ export function AlbumPage() {
 	const albumName = tracks[0]?.album?.title ?? "Album";
 
 	return (
-		<DefaultLayout class="gap-4 h-full">
-			<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-				<header class="flex items-center gap-4">
-					{cover ? (
-						<img
-							src={cover}
-							alt=""
-							class="h-16 w-16 shrink-0 rounded-md object-cover"
-						/>
-					) : (
-						<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-zinc-500">
-							<Disc3 size={28} />
-						</div>
-					)}
-					<div class="min-w-0">
-						<h2 class="truncate text-xl font-semibold leading-tight">
-							{albumName}
-						</h2>
-						<p class="text-sm opacity-70 mt-1">
-							{tracks.length} track{tracks.length === 1 ? "" : "s"}
-						</p>
-					</div>
-				</header>
-
-				{isError ? (
-					<div class="flex items-center gap-2 p-4 text-sm text-red-400">
-						Failed to load album
-					</div>
-				) : isLoading ? (
-					<div class="flex min-h-0 flex-1 items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-						<Loader size={24} class="animate-spin" />
-					</div>
-				) : tracks.length === 0 ? (
-					<p class="text-sm text-zinc-500">No tracks found.</p>
+		<DefaultLayout class="gap-4">
+			<header class="flex items-center gap-4">
+				{cover ? (
+					<img
+						src={cover}
+						alt=""
+						class="h-16 w-16 shrink-0 rounded-md object-cover"
+					/>
 				) : (
-					<Virtualization songs={tracks} />
+					<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-zinc-500">
+						<Disc3 size={28} />
+					</div>
 				)}
-			</div>
+				<div class="min-w-0">
+					<h2 class="truncate text-xl font-semibold leading-tight">
+						{albumName}
+					</h2>
+					<p class="text-sm opacity-70 mt-1">
+						{tracks.length} track{tracks.length === 1 ? "" : "s"}
+					</p>
+				</div>
+			</header>
+
+			{isError ? (
+				<div class="flex items-center gap-2 p-4 text-sm text-red-400">
+					Failed to load album
+				</div>
+			) : isLoading ? (
+				<div class="flex min-h-0 flex-1 items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+					<Loader size={24} class="animate-spin" />
+				</div>
+			) : tracks.length === 0 ? (
+				<p class="text-sm text-zinc-500">No tracks found.</p>
+			) : (
+				<Virtualization songs={tracks} />
+			)}
 		</DefaultLayout>
 	);
 }

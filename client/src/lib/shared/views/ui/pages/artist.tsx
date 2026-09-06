@@ -88,8 +88,8 @@ export function ArtistPage() {
 
 	if (isError) {
 		return (
-			<DefaultLayout class="gap-6 h-full">
-				<div class="flex flex-col gap-6 h-full items-center justify-center">
+			<DefaultLayout class="gap-6">
+				<div class="flex flex-col gap-6 min-h-0 flex-1 items-center justify-center">
 					<p class="text-red-400">Failed to load artist</p>
 				</div>
 			</DefaultLayout>
@@ -97,9 +97,9 @@ export function ArtistPage() {
 	}
 
 	return (
-		<DefaultLayout class="gap-4 h-full">
-			<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-				<header class="flex items-center gap-4">
+		<DefaultLayout class="gap-4">
+			<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6">
+				<header class="flex items-center gap-4 shrink-0">
 					{data?.imageUrl ? (
 						<img
 							src={data.imageUrl}
@@ -118,7 +118,7 @@ export function ArtistPage() {
 					</div>
 				</header>
 
-				<div class="flex flex-wrap items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2 shrink-0">
 					{tabs.map((tab) =>
 						tab === "tracks" ? (
 							<button

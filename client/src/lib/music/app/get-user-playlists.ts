@@ -1,27 +1,13 @@
-import { get } from "@/lib/shared/api";
+import type { PlaylistSummary } from "@/lib/music/model";
+import { GetUserPlaylists } from "@/wailsjs/go/app/App";
 
-export type PlaylistSummary =
-	| {
-			id: string;
-			name: string;
-			mosaic: string;
-	  }
-	| {
-			id: string;
-			name: string;
-			cover: string;
-	  };
+export type { PlaylistSummary };
 
 export default async function getUserPlaylists(
 	user: string,
-	revalidate?: boolean,
 ): Promise<PlaylistSummary[]> {
 	try {
-		const playlists = await get<PlaylistSummary[]>(`/music/playlists/${user}`, {
-			query: revalidate ? { revalidate: "1" } : undefined,
-		});
-
-		return playlists;
+		return (await GetUserPlaylists(user)) as unknown as PlaylistSummary[];
 	} catch (error) {
 		console.error(error);
 		throw error;

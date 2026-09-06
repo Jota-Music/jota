@@ -1,13 +1,11 @@
 import { signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Heart, RefreshCw } from "lucide-preact";
-import { Link, useParams } from "wouter-preact";
-import getUserPlaylists, {
-	type PlaylistSummary,
-} from "@/lib/music/app/get-user-playlists";
+import { useParams } from "wouter-preact";
+import getUserPlaylists from "@/lib/music/app/get-user-playlists";
+import { PlaylistGrid } from "@/lib/music/views/ui/playlist/grid";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
 import { followedUsers, toggleFollow } from "@/lib/shared/views/stores/follows";
-import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function UserPage() {
@@ -31,7 +29,7 @@ export function UserPage() {
 		queryClient.removeQueries({ queryKey: ["user-playlists", user] });
 		await queryClient.fetchQuery({
 			queryKey: ["user-playlists", user],
-			queryFn: () => getUserPlaylists(user ?? "", true),
+			queryFn: () => getUserPlaylists(user ?? ""),
 		});
 		refreshing.value = false;
 	}
@@ -45,13 +43,7 @@ export function UserPage() {
 					<p class="text-red-400">Failed to load playlists for @{user}</p>
 					<button
 						type="button"
-						onClick={() => {
-							queryClient.removeQueries({ queryKey: ["user-playlists", user] });
-							queryClient.fetchQuery({
-								queryKey: ["user-playlists", user],
-								queryFn: () => getUserPlaylists(user ?? "", true),
-							});
-						}}
+						onClick={handleRefresh}
 						title="Retry"
 						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white transition-colors"
 					>
@@ -63,9 +55,9 @@ export function UserPage() {
 	}
 
 	return (
-		<DefaultLayout class="gap-6 h-full">
-			<div class="flex flex-col gap-6 h-full">
-				<header class="flex items-center gap-3">
+		<DefaultLayout class="gap-6">
+			<div class="flex flex-col gap-6 min-h-0 flex-1">
+				<header class="flex items-center gap-3 shrink-0">
 					<h2 class="text-xl font-semibold leading-tight">
 						Playlists de {user}
 					</h2>
@@ -103,31 +95,13 @@ export function UserPage() {
 					</button>
 				</header>
 
-				{isLoading ? (
-					<div class="p-4 rounded-md">Cargando playlists...</div>
-				) : playlists.length === 0 ? (
-					<div class="p-4 rounded-md">No se encontraron playlists.</div>
-				) : (
-					<div class="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-						{playlists.map((p: PlaylistSummary) => (
-							<Link key={p.id} href={`/playlist/${p.id}`}>
-								<div class="rounded-md overflow-hidden cursor-pointer">
-									<div class="flex flex-col gap-3">
-										<h3 class="font-medium truncate">{p.name}</h3>
-
-										<div class="aspect-square w-full overflow-hidden rounded-md">
-											<PlaylistCover
-												src={"mosaic" in p ? p.mosaic : p.cover}
-												alt={p.name}
-												imgClass="w-full h-full object-cover"
-											/>
-										</div>
-									</div>
-								</div>
-							</Link>
-						))}
-					</div>
-				)}
+				<section class="flex flex-col gap-3 min-h-0 flex-1 overflow-y-auto pb-8">
+					<PlaylistGrid
+						playlists={playlists}
+						isLoading={isLoading}
+						emptyMessage="No se encontraron playlists."
+					/>
+				</section>
 			</div>
 		</DefaultLayout>
 	);
