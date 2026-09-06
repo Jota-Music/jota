@@ -8,11 +8,7 @@ import (
 )
 
 type Config struct {
-	Port            string
-	PublicURL       string
 	SpotifyClientID string
-	SuperUsername   string
-	SuperPassword   string
 }
 
 func Load() Config {
@@ -21,18 +17,6 @@ func Load() Config {
 	}
 
 	return Config{
-		Port:            getPort(),
-		PublicURL:       os.Getenv("PUBLIC_URL"),
 		SpotifyClientID: os.Getenv("SPOTIFY_CLIENT_ID"),
-		SuperUsername:   os.Getenv("SUPER_USERNAME"),
-		SuperPassword:   os.Getenv("SUPER_PASSWORD"),
 	}
-}
-
-func getPort() string {
-	port := os.Getenv("PORT")
-	if port == "" {
-		return "3001"
-	}
-	return port
 }

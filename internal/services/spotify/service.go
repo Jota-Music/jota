@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os/exec"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -39,15 +37,14 @@ type SpotifyService struct {
 	sess *session.Session
 	done bool
 
-	clientID string
-
-	pendingMu sync.Mutex
-	pending   *pendingLogin
+	clientID       string
+	callbackServer *callbackServer
+	pendingMu      sync.Mutex
+	pending        *pendingLogin
 }
 
 type pendingLogin struct {
 	verifier    string
-	origin      string
 	redirectURL string
 	createdAt   time.Time
 }
@@ -57,35 +54,6 @@ func NewSpotifyService(clientID string) *SpotifyService {
 		clientID = librespot.ClientIdHex
 	}
 	return &SpotifyService{clientID: clientID}
-}
-
-var spotifyOAuthScopes = []string{
-	"app-remote-control",
-	"playlist-modify",
-	"playlist-modify-private",
-	"playlist-modify-public",
-	"playlist-read",
-	"playlist-read-collaborative",
-	"playlist-read-private",
-	"streaming",
-	"ugc-image-upload",
-	"user-follow-modify",
-	"user-follow-read",
-	"user-library-modify",
-	"user-library-read",
-	"user-modify",
-	"user-modify-playback-state",
-	"user-modify-private",
-	"user-personalized",
-	"user-read-birthdate",
-	"user-read-currently-playing",
-	"user-read-email",
-	"user-read-play-history",
-	"user-read-playback-position",
-	"user-read-playback-state",
-	"user-read-private",
-	"user-read-recently-played",
-	"user-top-read",
 }
 
 func (s *SpotifyService) Connect(ctx context.Context) error {
@@ -146,35 +114,21 @@ func (s *SpotifyService) IsConnected() bool {
 }
 
 func (s *SpotifyService) Reconnect(ctx context.Context) error {
-	s.mu.Lock()
-	if s.sess != nil {
-		s.sess.Close()
-		s.sess = nil
-	}
-	s.done = false
-	s.mu.Unlock()
 	return s.Connect(ctx)
 }
 
 func (s *SpotifyService) Disconnect() error {
 	s.mu.Lock()
-	if s.sess != nil {
-		s.sess.Close()
-		s.sess = nil
+	defer s.mu.Unlock()
+	if s.sess == nil {
+		return nil
 	}
 	s.done = true
 	s.mu.Unlock()
 	return sessionBucket.Delete(credsKey)
 }
 
-// StartInteractiveLogin closes any existing session and returns the Spotify
-// authorize URL. The caller is expected to send the user there; once Spotify
-// redirects back to /login with a code, ResolveLogin completes the login.
-//
-// publicURL is the externally-accessible origin of the app (e.g.
-// "https://jota.example.com"). When empty, falls back to
-// "http://127.0.0.1:port" for local development.
-func (s *SpotifyService) StartInteractiveLogin(redirectOrigin, publicURL, port string) (string, error) {
+func (s *SpotifyService) StartupLogin() (string, error) {
 	s.mu.Lock()
 	if s.sess != nil {
 		s.sess.Close()
@@ -183,27 +137,26 @@ func (s *SpotifyService) StartInteractiveLogin(redirectOrigin, publicURL, port s
 	s.done = false
 	s.mu.Unlock()
 
-	redirectBase := strings.TrimRight(publicURL, "/")
-	if redirectBase == "" {
-		if port == "" {
-			port = "3001"
-		}
-		redirectBase = "http://127.0.0.1:" + port
+	cbServer, err := newCallbackServer()
+	if err != nil {
+		log.Printf("spotify-v2: StartupLogin failed: %v", err)
+		return "", fmt.Errorf("failed to start callback server: %w", err)
 	}
+	s.callbackServer = cbServer
+	log.Printf("spotify-v2: callback server started on port %d", cbServer.port)
 
 	oauthConf := &oauth2.Config{
 		ClientID:    s.clientID,
-		RedirectURL: redirectBase + "/login",
+		RedirectURL: fmt.Sprintf("http://127.0.0.1:%d/login", cbServer.port),
 		Scopes:      spotifyOAuthScopes,
 		Endpoint:    spotifyoauth2.Endpoint,
 	}
 
 	verifier := oauth2.GenerateVerifier()
-	url := oauthConf.AuthCodeURL("", oauth2.S256ChallengeOption(verifier))
+	authURL := oauthConf.AuthCodeURL("", oauth2.S256ChallengeOption(verifier))
 
 	p := &pendingLogin{
 		verifier:    verifier,
-		origin:      redirectOrigin,
 		redirectURL: oauthConf.RedirectURL,
 		createdAt:   time.Now(),
 	}
@@ -211,35 +164,58 @@ func (s *SpotifyService) StartInteractiveLogin(redirectOrigin, publicURL, port s
 	s.pending = p
 	s.pendingMu.Unlock()
 
+	log.Printf("spotify-v2: auth URL: %s", authURL)
+
 	go func() {
 		time.Sleep(loginTimeout)
 		s.pendingMu.Lock()
 		if s.pending == p {
 			s.pending = nil
+			s.callbackServer.stop()
+			log.Printf("spotify-v2: login timeout")
 		}
 		s.pendingMu.Unlock()
 	}()
 
-	return url, nil
+	return authURL, nil
 }
 
 var ErrNoLoginInProgress = errors.New("no login in progress")
 
-// ResolveLogin completes a pending interactive login with the given OAuth code.
-// It runs synchronously so the caller can show a clear success/failure page.
-// It returns the app origin to redirect the browser back to.
-func (s *SpotifyService) ResolveLogin(code string) (string, error) {
+func (s *SpotifyService) CompleteLogin() error {
 	s.pendingMu.Lock()
 	p := s.pending
 	s.pending = nil
 	s.pendingMu.Unlock()
 	if p == nil {
-		return "", ErrNoLoginInProgress
+		log.Printf("spotify-v2: CompleteLogin: no pending login")
+		return ErrNoLoginInProgress
+	}
+	if s.callbackServer == nil {
+		log.Printf("spotify-v2: CompleteLogin: no callback server")
+		return errors.New("no callback server running")
 	}
 
-	log.Printf("spotify-v2: completing interactive login")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
+
+	log.Printf("spotify-v2: waiting for callback...")
+	code, err := s.callbackServer.wait(ctx)
+	s.callbackServer.stop()
+	s.callbackServer = nil
+	if err != nil {
+		log.Printf("spotify-v2: callback error: %v", err)
+		return fmt.Errorf("callback wait: %w", err)
+	}
+	if code == "" {
+		log.Printf("spotify-v2: no code received")
+		return errors.New("no code received from Spotify")
+	}
+	log.Printf("spotify-v2: got code")
+
+	log.Printf("spotify-v2: completing interactive login")
+	exchangeCtx, exchangeCancel := context.WithTimeout(context.Background(), time.Minute)
+	defer exchangeCancel()
 
 	oauthConf := &oauth2.Config{
 		ClientID:    s.clientID,
@@ -248,14 +224,17 @@ func (s *SpotifyService) ResolveLogin(code string) (string, error) {
 		Endpoint:    spotifyoauth2.Endpoint,
 	}
 
-	token, err := oauthConf.Exchange(ctx, code, oauth2.VerifierOption(p.verifier))
+	token, err := oauthConf.Exchange(exchangeCtx, code, oauth2.VerifierOption(p.verifier))
 	if err != nil {
-		return p.origin, fmt.Errorf("failed exchanging oauth2 code: %w", err)
+		log.Printf("spotify-v2: token exchange failed: %v", err)
+		return fmt.Errorf("failed exchanging oauth2 code: %w", err)
 	}
+	log.Printf("spotify-v2: token exchanged")
 
 	username, _ := token.Extra("username").(string)
 	if username == "" {
-		return p.origin, errors.New("missing username in token response")
+		log.Printf("spotify-v2: missing username in token")
+		return errors.New("missing username in token response")
 	}
 
 	sess, err := s.newSession(context.Background(), session.SpotifyTokenCredentials{
@@ -263,7 +242,8 @@ func (s *SpotifyService) ResolveLogin(code string) (string, error) {
 		Token:    token.AccessToken,
 	})
 	if err != nil {
-		return p.origin, fmt.Errorf("failed connecting session: %w", err)
+		log.Printf("spotify-v2: session creation failed: %v", err)
+		return fmt.Errorf("failed connecting session: %w", err)
 	}
 
 	s.mu.Lock()
@@ -275,7 +255,7 @@ func (s *SpotifyService) ResolveLogin(code string) (string, error) {
 	}
 	log.Printf("spotify-v2: connected as %s", sess.Username())
 
-	return p.origin, nil
+	return nil
 }
 
 func loadCreds() (*storedCreds, error) {
@@ -305,8 +285,6 @@ func mustHexDecode(s string) []byte {
 	return b
 }
 
-var authURLPattern = regexp.MustCompile(`https?://[^\s]+`)
-
 type browserLogger struct{}
 
 func (l *browserLogger) Tracef(string, ...interface{}) {}
@@ -319,7 +297,6 @@ func (l *browserLogger) Infof(format string, args ...interface{}) {
 	log.Print(msg)
 	if url := authURLPattern.FindString(msg); url != "" {
 		fmt.Printf("\n>>> Open this URL in your browser to log in: %s\n\n", url)
-		_ = exec.Command("xdg-open", url).Start()
 	}
 }
 
@@ -331,4 +308,34 @@ func (l *browserLogger) Error(...interface{})                           {}
 func (l *browserLogger) WithField(string, interface{}) librespot.Logger { return l }
 func (l *browserLogger) WithError(error) librespot.Logger               { return l }
 
+var authURLPattern = regexp.MustCompile(`https://[^\s]+`)
 var ErrNotConnected = errors.New("spotify is not connected")
+
+var spotifyOAuthScopes = []string{
+	"app-remote-control",
+	"playlist-modify",
+	"playlist-modify-private",
+	"playlist-modify-public",
+	"playlist-read",
+	"playlist-read-collaborative",
+	"playlist-read-private",
+	"streaming",
+	"ugc-image-upload",
+	"user-follow-modify",
+	"user-follow-read",
+	"user-library-modify",
+	"user-library-read",
+	"user-modify",
+	"user-modify-playback-state",
+	"user-modify-private",
+	"user-personalized",
+	"user-read-birthdate",
+	"user-read-currently-playing",
+	"user-read-email",
+	"user-read-play-history",
+	"user-read-playback-position",
+	"user-read-playback-state",
+	"user-read-private",
+	"user-read-recently-played",
+	"user-top-read",
+}
