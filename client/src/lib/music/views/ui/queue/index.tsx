@@ -17,6 +17,7 @@ import { useQueuePanel } from "@/lib/music/views/hooks/use-queue";
 import { isLoading, isPlaying } from "@/lib/music/views/stores/audio";
 import { showQueue } from "@/lib/music/views/stores/queue";
 import { cn } from "@/lib/shared/utils/tw";
+import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 
 const ROW_PX = 64;
@@ -309,6 +310,12 @@ function Queue() {
 											</p>
 											<p class="truncate text-[11px] text-zinc-500 sm:text-xs">
 												<ArtistLinks artists={song.artists} />
+												{song.album.title && (
+													<>
+														{" • "}
+														<AlbumLink album={song.album} />
+													</>
+												)}
 											</p>
 										</div>
 

@@ -13,6 +13,7 @@ import {
 } from "@/lib/music/views/stores/player";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
+import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 
 type Props = {
@@ -45,12 +46,12 @@ export function Virtualization({ songs }: Props) {
 					Sin canciones
 				</div>
 			) : (
-			<div
-				className="relative w-full pb-3"
-				style={{
-					height: `${rowVirtualizer.getTotalSize()}px`,
-				}}
-			>
+				<div
+					className="relative w-full pb-3"
+					style={{
+						height: `${rowVirtualizer.getTotalSize()}px`,
+					}}
+				>
 					{rowVirtualizer.getVirtualItems().map((virtualRow) => {
 						const song = songs[virtualRow.index];
 						const isCurrent = song.id === current?.id;
@@ -115,6 +116,12 @@ export function Virtualization({ songs }: Props) {
 
 										<span className="truncate text-xs text-zinc-400">
 											<ArtistLinks artists={song.artists} />
+											{song.album?.title && (
+												<>
+													{" • "}
+													<AlbumLink album={song.album} />
+												</>
+											)}
 										</span>
 									</div>
 								</div>

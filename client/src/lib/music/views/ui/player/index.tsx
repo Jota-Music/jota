@@ -1,5 +1,11 @@
 import { signal } from "@preact/signals";
-import { ChevronDown, ChevronUp, ListMusic, SkipBack, SkipForward } from "lucide-preact";
+import {
+	ChevronDown,
+	ChevronUp,
+	ListMusic,
+	SkipBack,
+	SkipForward,
+} from "lucide-preact";
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
@@ -10,6 +16,7 @@ import { PlayerSkeleton } from "@/lib/music/views/ui/player/skeleton";
 import Toggle from "@/lib/music/views/ui/player/toggle";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { secondsToTime } from "@/lib/shared/utils/format";
+import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
 import Progress from "@/lib/shared/views/ui/components/progress";
@@ -97,7 +104,7 @@ function FullPlayerContent({
 
 			<div class="flex-1 min-w-0 w-full">
 				<small class="text-white text-xs opacity-60 block truncate">
-					{song.album.title}
+					<AlbumLink album={song.album} />
 				</small>
 
 				<h1 class="text-white text-xl font-semibold truncate">{song.name}</h1>
