@@ -79,7 +79,12 @@ function Progress({
 				"relative h-2 w-full cursor-pointer select-none rounded-full bg-neutral-300 touch-none",
 				className,
 			)}
-			role="none"
+			role="slider"
+			tabIndex={0}
+			aria-valuenow={value}
+			aria-valuemin={min}
+			aria-valuemax={max}
+			aria-label="Seek"
 		>
 			<div
 				class="absolute left-0 top-0 h-full bg-current rounded-full"
