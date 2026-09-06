@@ -20,6 +20,7 @@ export namespace app {
 export namespace music {
 	
 	export class Album {
+	    id: string;
 	    title: string;
 	    url: string;
 	    covers: string[];
@@ -30,6 +31,7 @@ export namespace music {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
 	        this.title = source["title"];
 	        this.url = source["url"];
 	        this.covers = source["covers"];

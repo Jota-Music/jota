@@ -293,6 +293,11 @@ func trackToSong(t Track) music.Song {
 		covers = append(covers, t.CoverURL)
 	}
 
+	albumID := ""
+	if strings.HasPrefix(t.AlbumURI, URIAlbumPrefix) {
+		albumID = strings.TrimPrefix(t.AlbumURI, URIAlbumPrefix)
+	}
+
 	return music.Song{
 		Id:       id,
 		Url:      t.URI,
@@ -303,6 +308,7 @@ func trackToSong(t Track) music.Song {
 			Url: "https://open.spotify.com/track/" + id,
 		},
 		Album: music.Album{
+			Id:     albumID,
 			Title:  t.Album,
 			Url:    t.AlbumURI,
 			Covers: covers,

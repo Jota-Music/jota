@@ -16,6 +16,7 @@ type Share struct {
 }
 
 type Album struct {
+	Id     string   `json:"id"`
 	Title  string   `json:"title"`
 	Url    string   `json:"url"`
 	Covers []string `json:"covers"`

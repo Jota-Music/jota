@@ -4,6 +4,7 @@ export interface Share {
 }
 
 export interface Album {
+	id?: string;
 	title: string;
 	url: string;
 	covers: string[];
