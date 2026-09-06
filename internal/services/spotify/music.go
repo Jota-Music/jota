@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"jota/server/internal/music"
 
@@ -24,6 +25,96 @@ func (s *SpotifyService) GetSong(id string) (music.Song, error) {
 		return music.Song{}, err
 	}
 	return trackToSong(track), nil
+}
+
+func (s *SpotifyService) GetFullPlaylist(playlistID string) (music.Playlist, error) {
+	return cachedFullPlaylist(playlistID, func() (music.Playlist, error) {
+		return s.fullPlaylist(playlistID)
+	})
+}
+
+func (s *SpotifyService) RevalidateFullPlaylist(playlistID string) error {
+	return revalidateFullPlaylist(playlistID)
+}
+
+func (s *SpotifyService) GetFullPlaylistNoCache(playlistID string) (music.Playlist, error) {
+	return s.fullPlaylist(playlistID)
+}
+
+func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error) {
+	uri := normalizePlaylistID(playlistID)
+
+	ctx := context.Background()
+	sess := s.Session()
+	if sess == nil {
+		return music.Playlist{}, ErrNotConnected
+	}
+
+	uris, err := resolveContextURIs(ctx, sess, uri)
+	if err != nil {
+		return music.Playlist{}, fmt.Errorf("resolve playlist: %w", err)
+	}
+	total := len(uris)
+
+	const batchSize = 50
+	const maxConcurrency = 3
+
+	batchCount := (total + batchSize - 1) / batchSize
+	type batchResult struct {
+		songs []music.Song
+		err   error
+	}
+	results := make([]batchResult, batchCount)
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxConcurrency)
+
+	for i := 0; i < batchCount; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			offset := idx * batchSize
+			limit := batchSize
+			if offset+limit > total {
+				limit = total - offset
+			}
+
+			tracks, err := getTracksFromURIs(ctx, sess, uri, offset, limit)
+			if err != nil {
+				results[idx] = batchResult{err: err}
+				return
+			}
+
+			songs := make([]music.Song, 0, len(tracks))
+			for _, t := range tracks {
+				songs = append(songs, trackToSong(t))
+			}
+			results[idx] = batchResult{songs: songs}
+		}(i)
+	}
+
+	wg.Wait()
+
+	allSongs := make([]music.Song, 0, total)
+	for _, r := range results {
+		if r.err != nil {
+			return music.Playlist{}, r.err
+		}
+		allSongs = append(allSongs, r.songs...)
+	}
+
+	return music.Playlist{
+		Songs: allSongs,
+		Page: music.Page{
+			Size:    total,
+			Offset:  0,
+			Total:   total,
+			HasNext: false,
+		},
+	}, nil
 }
 
 func (s *SpotifyService) GetPlaylist(playlistID string, page, size int) (music.Playlist, error) {
@@ -98,6 +189,20 @@ func getTracksFromURIs(ctx context.Context, sess *session.Session, uri string, o
 }
 
 func (s *SpotifyService) GetUserPlaylists(user string) ([]music.PlaylistSummary, error) {
+	return cachedUserPlaylists(user, func() ([]music.PlaylistSummary, error) {
+		return s.userPlaylists(user)
+	})
+}
+
+func (s *SpotifyService) RevalidateUserPlaylists(user string) error {
+	return revalidateUserPlaylists(user)
+}
+
+func (s *SpotifyService) GetUserPlaylistsNoCache(user string) ([]music.PlaylistSummary, error) {
+	return s.userPlaylists(user)
+}
+
+func (s *SpotifyService) userPlaylists(user string) ([]music.PlaylistSummary, error) {
 	ctx := context.Background()
 	sess := s.Session()
 	if sess == nil {
