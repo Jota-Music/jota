@@ -155,6 +155,7 @@ func GetAudio(youtubeId string) (*Audio, error) {
 		Url:      streamURL,
 		Duration: info.Duration,
 		ExpireAt: info.ExpireAt,
+		VideoID:  youtubeId,
 	}
 
 	if err := audioBucket.SetObject(youtubeId, audio, ttl); err != nil {
@@ -162,6 +163,30 @@ func GetAudio(youtubeId string) (*Audio, error) {
 	}
 
 	return &audio, nil
+}
+
+func GetCachedAudioBySpotifyId(spotifyId string) *Audio {
+	var cached Audio
+	if err := audioBucket.GetObject("spotify:"+spotifyId, &cached); err == nil {
+		if audioCacheStillValid(&cached) {
+			return &cached
+		}
+	}
+	return nil
+}
+
+func GetCachedAudioByYoutubeId(youtubeId string) *Audio {
+	var cached Audio
+	if err := audioBucket.GetObject(youtubeId, &cached); err == nil {
+		if audioCacheStillValid(&cached) {
+			return &cached
+		}
+	}
+	return nil
+}
+
+func SaveAudioForSpotifyId(spotifyId string, audio Audio, ttl time.Duration) {
+	_ = audioBucket.SetObject("spotify:"+spotifyId, audio, ttl)
 }
 
 func CookiesPath() string {
