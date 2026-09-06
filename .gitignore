@@ -6,3 +6,8 @@ tmp/
 *.mem
 .env
 storage/
+
+# Wails desktop build artifacts
+*.AppImage
+build/bin/
+client/package.json.md5
