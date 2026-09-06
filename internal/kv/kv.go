@@ -24,13 +24,11 @@ var (
 )
 
 func getDatabasePath() (string, error) {
-	exePath, err := os.Executable()
+	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-
-	baseDir := filepath.Dir(exePath)
-	return filepath.Join(baseDir, "storage", "kv"), nil
+	return filepath.Join(configDir, "jota", "storage", "kv"), nil
 }
 
 func EnsureStarted() error {

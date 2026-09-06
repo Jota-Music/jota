@@ -19,3 +19,23 @@
 	--dominant-color: var(--color-primary-400);
 	--binary-color: #ffffff;
 }
+
+/* Wails frameless drag: JS hook (useWindowDrag) handles drag via WindowSetPosition.
+   --wails-draggable CSS variable + no-drag rules kept for future-proofing. */
+[style*="--wails-draggable"] button,
+[style*="--wails-draggable"] a,
+[style*="--wails-draggable"] input,
+[style*="--wails-draggable"] select,
+[style*="--wails-draggable"] textarea,
+[style*="--wails-draggable"] [role="slider"] {
+	pointer-events: auto;
+}
+
+* {
+    user-select: none !important;
+}
+
+html, body {
+    overflow: hidden;
+    height: 100%;
+}

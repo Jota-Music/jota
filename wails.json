@@ -1,0 +1,22 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "jota",
+  "outputfilename": "jota",
+  "frontend:dir": "client",
+  "frontend:install": "bun install",
+  "frontend:build": "bun run build",
+  "frontend:dev:watcher": "bun run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "salvadorsru",
+    "email": "salvadorsru@gmail.com"
+  },
+  "wailsjsdir": "./client/src",
+  "build:tags": "webkit2_41",
+  "info": {
+    "companyName": "salvadorsru",
+    "productName": "Jota",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright © 2024"
+  }
+}
