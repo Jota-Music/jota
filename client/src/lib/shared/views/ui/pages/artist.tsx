@@ -8,6 +8,7 @@ import { Link, useParams } from "wouter-preact";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import type { AlbumSummary, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import { cn } from "@/lib/shared/utils/tw";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
@@ -127,11 +128,12 @@ export function ArtistPage() {
 								onClick={() => {
 									view.value = "tracks";
 								}}
-								class={`flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm transition-colors ${
+								class={cn(
+									"flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm transition-colors",
 									activeTab === "tracks"
 										? "border-zinc-600 bg-zinc-900 text-white"
-										: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white"
-								}`}
+										: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white",
+								)}
 							>
 								<ListMusic size={14} />
 								Top tracks
