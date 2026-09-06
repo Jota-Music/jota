@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { ListMusic, SkipBack, SkipForward } from "lucide-preact";
+import { ChevronDown, ChevronUp, ListMusic, SkipBack, SkipForward } from "lucide-preact";
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
@@ -53,7 +53,7 @@ function FullPlayerContent({
 					max={duration}
 					min={0}
 					onChange={seek}
-					class="text-current mx-auto w-52 drop-shadow-lg drop-shadow-black"
+					class="text-current mx-auto w-48 drop-shadow-lg drop-shadow-black"
 				>
 					<div class="relative aspect-square w-full">
 						<img
@@ -163,7 +163,7 @@ function DraggableSheet({
 }) {
 	const sheetRef = useRef<HTMLDivElement>(null);
 	const backdropRef = useRef<HTMLButtonElement>(null);
-	const handleRef = useRef<HTMLDivElement>(null);
+	const handleRef = useRef<HTMLButtonElement>(null);
 	const contentRef = useRef<HTMLDivElement>(null);
 	const dragStartY = useRef(0);
 	const dragStartTime = useRef(0);
@@ -329,12 +329,14 @@ function DraggableSheet({
 				ref={sheetRef}
 				class="absolute bottom-0 left-0 right-0 bg-stone-950 rounded-t-2xl flex flex-col max-h-[85vh]"
 			>
-				<div
+				<button
+					type="button"
 					ref={handleRef}
-					class="w-full flex justify-center pt-4 pb-2 cursor-grab active:cursor-grabbing touch-none"
+					onClick={closeSheet}
+					class="w-full flex items-center justify-center gap-1 pt-4 pb-2 cursor-grab active:cursor-grabbing touch-none text-white/60 hover:text-white transition-colors"
 				>
-					<div class="w-14 h-1.5 bg-white/20 rounded-full" />
-				</div>
+					<ChevronDown size={18} />
+				</button>
 				<div
 					ref={contentRef}
 					class="overflow-y-auto min-h-0 flex-1 select-none px-4 pb-8"
@@ -411,11 +413,11 @@ export function Player() {
 						max={duration}
 						min={0}
 						onChange={seek}
-						class="h-[3px] w-full rounded-none border-0 bg-neutral-800"
+						class="h-0.75 w-full rounded-none border-0 bg-neutral-800"
 					/>
 				</div>
 
-				<div class="flex items-center gap-3 w-full px-4 py-3">
+				<div class="flex items-center gap-2 w-full px-4 py-3">
 					<div
 						role="toolbar"
 						tabIndex={-1}
@@ -473,6 +475,18 @@ export function Player() {
 							class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
 						>
 							<SkipForward size={20} class="fill-current" />
+						</button>
+
+						<button
+							type="button"
+							aria-label="Expand player"
+							onClick={(e) => {
+								e.stopPropagation();
+								playerModalOpen.value = true;
+							}}
+							class="shrink-0 p-1.5 rounded-full text-white/60 hover:text-white cursor-pointer transition-colors"
+						>
+							<ChevronUp size={18} />
 						</button>
 					</div>
 				</div>

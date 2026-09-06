@@ -13,7 +13,6 @@ import {
 	prevSong,
 	seekFromLocalControl,
 	toggleSong,
-	waitingForConsensus,
 } from "@/lib/music/views/stores/player";
 import { currentIndex, queue } from "@/lib/music/views/stores/queue";
 import {
@@ -62,7 +61,10 @@ export function usePlayer() {
 			try {
 				const cached = await AudioCache.get(song);
 				if (!cancelled && cached.youtube) {
-					song.youtubeId = cached.youtube;
+					const current = currentSong.value;
+					if (current && current.id === song.id) {
+						currentSong.value = { ...current, youtubeId: cached.youtube };
+					}
 				}
 			} catch (error) {
 				console.error("Error loading YouTube ID:", error);
@@ -84,7 +86,7 @@ export function usePlayer() {
 		cover,
 
 		// state
-		isLoading: isLoading.value || waitingForConsensus.value,
+		isLoading: isLoading.value,
 		isPlaying: isPlaying.value,
 		progress: progress.value,
 		duration: audioDuration.value,

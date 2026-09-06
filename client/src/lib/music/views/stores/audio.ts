@@ -19,17 +19,12 @@ function parseStoredVolume(raw: string | null): number {
 function parseStoredMuted(raw: string | null): boolean {
 	if (raw === null) return false;
 	if (raw === "1" || raw === "true") return true;
-	if (raw === "0" || raw === "false") return false;
 	return false;
 }
 
 function checkTabMute(): boolean {
 	return muted.value || !isMainTab.value;
 }
-
-/* -------------------------------------------------
-   AUDIO INSTANCE
--------------------------------------------------- */
 
 let audio: HTMLAudioElement | null = null;
 
@@ -39,15 +34,14 @@ export function setOnTrackEnded(fn: () => void) {
 	onTrackEndedCallback = fn;
 }
 
-let _broadcastToggle: (() => void) | null = null;
+export const isLoading = signal(false);
+export const isPlaying = signal(false);
+export const progress = signal(0);
+export const audioDuration = signal(0);
+export const volume = signal(getInitialVolume());
+export const muted = signal(getInitialMuted());
 
-export function setBroadcastToggle(fn: (() => void) | null) {
-	_broadcastToggle = fn;
-}
-
-/* -------------------------------------------------
-   STATE
--------------------------------------------------- */
+export const currentSong = signal<Song | null>(null);
 
 function getInitialVolume() {
 	if (typeof window !== "undefined") {
@@ -62,23 +56,6 @@ function getInitialMuted() {
 	}
 	return false;
 }
-
-export const isLoading = signal(false);
-export const isPlaying = signal(false);
-export const progress = signal(0);
-export const audioDuration = signal(0);
-export const volume = signal(getInitialVolume());
-export const muted = signal(getInitialMuted());
-
-/* -------------------------------------------------
-   CURRENT SONG (reference)
--------------------------------------------------- */
-
-export const currentSong = signal<Song | null>(null);
-
-/* -------------------------------------------------
-   PLAYBACK
--------------------------------------------------- */
 
 function waitUntilBufferedEnough(el: HTMLAudioElement): Promise<void> {
 	if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
@@ -132,6 +109,10 @@ async function loadSongIntoPlayer(
 	let data: { url: string; youtube: string };
 	try {
 		data = await AudioCache.get(song);
+		if (data.youtube && currentSong.value?.id === song.id) {
+			const current = currentSong.value;
+			currentSong.value = { ...current, youtubeId: data.youtube };
+		}
 	} catch {
 		isLoading.value = false;
 		isPlaying.value = false;
@@ -237,29 +218,16 @@ export function getPlaybackSeconds(): number {
 	return Number.isFinite(p) ? Math.max(0, p) : 0;
 }
 
-/* -------------------------------------------------
-   CONTROLS
--------------------------------------------------- */
-
 export function pause() {
 	audio?.pause();
-	_broadcastToggle?.();
-}
-
-function setPlayerPosition(seconds: number) {
-	if (!Number.isFinite(seconds)) return;
-	if (audio) {
-		audio.currentTime = seconds;
-	}
-	progress.value = seconds;
 }
 
 export function seek(time: number) {
-	setPlayerPosition(time);
-}
-
-export function socketSeek(time: number) {
-	setPlayerPosition(time);
+	if (!Number.isFinite(time)) return;
+	if (audio) {
+		audio.currentTime = time;
+	}
+	progress.value = time;
 }
 
 export function setVolume(value: number) {
@@ -299,36 +267,7 @@ export async function togglePlayPause(): Promise<boolean> {
 	} else {
 		audio.pause();
 	}
-	_broadcastToggle?.();
 	return !audio.paused;
-}
-
-export async function remoteTogglePlayPause(): Promise<boolean> {
-	if (!audio) return false;
-	if (audio.paused) {
-		try {
-			await audio.play();
-		} catch {
-			addError("Playback failed — check your connection");
-			return false;
-		}
-	} else {
-		audio.pause();
-	}
-	return !audio.paused;
-}
-
-export function syncPlayerFromServer(playing: boolean) {
-	if (audio) {
-		if (playing) {
-			void audio.play().catch(() => {
-				addError("Playback failed — check your connection");
-			});
-		} else {
-			audio.pause();
-		}
-	}
-	isPlaying.value = playing;
 }
 
 export function stopPlayer() {
@@ -343,10 +282,6 @@ export function stopPlayer() {
 	audioDuration.value = 0;
 	isPlaying.value = false;
 }
-
-/* -------------------------------------------------
-   EVENTS
--------------------------------------------------- */
 
 function bindEvents(a: HTMLAudioElement) {
 	const syncDuration = () => {
