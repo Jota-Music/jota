@@ -9,6 +9,8 @@ import (
 	"jota/server/internal/music"
 	"jota/server/internal/services/spotify"
 	"jota/server/internal/services/youtube"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type App struct {
@@ -28,7 +30,7 @@ func New() *App {
 	}
 }
 
-func (a *App) Startup(ctx context.Context) {
+func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
 	kv.Start()
 	if err := a.Spotify.Connect(ctx); err != nil {
@@ -36,10 +38,12 @@ func (a *App) Startup(ctx context.Context) {
 	} else {
 		log.Printf("spotify: connected as %s", a.Spotify.Username())
 	}
+	return nil
 }
 
-func (a *App) Shutdown(ctx context.Context) {
+func (a *App) ServiceShutdown() error {
 	kv.Close()
+	return nil
 }
 
 // ----- Spotify bindings -----

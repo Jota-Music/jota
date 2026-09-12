@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+	/* Primary scale */
+	--color-primary-50: #fff1f3;
+	--color-primary-100: #ffe4e8;
+	--color-primary-200: #ffc9d2;
+	--color-primary-300: #ff9fb0;
+	--color-primary-400: #ff5f7a;
+	--color-primary-500: #ff2d55;
+	--color-primary: var(--color-primary-500);
+	--color-primary-600: #e61f46;
+	--color-primary-700: #c2183a;
+	--color-primary-800: #9d1430;
+	--color-primary-900: #6e0e21;
+	--color-primary-950: #3b0711;
+
+	/* Player accent until cover analysis sets inline vars */
+	--dominant-color: var(--color-primary-400);
+	--binary-color: #ffffff;
+}
+
+/* Wails frameless drag: JS hook (useWindowDrag) handles drag via WindowSetPosition.
+   --wails-draggable CSS variable + no-drag rules kept for future-proofing. */
+[style*="--wails-draggable"] button,
+[style*="--wails-draggable"] a,
+[style*="--wails-draggable"] input,
+[style*="--wails-draggable"] select,
+[style*="--wails-draggable"] textarea,
+[style*="--wails-draggable"] [role="slider"] {
+	pointer-events: auto;
+}
+
+* {
+    user-select: none !important;
+}
+
+html, body {
+    overflow: hidden;
+    height: 100%;
+}
+
+* {
+	scrollbar-width: thin;
+	scrollbar-color: #3f3f46 transparent;
+}
+
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: #3f3f46;
+	border-radius: 9999px;
+	border: 2px solid transparent;
+	background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background-color: #52525b;
+}
+
+::-webkit-scrollbar-corner {
+	background: transparent;
+}

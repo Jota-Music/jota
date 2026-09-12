@@ -1,13 +1,19 @@
 dist/
 node_modules/
+build/
+vendor/
 tmp/
 *.log
 *.vlog
 *.mem
 .env
 storage/
+.vite/
+.task/
+bin/
+vendor/
 
 # Wails desktop build artifacts
 *.AppImage
 build/bin/
-client/package.json.md5
+frontend/package.json.md5

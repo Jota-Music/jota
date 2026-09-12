@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"runtime"
 	"sync"
 	"time"
 
@@ -137,17 +138,29 @@ func (s *SpotifyService) StartupLogin() (string, error) {
 	s.done = false
 	s.mu.Unlock()
 
-	cbServer, err := newCallbackServer()
-	if err != nil {
-		log.Printf("spotify-v2: StartupLogin failed: %v", err)
-		return "", fmt.Errorf("failed to start callback server: %w", err)
+	// On Android, use custom scheme for OAuth callback instead of local server
+	var redirectURL string
+	var useCallbackServer bool
+
+	if runtime.GOOS == "android" {
+		// Android uses custom scheme redirect
+		redirectURL = "jota://callback"
+		useCallbackServer = false
+	} else {
+		cbServer, err := newCallbackServer()
+		if err != nil {
+			log.Printf("spotify-v2: StartupLogin failed: %v", err)
+			return "", fmt.Errorf("failed to start callback server: %w", err)
+		}
+		s.callbackServer = cbServer
+		log.Printf("spotify-v2: callback server started on port %d", cbServer.port)
+		redirectURL = fmt.Sprintf("http://127.0.0.1:%d/login", cbServer.port)
+		useCallbackServer = true
 	}
-	s.callbackServer = cbServer
-	log.Printf("spotify-v2: callback server started on port %d", cbServer.port)
 
 	oauthConf := &oauth2.Config{
 		ClientID:    s.clientID,
-		RedirectURL: fmt.Sprintf("http://127.0.0.1:%d/login", cbServer.port),
+		RedirectURL: redirectURL,
 		Scopes:      spotifyOAuthScopes,
 		Endpoint:    spotifyoauth2.Endpoint,
 	}
@@ -157,12 +170,19 @@ func (s *SpotifyService) StartupLogin() (string, error) {
 
 	p := &pendingLogin{
 		verifier:    verifier,
-		redirectURL: oauthConf.RedirectURL,
+		redirectURL: redirectURL,
 		createdAt:   time.Now(),
 	}
 	s.pendingMu.Lock()
 	s.pending = p
 	s.pendingMu.Unlock()
+
+	// Only start callback server on non-Android platforms
+	if useCallbackServer {
+		// callbackServer already assigned above
+	} else {
+		s.callbackServer = nil
+	}
 
 	log.Printf("spotify-v2: auth URL: %s", authURL)
 
@@ -214,6 +234,85 @@ func (s *SpotifyService) CompleteLogin() error {
 	log.Printf("spotify-v2: got code")
 
 	log.Printf("spotify-v2: completing interactive login")
+	exchangeCtx, exchangeCancel := context.WithTimeout(context.Background(), time.Minute)
+	defer exchangeCancel()
+
+	oauthConf := &oauth2.Config{
+		ClientID:    s.clientID,
+		RedirectURL: p.redirectURL,
+		Scopes:      spotifyOAuthScopes,
+		Endpoint:    spotifyoauth2.Endpoint,
+	}
+
+	token, err := oauthConf.Exchange(exchangeCtx, code, oauth2.VerifierOption(p.verifier))
+	if err != nil {
+		log.Printf("spotify-v2: token exchange failed: %v", err)
+		return fmt.Errorf("failed exchanging oauth2 code: %w", err)
+	}
+	log.Printf("spotify-v2: token exchanged")
+
+	username, _ := token.Extra("username").(string)
+	if username == "" {
+		log.Printf("spotify-v2: missing username in token")
+		return errors.New("missing username in token response")
+	}
+
+	sess, err := s.newSession(context.Background(), session.SpotifyTokenCredentials{
+		Username: username,
+		Token:    token.AccessToken,
+	})
+	if err != nil {
+		log.Printf("spotify-v2: session creation failed: %v", err)
+		return fmt.Errorf("failed connecting session: %w", err)
+	}
+
+	s.mu.Lock()
+	s.sess = sess
+	s.mu.Unlock()
+
+	if err := saveCreds(sess.Username(), sess.StoredCredentials()); err != nil {
+		log.Printf("spotify-v2: failed to save credentials: %v", err)
+	}
+	log.Printf("spotify-v2: connected as %s", sess.Username())
+
+	return nil
+}
+
+// CompleteLoginWithCode completes the OAuth flow using a code received externally
+// (e.g., via custom scheme redirect on Android).
+func (s *SpotifyService) CompleteLoginWithCode(code string) error {
+	if code == "" {
+		return errors.New("empty code")
+	}
+	// We don't have the pending struct (with verifier and redirectURL) when called externally.
+	// We need to use the pending info if available, or fall back to defaults.
+	s.pendingMu.Lock()
+	p := s.pending
+	s.pendingMu.Unlock()
+
+	// If we have pending info from StartupLogin, use it; otherwise use defaults.
+	verifier := ""
+	redirectURL := ""
+	if p != nil {
+		verifier = p.verifier
+		redirectURL = p.redirectURL
+	}
+	if verifier == "" {
+		log.Printf("spotify-v2: CompleteLoginWithCode: no PKCE verifier available")
+	}
+	if redirectURL == "" {
+		redirectURL = "http://127.0.0.1:35261/login" // default, but may not be used with custom scheme
+	}
+
+	return s.completeLoginWithCode(code, &pendingLogin{
+		verifier:    verifier,
+		redirectURL: redirectURL,
+	})
+}
+
+func (s *SpotifyService) completeLoginWithCode(code string, p *pendingLogin) error {
+	log.Printf("spotify-v2: completing login with code")
+
 	exchangeCtx, exchangeCancel := context.WithTimeout(context.Background(), time.Minute)
 	defer exchangeCancel()
 

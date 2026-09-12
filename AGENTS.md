@@ -4,21 +4,27 @@ Self-hosted music streaming desktop app — Go backend with Preact frontend, pac
 
 ## Stack
 
-- **Backend**: Go + Wails v2 (desktop app) + BadgerDB (embedded key-value store)
+- **Backend**: Go + Wails v3 (desktop app) + BadgerDB (embedded key-value store)
 - **Frontend**: Preact + Vite + Bun + TypeScript
-- **Music Sources**: Spotify (via go-librespot) + YouTube (via yt-dlp)
+- **Music Sources**: Spotify (via go-librespot) + YouTube (via innertube API)
 - **Spotify Auth**: Local callback server inside the desktop app + default librespot client
+- **Build**: Wails v3 `Taskfile.yml` + `build/` scaffolding; targets Linux (native), Android (via Gradle), Windows/macOS/iOS (template)
 
 ## Commands
 
 ```bash
 # Desktop app (live-reload)
-WEBKIT_DISABLE_DMABUF_RENDERER=1 wails dev -tags webkit2_41
+WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev
 
 # Production build (Linux)
-wails build -tags webkit2_41
-./build/bin/jota
+wails3 task build            # output: bin/jota
+wails3 dev                   # dev build + vite dev server (port 9245)
+
+# Regenerate TypeScript bindings only
+wails3 generate bindings -ts -clean=true   # into frontend/bindings/
 ```
+
+`wails3` lives at `~/go/bin/wails3` (add to PATH). The Linux build hard-codes the `gtk3` tag (webkit2gtk-4.1); the default compiles against GTK4/webkitgtk-6.0 which crashes gcc 16 on this machine.
 
 ## Environment Variables
 
@@ -41,10 +47,10 @@ The default `librespot.ClientIdHex` is registered with Spotify for `http://127.0
 ## Project Structure
 
 ```
-main.go                          # Wails entry point; embeds client/dist
+main.go                          # Wails entry point; embeds frontend/dist
 ├── internal/
 │   ├── app/
-│   │   └── app.go                # App struct; bound to JS as `go.app.App`
+│   │   └── app.go                # App struct; bound as a Wails v3 Service
 │   ├── services/
 │   │   ├── spotify/             # Spotify OAuth, session, music API
 │   │   │   ├── service.go       # SpotifyService; callback server, reconnect, OAuth
@@ -56,22 +62,21 @@ main.go                          # Wails entry point; embeds client/dist
 │   │   │   ├── search.go
 │   │   │   ├── id.go
 │   │   │   └── metadata.go
-│   │   └── youtube/             # yt-dlp wrapper for stream URL retrieval
+│   │   └── youtube/             # innertube API stream URL retrieval
 │   ├── music/                    # Domain types + MusicRepository
 │   ├── kv/                       # BadgerDB key-value abstraction
 │   ├── session/                  # Spotify session persistence (BadgerDB)
 │   └── env/                      # env.Load() configuration
-├── client/                       # Preact SPA
+├── frontend/                     # Preact SPA
 │   ├── src/
 │   │   ├── lib/                  # Feature code (auth, music, shared)
-│   │   │   ├── auth/            # Spotify login flow (Wails BrowserOpenURL)
+│   │   │   ├── auth/            # Spotify login flow (Wails Browser.OpenURL)
 │   │   │   ├── music/           # Playlists, player, queue, audio cache
 │   │   │   └── shared/          # Layouts, components, hooks, stores
-│   │   ├── wailsjs/             # Generated Wails bindings
 │   │   └── main.tsx
-│   └── ...
-├── wails.json                    # Wails build config
-└── Dockerfile                    # Multi-stage container build
+│   └── bindings/                # Generated Wails v3 bindings (@wailsio/runtime)
+├── Taskfile.yml                  # Wails v3 tasks (build/dev/package)
+└── build/                        # Platform scaffolding + config.yml (icons, metadata)
 ```
 
 ## Wails Bindings (exposed to JS)
@@ -108,12 +113,12 @@ The default `librespot.ClientIdHex` is registered with Spotify for `http://127.0
 
 ## Code Conventions
 
-- Go: Standard library + Wails v2; no heavy OOP frameworks
+- Go: Standard library + Wails v3; no heavy OOP frameworks
 - Frontend: Preact with signals; uses `@tanstack/preact-query` for data fetching
 - Error handling: Return errors as values; log and continue where appropriate
 - Bindings: All Go→JS bridge methods live on `internal/app/app.go` (struct `App`)
 - Caching: Spotify playlist/track metadata cached for 12h in BadgerDB (`sessionBucket`)
-- Types: Keep Go `music.Song`, `music.Playlist`, etc. JSON tags in sync with `client/src/lib/music/model/index.ts`
+- Types: Keep Go `music.Song`, `music.Playlist`, etc. JSON tags in sync with `frontend/src/lib/music/model/index.ts`
 
 ## Linting
 
@@ -122,12 +127,12 @@ The default `librespot.ClientIdHex` is registered with Spotify for `http://127.0
 go fmt ./...
 
 # TypeScript
-cd client && bun run typecheck
-cd client && bun run lint
+cd frontend && bun run typecheck
+cd frontend && bun run lint
 ```
 
 ## Common Tasks
 
-- **Add a new binding**: Add a method to `App` in `internal/app/app.go` and rebuild with `wails build` to regenerate TypeScript bindings at `client/src/wailsjs/go/app/App.ts`
+- **Add a new binding**: Add a method to `App` in `internal/app/app.go` and rebuild with `wails3 task build` to regenerate TypeScript bindings at `frontend/bindings/`
 - **Add a new Spotify endpoint**: Add to `internal/services/spotify/`, expose via `Music` (MusicRepository), call from `App` in `internal/app/app.go`
 - **Add a new YouTube helper**: Add to `internal/services/youtube/`, expose via `YouTube` in `App`
