@@ -3,6 +3,9 @@ import {
 	ChevronDown,
 	ChevronUp,
 	ListMusic,
+	Repeat,
+	Repeat1,
+	Shuffle,
 	SkipBack,
 	SkipForward,
 } from "lucide-preact";
@@ -10,12 +13,20 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { usePlayer } from "@/lib/music/views/hooks/use-player";
-import { playerSkeletonOn, showQueue } from "@/lib/music/views/stores/queue";
+import {
+	cycleRepeat,
+	playerSkeletonOn,
+	repeat,
+	showQueue,
+	shuffle,
+	toggleShuffle,
+} from "@/lib/music/views/stores/queue";
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
 import { PlayerSkeleton } from "@/lib/music/views/ui/player/skeleton";
 import Toggle from "@/lib/music/views/ui/player/toggle";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { secondsToTime } from "@/lib/shared/utils/format";
+import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
@@ -134,6 +145,51 @@ function FullPlayerContent({
 				</div>
 
 				<div class="flex items-center justify-between gap-4 mt-4 pb-2">
+					<div class="flex items-center gap-2">
+						<button
+							type="button"
+							title={
+								shuffle.value ? "Desactivar aleatorio" : "Activar aleatorio"
+							}
+							onClick={toggleShuffle}
+							aria-pressed={shuffle.value}
+							class={cn(
+								"rounded-md p-1 transition cursor-pointer",
+								shuffle.value
+									? "bg-(--dominant-color)/20 text-(--dominant-color)"
+									: "text-white/60 hover:bg-white/10 hover:text-white",
+							)}
+						>
+							<Shuffle size={20} class="stroke-current" />
+						</button>
+
+						<button
+							type="button"
+							title={
+								repeat.value === "off"
+									? "Repetir todo"
+									: repeat.value === "all"
+										? "Repetir uno"
+										: "Sin repetición"
+							}
+							onClick={cycleRepeat}
+							aria-label="Modo de repetición"
+							aria-pressed={repeat.value !== "off"}
+							class={cn(
+								"rounded-md p-1 transition cursor-pointer",
+								repeat.value !== "off"
+									? "bg-(--dominant-color)/20 text-(--dominant-color)"
+									: "text-white/60 hover:bg-white/10 hover:text-white",
+							)}
+						>
+							{repeat.value === "one" ? (
+								<Repeat1 size={20} class="stroke-current" />
+							) : (
+								<Repeat size={20} class="stroke-current" />
+							)}
+						</button>
+					</div>
+
 					<Toggle
 						loading={isLoading}
 						playing={isPlaying}
@@ -458,6 +514,8 @@ export function Player() {
 					</div>
 
 					<div class="flex items-center gap-1 shrink-0">
+						<VolumeControl class="mr-2" />
+
 						<button
 							type="button"
 							disabled={!canPrev}

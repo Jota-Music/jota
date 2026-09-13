@@ -9,7 +9,14 @@ import {
 	togglePlayPause,
 } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
-import { currentIndex, queue } from "@/lib/music/views/stores/queue";
+import * as media from "@/lib/music/views/stores/media-session";
+import {
+	currentIndex,
+	persistQueue,
+	queue,
+	repeat,
+	shuffle,
+} from "@/lib/music/views/stores/queue";
 
 function clampPlaybackSeconds(seconds: number): number {
 	if (!Number.isFinite(seconds) || seconds < 0) return 0;
@@ -30,7 +37,7 @@ export function seekFromLocalControl(seconds: number) {
 	seek(clampPlaybackSeconds(seconds));
 }
 
-async function applyQueueState(nextQueue: Song[], nextIndex: number) {
+function setQueueState(nextQueue: Song[], nextIndex: number) {
 	const prevId = currentSong.value?.id ?? null;
 	const song =
 		nextIndex >= 0 && nextIndex < nextQueue.length
@@ -40,6 +47,7 @@ async function applyQueueState(nextQueue: Song[], nextIndex: number) {
 
 	queue.value = nextQueue;
 	currentIndex.value = nextIndex;
+	persistQueue();
 
 	if (!song) {
 		stopPlayer();
@@ -52,13 +60,25 @@ async function applyQueueState(nextQueue: Song[], nextIndex: number) {
 		return;
 	}
 
+	currentSong.value = song;
+	preloadUpcomingSongs(nextQueue, nextIndex);
+}
+
+async function playAtIndex(i: number): Promise<void> {
+	const q = queue.value;
+	if (i < 0 || i >= q.length) return;
+
+	currentIndex.value = i;
+	persistQueue();
+	const song = q[i];
+
 	const ok = await play(song);
 	if (!ok) {
 		stopPlayer();
 		return;
 	}
 
-	preloadUpcomingSongs(nextQueue, nextIndex);
+	preloadUpcomingSongs(q, i);
 }
 
 export async function playFromQueueSelection(
@@ -68,7 +88,8 @@ export async function playFromQueueSelection(
 	const i = fullOrderedSongs.findIndex((s) => s.id === clicked.id);
 	if (i === -1) return;
 
-	await applyQueueState(fullOrderedSongs.slice(), i);
+	await setQueueState(fullOrderedSongs.slice(), i);
+	await playAtIndex(i);
 }
 
 export function enqueue(song: Song) {
@@ -79,6 +100,7 @@ export function enqueue(song: Song) {
 		newQueue.push(song);
 		queue.value = newQueue;
 		currentIndex.value = 0;
+		persistQueue();
 		void AudioCache.preload(song);
 		return;
 	}
@@ -90,6 +112,7 @@ export function enqueue(song: Song) {
 
 	newQueue.splice(insertAt, 0, song);
 	queue.value = newQueue;
+	persistQueue();
 
 	void AudioCache.preload(song);
 }
@@ -117,7 +140,7 @@ export async function unqueue(removeIdx: number): Promise<void> {
 		nextIndex = 0;
 	}
 
-	await applyQueueState(q, nextIndex);
+	setQueueState(q, nextIndex);
 }
 
 export async function moveQueue(from: number, to: number): Promise<void> {
@@ -143,7 +166,7 @@ export async function moveQueue(from: number, to: number): Promise<void> {
 				? 0
 				: -1;
 
-	await applyQueueState(a, nextIndex >= 0 ? nextIndex : a.length > 0 ? 0 : -1);
+	setQueueState(a, nextIndex >= 0 ? nextIndex : a.length > 0 ? 0 : -1);
 }
 
 export async function moveAfterCurrent(from: number): Promise<void> {
@@ -167,7 +190,7 @@ export async function moveAfterCurrent(from: number): Promise<void> {
 
 	const nextIndex = a.findIndex((s) => s.id === playingId);
 
-	await applyQueueState(a, nextIndex >= 0 ? nextIndex : 0);
+	setQueueState(a, nextIndex >= 0 ? nextIndex : 0);
 }
 
 export async function playAt(i: number): Promise<void> {
@@ -176,16 +199,7 @@ export async function playAt(i: number): Promise<void> {
 	if (i < 0 || i >= q.length) return;
 	if (i === currentIndex.value) return;
 
-	currentIndex.value = i;
-	const song = q[i];
-
-	const ok = await play(song);
-	if (!ok) {
-		stopPlayer();
-		return;
-	}
-
-	preloadUpcomingSongs(q, i);
+	await playAtIndex(i);
 }
 
 export async function toggleSong() {
@@ -195,20 +209,103 @@ export async function toggleSong() {
 export async function nextSong() {
 	const q = queue.value;
 	const i = currentIndex.value;
+	const r = repeat.value;
+	const s = shuffle.value;
 
-	if (i >= q.length - 1) return;
+	if (q.length === 0) return;
 
-	await playAt(i + 1);
+	if (r === "one") {
+		await playAtIndex(i);
+		return;
+	}
+
+	let nextIndex: number;
+
+	if (s) {
+		const candidates = q.filter((_, idx) => idx !== i);
+		if (candidates.length === 0) return;
+		const random = candidates[Math.floor(Math.random() * candidates.length)];
+		nextIndex = q.findIndex((song) => song.id === random.id);
+	} else if (i >= q.length - 1) {
+		if (r === "all") {
+			nextIndex = 0;
+		} else {
+			return;
+		}
+	} else {
+		nextIndex = i + 1;
+	}
+
+	await playAtIndex(nextIndex);
 }
 
 export async function prevSong() {
+	const q = queue.value;
 	const i = currentIndex.value;
+	const r = repeat.value;
+	const s = shuffle.value;
 
-	if (i <= 0) return;
+	if (q.length === 0) return;
 
-	await playAt(i - 1);
+	if (r === "one") {
+		await playAtIndex(i);
+		return;
+	}
+
+	let prevIndex: number;
+
+	if (s) {
+		const candidates = q.filter((_, idx) => idx !== i);
+		if (candidates.length === 0) return;
+		const random = candidates[Math.floor(Math.random() * candidates.length)];
+		prevIndex = q.findIndex((song) => song.id === random.id);
+	} else if (i <= 0) {
+		if (r === "all") {
+			prevIndex = q.length - 1;
+		} else {
+			return;
+		}
+	} else {
+		prevIndex = i - 1;
+	}
+
+	await playAtIndex(prevIndex);
 }
 
 setOnTrackEnded(() => {
-	void nextSong();
+	const q = queue.value;
+	const i = currentIndex.value;
+	const r = repeat.value;
+	const s = shuffle.value;
+
+	if (q.length === 0) return;
+
+	if (r === "one") {
+		void playAtIndex(i);
+		return;
+	}
+
+	let nextIndex: number;
+
+	if (s) {
+		const candidates = q.filter((_, idx) => idx !== i);
+		if (candidates.length === 0) return;
+		const random = candidates[Math.floor(Math.random() * candidates.length)];
+		nextIndex = q.findIndex((song) => song.id === random.id);
+	} else if (i >= q.length - 1) {
+		if (r === "all") {
+			nextIndex = 0;
+		} else {
+			return;
+		}
+	} else {
+		nextIndex = i + 1;
+	}
+
+	void playAtIndex(nextIndex);
+});
+
+media.tracks({
+	next: () => void nextSong(),
+	previous: () => void prevSong(),
 });

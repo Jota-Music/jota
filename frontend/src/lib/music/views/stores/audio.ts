@@ -1,6 +1,7 @@
 import { effect, signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
+import * as media from "@/lib/music/views/stores/media-session";
 import { addError } from "@/lib/shared/views/stores/errors";
 import { isMainTab } from "@/lib/shared/views/ui/hooks/tabs";
 
@@ -100,6 +101,7 @@ async function loadSongIntoPlayer(
 	startSeconds?: number,
 ): Promise<boolean> {
 	currentSong.value = song;
+	media.update(song, isPlaying.value);
 
 	progress.value = 0;
 	audioDuration.value = 0;
@@ -129,7 +131,7 @@ async function loadSongIntoPlayer(
 
 	let instance: HTMLAudioElement;
 	try {
-		instance = new Audio(data.url);
+		instance = await AudioCache.getAudioElement(song);
 	} catch {
 		isLoading.value = false;
 		isPlaying.value = false;
@@ -139,7 +141,6 @@ async function loadSongIntoPlayer(
 
 	audio = instance;
 
-	instance.preload = "auto";
 	instance.volume = volume.value;
 	instance.muted = checkTabMute();
 	instance.currentTime = 0;
@@ -278,6 +279,7 @@ export function stopPlayer() {
 		audio = null;
 	}
 	currentSong.value = null;
+	media.clear();
 	progress.value = 0;
 	audioDuration.value = 0;
 	isPlaying.value = false;
@@ -294,14 +296,17 @@ function bindEvents(a: HTMLAudioElement) {
 
 	a.onplay = () => {
 		isPlaying.value = true;
+		media.update(currentSong.value, true);
 	};
 
 	a.onpause = () => {
 		isPlaying.value = false;
+		media.update(currentSong.value, false);
 	};
 
 	a.ontimeupdate = () => {
 		progress.value = a.currentTime;
+		media.position(a);
 	};
 
 	a.onended = () => {
@@ -333,3 +338,11 @@ if (typeof window !== "undefined") {
 		}
 	});
 }
+
+media.setup({
+	play: () => void audio?.play(),
+	pause: () => audio?.pause(),
+	stop: stopPlayer,
+	seek,
+	position: getPlaybackSeconds,
+});

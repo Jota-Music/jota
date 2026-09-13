@@ -114,6 +114,7 @@ export class AudioCache {
 				if (cached) {
 					cached.audio = audio;
 					cached.lastUsed = Date.now();
+					AudioCache.touch(song.id);
 				}
 			}),
 		);
@@ -127,6 +128,7 @@ export class AudioCache {
 		const cached = await AudioCache.get(song);
 
 		if (cached.audio) {
+			AudioCache.touch(song.id);
 			return cached.audio;
 		}
 
