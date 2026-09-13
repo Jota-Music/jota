@@ -99,6 +99,14 @@ function clampStartSeconds(
 	return seconds;
 }
 
+function isAbortError(err: unknown): boolean {
+	return (
+		typeof DOMException !== "undefined" &&
+		err instanceof DOMException &&
+		err.name === "AbortError"
+	);
+}
+
 async function loadSongIntoPlayer(
 	song: Song,
 	autostart: boolean,
@@ -180,11 +188,13 @@ async function loadSongIntoPlayer(
 		try {
 			await instance.play();
 			isPlaying.value = true;
-		} catch {
-			isPlaying.value = false;
-			addError(
-				"Playback failed — check your connection or try a different song",
-			);
+		} catch (err) {
+			if (!isAbortError(err)) {
+				isPlaying.value = false;
+				addError(
+					"Playback failed — check your connection or try a different song",
+				);
+			}
 		}
 	} else {
 		isPlaying.value = false;
@@ -318,9 +328,11 @@ export async function togglePlayPause(): Promise<boolean> {
 	if (audio.paused) {
 		try {
 			await audio.play();
-		} catch {
-			addError("Playback failed — check your connection");
-			return false;
+		} catch (err) {
+			if (!isAbortError(err)) {
+				addError("Playback failed — check your connection");
+				return false;
+			}
 		}
 	} else {
 		audio.pause();

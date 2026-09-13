@@ -354,6 +354,8 @@ async function applyState(
 		return;
 	}
 
+	if (isLoading.value) return;
+
 	if (m.playing && !isPlaying.value) {
 		await togglePlayPause();
 	} else if (!m.playing && isPlaying.value) {
