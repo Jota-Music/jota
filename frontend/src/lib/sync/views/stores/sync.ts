@@ -17,19 +17,13 @@ import {
 	queue,
 } from "@/lib/music/views/stores/queue";
 import { binaryColor, dominantColor } from "@/lib/music/views/stores/theme";
-import * as transport from "@/lib/p2p/app/transport";
-import type { PeerMessage } from "@/lib/p2p/model";
-import * as store from "@/lib/p2p/views/stores";
-
-const QUEUE_CHUNK = 64 * 1024;
+import * as transport from "@/lib/sync/app/transport";
+import type { PeerMessage } from "@/lib/sync/model";
+import * as store from "@/lib/sync/views/stores";
 
 const samples: number[] = [];
 let pingId = 0;
-let queueTransferId = 0;
-let queueReady = false;
 const pending = new Map<number, number>();
-const queueBuffers = new Map<number, (string | undefined)[]>();
-let pendingState: Extract<PeerMessage, { t: "state" }> | null = null;
 
 effect(() => {
 	if (store.role.value !== "host" || store.status.value !== "open") return;
@@ -44,7 +38,7 @@ effect(() => {
 	currentIndex.value;
 	transport.send({
 		t: "state",
-		at: Date.now(),
+		at: serverNow(),
 		playing: isPlaying.value,
 		positionMs: Math.round(getPlaybackSeconds() * 1000),
 		songId: currentSong.value?.id ?? "",
@@ -59,7 +53,7 @@ setInterval(() => {
 	if (store.role.value !== "host" || store.status.value !== "open") return;
 	transport.send({
 		t: "heartbeat",
-		at: Date.now(),
+		at: serverNow(),
 		playing: isPlaying.value,
 		positionMs: Math.round(getPlaybackSeconds() * 1000),
 		songId: currentSong.value?.id ?? "",
@@ -69,41 +63,7 @@ setInterval(() => {
 }, 2000);
 
 effect(() => {
-	const raw = store.lastMessage.value;
-	if (!raw || store.role.value !== "guest") return;
-	try {
-		const msg = JSON.parse(raw) as PeerMessage;
-		handleGuest(msg);
-	} catch {
-		console.error("p2p: invalid message");
-	}
-});
-
-effect(() => {
-	const raw = store.lastMessage.value;
-	if (!raw || store.role.value !== "host") return;
-	try {
-		const msg = JSON.parse(raw) as PeerMessage;
-		if (msg.t === "ping") {
-			transport.send({
-				t: "pong",
-				id: msg.id,
-				at: msg.at,
-				echo: Date.now(),
-			});
-		}
-	} catch {
-		console.error("p2p: invalid message");
-	}
-});
-
-effect(() => {
-	if (store.role.value !== "guest" || store.status.value !== "open") {
-		return;
-	}
-	pendingState = null;
-	queueReady = false;
-	queueBuffers.clear();
+	if (store.role.value === "off" || store.status.value !== "open") return;
 	samples.length = 0;
 	pending.clear();
 	const interval = window.setInterval(() => {
@@ -111,9 +71,43 @@ effect(() => {
 		const at = Date.now();
 		pending.set(id, at);
 		transport.send({ t: "ping", id, at });
+		for (const [key, sentAt] of pending) {
+			if (at - sentAt > 5000) pending.delete(key);
+		}
 	}, 1000);
-	window.setTimeout(() => window.clearInterval(interval), 5500);
 	return () => window.clearInterval(interval);
+});
+
+effect(() => {
+	const raw = store.lastMessage.value;
+	if (!raw) return;
+	let msg: PeerMessage;
+	try {
+		msg = JSON.parse(raw) as PeerMessage;
+	} catch {
+		console.error("sync: invalid message");
+		return;
+	}
+
+	if (msg.t === "role") {
+		store.role.value = msg.role;
+		return;
+	}
+	if (store.role.value === "off") return;
+
+	switch (msg.t) {
+		case "pong":
+			applyPong(msg);
+			break;
+		case "members":
+			store.peers.value = msg.count;
+			break;
+		case "error":
+			store.error.value = msg.reason;
+			break;
+		default:
+			if (store.role.value === "guest") handleGuest(msg);
+	}
 });
 
 effect(() => {
@@ -127,65 +121,25 @@ effect(() => {
 });
 
 function sendQueue(): void {
-	const json = JSON.stringify(queue.value);
-	const id = ++queueTransferId;
-	const n = Math.max(1, Math.ceil(json.length / QUEUE_CHUNK));
-	for (let i = 0; i < n; i++) {
-		transport.send({
-			t: "queue",
-			id,
-			i,
-			n,
-			data: json.slice(i * QUEUE_CHUNK, (i + 1) * QUEUE_CHUNK),
-		});
-	}
+	transport.send({ t: "queue", data: JSON.stringify(queue.value) });
 }
 
 function handleGuest(msg: PeerMessage): void {
 	switch (msg.t) {
 		case "queue":
-			applyQueue(msg);
+			try {
+				queue.value = JSON.parse(msg.data) as Song[];
+				persistQueue();
+			} catch {
+				console.error("sync: invalid queue");
+			}
 			break;
 		case "state":
-			if (!queueReady) {
-				pendingState = msg;
-			} else {
-				void applyState(msg);
-			}
+			void applyState(msg);
 			break;
 		case "heartbeat":
 			applyHeartbeat(msg);
 			break;
-		case "pong":
-			applyPong(msg);
-			break;
-	}
-}
-
-function applyQueue(m: Extract<PeerMessage, { t: "queue" }>): void {
-	if (m.i === 0) queueBuffers.clear();
-
-	let parts = queueBuffers.get(m.id);
-	if (!parts) {
-		parts = new Array<string | undefined>(m.n);
-		queueBuffers.set(m.id, parts);
-	}
-	parts[m.i] = m.data;
-	if (parts.includes(undefined)) return;
-
-	queueBuffers.delete(m.id);
-	try {
-		queue.value = JSON.parse((parts as string[]).join("")) as Song[];
-		persistQueue();
-		queueReady = true;
-	} catch {
-		console.error("p2p: invalid queue");
-		return;
-	}
-	if (pendingState) {
-		const ps = pendingState;
-		pendingState = null;
-		void applyState(ps);
 	}
 }
 
@@ -254,8 +208,12 @@ function median(values: number[]): number {
 		: (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+function serverNow(): number {
+	return Date.now() + store.offsetMs.value;
+}
+
 function projected(positionMs: number, sentAt: number): number {
-	return (positionMs + (Date.now() - sentAt) + store.offsetMs.value) / 1000;
+	return (positionMs + (serverNow() - sentAt)) / 1000;
 }
 
 function applyColor(color?: string | null, binary?: string | null): void {

@@ -10,9 +10,9 @@ import {
 import { useCallback, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { disconnectSpotify } from "@/lib/auth/views/stores/session";
-import { showP2P } from "@/lib/p2p/views/stores";
 import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
+import { showSync } from "@/lib/sync/views/stores";
 
 const searchTypeOptions = [
 	{ value: "user", label: "User" },
@@ -107,9 +107,9 @@ export function Header({
 
 				<div class="flex items-center gap-3 pr-1 h-full">
 					<button
-						onClick={() => (showP2P.value = !showP2P.value)}
+						onClick={() => (showSync.value = !showSync.value)}
 						type="button"
-						title="P2P Session"
+						title="Listen together"
 						class="cursor-pointer"
 					>
 						<Users class="size-4 text-zinc-400 hover:text-zinc-100" />

@@ -7,8 +7,8 @@ import (
 	"jota/server/internal/env"
 	"jota/server/internal/kv"
 	"jota/server/internal/music"
-	"jota/server/internal/services/p2p"
 	"jota/server/internal/services/spotify"
+	"jota/server/internal/services/sync"
 	"jota/server/internal/services/youtube"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -19,7 +19,7 @@ type App struct {
 	Spotify *spotify.SpotifyService
 	Music   *music.MusicRepository
 	YouTube *youtube.Service
-	P2P     *p2p.Service
+	Sync    *sync.Service
 }
 
 func New() *App {
@@ -29,7 +29,7 @@ func New() *App {
 		Spotify: spotifySvc,
 		Music:   music.NewMusicRepository(spotifySvc),
 		YouTube: youtube.NewService(),
-		P2P:     p2p.New(p2p.Config{TURNURL: cfg.TURNURL, TURNUser: cfg.TURNUser, TURNPass: cfg.TURNPass}),
+		Sync:    sync.New(),
 	}
 }
 
@@ -156,29 +156,25 @@ func (a *App) SearchYouTube(query string) ([]youtube.Video, error) {
 	return youtube.Search(query)
 }
 
-// ----- P2P bindings -----
+// ----- Sync bindings -----
 
-func (a *App) P2PHostStart() (string, error) {
-	return a.P2P.StartHost()
+func (a *App) SyncCheck(relayURL string) error {
+	return a.Sync.Check(relayURL)
 }
 
-func (a *App) P2PGuestJoin(offerCode string) (string, error) {
-	return a.P2P.JoinGuest(offerCode)
+func (a *App) SyncConnect(relayURL string, room string, role string) error {
+	return a.Sync.Connect(relayURL, room, role)
 }
 
-func (a *App) P2PHostAccept(answerCode string) error {
-	return a.P2P.AcceptAnswer(answerCode)
+func (a *App) SyncStop() {
+	a.Sync.Stop()
 }
 
-func (a *App) P2PStop() {
-	a.P2P.Stop()
+func (a *App) SyncSend(payload string) error {
+	return a.Sync.Send(payload)
 }
 
-func (a *App) P2PSend(payload string) error {
-	return a.P2P.Send(payload)
-}
-
-func (a *App) P2PReadClipboard() string {
+func (a *App) ReadClipboard() string {
 	app := application.Get()
 	if app == nil {
 		return ""

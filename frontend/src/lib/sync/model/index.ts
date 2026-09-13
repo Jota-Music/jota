@@ -1,7 +1,6 @@
 export type Role = "off" | "host" | "guest";
 
 export type PeerMessage =
-	| { t: "hello"; at: number }
 	| {
 			t: "state";
 			at: number;
@@ -13,13 +12,7 @@ export type PeerMessage =
 			color?: string | null;
 			binary?: string | null;
 	  }
-	| {
-			t: "queue";
-			id: number;
-			i: number;
-			n: number;
-			data: string;
-	  }
+	| { t: "queue"; data: string }
 	| {
 			t: "heartbeat";
 			at: number;
@@ -30,4 +23,7 @@ export type PeerMessage =
 			binary?: string | null;
 	  }
 	| { t: "ping"; id: number; at: number }
-	| { t: "pong"; id: number; at: number; echo: number };
+	| { t: "pong"; id: number; at: number; echo: number }
+	| { t: "members"; count: number }
+	| { t: "role"; role: "host" | "guest" }
+	| { t: "error"; reason: string };

@@ -2,10 +2,10 @@ import type { PropsWithChildren } from "preact/compat";
 import { currentSong } from "@/lib/music/views/stores/audio";
 import { Player } from "@/lib/music/views/ui/player";
 import Queue from "@/lib/music/views/ui/queue";
-import { P2PPanel } from "@/lib/p2p/views/ui/session";
 import { cn } from "@/lib/shared/utils/tw";
 import { Header } from "@/lib/shared/views/ui/components/header";
 import { ErrorBar } from "@/lib/shared/views/ui/error-bar";
+import { SyncPanel } from "@/lib/sync/views/ui/session";
 
 function DefaultLayout({
 	children,
@@ -46,7 +46,7 @@ function DefaultLayout({
 			</main>
 
 			<ErrorBar />
-			<P2PPanel />
+			<SyncPanel />
 		</div>
 	);
 }
