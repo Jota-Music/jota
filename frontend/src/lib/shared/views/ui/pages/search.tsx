@@ -143,7 +143,7 @@ export function SearchPage() {
 
 	useLayoutEffect(() => {
 		if (detailRoute && redirectId) {
-			setLocation(detailRoute(redirectId));
+			setLocation(detailRoute(redirectId), { replace: true });
 		}
 	}, [detailRoute, redirectId, setLocation]);
 
