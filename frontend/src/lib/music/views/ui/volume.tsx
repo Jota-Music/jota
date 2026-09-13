@@ -34,8 +34,21 @@ function VolumeControl({
 }) {
 	const Icon = getVolumeStatus(volume.value, muted.value);
 	return (
-		<div class={cn("w-36 flex items-center gap-4", _class, className)}>
-			<Icon onClick={toggleMute} size={35} class="cursor-pointer" />
+		<div
+			class={cn(
+				"w-26 md:w-36 flex items-center gap-2 text-(--dominant-color)",
+				_class,
+				className,
+			)}
+		>
+			<button
+				type="button"
+				onClick={toggleMute}
+				aria-label={muted.value ? "Unmute" : "Mute"}
+				class="contents"
+			>
+				<Icon size={35} class="cursor-pointer" />
+			</button>
 
 			<Progress
 				class="w-36 text-current"

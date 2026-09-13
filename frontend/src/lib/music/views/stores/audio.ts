@@ -23,8 +23,10 @@ function parseStoredMuted(raw: string | null): boolean {
 	return false;
 }
 
+export const ignoreTabMute = signal(false);
+
 function checkTabMute(): boolean {
-	return muted.value || !isMainTab.value;
+	return muted.value || (!ignoreTabMute.value && !isMainTab.value);
 }
 
 let audio: HTMLAudioElement | null = null;

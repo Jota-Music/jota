@@ -32,7 +32,7 @@ function LoginPage() {
 			<header
 				style="--wails-draggable: drag"
 				onMouseDown={handleDragMouseDown}
-				class="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur"
+				class="sticky top-0 z-40 md:z-100 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur"
 			>
 				<div class="mx-auto flex max-w-2xl items-center justify-end h-10 text-sm text-zinc-300 pr-0">
 					<WindowControlsBar />
@@ -52,8 +52,8 @@ function LoginPage() {
 						<div class="flex flex-col items-center gap-3">
 							<Loader size={24} class="text-zinc-500 animate-spin" />
 							<p class="text-sm text-zinc-500">
-								Complete Spotify login in the browser window that opened,
-								then return here.
+								Complete Spotify login in the browser window that opened, then
+								return here.
 							</p>
 						</div>
 					) : (

@@ -1,5 +1,6 @@
 import { Application, System, Window } from "@wailsio/runtime";
 import { Copy, Minus, X } from "lucide-preact";
+import { createPortal } from "preact/compat";
 import { useEffect, useState } from "preact/hooks";
 
 export function WindowControlsBar() {
@@ -27,9 +28,9 @@ export function WindowControlsBar() {
 		await Application.Quit();
 	};
 
-	return (
+	return createPortal(
 		<div
-			class="flex items-center h-full"
+			class="fixed top-0 right-0 z-200 flex h-10 items-center bg-zinc-950/80 backdrop-blur"
 			style="--wails-draggable: no-drag; -webkit-app-region: no-drag;"
 		>
 			<button
@@ -56,6 +57,7 @@ export function WindowControlsBar() {
 			>
 				<X class="size-3.5" />
 			</button>
-		</div>
+		</div>,
+		document.body,
 	);
 }

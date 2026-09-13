@@ -11,6 +11,7 @@ import {
 } from "lucide-preact";
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
+import { createPortal } from "preact/compat";
 import type { Song } from "@/lib/music/model";
 import { usePlayer } from "@/lib/music/views/hooks/use-player";
 import {
@@ -379,7 +380,7 @@ function DraggableSheet({
 		};
 	}, []);
 
-	return (
+	return createPortal(
 		<div class="fixed inset-0 z-50 md:hidden">
 			<button
 				type="button"
@@ -408,7 +409,8 @@ function DraggableSheet({
 					{children}
 				</div>
 			</div>
-		</div>
+		</div>,
+		document.body,
 	);
 }
 
@@ -514,7 +516,7 @@ export function Player() {
 					</div>
 
 					<div class="flex items-center gap-1 shrink-0">
-						<VolumeControl class="mr-2" />
+						<VolumeControl class="mr-2 max-[500px]:hidden" />
 
 						<button
 							type="button"

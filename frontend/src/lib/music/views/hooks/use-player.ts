@@ -15,6 +15,7 @@ import {
 	toggleSong,
 } from "@/lib/music/views/stores/player";
 import { currentIndex, queue } from "@/lib/music/views/stores/queue";
+import { binaryColor, dominantColor } from "@/lib/music/views/stores/theme";
 import {
 	getDominantColorFromImage,
 	isDarkColor,
@@ -39,12 +40,12 @@ export function usePlayer() {
 
 			const [r, g, b] = normalizeColor(rgb[0], rgb[1], rgb[2]);
 			const color = `rgb(${r}, ${g}, ${b})`;
+			const binary = isDarkColor(r, g, b) ? "#FFFFFF" : "#000000";
 
+			dominantColor.value = color;
+			binaryColor.value = binary;
 			document.documentElement.style.setProperty("--dominant-color", color);
-			document.documentElement.style.setProperty(
-				"--binary-color",
-				isDarkColor(r, g, b) ? "#FFFFFF" : "#000000",
-			);
+			document.documentElement.style.setProperty("--binary-color", binary);
 		})();
 
 		return () => {

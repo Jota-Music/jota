@@ -47,7 +47,7 @@ export function MainPage() {
 						/>
 					</section>
 				)}
-      </div>
+			</div>
 		</DefaultLayout>
 	);
 }

@@ -15,12 +15,12 @@ function stripUriPrefix(query: string, type: string): string {
 	return query.startsWith(prefix) ? query.slice(prefix.length) : query;
 }
 
-	const detailRoutes: Partial<Record<SearchType, (id: string) => string>> = {
-		artist: (id) => `/artist/${id}`,
-		album: (id) => `/album/${id}`,
-		playlist: (id) => `/playlist/${id}`,
-		user: (id) => `/${id}`,
-	};
+const detailRoutes: Partial<Record<SearchType, (id: string) => string>> = {
+	artist: (id) => `/artist/${id}`,
+	album: (id) => `/album/${id}`,
+	playlist: (id) => `/playlist/${id}`,
+	user: (id) => `/${id}`,
+};
 
 function SearchResultItem({ item }: { item: SearchResult }) {
 	const coverUrl = item.coverUrl ?? "";
@@ -46,16 +46,10 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 						{item.name}
 					</h3>
 
-					{artists && (
-						<p class="truncate text-xs text-zinc-500">
-							{artists}
-						</p>
-					)}
+					{artists && <p class="truncate text-xs text-zinc-500">{artists}</p>}
 
 					{item.ownerName && (
-						<p class="truncate text-xs text-zinc-500">
-							By {item.ownerName}
-						</p>
+						<p class="truncate text-xs text-zinc-500">By {item.ownerName}</p>
 					)}
 
 					{item.trackCount != null && (
@@ -136,9 +130,7 @@ export function SearchPage() {
 	);
 
 	const detailRoute = type ? detailRoutes[type] : undefined;
-	const redirectId = detailRoute && type
-		? stripUriPrefix(query, type)
-		: "";
+	const redirectId = detailRoute && type ? stripUriPrefix(query, type) : "";
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["spotify-search", type, query],
@@ -169,9 +161,7 @@ export function SearchPage() {
 			<DefaultLayout class="gap-4">
 				<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
 					<header class="shrink-0">
-						<h2 class="text-xl font-semibold leading-tight">
-							{query}
-						</h2>
+						<h2 class="text-xl font-semibold leading-tight">{query}</h2>
 					</header>
 
 					{isLoading ? (
@@ -179,9 +169,7 @@ export function SearchPage() {
 							<Loader size={24} class="animate-spin" />
 						</div>
 					) : songs.length === 0 ? (
-						<p class="text-sm text-zinc-500">
-							No results found.
-						</p>
+						<p class="text-sm text-zinc-500">No results found.</p>
 					) : (
 						<Virtualization songs={songs} />
 					)}
@@ -206,16 +194,11 @@ export function SearchPage() {
 							Loading...
 						</div>
 					) : results.length === 0 ? (
-						<p class="text-sm text-zinc-500">
-							No playlists found.
-						</p>
+						<p class="text-sm text-zinc-500">No playlists found.</p>
 					) : (
 						<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
 							{results.map((item) => (
-								<SearchResultItem
-									key={item.uri}
-									item={item}
-								/>
+								<SearchResultItem key={item.uri} item={item} />
 							))}
 						</div>
 					)}

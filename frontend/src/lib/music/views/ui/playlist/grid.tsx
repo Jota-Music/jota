@@ -1,6 +1,6 @@
 import { Link } from "wouter-preact";
-import { PlaylistCover } from "@/lib/shared/views/ui/components/playlist-cover";
 import type { PlaylistSummary } from "@/lib/music/model";
+import { PlaylistCover } from "@/lib/shared/views/ui/components/playlist-cover";
 
 interface PlaylistGridProps {
 	playlists: PlaylistSummary[];

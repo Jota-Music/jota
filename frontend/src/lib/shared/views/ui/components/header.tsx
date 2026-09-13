@@ -1,7 +1,16 @@
-import { ArrowLeft, ChevronDown, House, LogOut, Search } from "lucide-preact";
+import { System } from "@wailsio/runtime";
+import {
+	ArrowLeft,
+	ChevronDown,
+	House,
+	LogOut,
+	Search,
+	Users,
+} from "lucide-preact";
 import { useCallback, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { disconnectSpotify } from "@/lib/auth/views/stores/session";
+import { showP2P } from "@/lib/p2p/views/stores";
 import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
 
@@ -24,6 +33,7 @@ export function Header({
 	onDragStart?: (e: MouseEvent) => void;
 }) {
 	const [, setLocation] = useLocation();
+	const desktop = System.IsDesktop();
 	const [openSearch, setOpenSearch] = useState(false);
 	const [searchDraft, setSearchDraft] = useState("");
 	const [searchType, setSearchType] = useState<
@@ -67,7 +77,7 @@ export function Header({
 			style="--wails-draggable: drag"
 			onMouseDown={handleDragMouseDown}
 			class={cn(
-				"sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur",
+				"sticky top-0 z-40 md:z-100 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur",
 				_class,
 				className,
 			)}
@@ -97,6 +107,15 @@ export function Header({
 
 				<div class="flex items-center gap-3 pr-1 h-full">
 					<button
+						onClick={() => (showP2P.value = !showP2P.value)}
+						type="button"
+						title="P2P Session"
+						class="cursor-pointer"
+					>
+						<Users class="size-4 text-zinc-400 hover:text-zinc-100" />
+					</button>
+
+					<button
 						onClick={() => void disconnectSpotify()}
 						type="button"
 						title="Disconnect Spotify"
@@ -105,6 +124,7 @@ export function Header({
 						<LogOut class="size-4 text-zinc-400 hover:text-zinc-100" />
 					</button>
 
+					{desktop && <div class="h-full w-26" aria-hidden />}
 					<WindowControlsBar />
 				</div>
 			</div>

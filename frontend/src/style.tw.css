@@ -32,12 +32,13 @@
 }
 
 * {
-    user-select: none !important;
+	user-select: none !important;
 }
 
-html, body {
-    overflow: hidden;
-    height: 100%;
+html,
+body {
+	overflow: hidden;
+	height: 100%;
 }
 
 * {

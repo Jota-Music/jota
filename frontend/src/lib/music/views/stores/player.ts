@@ -1,3 +1,4 @@
+import { signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 import {
 	audioDuration,
@@ -17,6 +18,8 @@ import {
 	repeat,
 	shuffle,
 } from "@/lib/music/views/stores/queue";
+
+export const autoAdvance = signal(true);
 
 function clampPlaybackSeconds(seconds: number): number {
 	if (!Number.isFinite(seconds) || seconds < 0) return 0;
@@ -273,6 +276,8 @@ export async function prevSong() {
 }
 
 setOnTrackEnded(() => {
+	if (!autoAdvance.value) return;
+
 	const q = queue.value;
 	const i = currentIndex.value;
 	const r = repeat.value;

@@ -73,7 +73,7 @@ func main() {
 		Title:            "Jota",
 		Width:            1100,
 		Height:           720,
-		MinWidth:         640,
+		MinWidth:         320,
 		MinHeight:        480,
 		Frameless:        true,
 		BackgroundType:   application.BackgroundTypeSolid,
