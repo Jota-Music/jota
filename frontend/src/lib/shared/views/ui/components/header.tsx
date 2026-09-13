@@ -98,22 +98,14 @@ export function Header({
 					</Link>
 				</div>
 
-				<button
-					type="button"
-					onClick={() => setOpenSearch((v) => !v)}
-					class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
-				>
-					<Search class="size-4" />
-				</button>
-
-				<div class="flex items-center gap-3 pr-1 h-full">
-					<Link
-						href="/settings"
-						title="Settings"
-						class="text-zinc-400 hover:text-zinc-100"
+				<div class="flex items-center gap-3">
+					<button
+						type="button"
+						onClick={() => setOpenSearch((v) => !v)}
+						class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
 					>
-						<Settings class="size-4" />
-					</Link>
+						<Search class="size-4" />
+					</button>
 
 					<button
 						onClick={() => (showSync.value = !showSync.value)}
@@ -123,7 +115,9 @@ export function Header({
 					>
 						<Users class="size-4 text-zinc-400 hover:text-zinc-100" />
 					</button>
+				</div>
 
+				<div class="flex items-center gap-3 pr-1 h-full">
 					<button
 						onClick={() => void disconnectSpotify()}
 						type="button"
@@ -132,6 +126,14 @@ export function Header({
 					>
 						<LogOut class="size-4 text-zinc-400 hover:text-zinc-100" />
 					</button>
+
+					<Link
+						href="/settings"
+						title="Settings"
+						class="text-zinc-400 hover:text-zinc-100"
+					>
+						<Settings class="size-4" />
+					</Link>
 
 					{desktop && <div class="h-full w-26" aria-hidden />}
 					<WindowControlsBar />
