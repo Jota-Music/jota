@@ -8,6 +8,8 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor">@color/wails_background</item>
         <item name="android:navigationBarColor">@color/wails_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <!-- Window background -->
         <item name="android:windowBackground">@color/wails_background</item>
     </style>
