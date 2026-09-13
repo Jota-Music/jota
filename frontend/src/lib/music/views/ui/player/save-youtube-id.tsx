@@ -3,10 +3,17 @@ import { Check, Edit2, X } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { updateYoutubeId } from "@/lib/music/app/get-audio";
 import type { Song } from "@/lib/music/model";
+import {
+	getPlaybackSeconds,
+	play,
+	prepareSong,
+} from "@/lib/music/views/stores/audio";
+import { AudioCache } from "@/lib/music/views/stores/cache";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 export default function SaveYoutubeId({
 	song,
+	isPlaying,
 }: {
 	song: Song;
 	isPlaying: boolean;
@@ -40,6 +47,13 @@ export default function SaveYoutubeId({
 		await updateYoutubeId(song.id, youtube);
 		song.youtubeId = youtube;
 		currentYoutubeId.value = youtube;
+		AudioCache.remove(song.id);
+		const at = getPlaybackSeconds();
+		if (isPlaying) {
+			await play(song, at);
+		} else {
+			await prepareSong(song, at);
+		}
 
 		setIsEditing(false);
 	}
@@ -103,14 +117,11 @@ export default function SaveYoutubeId({
 				>
 					<p class="text-white text-xs opacity-50 flex-1 truncate flex items-center gap-2">
 						{song.youtubeId ? (
-							<button
-								type="button"
-								class="cursor-pointer font-mono bg-white/10 px-1.5 py-0.5 rounded"
-							>
+							<span class="font-mono bg-white/10 px-1.5 py-0.5 rounded">
 								{song.youtubeId}
-							</button>
+							</span>
 						) : (
-							<span class="cursor-pointer font-mono bg-white/10 px-1.5 py-0.5 rounded">
+							<span class="font-mono bg-white/10 px-1.5 py-0.5 rounded">
 								...
 							</span>
 						)}

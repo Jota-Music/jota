@@ -77,5 +77,10 @@ func GetSong(id, search string) (string, error) {
 }
 
 func SetYoutubeId(id string, youtubeId string) error {
+	// Invalidate cached audio so the new video is resolved on the next request.
+	if old, err := youtubeSourceBucket.GetString(id); err == nil && old != "" && old != youtubeId {
+		_ = audioBucket.Delete(old)
+	}
+	_ = audioBucket.Delete("spotify:" + id)
 	return youtubeSourceBucket.SetString(id, youtubeId)
 }
