@@ -2,7 +2,9 @@ import {
 	Link,
 	LogOut,
 	Radio,
+	RadioTower,
 	RefreshCw,
+	Settings,
 	Unplug,
 	Users,
 	X,
@@ -10,6 +12,7 @@ import {
 import { useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { cn } from "@/lib/shared/utils/tw";
+import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
 import { Sheet } from "@/lib/shared/views/ui/components/sheet";
 import * as transport from "@/lib/sync/app/transport";
 import * as store from "@/lib/sync/views/stores";
@@ -64,7 +67,7 @@ export function SyncPanel() {
 				</div>
 			</header>
 
-			<div class="flex-1 overflow-y-auto px-4 py-4">
+			<div class="h-[min(70dvh,26rem)] overflow-y-auto px-4 py-4">
 				<SessionForm />
 			</div>
 		</Sheet>
@@ -80,11 +83,38 @@ function SessionForm() {
 	const ready = relay !== "" && code.trim() !== "";
 	const connecting = status === "connecting";
 	const active = role !== "off";
+	const currentRoom = store.room.value.trim();
+	const switching = active && code.trim() !== currentRoom;
 
 	const openSettings = () => {
 		showSync.value = false;
 		setLocation("/settings");
 	};
+
+	if (relay === "") {
+		return (
+			<div class="flex h-full flex-col items-center justify-center gap-4 text-center">
+				<div class="flex size-14 items-center justify-center rounded-full bg-zinc-900 ring-1 ring-zinc-800">
+					<RadioTower size={26} class="text-zinc-500" />
+				</div>
+				<div class="space-y-1">
+					<p class="text-sm font-medium text-zinc-100">Relay server required</p>
+					<p class="text-xs text-zinc-500">
+						To use this feature you need a relay server. Configure one in
+						Settings to start or join a room.
+					</p>
+				</div>
+				<button
+					type="button"
+					class="flex items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 hover:bg-zinc-700 transition-colors cursor-pointer"
+					onClick={openSettings}
+				>
+					<Settings size={16} />
+					Open settings
+				</button>
+			</div>
+		);
+	}
 
 	return (
 		<div class="flex flex-col gap-3">
@@ -109,29 +139,35 @@ function SessionForm() {
 				</button>
 			</div>
 			<p class="text-xs text-zinc-500">
-				{active
-					? "Change the code to move the session to another room."
-					: "If nobody is hosting it yet, you become the host; otherwise you join and listen in sync."}
+				{active ? (
+					<>
+						You are in room{" "}
+						<span class="font-mono text-zinc-300">{currentRoom}</span>. Edit the
+						code to switch rooms.
+					</>
+				) : (
+					"If nobody is hosting it yet, you become the host; otherwise you join and listen in sync."
+				)}
 			</p>
 			<label for="sync-pass" class="text-xs text-zinc-500">
 				Room password
 			</label>
-			<input
+			<PasswordInput
 				id="sync-pass"
-				type="password"
 				class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
 				placeholder="optional"
+				label="Room password"
 				value={store.password.value}
-				onInput={(e) => (store.password.value = e.currentTarget.value)}
+				onValue={(v) => (store.password.value = v)}
 			/>
 			<button
 				type="button"
 				class="flex items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-40"
-				disabled={!ready || connecting}
+				disabled={!ready || connecting || (active && !switching)}
 				onClick={() => void transport.connect(code.trim())}
 			>
 				<Link size={16} />
-				{connecting ? "Connecting…" : active ? "Change room" : "Connect"}
+				{connecting ? "Connecting…" : active ? "Switch room" : "Connect"}
 			</button>
 			{active && (
 				<button
