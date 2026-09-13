@@ -1,5 +1,5 @@
-github.com/Jota-Music/go-librespot v0.9.0-jota.2 h1:Vuh4ybWZjwl3mEnySDtmNqXz0ryHiV3vwUShCRukkOE=
-github.com/Jota-Music/go-librespot v0.9.0-jota.2/go.mod h1:tcLnLzCmW9xbPe2Uo0wMiu08d1wzNI2b2zuWlFYEx00=
+github.com/Jota-Music/go-librespot v0.9.0-jota.4 h1:+3oQUaFgNHWmZBndzcmFNAs8P5wl8zSVV7448YGH364=
+github.com/Jota-Music/go-librespot v0.9.0-jota.4/go.mod h1:tcLnLzCmW9xbPe2Uo0wMiu08d1wzNI2b2zuWlFYEx00=
 github.com/adrg/xdg v0.5.3 h1:xRnxJXne7+oWDatRhR1JLnvuccuIeCoBu2rtuLqQB78=
 github.com/adrg/xdg v0.5.3/go.mod h1:nlTsY+NNiCBGCK2tpm09vRqfVzrc2fLmXGpBLF0zlTQ=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
