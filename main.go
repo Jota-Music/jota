@@ -94,6 +94,7 @@ func main() {
 	window := wailsApp.Window.NewWithOptions(opts)
 
 	var restored atomic.Bool
+	var quitting atomic.Bool
 	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
 		if restored.Swap(true) || state.Width <= 0 {
 			return
@@ -112,6 +113,11 @@ func main() {
 			return
 		}
 		saveWindowState(window)
+	})
+	window.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
+		if quitting.CompareAndSwap(false, true) {
+			wailsApp.Quit()
+		}
 	})
 
 	if err := wailsApp.Run(); err != nil {
