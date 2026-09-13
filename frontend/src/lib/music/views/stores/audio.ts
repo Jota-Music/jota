@@ -221,37 +221,43 @@ export async function prepareSong(
 }
 
 export async function warm(song: Song, timeoutMs = 6000): Promise<boolean> {
-	let el: HTMLAudioElement;
-	try {
-		el = await AudioCache.getAudioElement(song);
-	} catch {
-		return false;
-	}
-	if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) return true;
-
-	return await new Promise<boolean>((resolve) => {
-		const done = () => {
-			el.removeEventListener("canplaythrough", ok);
-			el.removeEventListener("canplay", ok);
-			el.removeEventListener("error", err);
-			clearTimeout(timer);
-		};
-		const ok = () => {
-			done();
-			resolve(true);
-		};
-		const err = () => {
-			done();
-			resolve(false);
-		};
-		const timer = setTimeout(() => {
-			done();
-			resolve(el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA);
-		}, timeoutMs);
-		el.addEventListener("canplaythrough", ok, { once: true });
-		el.addEventListener("canplay", ok, { once: true });
-		el.addEventListener("error", err, { once: true });
+	const timeout = new Promise<boolean>((resolve) => {
+		setTimeout(() => resolve(false), timeoutMs);
 	});
+	const load = (async () => {
+		let el: HTMLAudioElement;
+		try {
+			el = await AudioCache.getAudioElement(song);
+		} catch {
+			return false;
+		}
+		if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) return true;
+
+		return await new Promise<boolean>((resolve) => {
+			const done = () => {
+				el.removeEventListener("canplaythrough", ok);
+				el.removeEventListener("canplay", ok);
+				el.removeEventListener("error", err);
+				clearTimeout(timer);
+			};
+			const ok = () => {
+				done();
+				resolve(true);
+			};
+			const err = () => {
+				done();
+				resolve(false);
+			};
+			const timer = setTimeout(() => {
+				done();
+				resolve(el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA);
+			}, timeoutMs);
+			el.addEventListener("canplaythrough", ok, { once: true });
+			el.addEventListener("canplay", ok, { once: true });
+			el.addEventListener("error", err, { once: true });
+		});
+	})();
+	return await Promise.race([load, timeout]);
 }
 
 export function getPlaybackSeconds(): number {
