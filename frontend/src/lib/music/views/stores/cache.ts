@@ -15,6 +15,10 @@ export class AudioCache {
 
 	private static maxCache = 25;
 
+	private static maxElements = 3;
+
+	private static pinnedId: string | null = null;
+
 	/* -------------------------------------------------
        INTERNAL HELPERS
     -------------------------------------------------- */
@@ -31,10 +35,35 @@ export class AudioCache {
 	}
 
 	private static release(item: CachedAudio) {
-		if (item.audio) {
-			item.audio.pause();
-			item.audio.src = "";
-			item.audio.load();
+		if (!item.audio) return;
+
+		item.audio.pause();
+		item.audio.src = "";
+		item.audio.load();
+		item.audio = undefined;
+	}
+
+	// Pin the audio element the player is using so eviction never cuts playback.
+	static pin(id: string | null) {
+		AudioCache.pinnedId = id;
+	}
+
+	// Keep only the most recent audio elements alive. URLs stay cached, so an
+	// evicted song is re-created on demand without resolving the stream again.
+	private static enforceElements() {
+		const pinned = AudioCache.pinnedId
+			? AudioCache.cache.get(AudioCache.pinnedId)
+			: undefined;
+
+		const droppable = [...AudioCache.cache.values()].filter(
+			(item) => item.audio && item !== pinned,
+		);
+
+		const excess =
+			droppable.length - (AudioCache.maxElements - (pinned ? 1 : 0));
+
+		for (let i = 0; i < excess; i++) {
+			AudioCache.release(droppable[i]);
 		}
 	}
 
@@ -115,6 +144,7 @@ export class AudioCache {
 					cached.audio = audio;
 					cached.lastUsed = Date.now();
 					AudioCache.touch(song.id);
+					AudioCache.enforceElements();
 				}
 			}),
 		);
@@ -138,6 +168,7 @@ export class AudioCache {
 
 		cached.audio = audio;
 		cached.lastUsed = Date.now();
+		AudioCache.enforceElements();
 
 		return audio;
 	}

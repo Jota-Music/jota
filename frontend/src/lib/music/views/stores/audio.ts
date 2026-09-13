@@ -123,6 +123,7 @@ async function loadSongIntoPlayer(
 		audio.load();
 		audio = null;
 		loadedSongId = null;
+		AudioCache.pin(null);
 	}
 
 	progress.value = 0;
@@ -158,6 +159,7 @@ async function loadSongIntoPlayer(
 
 	audio = instance;
 	loadedSongId = song.id;
+	AudioCache.pin(song.id);
 
 	instance.volume = volume.value;
 	instance.muted = checkTabMute();
@@ -333,6 +335,7 @@ export function stopPlayer() {
 		audio = null;
 	}
 	loadedSongId = null;
+	AudioCache.pin(null);
 	currentSong.value = null;
 	media.clear();
 	progress.value = 0;
@@ -346,8 +349,8 @@ function bindEvents(a: HTMLAudioElement) {
 		audioDuration.value = Number.isFinite(d) && d > 0 ? d : 0;
 	};
 
-	a.addEventListener("loadedmetadata", syncDuration);
-	a.addEventListener("durationchange", syncDuration);
+	a.onloadedmetadata = syncDuration;
+	a.ondurationchange = syncDuration;
 
 	a.onplay = () => {
 		isPlaying.value = true;
