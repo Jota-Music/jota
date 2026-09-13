@@ -134,7 +134,10 @@ export function SearchPage() {
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["spotify-search", type, query],
-		queryFn: () => searchSpotify(type!, query),
+		queryFn: () => {
+			if (!type) throw new Error("search type is required");
+			return searchSpotify(type, query);
+		},
 		enabled: !detailRoute && !!type && !!query,
 	});
 

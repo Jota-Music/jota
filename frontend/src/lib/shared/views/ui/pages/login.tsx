@@ -29,6 +29,7 @@ function LoginPage() {
 
 	return (
 		<div class="h-dvh flex flex-col bg-stone-950">
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: pointer-only window drag surface */}
 			<header
 				style="--wails-draggable: drag"
 				onMouseDown={handleDragMouseDown}

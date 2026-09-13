@@ -72,6 +72,7 @@ export function Header({
 	}
 
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: pointer-only window drag surface
 		<header
 			style="--wails-draggable: drag"
 			onMouseDown={handleDragMouseDown}
