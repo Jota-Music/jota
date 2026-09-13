@@ -44,12 +44,10 @@ export function seekFromLocalControl(seconds: number) {
 }
 
 function setQueueState(nextQueue: Song[], nextIndex: number) {
-	const prevId = currentSong.value?.id ?? null;
 	const song =
 		nextIndex >= 0 && nextIndex < nextQueue.length
 			? nextQueue[nextIndex]
 			: null;
-	const sameTrack = prevId != null && song != null && prevId === song.id;
 
 	queue.value = nextQueue;
 	currentIndex.value = nextIndex;
@@ -57,12 +55,6 @@ function setQueueState(nextQueue: Song[], nextIndex: number) {
 
 	if (!song) {
 		stopPlayer();
-		return;
-	}
-
-	if (sameTrack) {
-		currentSong.value = song;
-		preloadUpcomingSongs(nextQueue, nextIndex);
 		return;
 	}
 
@@ -233,107 +225,62 @@ export async function toggleSong() {
 	await togglePlayPause();
 }
 
+function pickRandom(songs: Song[], i: number): number | null {
+	const candidates = songs.filter((_, idx) => idx !== i);
+	if (candidates.length === 0) return null;
+	const pick = candidates[Math.floor(Math.random() * candidates.length)];
+	return songs.findIndex((song) => song.id === pick.id);
+}
+
+function pickNext(
+	songs: Song[],
+	i: number,
+	mode: "off" | "all" | "one",
+	shuffleOn: boolean,
+): number | null {
+	if (mode === "one") return i;
+	if (shuffleOn) return pickRandom(songs, i);
+	if (i >= songs.length - 1) return mode === "all" ? 0 : null;
+	return i + 1;
+}
+
+function pickPrev(
+	songs: Song[],
+	i: number,
+	mode: "off" | "all" | "one",
+	shuffleOn: boolean,
+): number | null {
+	if (mode === "one") return i;
+	if (shuffleOn) return pickRandom(songs, i);
+	if (i <= 0) return mode === "all" ? songs.length - 1 : null;
+	return i - 1;
+}
+
 export async function nextSong() {
 	forward({ action: "next" });
 	const q = queue.value;
-	const i = currentIndex.value;
-	const r = repeat.value;
-	const s = shuffle.value;
-
 	if (q.length === 0) return;
-
-	if (r === "one") {
-		await playAtIndex(i);
-		return;
-	}
-
-	let nextIndex: number;
-
-	if (s) {
-		const candidates = q.filter((_, idx) => idx !== i);
-		if (candidates.length === 0) return;
-		const random = candidates[Math.floor(Math.random() * candidates.length)];
-		nextIndex = q.findIndex((song) => song.id === random.id);
-	} else if (i >= q.length - 1) {
-		if (r === "all") {
-			nextIndex = 0;
-		} else {
-			return;
-		}
-	} else {
-		nextIndex = i + 1;
-	}
-
-	await playAtIndex(nextIndex);
+	const next = pickNext(q, currentIndex.value, repeat.value, shuffle.value);
+	if (next == null) return;
+	await playAtIndex(next);
 }
 
 export async function prevSong() {
 	forward({ action: "prev" });
 	const q = queue.value;
-	const i = currentIndex.value;
-	const r = repeat.value;
-	const s = shuffle.value;
-
 	if (q.length === 0) return;
-
-	if (r === "one") {
-		await playAtIndex(i);
-		return;
-	}
-
-	let prevIndex: number;
-
-	if (s) {
-		const candidates = q.filter((_, idx) => idx !== i);
-		if (candidates.length === 0) return;
-		const random = candidates[Math.floor(Math.random() * candidates.length)];
-		prevIndex = q.findIndex((song) => song.id === random.id);
-	} else if (i <= 0) {
-		if (r === "all") {
-			prevIndex = q.length - 1;
-		} else {
-			return;
-		}
-	} else {
-		prevIndex = i - 1;
-	}
-
-	await playAtIndex(prevIndex);
+	const prev = pickPrev(q, currentIndex.value, repeat.value, shuffle.value);
+	if (prev == null) return;
+	await playAtIndex(prev);
 }
 
 setOnTrackEnded(() => {
 	if (!autoAdvance.value) return;
-
 	const q = queue.value;
-	const i = currentIndex.value;
-	const r = repeat.value;
-	const s = shuffle.value;
-
 	if (q.length === 0) return;
-
-	if (r === "one") {
-		void playAtIndex(i);
-		return;
-	}
-
-	let nextIndex: number;
-
-	if (s) {
-		const candidates = q.filter((_, idx) => idx !== i);
-		if (candidates.length === 0) return;
-		const random = candidates[Math.floor(Math.random() * candidates.length)];
-		nextIndex = q.findIndex((song) => song.id === random.id);
-	} else if (i >= q.length - 1) {
-		if (r === "all") {
-			nextIndex = 0;
-		} else {
-			return;
-		}
-	} else {
-		nextIndex = i + 1;
-	}
-
-	void playAtIndex(nextIndex);
+	const next = pickNext(q, currentIndex.value, repeat.value, shuffle.value);
+	if (next == null) return;
+	void playAtIndex(next);
 });
 
 media.tracks({
