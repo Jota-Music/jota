@@ -51,15 +51,16 @@ func retryRequest(url string, payload map[string]any, useVisitor bool, retries i
 			time.Sleep(time.Duration(100+(i*200)) * time.Millisecond)
 			continue
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode == 429 || resp.StatusCode >= 500 {
+			resp.Body.Close()
 			lastErr = fmt.Errorf("status %d", resp.StatusCode)
 			time.Sleep(time.Duration(500+(i*500)) * time.Millisecond)
 			continue
 		}
 
 		data, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			lastErr = err
 			time.Sleep(time.Duration(100+(i*100)) * time.Millisecond)
