@@ -1,5 +1,5 @@
 {
   "Replace": {
-    "/home/master/Proyectos/Personal/github/jota/main_android.gen.go": "/home/master/Proyectos/Personal/github/jota/build/android/gen/main_android.gen.go"
+    "main_android.gen.go": "build/android/gen/main_android.gen.go"
   }
 }
