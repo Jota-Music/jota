@@ -48,7 +48,11 @@ func EnsureStarted() error {
 			return
 		}
 
-		opts := badger.DefaultOptions(path).WithLogger(nil)
+		opts := badger.DefaultOptions(path).
+			WithLogger(nil).
+			WithBlockCacheSize(8 << 20).
+			WithMemTableSize(8 << 20).
+			WithNumMemtables(1)
 		db, startErr = badger.Open(opts)
 	})
 	return startErr
