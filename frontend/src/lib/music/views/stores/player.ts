@@ -18,6 +18,7 @@ import {
 	repeat,
 	shuffle,
 } from "@/lib/music/views/stores/queue";
+import { forward, playGate } from "@/lib/music/views/stores/remote";
 
 export const autoAdvance = signal(true);
 
@@ -31,13 +32,15 @@ function clampPlaybackSeconds(seconds: number): number {
 	return seconds;
 }
 
-function preloadUpcomingSongs(songs: Song[], idx: number) {
+export function preloadUpcomingSongs(songs: Song[], idx: number) {
 	const upcoming = songs.slice(idx + 1, idx + 3);
 	if (upcoming.length > 0) void AudioCache.preload(...upcoming);
 }
 
 export function seekFromLocalControl(seconds: number) {
-	seek(clampPlaybackSeconds(seconds));
+	const clamped = clampPlaybackSeconds(seconds);
+	forward({ action: "seek", positionMs: clamped * 1000 });
+	seek(clamped);
 }
 
 function setQueueState(nextQueue: Song[], nextIndex: number) {
@@ -70,10 +73,15 @@ function setQueueState(nextQueue: Song[], nextIndex: number) {
 async function playAtIndex(i: number): Promise<void> {
 	const q = queue.value;
 	if (i < 0 || i >= q.length) return;
+	const song = q[i];
+
+	const gate = playGate.value;
+	if (gate) await gate(song);
+	if (queue.value[i]?.id !== song.id) return;
 
 	currentIndex.value = i;
+	currentSong.value = song;
 	persistQueue();
-	const song = q[i];
 
 	const ok = await play(song);
 	if (!ok) {
@@ -91,11 +99,18 @@ export async function playFromQueueSelection(
 	const i = fullOrderedSongs.findIndex((s) => s.id === clicked.id);
 	if (i === -1) return;
 
+	forward({
+		action: "playSelection",
+		songId: clicked.id,
+		songs: fullOrderedSongs,
+	});
+
 	await setQueueState(fullOrderedSongs.slice(), i);
 	await playAtIndex(i);
 }
 
 export function enqueue(song: Song) {
+	forward({ action: "enqueue", song });
 	const newQueue = [...queue.value];
 	const newIndex = currentIndex.value;
 
@@ -124,6 +139,8 @@ export async function unqueue(removeIdx: number): Promise<void> {
 	const q = [...queue.value];
 	const n = q.length;
 	if (removeIdx < 0 || removeIdx >= n) return;
+
+	forward({ action: "remove", index: removeIdx });
 
 	const playingId =
 		currentIndex.value >= 0 && currentIndex.value < n
@@ -154,6 +171,8 @@ export async function moveQueue(from: number, to: number): Promise<void> {
 	const clamped = Math.max(0, Math.min(n - 1, to));
 	if (from === clamped) return;
 
+	forward({ action: "move", from, to: clamped });
+
 	const playingId =
 		currentIndex.value >= 0 && currentIndex.value < n
 			? a[currentIndex.value].id
@@ -181,6 +200,8 @@ export async function moveAfterCurrent(from: number): Promise<void> {
 	if (ci < 0 || ci >= n) return;
 	if (from === ci || from === ci + 1) return;
 
+	forward({ action: "moveAfter", index: from });
+
 	const playingId = a[ci].id;
 
 	const [it] = a.splice(from, 1);
@@ -202,14 +223,18 @@ export async function playAt(i: number): Promise<void> {
 	if (i < 0 || i >= q.length) return;
 	if (i === currentIndex.value) return;
 
+	forward({ action: "play", index: i });
+
 	await playAtIndex(i);
 }
 
 export async function toggleSong() {
+	forward({ action: "toggle" });
 	await togglePlayPause();
 }
 
 export async function nextSong() {
+	forward({ action: "next" });
 	const q = queue.value;
 	const i = currentIndex.value;
 	const r = repeat.value;
@@ -243,6 +268,7 @@ export async function nextSong() {
 }
 
 export async function prevSong() {
+	forward({ action: "prev" });
 	const q = queue.value;
 	const i = currentIndex.value;
 	const r = repeat.value;

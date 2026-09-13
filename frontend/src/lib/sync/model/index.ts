@@ -1,4 +1,20 @@
+import type { Song } from "@/lib/music/model";
+
 export type Role = "off" | "host" | "guest";
+
+export type ControlAction =
+	| { action: "toggle" }
+	| { action: "seek"; positionMs: number }
+	| { action: "next" }
+	| { action: "prev" }
+	| { action: "shuffle" }
+	| { action: "repeat" }
+	| { action: "play"; index: number }
+	| { action: "enqueue"; song: Song }
+	| { action: "playSelection"; songId: string; songs: Song[] }
+	| { action: "remove"; index: number }
+	| { action: "move"; from: number; to: number }
+	| { action: "moveAfter"; index: number };
 
 export type PeerMessage =
 	| {
@@ -9,6 +25,8 @@ export type PeerMessage =
 			songId: string;
 			youtubeId?: string;
 			index: number;
+			shuffle?: boolean;
+			repeat?: "off" | "all" | "one";
 			color?: string | null;
 			binary?: string | null;
 	  }
@@ -26,4 +44,7 @@ export type PeerMessage =
 	| { t: "pong"; id: number; at: number; echo: number }
 	| { t: "members"; count: number }
 	| { t: "role"; role: "host" | "guest" }
+	| { t: "prepare"; songId: string; youtubeId?: string }
+	| { t: "ready"; songId: string }
+	| ({ t: "control" } & ControlAction)
 	| { t: "error"; reason: string };

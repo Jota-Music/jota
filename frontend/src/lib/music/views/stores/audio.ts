@@ -30,6 +30,7 @@ function checkTabMute(): boolean {
 }
 
 let audio: HTMLAudioElement | null = null;
+let loadedSongId: string | null = null;
 
 let onTrackEndedCallback: (() => void) | null = null;
 
@@ -40,6 +41,7 @@ export function setOnTrackEnded(fn: () => void) {
 export const isLoading = signal(false);
 export const isPlaying = signal(false);
 export const progress = signal(0);
+export const seekCount = signal(0);
 export const audioDuration = signal(0);
 export const volume = signal(getInitialVolume());
 export const muted = signal(getInitialMuted());
@@ -100,15 +102,22 @@ function clampStartSeconds(
 async function loadSongIntoPlayer(
 	song: Song,
 	autostart: boolean,
-	startSeconds?: number,
+	startSeconds?: number | (() => number),
 ): Promise<boolean> {
-	currentSong.value = song;
-	media.update(song, isPlaying.value);
+	if (audio) {
+		audio.pause();
+		audio.src = "";
+		audio.load();
+		audio = null;
+		loadedSongId = null;
+	}
 
 	progress.value = 0;
 	audioDuration.value = 0;
-
 	isLoading.value = true;
+
+	currentSong.value = song;
+	media.update(song, isPlaying.value);
 
 	let data: { url: string; youtube: string };
 	try {
@@ -124,13 +133,6 @@ async function loadSongIntoPlayer(
 		return false;
 	}
 
-	if (audio) {
-		audio.pause();
-		audio.src = "";
-		audio.load();
-		audio = null;
-	}
-
 	let instance: HTMLAudioElement;
 	try {
 		instance = await AudioCache.getAudioElement(song);
@@ -142,6 +144,7 @@ async function loadSongIntoPlayer(
 	}
 
 	audio = instance;
+	loadedSongId = song.id;
 
 	instance.volume = volume.value;
 	instance.muted = checkTabMute();
@@ -154,8 +157,12 @@ async function loadSongIntoPlayer(
 		audioDuration.value = d0;
 	}
 
-	const wantsStart =
-		startSeconds != null && Number.isFinite(startSeconds) && startSeconds > 0;
+	const wantsStart = startSeconds != null;
+	const startAt = (): number => {
+		const raw =
+			typeof startSeconds === "function" ? startSeconds() : startSeconds;
+		return clampStartSeconds(instance, raw ?? 0);
+	};
 
 	if (autostart) {
 		if (wantsStart) {
@@ -166,7 +173,7 @@ async function loadSongIntoPlayer(
 				isPlaying.value = false;
 				return false;
 			}
-			const t = clampStartSeconds(instance, startSeconds);
+			const t = startAt();
 			instance.currentTime = t;
 			progress.value = t;
 		}
@@ -189,7 +196,7 @@ async function loadSongIntoPlayer(
 			return false;
 		}
 		if (wantsStart) {
-			const t = clampStartSeconds(instance, startSeconds);
+			const t = startAt();
 			instance.currentTime = t;
 			progress.value = t;
 		}
@@ -201,24 +208,61 @@ async function loadSongIntoPlayer(
 
 export async function play(
 	song: Song,
-	startSeconds?: number,
+	startSeconds?: number | (() => number),
 ): Promise<boolean> {
 	return await loadSongIntoPlayer(song, true, startSeconds);
 }
 
 export async function prepareSong(
 	song: Song,
-	startSeconds?: number,
+	startSeconds?: number | (() => number),
 ): Promise<boolean> {
 	return await loadSongIntoPlayer(song, false, startSeconds);
 }
 
+export async function warm(song: Song, timeoutMs = 6000): Promise<boolean> {
+	let el: HTMLAudioElement;
+	try {
+		el = await AudioCache.getAudioElement(song);
+	} catch {
+		return false;
+	}
+	if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) return true;
+
+	return await new Promise<boolean>((resolve) => {
+		const done = () => {
+			el.removeEventListener("canplaythrough", ok);
+			el.removeEventListener("canplay", ok);
+			el.removeEventListener("error", err);
+			clearTimeout(timer);
+		};
+		const ok = () => {
+			done();
+			resolve(true);
+		};
+		const err = () => {
+			done();
+			resolve(false);
+		};
+		const timer = setTimeout(() => {
+			done();
+			resolve(el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA);
+		}, timeoutMs);
+		el.addEventListener("canplaythrough", ok, { once: true });
+		el.addEventListener("canplay", ok, { once: true });
+		el.addEventListener("error", err, { once: true });
+	});
+}
+
 export function getPlaybackSeconds(): number {
-	if (audio && Number.isFinite(audio.currentTime)) {
+	if (
+		audio &&
+		loadedSongId === currentSong.value?.id &&
+		Number.isFinite(audio.currentTime)
+	) {
 		return Math.max(0, audio.currentTime);
 	}
-	const p = progress.value;
-	return Number.isFinite(p) ? Math.max(0, p) : 0;
+	return 0;
 }
 
 export function pause() {
@@ -231,6 +275,11 @@ export function seek(time: number) {
 		audio.currentTime = time;
 	}
 	progress.value = time;
+	seekCount.value++;
+}
+
+export function setPlaybackRate(rate: number) {
+	if (audio) audio.playbackRate = rate;
 }
 
 export function setVolume(value: number) {
@@ -280,6 +329,7 @@ export function stopPlayer() {
 		audio.load();
 		audio = null;
 	}
+	loadedSongId = null;
 	currentSong.value = null;
 	media.clear();
 	progress.value = 0;
