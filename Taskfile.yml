@@ -10,14 +10,6 @@ vars:
   # tasks below dispatch to the matching platform Taskfile via this variable.
   GOOS: '{{.GOOS | default OS}}'
 
-includes:
-  common: ./build/Taskfile.yml
-  windows: ./build/windows/Taskfile.yml
-  darwin: ./build/darwin/Taskfile.yml
-  linux: ./build/linux/Taskfile.yml
-  ios: ./build/ios/Taskfile.yml
-  android: ./build/android/Taskfile.yml
-
 tasks:
   build:
     summary: Builds the application
@@ -38,3 +30,49 @@ tasks:
     summary: Runs the application in development mode
     cmds:
       - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+
+  android:
+    desc: Build release APK for arm64 (phones)
+    cmds:
+      - task: android:package
+        vars:
+          ARCH: arm64
+
+  android:emu:
+    desc: Build release APK for emulator (amd64)
+    cmds:
+      - task: android:package
+        vars:
+          ARCH: amd64
+
+  android:fat:
+    desc: Build fat APK (arm64 + amd64)
+    cmds:
+      - task: android:package:fat
+
+  aab:
+    desc: Build AAB for Play Store
+    cmds:
+      - task: android:bundle
+        vars:
+          ARCH: arm64
+
+  run:android:
+    desc: Build debug and run in emulator
+    cmds:
+      - task: android:run
+
+  deploy:android:
+    desc: Deploy release APK to connected phone via USB
+    cmds:
+      - task: android:deploy-device
+        vars:
+          ARCH: arm64
+
+includes:
+  common: ./build/Taskfile.yml
+  windows: ./build/windows/Taskfile.yml
+  darwin: ./build/darwin/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
+  ios: ./build/ios/Taskfile.yml
+  android: ./build/android/Taskfile.yml

@@ -28,18 +28,25 @@ wails3 task linux:create:rpm                  # solo .rpm -> bin/
 
 ### Android
 
-**JDK <= 24 obligatorio** (Gradle 9 rechaza Java 26; uno en `~/.local/share/jota-jdk21`).
-Antes de cualquier tarea Android:
-`export JAVA_HOME=~/.local/share/jota-jdk21 && export PATH="$JAVA_HOME/bin:$PATH"`.
+**JDK <= 24 obligatorio** (Gradle 9 rechaza Java 26; el default apunta a `~/.local/share/jota-jdk21`).
+El `build/android/Taskfile.yml` setea `JAVA_HOME` y `PATH` automáticamente para todas las tareas de Android;
+no hace falta exportarlos a mano salvo que uses las tareas internas directamente.
 
 ```bash
-wails3 task android:package ARCH=arm64      # APK release arm64 (teléfonos) -> bin/jota.apk
-wails3 task android:package ARCH=amd64      # APK release x86_64 (emulador) -> bin/jota.apk
-wails3 task android:package:fat ARCH=arm64  # APK con arm64 + x86_64 -> bin/jota.apk
-wails3 task android:bundle ARCH=arm64       # AAB para Play Store -> bin/jota.aab
-wails3 task android:run                      # build debug en emulador
-wails3 task android:run:device               # build debug en teléfono (USB) [ARCH=arm64]
-wails3 task android:deploy-device ARCH=arm64 # APK release en teléfono (USB)
+wails3 task android              # APK release arm64 (teléfonos) -> bin/jota.apk
+wails3 task android:emu          # APK release x86_64 (emulador) -> bin/jota.apk
+wails3 task android:fat          # APK con arm64 + x86_64 -> bin/jota.apk
+wails3 task aab                  # AAB para Play Store -> bin/jota.aab
+wails3 task run:android          # build debug en emulador
+wails3 task deploy:android       # APK release en teléfono (USB)
+```
+
+Tareas internas (requieren `JAVA_HOME` manual si no usás las de arriba):
+```bash
+wails3 task android:package ARCH=arm64
+wails3 task android:bundle ARCH=arm64
+wails3 task android:run
+wails3 task android:deploy-device ARCH=arm64
 ```
 
 Notas: `package`/`bundle` fuerzan el build con flags de producción
