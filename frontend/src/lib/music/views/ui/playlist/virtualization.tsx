@@ -57,10 +57,10 @@ export function Virtualization({ songs }: Props) {
 						const isCurrent = song.id === current?.id;
 
 						return (
-							<button
-								type="button"
+							<div
 								key={`${song.id}-${virtualRow.index}`}
 								data-id={song.id}
+								role="none"
 								onClick={() => void playFromQueueSelection(songs, song)}
 								className={cn(
 									"absolute left-0 flex w-full items-center justify-between gap-2 border-b border-zinc-900 px-3 transition hover:cursor-pointer hover:bg-zinc-900/40",
@@ -142,7 +142,7 @@ export function Virtualization({ songs }: Props) {
 										{secondsToTime(song.duration)}
 									</div>
 								</div>
-							</button>
+							</div>
 						);
 					})}
 				</div>

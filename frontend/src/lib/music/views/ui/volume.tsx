@@ -20,8 +20,8 @@ const VOLUME_STATUS = {
 const getVolumeStatus = (value: number, muted: boolean) => {
 	if (muted) return VOLUME_STATUS.MUTED;
 	if (value === 0) return VOLUME_STATUS.MUTED;
-	if (value < 0.5) return VOLUME_STATUS.LOW;
-	if (value < 0.75) return VOLUME_STATUS.MEDIUM;
+	if (value < 1 / 3) return VOLUME_STATUS.LOW;
+	if (value < 2 / 3) return VOLUME_STATUS.MEDIUM;
 	return VOLUME_STATUS.HIGH;
 };
 

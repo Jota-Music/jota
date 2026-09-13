@@ -72,7 +72,7 @@ export function Header({
 				className,
 			)}
 		>
-			<div class="mx-auto flex max-w-2xl items-center justify-between py-2 text-sm text-zinc-300 h-10 px-2 md:px-0">
+			<div class="mx-auto flex items-center justify-between text-sm text-zinc-300 h-10 px-4">
 				<div class="flex items-center gap-3 pl-1">
 					<button
 						type="button"
@@ -95,7 +95,7 @@ export function Header({
 					<Search class="size-4" />
 				</button>
 
-				<div class="flex items-center gap-3 pr-1">
+				<div class="flex items-center gap-3 pr-1 h-full">
 					<button
 						onClick={() => void disconnectSpotify()}
 						type="button"
@@ -111,7 +111,7 @@ export function Header({
 
 			<div
 				class={cn(
-					"mx-auto max-w-2xl overflow-hidden transition-all duration-200 px-2 md:px-0",
+					"mx-auto max-w-2xl overflow-hidden transition-all duration-200 px-4 md:px-0",
 					openSearch ? "max-h-40 opacity-100 py-2" : "max-h-0 opacity-0 py-0",
 				)}
 			>

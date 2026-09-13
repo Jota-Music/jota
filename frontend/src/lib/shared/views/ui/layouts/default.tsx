@@ -34,7 +34,13 @@ function DefaultLayout({
 
 			<Queue />
 
-			<main class={cn("flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-2 md:px-0 mx-auto pb-24 md:pb-0", className)}>
+			<main
+				class={cn(
+					"flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-4 md:px-0 mx-auto md:pb-0",
+					hasPlayer ? "pb-20" : "pb-4",
+					className,
+				)}
+			>
 				{children}
 			</main>
 

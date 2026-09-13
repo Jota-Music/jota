@@ -15,7 +15,7 @@ function ClearLayout({
 
 			<Queue />
 
-			<main class="flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-2 md:px-0 mx-auto">
+			<main class="flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-4 md:px-0 mx-auto">
 				{children}
 			</main>
 

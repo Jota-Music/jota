@@ -35,7 +35,7 @@ export function WindowControlsBar() {
 			<button
 				type="button"
 				onClick={() => void Window.Minimise()}
-				class="h-full px-2 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors cursor-pointer"
+				class="h-full px-4 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors cursor-pointer"
 				title="Minimise"
 			>
 				<Minus class="size-3.5" />
