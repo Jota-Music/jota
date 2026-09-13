@@ -27,6 +27,7 @@ type Service struct {
 	mu     sync.Mutex
 	conn   *websocket.Conn
 	cancel context.CancelFunc
+	gen    uint64
 }
 
 func New() *Service {
@@ -39,7 +40,20 @@ func (s *Service) Connect(rawURL string, room string, role string, token string,
 		return err
 	}
 
-	s.Stop()
+	s.mu.Lock()
+	s.gen++
+	gen := s.gen
+	old := s.conn
+	oldCancel := s.cancel
+	s.conn = nil
+	s.cancel = nil
+	s.mu.Unlock()
+	if oldCancel != nil {
+		oldCancel()
+	}
+	if old != nil {
+		old.Close(websocket.StatusNormalClosure, "")
+	}
 
 	header := http.Header{}
 	if token != "" {
@@ -65,10 +79,11 @@ func (s *Service) Connect(rawURL string, room string, role string, token string,
 	conn.SetReadLimit(maxMessageBytes)
 
 	s.mu.Lock()
-	if s.conn != nil {
+	// Stop() or a newer Connect() superseded this dial: drop it silently.
+	if gen != s.gen {
 		s.mu.Unlock()
 		conn.Close(websocket.StatusNormalClosure, "")
-		return errors.New("already connected")
+		return nil
 	}
 	runCtx, runCancel := context.WithCancel(context.Background())
 	s.conn = conn
@@ -96,6 +111,7 @@ func (s *Service) Send(payload string) error {
 
 func (s *Service) Stop() {
 	s.mu.Lock()
+	s.gen++
 	conn := s.conn
 	cancel := s.cancel
 	s.conn = nil
