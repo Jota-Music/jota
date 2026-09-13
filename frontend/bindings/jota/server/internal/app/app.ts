@@ -117,12 +117,12 @@ export function SpotifyReconnect(): $CancellablePromise<void> {
     return $Call.ByID(1784184919);
 }
 
-export function SyncCheck(relayURL: string): $CancellablePromise<void> {
+export function SyncCheck(relayURL: string): $CancellablePromise<boolean> {
     return $Call.ByID(4103377601, relayURL);
 }
 
-export function SyncConnect(relayURL: string, room: string, role: string): $CancellablePromise<void> {
-    return $Call.ByID(3307907283, relayURL, room, role);
+export function SyncConnect(relayURL: string, room: string, role: string, token: string, password: string): $CancellablePromise<void> {
+    return $Call.ByID(3307907283, relayURL, room, role, token, password);
 }
 
 export function SyncSend(payload: string): $CancellablePromise<void> {

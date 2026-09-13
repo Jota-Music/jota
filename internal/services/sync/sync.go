@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -16,6 +17,10 @@ import (
 
 const maxMessageBytes = 16 << 20
 
+// ErrTokenRequired is returned when the relay rejects the handshake with 401,
+// i.e. it has AUTH_TOKEN configured and we did not present a valid one.
+var ErrTokenRequired = errors.New("relay requires a token")
+
 // Message shapes are documented in Jota-Music/relay's README. Keep the JSON
 // contract in sync with frontend/src/lib/sync/model.
 type Service struct {
@@ -28,16 +33,33 @@ func New() *Service {
 	return &Service{}
 }
 
-func (s *Service) Connect(rawURL string, room string, role string) error {
+func (s *Service) Connect(rawURL string, room string, role string, token string, password string) error {
 	target, err := endpoint(rawURL, room, role)
 	if err != nil {
 		return err
 	}
 
+	s.Stop()
+
+	header := http.Header{}
+	if token != "" {
+		header.Set("Authorization", "Bearer "+token)
+	}
+	if password != "" {
+		header.Set("X-Room-Password", password)
+	}
+	var opts *websocket.DialOptions
+	if len(header) > 0 {
+		opts = &websocket.DialOptions{HTTPHeader: header}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	conn, _, err := websocket.Dial(ctx, target, nil)
+	conn, resp, err := websocket.Dial(ctx, target, opts)
 	cancel()
 	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusUnauthorized {
+			return ErrTokenRequired
+		}
 		return err
 	}
 	conn.SetReadLimit(maxMessageBytes)
@@ -111,26 +133,35 @@ func (s *Service) read(ctx context.Context, conn *websocket.Conn) {
 	}
 }
 
-func (s *Service) Check(rawURL string) error {
+// Check probes /healthz. It returns whether the relay requires an auth token
+// so the UI can ask for one up front. Older relays return a plain 200 body, in
+// which case a token is assumed not to be required.
+func (s *Service) Check(rawURL string) (bool, error) {
 	target, err := healthURL(rawURL)
 	if err != nil {
-		return err
+		return false, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("relay returned %s", resp.Status)
+		return false, fmt.Errorf("relay returned %s", resp.Status)
 	}
-	return nil
+	var body struct {
+		Auth bool `json:"auth"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return false, nil
+	}
+	return body.Auth, nil
 }
 
 func endpoint(raw string, room string, role string) (string, error) {

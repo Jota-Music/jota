@@ -158,12 +158,12 @@ func (a *App) SearchYouTube(query string) ([]youtube.Video, error) {
 
 // ----- Sync bindings -----
 
-func (a *App) SyncCheck(relayURL string) error {
+func (a *App) SyncCheck(relayURL string) (bool, error) {
 	return a.Sync.Check(relayURL)
 }
 
-func (a *App) SyncConnect(relayURL string, room string, role string) error {
-	return a.Sync.Connect(relayURL, room, role)
+func (a *App) SyncConnect(relayURL string, room string, role string, token string, password string) error {
+	return a.Sync.Connect(relayURL, room, role, token, password)
 }
 
 func (a *App) SyncStop() {

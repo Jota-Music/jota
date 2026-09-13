@@ -1,9 +1,9 @@
 import {
-	Copy,
 	Link,
 	LogOut,
 	Radio,
 	RefreshCw,
+	ShieldAlert,
 	Unplug,
 	Users,
 	X,
@@ -48,7 +48,9 @@ export function SyncPanel() {
 								? connected
 									? `${store.peers.value} connected`
 									: "Connecting..."
-								: "Offline"}
+								: status === "connecting"
+									? "Connecting..."
+									: "Offline"}
 						</span>
 					</div>
 					<button
@@ -63,32 +65,30 @@ export function SyncPanel() {
 			</header>
 
 			<div class="flex-1 overflow-y-auto px-4 py-4">
-				<SyncForm />
+				<SessionForm />
 			</div>
 		</Sheet>
 	);
 }
 
-function SyncForm() {
-	const r = store.role.value;
-
-	if (r === "off") return <ConnectForm />;
-	if (r === "host") return <HostView />;
-	return <GuestView />;
-}
-
-function ConnectForm() {
+function SessionForm() {
+	const role = store.role.value;
+	const status = store.status.value;
 	const [code, setCode] = useState(store.room.value);
 	const [relay, setRelay] = useState<"idle" | "checking" | "ok" | "error">(
 		"idle",
 	);
 	const url = store.relayUrl.value;
+	const showToken = store.tokenRequired.value;
 	const ready = url.trim() !== "" && code.trim() !== "";
+	const connecting = status === "connecting";
+	const active = role !== "off";
 
 	useEffect(() => {
 		const trimmed = url.trim();
 		if (trimmed === "") {
 			setRelay("idle");
+			store.tokenRequired.value = false;
 			return;
 		}
 		let alive = true;
@@ -96,7 +96,11 @@ function ConnectForm() {
 		const timer = setTimeout(() => {
 			transport
 				.check(trimmed)
-				.then(() => alive && setRelay("ok"))
+				.then((required) => {
+					if (!alive) return;
+					setRelay("ok");
+					store.tokenRequired.value = required;
+				})
 				.catch(() => alive && setRelay("error"));
 		}, 500);
 		return () => {
@@ -113,7 +117,7 @@ function ConnectForm() {
 			<input
 				id="sync-relay"
 				class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
-				placeholder="wss://relay.example.com"
+				placeholder="relay.example.com"
 				value={url}
 				onInput={(e) => (store.relayUrl.value = e.currentTarget.value)}
 			/>
@@ -123,6 +127,23 @@ function ConnectForm() {
 			{relay === "ok" && <p class="text-xs text-green-400">Relay reachable</p>}
 			{relay === "error" && (
 				<p class="text-xs text-red-400">Relay not reachable</p>
+			)}
+			{showToken && (
+				<>
+					<p class="flex items-center gap-1.5 text-xs text-yellow-400">
+						<ShieldAlert size={14} class="shrink-0" />
+						This server requires an auth token.
+					</p>
+					<input
+						id="sync-token"
+						type="password"
+						class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
+						placeholder="Insert your token here"
+						aria-label="Auth token"
+						value={store.token.value}
+						onInput={(e) => (store.token.value = e.currentTarget.value)}
+					/>
+				</>
 			)}
 			<label for="sync-room" class="text-xs text-zinc-500">
 				Room code
@@ -145,75 +166,40 @@ function ConnectForm() {
 				</button>
 			</div>
 			<p class="text-xs text-zinc-500">
-				Enter a room code. If nobody is hosting it yet, you become the host;
-				otherwise you join and listen in sync.
+				{active
+					? "Change the code to move the session to another room."
+					: "If nobody is hosting it yet, you become the host; otherwise you join and listen in sync."}
 			</p>
+			<label for="sync-pass" class="text-xs text-zinc-500">
+				Room password
+			</label>
+			<input
+				id="sync-pass"
+				type="password"
+				class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
+				placeholder="optional"
+				value={store.password.value}
+				onInput={(e) => (store.password.value = e.currentTarget.value)}
+			/>
 			<button
 				type="button"
 				class="flex items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-40"
-				disabled={!ready}
+				disabled={!ready || connecting}
 				onClick={() => void transport.connect(code.trim())}
 			>
 				<Link size={16} />
-				Connect
+				{connecting ? "Connecting…" : active ? "Change room" : "Connect"}
 			</button>
-			{store.error.value && (
-				<p class="text-xs text-red-400">{store.error.value}</p>
-			)}
-		</div>
-	);
-}
-
-function HostView() {
-	return (
-		<div class="flex flex-col gap-3">
-			<p class="text-sm text-zinc-400">
-				Share this room code with your guests.
-			</p>
-			<div class="flex gap-2">
-				<input
-					class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none font-mono"
-					readOnly
-					value={store.room.value}
-				/>
+			{active && (
 				<button
 					type="button"
-					class="flex shrink-0 items-center gap-2 rounded-lg bg-zinc-800 px-4 text-sm text-zinc-100 hover:bg-zinc-700 transition-colors cursor-pointer"
-					onClick={() => void transport.copy(store.room.value)}
+					class="flex items-center justify-center gap-2 rounded-lg bg-red-900/40 px-4 py-2.5 text-sm text-red-200 hover:bg-red-900/60 transition-colors cursor-pointer"
+					onClick={() => transport.stop()}
 				>
-					<Copy size={16} />
-					Copy
+					{role === "host" ? <Unplug size={16} /> : <LogOut size={16} />}
+					{role === "host" ? "Stop session" : "Leave session"}
 				</button>
-			</div>
-			<button
-				type="button"
-				class="flex items-center justify-center gap-2 rounded-lg bg-red-900/40 px-4 py-2.5 text-sm text-red-200 hover:bg-red-900/60 transition-colors cursor-pointer"
-				onClick={() => transport.stop()}
-			>
-				<Unplug size={16} />
-				Stop session
-			</button>
-			{store.error.value && (
-				<p class="text-xs text-red-400">{store.error.value}</p>
 			)}
-		</div>
-	);
-}
-
-function GuestView() {
-	return (
-		<div class="flex flex-col gap-3">
-			<p class="text-sm text-zinc-400">
-				You are listening in sync. The host controls playback.
-			</p>
-			<button
-				type="button"
-				class="flex items-center justify-center gap-2 rounded-lg bg-red-900/40 px-4 py-2.5 text-sm text-red-200 hover:bg-red-900/60 transition-colors cursor-pointer"
-				onClick={() => transport.stop()}
-			>
-				<LogOut size={16} />
-				Leave session
-			</button>
 			{store.error.value && (
 				<p class="text-xs text-red-400">{store.error.value}</p>
 			)}

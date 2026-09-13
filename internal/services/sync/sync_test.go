@@ -1,6 +1,47 @@
 package sync
 
-import "testing"
+import (
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestConnectTokenRequired(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	err := New().Connect(srv.URL, "room", "host", "", "")
+	if !errors.Is(err, ErrTokenRequired) {
+		t.Fatalf("got %v, want ErrTokenRequired", err)
+	}
+}
+
+func TestCheckAuthFlag(t *testing.T) {
+	cases := []struct {
+		body string
+		want bool
+	}{
+		{`{"auth":true}`, true},
+		{`{"auth":false}`, false},
+		{`ok`, false},
+	}
+	for _, c := range cases {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(c.body))
+		}))
+		got, err := New().Check(srv.URL)
+		srv.Close()
+		if err != nil {
+			t.Fatalf("Check(%q): %v", c.body, err)
+		}
+		if got != c.want {
+			t.Errorf("Check(%q) = %v, want %v", c.body, got, c.want)
+		}
+	}
+}
 
 func TestEndpoint(t *testing.T) {
 	cases := []struct {
