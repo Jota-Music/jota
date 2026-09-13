@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/dgraph-io/badger/v4"
 )
@@ -72,52 +71,4 @@ func checkDB() error {
 		return KvNotStartedError
 	}
 	return nil
-}
-
-func New(key string, value string, ttl time.Duration) error {
-	if err := checkDB(); err != nil {
-		return err
-	}
-	return db.Update(func(txn *badger.Txn) error {
-		entry := badger.NewEntry([]byte(key), []byte(value))
-		if ttl > 0 {
-			entry = entry.WithTTL(ttl)
-		}
-		return txn.SetEntry(entry)
-	})
-}
-
-func Delete(key string) error {
-	if err := checkDB(); err != nil {
-		return err
-	}
-	return db.Update(func(txn *badger.Txn) error {
-		err := txn.Delete([]byte(key))
-		if err == badger.ErrKeyNotFound {
-			return KeyNotFoundError
-		}
-		return err
-	})
-}
-
-func Get(key string) (string, error) {
-	if err := checkDB(); err != nil {
-		return "", err
-	}
-	var valCopy []byte
-	err := db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(key))
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return KeyNotFoundError
-			}
-			return err
-		}
-		valCopy, err = item.ValueCopy(nil)
-		return err
-	})
-	if err != nil {
-		return "", err
-	}
-	return string(valCopy), nil
 }
