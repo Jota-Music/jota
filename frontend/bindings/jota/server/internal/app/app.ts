@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -16,44 +16,64 @@ import * as youtube$0 from "../services/youtube/models.js";
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
-export function GetAlbumTracks(uri: string): $CancellablePromise<music$0.Song[] | null> {
-    return $Call.ByID(419118927, uri);
+export function GetAlbumTracks(uri: string): $CancellablePromise<music$0.Song[]> {
+    return $Call.ByID(419118927, uri).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 export function GetArtist(uri: string): $CancellablePromise<music$0.ArtistInfo> {
-    return $Call.ByID(3239842779, uri);
+    return $Call.ByID(3239842779, uri).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 export function GetArtistDiscography(uri: string): $CancellablePromise<music$0.ArtistDiscography> {
-    return $Call.ByID(1355396988, uri);
+    return $Call.ByID(1355396988, uri).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 export function GetFullPlaylist(id: string): $CancellablePromise<music$0.Playlist> {
-    return $Call.ByID(2338522147, id);
+    return $Call.ByID(2338522147, id).then(($result: any) => {
+        return $$createType4($result);
+    });
 }
 
 export function GetFullPlaylistNoCache(id: string): $CancellablePromise<music$0.Playlist> {
-    return $Call.ByID(1881129154, id);
+    return $Call.ByID(1881129154, id).then(($result: any) => {
+        return $$createType4($result);
+    });
 }
 
 export function GetPlaylist(id: string, page: number, size: number): $CancellablePromise<music$0.Playlist> {
-    return $Call.ByID(1505077398, id, page, size);
+    return $Call.ByID(1505077398, id, page, size).then(($result: any) => {
+        return $$createType4($result);
+    });
 }
 
 export function GetSong(id: string): $CancellablePromise<music$0.Song> {
-    return $Call.ByID(363768417, id);
+    return $Call.ByID(363768417, id).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
-export function GetUserPlaylists(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
-    return $Call.ByID(119247114, user);
+export function GetUserPlaylists(user: string): $CancellablePromise<music$0.PlaylistSummary[]> {
+    return $Call.ByID(119247114, user).then(($result: any) => {
+        return $$createType6($result);
+    });
 }
 
-export function GetUserPlaylistsNoCache(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
-    return $Call.ByID(2339901353, user);
+export function GetUserPlaylistsNoCache(user: string): $CancellablePromise<music$0.PlaylistSummary[]> {
+    return $Call.ByID(2339901353, user).then(($result: any) => {
+        return $$createType6($result);
+    });
 }
 
 export function GetYouTubeAudio(spotifyId: string, search: string): $CancellablePromise<youtube$0.Audio> {
-    return $Call.ByID(997358013, spotifyId, search);
+    return $Call.ByID(997358013, spotifyId, search).then(($result: any) => {
+        return $$createType7($result);
+    });
 }
 
 /**
@@ -77,12 +97,16 @@ export function RevalidateUserPlaylists(user: string): $CancellablePromise<void>
     return $Call.ByID(690355719, user);
 }
 
-export function Search(query: string, searchType: string): $CancellablePromise<music$0.SearchResult[] | null> {
-    return $Call.ByID(922006544, query, searchType);
+export function Search(query: string, searchType: string): $CancellablePromise<music$0.SearchResult[]> {
+    return $Call.ByID(922006544, query, searchType).then(($result: any) => {
+        return $$createType9($result);
+    });
 }
 
-export function SearchYouTube(query: string): $CancellablePromise<youtube$0.Video[] | null> {
-    return $Call.ByID(596564785, query);
+export function SearchYouTube(query: string): $CancellablePromise<youtube$0.Video[]> {
+    return $Call.ByID(596564785, query).then(($result: any) => {
+        return $$createType11($result);
+    });
 }
 
 export function SetYouTubeId(spotifyId: string, youtubeId: string): $CancellablePromise<void> {
@@ -94,7 +118,9 @@ export function SpotifyDisconnect(): $CancellablePromise<void> {
 }
 
 export function SpotifyGetStatus(): $CancellablePromise<$models.SpotifyStatus> {
-    return $Call.ByID(3825970500);
+    return $Call.ByID(3825970500).then(($result: any) => {
+        return $$createType12($result);
+    });
 }
 
 /**
@@ -132,3 +158,18 @@ export function SyncSend(payload: string): $CancellablePromise<void> {
 export function SyncStop(): $CancellablePromise<void> {
     return $Call.ByID(2010260919);
 }
+
+// Private type creation functions
+const $$createType0 = music$0.Song.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = music$0.ArtistInfo.createFrom;
+const $$createType3 = music$0.ArtistDiscography.createFrom;
+const $$createType4 = music$0.Playlist.createFrom;
+const $$createType5 = music$0.PlaylistSummary.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = youtube$0.Audio.createFrom;
+const $$createType8 = music$0.SearchResult.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = youtube$0.Video.createFrom;
+const $$createType11 = $Create.Array($$createType10);
+const $$createType12 = $models.SpotifyStatus.createFrom;
