@@ -1,6 +1,5 @@
 import { signal } from "@preact/signals";
 import {
-	ChevronDown,
 	ChevronUp,
 	ListMusic,
 	Repeat,
@@ -9,9 +8,7 @@ import {
 	SkipBack,
 	SkipForward,
 } from "lucide-preact";
-import type { ComponentChildren } from "preact";
-import { createPortal } from "preact/compat";
-import { useEffect, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { usePlayer } from "@/lib/music/views/hooks/use-player";
 import {
@@ -32,6 +29,7 @@ import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
 import Progress from "@/lib/shared/views/ui/components/progress";
+import { Sheet } from "@/lib/shared/views/ui/components/sheet";
 
 const playerModalOpen = signal(false);
 
@@ -218,202 +216,6 @@ function FullPlayerContent({
 	);
 }
 
-function DraggableSheet({
-	children,
-	onClose,
-}: {
-	children: ComponentChildren;
-	onClose: () => void;
-}) {
-	const sheetRef = useRef<HTMLDivElement>(null);
-	const backdropRef = useRef<HTMLButtonElement>(null);
-	const handleRef = useRef<HTMLButtonElement>(null);
-	const contentRef = useRef<HTMLDivElement>(null);
-	const dragStartY = useRef(0);
-	const dragStartTime = useRef(0);
-	const isDragging = useRef(false);
-	const translateY = useRef(0);
-	const onCloseRef = useRef(onClose);
-	onCloseRef.current = onClose;
-
-	const CLOSE_THRESHOLD = 120;
-	const FLING_VELOCITY = 0.5;
-
-	function closeSheet() {
-		if (sheetRef.current) {
-			sheetRef.current.style.transition =
-				"transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)";
-			sheetRef.current.style.transform = "translateY(100%)";
-		}
-		if (backdropRef.current) {
-			backdropRef.current.style.transition = "opacity 0.25s ease";
-			backdropRef.current.style.opacity = "0";
-		}
-		setTimeout(() => {
-			onCloseRef.current();
-			translateY.current = 0;
-		}, 280);
-	}
-
-	function snapBack() {
-		if (sheetRef.current) {
-			sheetRef.current.style.transition =
-				"transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)";
-			sheetRef.current.style.transform = "translateY(0)";
-		}
-		if (backdropRef.current) {
-			backdropRef.current.style.transition = "opacity 0.4s ease";
-			backdropRef.current.style.opacity = "1";
-		}
-	}
-
-	// Entry animation
-	useEffect(() => {
-		const sheet = sheetRef.current;
-		const backdrop = backdropRef.current;
-		if (!sheet || !backdrop) return;
-
-		sheet.style.transition = "none";
-		sheet.style.transform = "translateY(100%)";
-		backdrop.style.transition = "none";
-		backdrop.style.opacity = "0";
-
-		void sheet.offsetHeight;
-
-		requestAnimationFrame(() => {
-			sheet.style.transition = "transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)";
-			sheet.style.transform = "translateY(0)";
-			backdrop.style.transition = "opacity 0.3s ease";
-			backdrop.style.opacity = "1";
-		});
-	}, []);
-
-	function endDrag(e: PointerEvent) {
-		isDragging.current = false;
-
-		const elapsed = (performance.now() - dragStartTime.current) / 1000;
-		const velocity =
-			Math.abs(e.clientY - dragStartY.current) / Math.max(elapsed, 0.01) / 1000;
-		const shouldClose =
-			translateY.current > CLOSE_THRESHOLD || velocity > FLING_VELOCITY;
-
-		if (shouldClose) {
-			closeSheet();
-		} else {
-			snapBack();
-		}
-	}
-
-	function moveDrag(e: PointerEvent) {
-		if (!isDragging.current) return;
-		const delta = e.clientY - dragStartY.current;
-		if (delta < 0) return;
-		translateY.current = delta;
-		if (sheetRef.current) {
-			sheetRef.current.style.transform = `translateY(${translateY.current}px)`;
-		}
-		if (backdropRef.current) {
-			const opacity = Math.max(
-				0,
-				1 - translateY.current / (window.innerHeight * 0.4),
-			);
-			backdropRef.current.style.opacity = String(opacity);
-		}
-	}
-
-	useEffect(() => {
-		const handle = handleRef.current;
-		if (!handle) return;
-
-		function onPointerDown(e: PointerEvent) {
-			isDragging.current = true;
-			dragStartY.current = e.clientY;
-			dragStartTime.current = performance.now();
-			translateY.current = 0;
-			if (sheetRef.current) sheetRef.current.style.transition = "none";
-			if (backdropRef.current) backdropRef.current.style.transition = "none";
-			(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-		}
-
-		handle.addEventListener("pointerdown", onPointerDown);
-		handle.addEventListener("pointermove", moveDrag);
-		handle.addEventListener("pointerup", endDrag);
-
-		return () => {
-			handle.removeEventListener("pointerdown", onPointerDown);
-			handle.removeEventListener("pointermove", moveDrag);
-			handle.removeEventListener("pointerup", endDrag);
-		};
-	}, []);
-
-	useEffect(() => {
-		const content = contentRef.current;
-		if (!content) return;
-
-		function onPointerDown(e: PointerEvent) {
-			const target = e.target as HTMLElement;
-			if (
-				target.closest(
-					"button, input, a, select, textarea, form, [role='slider'], [role='button'], [role='link'], [class*='touch-none']",
-				)
-			)
-				return;
-			if (content && content.scrollTop > 0) return;
-
-			isDragging.current = true;
-			dragStartY.current = e.clientY;
-			dragStartTime.current = performance.now();
-			translateY.current = 0;
-			if (sheetRef.current) sheetRef.current.style.transition = "none";
-			if (backdropRef.current) backdropRef.current.style.transition = "none";
-			content?.setPointerCapture(e.pointerId);
-		}
-
-		content.addEventListener("pointerdown", onPointerDown);
-		content.addEventListener("pointermove", moveDrag);
-		content.addEventListener("pointerup", endDrag);
-
-		return () => {
-			content.removeEventListener("pointerdown", onPointerDown);
-			content.removeEventListener("pointermove", moveDrag);
-			content.removeEventListener("pointerup", endDrag);
-		};
-	}, []);
-
-	return createPortal(
-		<div class="fixed inset-0 z-50 md:hidden">
-			<button
-				type="button"
-				ref={backdropRef}
-				class="absolute inset-0 cursor-default bg-black/60 border-0 p-0"
-				onClick={closeSheet}
-				aria-label="Close"
-			/>
-			<div
-				ref={sheetRef}
-				class="absolute bottom-0 left-0 right-0 bg-stone-950 rounded-t-2xl flex flex-col max-h-[85vh]"
-			>
-				<button
-					type="button"
-					ref={handleRef}
-					onClick={closeSheet}
-					class="w-full flex items-center justify-center gap-1 pt-4 pb-2 cursor-grab active:cursor-grabbing touch-none text-white/60 hover:text-white transition-colors"
-				>
-					<ChevronDown size={18} />
-				</button>
-				<div
-					ref={contentRef}
-					class="overflow-y-auto min-h-0 flex-1 select-none px-4 pb-8"
-					style="touch-action: pan-y; -webkit-touch-callout: none"
-				>
-					{children}
-				</div>
-			</div>
-		</div>,
-		document.body,
-	);
-}
-
 export function Player() {
 	const player = usePlayer();
 
@@ -559,17 +361,18 @@ export function Player() {
 				</div>
 			</div>
 
-			{playerModalOpen.value && (
-				<DraggableSheet
-					onClose={() => {
-						playerModalOpen.value = false;
-					}}
-				>
-					<div class="pt-2">
-						<FullPlayerContent {...player} />
-					</div>
-				</DraggableSheet>
-			)}
+			<Sheet
+				open={playerModalOpen.value}
+				close={() => {
+					playerModalOpen.value = false;
+				}}
+				mobileOnly
+				closeLabel="Cerrar reproductor"
+			>
+				<div class="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-8">
+					<FullPlayerContent {...player} />
+				</div>
+			</Sheet>
 		</>
 	);
 }

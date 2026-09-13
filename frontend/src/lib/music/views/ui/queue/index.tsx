@@ -249,7 +249,7 @@ function Queue() {
 								>
 									<div
 										class={cn(
-											"flex shrink-0 touch-none rounded p-0.5 text-zinc-600",
+											"hidden shrink-0 touch-none rounded p-0.5 text-zinc-600 sm:flex",
 											songs.length <= 1 && "opacity-30",
 										)}
 										aria-hidden
