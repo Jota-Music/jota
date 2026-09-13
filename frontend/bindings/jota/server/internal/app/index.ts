@@ -6,6 +6,6 @@ export {
     App
 };
 
-export {
+export type {
     SpotifyStatus
 } from "./models.js";
