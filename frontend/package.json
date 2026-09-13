@@ -23,7 +23,6 @@
 		"lucide-preact": "^1.8.0",
 		"preact": "^10.29.1",
 		"tailwindcss": "^4.2.2",
-		"vite-plugin-pwa": "^1.3.0",
 		"wouter-preact": "^3.9.0"
 	},
 	"devDependencies": {
