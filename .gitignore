@@ -1,6 +1,5 @@
 dist/
 node_modules/
-build/
 vendor/
 tmp/
 *.log
@@ -11,9 +10,16 @@ storage/
 .vite/
 .task/
 bin/
-vendor/
 
 # Wails desktop build artifacts
 *.AppImage
 build/bin/
 frontend/package.json.md5
+
+# Android generated artifacts (scaffolding in build/ is tracked)
+build/android/.gradle/
+build/android/build/
+build/android/app/build/
+build/android/app/src/main/jniLibs/
+build/android/gen/
+build/android/local.properties

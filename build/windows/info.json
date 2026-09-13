@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "1.0.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "1.0.0",
+			"CompanyName": "Salvador Rodríguez",
+			"FileDescription": "Jota a simple self-hosted music service",
+			"LegalCopyright": "(c) 2025, Salvador Rodríguez",
+			"ProductName": "Jota",
+			"Comments": "Jota a simple self-hosted music service"
+		}
+	}
+}

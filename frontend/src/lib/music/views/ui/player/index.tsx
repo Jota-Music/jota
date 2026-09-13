@@ -10,8 +10,8 @@ import {
 	SkipForward,
 } from "lucide-preact";
 import type { ComponentChildren } from "preact";
-import { useEffect, useRef } from "preact/hooks";
 import { createPortal } from "preact/compat";
+import { useEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { usePlayer } from "@/lib/music/views/hooks/use-player";
 import {
