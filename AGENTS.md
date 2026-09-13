@@ -12,17 +12,76 @@ Self-hosted music streaming desktop app — Go backend with Preact frontend, pac
 
 ## Commands
 
+Requisitos generales: Go, `wails3` en `PATH` (`~/go/bin/wails3`), `bun` para la frontend.
+`WEBKIT_DISABLE_DMABUF_RENDERER=1` evita errores Wayland/DMA-BUF en Linux.
+
+### Linux (nativo)
+
 ```bash
-# Desktop app (live-reload)
-WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev
-
-# Production build (Linux)
-wails3 task build            # output: bin/jota
-wails3 dev                   # dev build + vite dev server (port 9245)
-
-# Regenerate TypeScript bindings only
-wails3 generate bindings -ts -clean=true   # into frontend/bindings/
+WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev   # live-reload; vite dev server en :9245
+wails3 task build                             # binario release -> bin/jota
+wails3 task package                           # .deb + .rpm + archlinux -> bin/
+wails3 task linux:create:deb                  # solo .deb -> bin/
+wails3 task linux:create:appimage             # AppImage -> bin/
+wails3 task linux:create:rpm                  # solo .rpm -> bin/
 ```
+
+### Android
+
+**JDK <= 24 obligatorio** (Gradle 9 rechaza Java 26; uno en `~/.local/share/jota-jdk21`).
+Antes de cualquier tarea Android:
+`export JAVA_HOME=~/.local/share/jota-jdk21 && export PATH="$JAVA_HOME/bin:$PATH"`.
+
+```bash
+wails3 task android:package ARCH=arm64      # APK release arm64 (teléfonos) -> bin/jota.apk
+wails3 task android:package ARCH=amd64      # APK release x86_64 (emulador) -> bin/jota.apk
+wails3 task android:package:fat ARCH=arm64  # APK con arm64 + x86_64 -> bin/jota.apk
+wails3 task android:bundle ARCH=arm64       # AAB para Play Store -> bin/jota.aab
+wails3 task android:run                      # build debug en emulador
+wails3 task android:run:device               # build debug en teléfono (USB) [ARCH=arm64]
+wails3 task android:deploy-device ARCH=arm64 # APK release en teléfono (USB)
+```
+
+Notas: `package`/`bundle` fuerzan el build con flags de producción
+(`-trimpath -ldflags="-w -s"`); `run`/`deploy-emulator` compilan en debug y no
+strippan el `.so`. Los builds de Android **limpian** `build/android/app/src/main/jniLibs`
+para no arrastrar ABIs/artefactos de builds anteriores.
+
+### iOS (solo macOS)
+
+```bash
+wails3 task ios:package:ipa                  # .ipa (requiere IOS_PLATFORM=device + signing)
+wails3 task ios:deploy-device                # instala en dispositivos conectados
+wails3 task ios:run                          # simulador
+```
+
+### macOS (solo macOS)
+
+```bash
+wails3 task darwin:build                     # binario -> bin/jota
+wails3 task darwin:package                   # .app bundle -> bin/ (macOS)
+wails3 task darwin:package:dmg               # .dmg -> bin/
+wails3 task darwin:package:universal         # .app universal (arm64 + x86_64)
+```
+
+### Windows (solo Windows; cross-compile Go funciona desde Linux)
+
+```bash
+wails3 task windows:build                    # -> bin/jota.exe
+wails3 task windows:package                  # instala MSIX + crea instalador
+wails3 task windows:create:nsis:installer    # instalador NSIS -> bin/
+wails3 task windows:create:msix:package      # paquete MSIX -> bin/
+```
+
+### Utilidades
+
+```bash
+wails3 generate bindings -ts -clean=true   # regenera frontend/bindings/
+wails3 task build GOOS=windows             # dispatcher genérico de build (Taskfile raíz)
+```
+
+`wails3 task <target>:<tarea>` llama directamente el Taskfile de la plataforma;
+`wails3 task <tarea>` desde la raíz rutea por `GOOS` a la plataforma del host.
 
 `wails3` lives at `~/go/bin/wails3` (add to PATH). The Linux build hard-codes the `gtk3` tag (webkit2gtk-4.1); the default compiles against GTK4/webkitgtk-6.0 which crashes gcc 16 on this machine.
 
@@ -33,16 +92,21 @@ wails3 generate bindings -ts -clean=true   # into frontend/bindings/
 | `WEBKIT_DISABLE_DMABUF_RENDERER` | `1` | Set to `1` by default in `main.go` to avoid Wayland DMA-BUF protocol errors. |
 | `SPOTIFY_CLIENT_ID` | `librespot.ClientIdHex` | Custom Spotify OAuth client ID; required if you want to use your own Spotify dev app with a registered redirect URI. |
 
-## Spotify OAuth Flow (Desktop)
+## Spotify OAuth Flow (Desktop & Android)
 
-1. User clicks "Log in with Spotify" → `loginSpotify()` is called
+1. User clicks "Log in with Spotify" → `loginSpotify()`
 2. Backend starts a local callback server on a random localhost port and returns the auth URL pointing to `http://127.0.0.1:{port}/login`
-3. Frontend calls `BrowserOpenURL(url)` to open the URL in the system browser
-4. User completes Spotify login in the browser; Spotify redirects to the local callback server
+3. Desktop: frontend calls `BrowserOpenURL(url)`; Android: the OAuth runs inside the app's own WebView (`window.location.href = url`)
+4. User completes Spotify login; Spotify redirects to the local callback server
 5. Backend captures the auth code, exchanges it for tokens, persists session to BadgerDB
 6. Frontend polls `SpotifyGetStatus()` to detect the new connection
 
-The default `librespot.ClientIdHex` is registered with Spotify for `http://127.0.0.1:{port}/login` (any localhost port). For production deploys with a custom `SPOTIFY_CLIENT_ID`, set `SPOTIFY_CLIENT_ID` to your own Spotify dev app's client ID with `http://127.0.0.1:<port>/login` as a redirect URI.
+The redirect is a loopback URL in all platforms (loopback is a registered redirect for
+`librespot.ClientIdHex`, needs no Spotify app and no native deep-link plumbing). On
+Android the callback success page redirects the WebView back to the app origin
+(`https://wails.localhost/`). For production deploys with a custom `SPOTIFY_CLIENT_ID`,
+set `SPOTIFY_CLIENT_ID` to your own Spotify dev app's client ID with
+`http://127.0.0.1:<port>/login` as a redirect URI.
 
 ## Project Structure
 
@@ -99,17 +163,22 @@ main.go                          # Wails entry point; embeds frontend/dist
 | `GetYouTubeAudio(spotifyId, search)` | `Audio` | YouTube audio stream URL |
 | `SetYouTubeId(spotifyId, youtubeId)` | `void` | Manually link a YouTube ID |
 
-## Spotify OAuth Flow (Desktop)
+## Spotify OAuth Flow
 
-1. User clicks "Log in with Spotify" → `loginSpotify()` is called
-2. Backend starts a local callback server on a random port and returns the auth URL
-3. Frontend calls `BrowserOpenURL(url)` to open the URL in the system browser
-4. User completes Spotify login in the browser; Spotify redirects to the local callback server
+1. User clicks "Log in with Spotify" → `loginSpotify()`
+2. Backend starts a local callback server on a random port and returns the auth URL pointing to `http://127.0.0.1:{port}/login`
+3. Desktop: frontend calls `BrowserOpenURL(url)`; Android: OAuth runs inside the app's own WebView (`window.location.href = url`)
+4. User completes Spotify login; Spotify redirects to the local callback server
 5. Backend captures the auth code, exchanges it for tokens, persists session to BadgerDB
 6. Frontend polls `SpotifyGetStatus()` to detect the new connection
-7. After Spotify redirect, the user is returned to the desktop app
+7. After Spotify redirect, the user is returned to the app
 
-The default `librespot.ClientIdHex` is registered with Spotify for `http://127.0.0.1:{port}/login` (any localhost port). For production deploys with a custom `SPOTIFY_CLIENT_ID`, set it to your own Spotify dev app's client ID with `http://127.0.0.1:<port>/login` as a redirect URI.
+Desktop uses the system browser; Android runs the flow in the app's WebView (the default
+`xdg-open`-based `BrowserOpenURL` doesn't work on Android). Both share the same loopback
+redirect (`http://127.0.0.1:{port}/login`) and the in-process callback server, so no
+Spotify app, custom scheme, or native deep-link plumbing is required. For production
+deploys with a custom `SPOTIFY_CLIENT_ID`, set `SPOTIFY_CLIENT_ID` to your own Spotify
+dev app's client ID with `http://127.0.0.1:<port>/login` as a redirect URI.
 
 ## Code Conventions
 
