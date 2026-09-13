@@ -7,8 +7,6 @@ import (
 	"sync"
 
 	"jota/server/internal/music"
-
-	"github.com/devgianlu/go-librespot/session"
 )
 
 func (s *SpotifyService) GetSong(id string) (music.Song, error) {
@@ -50,11 +48,11 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 		return music.Playlist{}, ErrNotConnected
 	}
 
-	uris, err := resolveContextURIs(ctx, sess, uri)
+	ctxTracks, err := resolveContextTracks(ctx, sess, uri)
 	if err != nil {
 		return music.Playlist{}, fmt.Errorf("resolve playlist: %w", err)
 	}
-	total := len(uris)
+	total := len(ctxTracks)
 
 	const batchSize = 50
 	const maxConcurrency = 3
@@ -77,16 +75,13 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 			defer func() { <-sem }()
 
 			offset := idx * batchSize
-			limit := batchSize
-			if offset+limit > total {
-				limit = total - offset
+			end := offset + batchSize
+			if end > total {
+				end = total
 			}
 
-			tracks, err := getTracksFromURIs(ctx, sess, uri, offset, limit)
-			if err != nil {
-				results[idx] = batchResult{err: err}
-				return
-			}
+			tracks := tracksFromContext(ctxTracks[offset:end])
+			enrichTracks(ctx, sess, tracks)
 
 			songs := make([]music.Song, 0, len(tracks))
 			for _, t := range tracks {
@@ -134,16 +129,30 @@ func (s *SpotifyService) GetPlaylist(playlistID string, page, size int) (music.P
 		return music.Playlist{}, ErrNotConnected
 	}
 
-	uris, err := resolveContextURIs(ctx, sess, uri)
+	ctxTracks, err := resolveContextTracks(ctx, sess, uri)
 	if err != nil {
 		return music.Playlist{}, fmt.Errorf("resolve playlist: %w", err)
 	}
-	total := len(uris)
+	total := len(ctxTracks)
 
-	tracks, err := getTracksFromURIs(ctx, sess, uri, offset, size)
-	if err != nil {
-		return music.Playlist{}, err
+	if offset >= total {
+		return music.Playlist{
+			Songs: []music.Song{},
+			Page: music.Page{
+				Size:    size,
+				Offset:  offset,
+				Total:   total,
+				HasNext: false,
+			},
+		}, nil
 	}
+	end := offset + size
+	if end > total {
+		end = total
+	}
+
+	tracks := tracksFromContext(ctxTracks[offset:end])
+	enrichTracks(ctx, sess, tracks)
 
 	songs := make([]music.Song, 0, len(tracks))
 	for _, t := range tracks {
@@ -156,36 +165,9 @@ func (s *SpotifyService) GetPlaylist(playlistID string, page, size int) (music.P
 			Size:    size,
 			Offset:  offset,
 			Total:   total,
-			HasNext: offset+size < total,
+			HasNext: end < total,
 		},
 	}, nil
-}
-
-func getTracksFromURIs(ctx context.Context, sess *session.Session, uri string, offset, limit int) ([]Track, error) {
-	_, err := spotifyID(uri, "playlist")
-	if err != nil {
-		return nil, err
-	}
-	uris, err := resolveContextURIs(ctx, sess, uri)
-	if err != nil {
-		return nil, err
-	}
-	if offset >= len(uris) {
-		return []Track{}, nil
-	}
-	end := len(uris)
-	if limit > 0 && offset+limit < end {
-		end = offset + limit
-	}
-	out := make([]Track, 0, end-offset)
-	for _, u := range uris[offset:end] {
-		if strings.HasPrefix(u, URILocalPrefix) {
-			continue
-		}
-		out = append(out, Track{URI: u})
-	}
-	enrichTracks(ctx, sess, out)
-	return out, nil
 }
 
 func (s *SpotifyService) GetUserPlaylists(user string) ([]music.PlaylistSummary, error) {

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	librespot "github.com/devgianlu/go-librespot"
+	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
 	"github.com/devgianlu/go-librespot/session"
 	"github.com/devgianlu/go-librespot/spclient"
 )
@@ -32,7 +33,7 @@ func (e *TypeMismatchError) Error() string {
 	return fmt.Sprintf("se esperaba spotify:%s:..., se recibió spotify:%s: (%s)", e.Expected, e.Got, e.URI)
 }
 
-func resolveContextURIs(ctx context.Context, sess *session.Session, uri string) ([]string, error) {
+func resolveContextTracks(ctx context.Context, sess *session.Session, uri string) ([]*connectpb.ContextTrack, error) {
 	resolved, err := sess.Spclient().ContextResolve(ctx, uri)
 	if err != nil {
 		return nil, err
@@ -42,7 +43,7 @@ func resolveContextURIs(ctx context.Context, sess *session.Session, uri string) 
 		return nil, err
 	}
 
-	var uris []string
+	var tracks []*connectpb.ContextTrack
 	for page := 0; ; page++ {
 		pageTracks, err := cr.Page(ctx, page)
 		if err == io.EOF {
@@ -52,14 +53,25 @@ func resolveContextURIs(ctx context.Context, sess *session.Session, uri string) 
 			return nil, err
 		}
 		for _, ct := range pageTracks {
-			u := ct.GetUri()
-			if u == "" && len(ct.GetGid()) == 16 {
-				u = librespot.SpotifyIdFromGid(cr.Type(), ct.GetGid()).Uri()
+			if ct.GetUri() == "" && len(ct.GetGid()) == 16 {
+				ct.Uri = librespot.SpotifyIdFromGid(cr.Type(), ct.GetGid()).Uri()
 			}
-			if u != "" {
-				uris = append(uris, u)
+			if ct.GetUri() != "" {
+				tracks = append(tracks, ct)
 			}
 		}
+	}
+	return tracks, nil
+}
+
+func resolveContextURIs(ctx context.Context, sess *session.Session, uri string) ([]string, error) {
+	tracks, err := resolveContextTracks(ctx, sess, uri)
+	if err != nil {
+		return nil, err
+	}
+	uris := make([]string, 0, len(tracks))
+	for _, ct := range tracks {
+		uris = append(uris, ct.GetUri())
 	}
 	return uris, nil
 }
