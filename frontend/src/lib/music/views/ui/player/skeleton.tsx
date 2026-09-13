@@ -20,19 +20,18 @@ export function PlayerSkeleton() {
 
 						<div class="absolute inset-0 w-max h-max flex items-center justify-center gap-6 m-auto">
 							<button type="button" class="p-1 rounded-full">
-								<SkipBack size={25} class="text-white" />
+								<SkipBack class="size-6 text-white" />
 							</button>
 
 							<Toggle
 								loading={false}
 								playing={false}
 								onClick={() => {}}
-								size={25}
 								class="bg-white/5"
 							/>
 
 							<button type="button" class="p-1 rounded-full">
-								<SkipForward size={25} class="text-white" />
+								<SkipForward class="size-6 text-white" />
 							</button>
 						</div>
 					</div>
@@ -75,14 +74,14 @@ export function PlayerSkeleton() {
 						loading={false}
 						playing={false}
 						onClick={() => {}}
-						size={18}
+						iconClass="size-5"
 						class="bg-white/5"
 					/>
 
 					<VolumeControl />
 
 					<button type="button" class="rounded-md p-1">
-						<ListMusic size={25} class="text-white" />
+						<ListMusic class="size-6 text-white" />
 					</button>
 				</div>
 			</div>

@@ -5,10 +5,11 @@ export function Toggle(props: {
 	loading: boolean;
 	playing: boolean;
 	onClick: () => void;
-	size: number;
+	iconClass?: string;
 	class?: string;
 }) {
-	const { loading, playing, onClick, size, class: className } = props;
+	const { loading, playing, onClick, iconClass, class: className } = props;
+	const icon = cn("fill-current text-(--binary-color)", iconClass);
 	return (
 		<button
 			type="button"
@@ -20,11 +21,11 @@ export function Toggle(props: {
 		>
 			<div class="flex items-center justify-center">
 				{loading ? (
-					<Loader size={size} class="animate-spin text-(--binary-color)" />
+					<Loader class={cn(icon, "animate-spin")} />
 				) : playing ? (
-					<Pause size={size} class="fill-current text-(--binary-color)" />
+					<Pause class={icon} />
 				) : (
-					<Play size={size} class="fill-current text-(--binary-color)" />
+					<Play class={icon} />
 				)}
 			</div>
 		</button>

@@ -88,11 +88,11 @@ export function Header({
 						onClick={goBack}
 						class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
 					>
-						<ArrowLeft class="size-4" />
+						<ArrowLeft class="size-5 md:size-4" />
 					</button>
 
 					<Link href="/" class="text-zinc-400 hover:text-zinc-100">
-						<House class="size-4" />
+						<House class="size-5 md:size-4" />
 					</Link>
 				</div>
 
@@ -102,7 +102,7 @@ export function Header({
 						onClick={() => setOpenSearch((v) => !v)}
 						class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
 					>
-						<Search class="size-4" />
+						<Search class="size-5 md:size-4" />
 					</button>
 
 					<button
@@ -111,7 +111,7 @@ export function Header({
 						title="Listen together"
 						class="cursor-pointer"
 					>
-						<Users class="size-4 text-zinc-400 hover:text-zinc-100" />
+						<Users class="size-5 md:size-4 text-zinc-400 hover:text-zinc-100" />
 					</button>
 				</div>
 
@@ -121,7 +121,7 @@ export function Header({
 						title="Settings"
 						class="text-zinc-400 hover:text-zinc-100"
 					>
-						<Settings class="size-4" />
+						<Settings class="size-5 md:size-4" />
 					</Link>
 
 					{desktop && <div class="h-full w-26" aria-hidden />}
@@ -156,10 +156,7 @@ export function Header({
 									</option>
 								))}
 							</select>
-							<ChevronDown
-								size={12}
-								class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400"
-							/>
+							<ChevronDown class="absolute right-2 top-1/2 -translate-y-1/2 size-3 pointer-events-none text-zinc-400" />
 						</div>
 						<div class="relative flex-1 flex items-center">
 							<input
@@ -184,7 +181,7 @@ export function Header({
 						type="submit"
 						title="Search"
 					>
-						<Search class="size-4" />
+						<Search class="size-5 md:size-4" />
 					</button>
 				</form>
 			</div>

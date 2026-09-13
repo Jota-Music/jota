@@ -88,14 +88,13 @@ function FullPlayerContent({
 								onClick={() => void prevSong()}
 								class="p-1 rounded-full transition drop-shadow-lg drop-shadow-black disabled:brightness-60 disabled:cursor-not-allowed cursor-pointer"
 							>
-								<SkipBack size={25} class="fill-current shadow-lg" />
+								<SkipBack class="size-6 fill-current shadow-lg" />
 							</button>
 
 							<Toggle
 								loading={isLoading}
 								playing={isPlaying}
 								onClick={() => void toggleSong()}
-								size={25}
 								class="bg-(--dominant-color)"
 							/>
 
@@ -105,7 +104,7 @@ function FullPlayerContent({
 								onClick={() => void nextSong()}
 								class="p-1 rounded-full transition drop-shadow-lg drop-shadow-black disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
 							>
-								<SkipForward size={25} class="fill-current shadow-lg" />
+								<SkipForward class="size-6 fill-current shadow-lg" />
 							</button>
 						</div>
 					</div>
@@ -159,7 +158,7 @@ function FullPlayerContent({
 									: "text-white/60 hover:bg-white/10 hover:text-white",
 							)}
 						>
-							<Shuffle size={20} class="stroke-current" />
+							<Shuffle class="size-5 stroke-current" />
 						</button>
 
 						<button
@@ -182,9 +181,9 @@ function FullPlayerContent({
 							)}
 						>
 							{repeat.value === "one" ? (
-								<Repeat1 size={20} class="stroke-current" />
+								<Repeat1 class="size-5 stroke-current" />
 							) : (
-								<Repeat size={20} class="stroke-current" />
+								<Repeat class="size-5 stroke-current" />
 							)}
 						</button>
 					</div>
@@ -193,7 +192,7 @@ function FullPlayerContent({
 						loading={isLoading}
 						playing={isPlaying}
 						onClick={() => void toggleSong()}
-						size={18}
+						iconClass="size-5"
 						class="bg-(--dominant-color)"
 					/>
 
@@ -208,7 +207,7 @@ function FullPlayerContent({
 						}}
 						class="rounded-md p-1 transition hover:bg-white/10 cursor-pointer"
 					>
-						<ListMusic size={25} class="fill-current" />
+						<ListMusic class="size-6 fill-current" />
 					</button>
 				</div>
 			</div>
@@ -326,14 +325,13 @@ export function Player() {
 							onClick={() => void prevSong()}
 							class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
 						>
-							<SkipBack size={20} class="fill-current" />
+							<SkipBack class="size-6 fill-current" />
 						</button>
 
 						<Toggle
 							loading={isLoading}
 							playing={isPlaying}
 							onClick={() => void toggleSong()}
-							size={22}
 							class="bg-(--dominant-color)"
 						/>
 
@@ -343,7 +341,7 @@ export function Player() {
 							onClick={() => void nextSong()}
 							class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
 						>
-							<SkipForward size={20} class="fill-current" />
+							<SkipForward class="size-6 fill-current" />
 						</button>
 
 						<button
@@ -355,7 +353,7 @@ export function Player() {
 							}}
 							class="shrink-0 p-1.5 rounded-full text-white/60 hover:text-white cursor-pointer transition-colors"
 						>
-							<ChevronUp size={18} />
+							<ChevronUp class="size-5" />
 						</button>
 					</div>
 				</div>

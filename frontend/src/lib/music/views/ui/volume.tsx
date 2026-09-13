@@ -47,7 +47,7 @@ function VolumeControl({
 				aria-label={muted.value ? "Unmute" : "Mute"}
 				class="contents"
 			>
-				<Icon size={35} class="cursor-pointer" />
+				<Icon class="size-9 cursor-pointer" />
 			</button>
 
 			<Progress

@@ -83,7 +83,7 @@ export default function SaveYoutubeId({
 						class="cursor-pointer p-1 rounded hover:brightness-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
 						title="Guardar"
 					>
-						<Check size={16} />
+						<Check class="size-4" />
 					</button>
 
 					<button
@@ -92,7 +92,7 @@ export default function SaveYoutubeId({
 						title="Cancelar"
 						onClick={() => setIsEditing(false)}
 					>
-						<X size={16} />
+						<X class="size-4" />
 					</button>
 				</form>
 			) : (
@@ -121,7 +121,7 @@ export default function SaveYoutubeId({
 							class="cursor-pointer p-1 rounded hover:brightness-200 transition opacity-0 group-hover:opacity-100"
 							title="Editar YouTube ID"
 						>
-							<Edit2 size={16} />
+							<Edit2 class="size-4" />
 						</span>
 					)}
 				</button>
