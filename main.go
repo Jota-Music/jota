@@ -4,10 +4,13 @@ import (
 	"embed"
 	"log"
 	"os"
+	"sync/atomic"
 
 	"jota/server/internal/app"
+	"jota/server/internal/kv"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 //go:embed all:frontend/dist
@@ -15,6 +18,32 @@ var assets embed.FS
 
 //go:embed build/appicon.png
 var icon []byte
+
+type windowState struct {
+	X, Y, Width, Height int
+	Maximised           bool
+}
+
+var windowBucket = kv.UseBucket("window")
+
+func loadWindowState() windowState {
+	var st windowState
+	_ = kv.EnsureStarted()
+	_ = windowBucket.GetObject("state", &st)
+	return st
+}
+
+func saveWindowState(w *application.WebviewWindow) {
+	x, y := w.Position()
+	width, height := w.Size()
+	_ = windowBucket.SetObject("state", windowState{
+		X:         x,
+		Y:         y,
+		Width:     width,
+		Height:    height,
+		Maximised: w.IsMaximised(),
+	})
+}
 
 func main() {
 	a := app.New()
@@ -38,7 +67,9 @@ func main() {
 		},
 	})
 
-	wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
+	state := loadWindowState()
+
+	opts := application.WebviewWindowOptions{
 		Title:            "Jota",
 		Width:            1100,
 		Height:           720,
@@ -52,6 +83,35 @@ func main() {
 			WebviewGpuPolicy: application.WebviewGpuPolicyOnDemand,
 		},
 		URL: "/",
+	}
+	if state.Width > 0 {
+		opts.Width, opts.Height = state.Width, state.Height
+		if state.Maximised {
+			opts.StartState = application.WindowStateMaximised
+		}
+	}
+
+	window := wailsApp.Window.NewWithOptions(opts)
+
+	var restored atomic.Bool
+	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
+		if restored.Swap(true) || state.Width <= 0 {
+			return
+		}
+		window.SetPosition(state.X, state.Y)
+		window.SetSize(state.Width, state.Height)
+	})
+	window.OnWindowEvent(events.Common.WindowDidMove, func(*application.WindowEvent) {
+		if !restored.Load() {
+			return
+		}
+		saveWindowState(window)
+	})
+	window.OnWindowEvent(events.Common.WindowDidResize, func(*application.WindowEvent) {
+		if !restored.Load() {
+			return
+		}
+		saveWindowState(window)
 	})
 
 	if err := wailsApp.Run(); err != nil {
