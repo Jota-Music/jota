@@ -99,6 +99,18 @@ public class MainActivity extends AppCompatActivity {
         bridge = new WailsBridge(this);
         bridge.initialize();
 
+        // Forward transport actions from the media notification back to the page.
+        MediaPlaybackService.setListener(
+                (action, seekMs) -> {
+                    try {
+                        JSONObject o = new JSONObject();
+                        o.put("action", action);
+                        if (seekMs != null) o.put("value", seekMs);
+                        bridge.emitEvent("media:action", o.toString());
+                    } catch (Exception ignored) {
+                    }
+                });
+
         // Set up WebView
         setupWebView();
 
@@ -877,6 +889,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        MediaPlaybackService.setListener(null);
         unregisterSystemEventReceivers();
         if (bridge != null) {
             bridge.shutdown();

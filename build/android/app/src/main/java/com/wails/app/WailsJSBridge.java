@@ -66,6 +66,25 @@ public class WailsJSBridge {
     }
 
     /**
+     * Publish the current playback to the system media notification.
+     * Called from JavaScript: wails.mediaUpdate(json)
+     *
+     * @param json {title, artist, album, artwork, playing, duration, position}
+     */
+    @JavascriptInterface
+    public void mediaUpdate(String json) {
+        bridge.updateMediaSession(json);
+    }
+
+    /**
+     * Remove the media notification. Called from JavaScript: wails.mediaClear()
+     */
+    @JavascriptInterface
+    public void mediaClear() {
+        bridge.clearMediaSession();
+    }
+
+    /**
      * Log a message from JavaScript to Android's logcat
      * Called from JavaScript: wails.log(level, message)
      *

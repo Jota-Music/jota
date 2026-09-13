@@ -1,3 +1,4 @@
+import { Events } from "@wailsio/runtime";
 import type { Song } from "@/lib/music/model";
 
 type Controls = {
@@ -8,8 +9,19 @@ type Controls = {
 	position: () => number;
 };
 
+type NativeBridge = {
+	mediaUpdate?: (json: string) => void;
+	mediaClear?: () => void;
+};
+
 let next = () => {};
 let previous = () => {};
+
+let current: Song | null = null;
+let playing = false;
+let storedDuration = 0;
+let storedPosition = 0;
+let lastPush = 0;
 
 function session() {
 	if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
@@ -18,38 +30,89 @@ function session() {
 	return navigator.mediaSession;
 }
 
+function native(): NativeBridge | null {
+	if (typeof window === "undefined") return null;
+	const wails = (window as unknown as { wails?: NativeBridge }).wails;
+	return wails && typeof wails.mediaUpdate === "function" ? wails : null;
+}
+
+function pushNative(force = false) {
+	const bridge = native();
+	if (!bridge?.mediaUpdate || !current) return;
+	const now = Date.now();
+	if (!force && now - lastPush < 2000) return;
+	lastPush = now;
+	bridge.mediaUpdate(
+		JSON.stringify({
+			title: current.name,
+			artist: current.artists.map((artist) => artist.name).join(", "),
+			album: current.album.title,
+			artwork: current.album.covers?.[0] ?? "",
+			playing,
+			duration: storedDuration,
+			position: storedPosition,
+		}),
+	);
+}
+
 export function setup(controls: Controls) {
 	const media = session();
-	if (!media) return;
+	if (media) {
+		const actions: Array<[MediaSessionAction, MediaSessionActionHandler]> = [
+			["play", controls.play],
+			["pause", controls.pause],
+			["stop", controls.stop],
+			["previoustrack", () => previous()],
+			["nexttrack", () => next()],
+			[
+				"seekbackward",
+				(details) =>
+					controls.seek(controls.position() - (details.seekOffset ?? 10)),
+			],
+			[
+				"seekforward",
+				(details) =>
+					controls.seek(controls.position() + (details.seekOffset ?? 10)),
+			],
+			[
+				"seekto",
+				(details) => {
+					if (details.seekTime != null) controls.seek(details.seekTime);
+				},
+			],
+		];
 
-	const actions: Array<[MediaSessionAction, MediaSessionActionHandler]> = [
-		["play", controls.play],
-		["pause", controls.pause],
-		["stop", controls.stop],
-		["previoustrack", () => previous()],
-		["nexttrack", () => next()],
-		[
-			"seekbackward",
-			(details) =>
-				controls.seek(controls.position() - (details.seekOffset ?? 10)),
-		],
-		[
-			"seekforward",
-			(details) =>
-				controls.seek(controls.position() + (details.seekOffset ?? 10)),
-		],
-		[
-			"seekto",
-			(details) => {
-				if (details.seekTime != null) controls.seek(details.seekTime);
-			},
-		],
-	];
+		for (const [action, handler] of actions) {
+			try {
+				media.setActionHandler(action, handler);
+			} catch {}
+		}
+	}
 
-	for (const [action, handler] of actions) {
-		try {
-			media.setActionHandler(action, handler);
-		} catch {}
+	if (native()) {
+		Events.On("media:action", (ev) => {
+			const data = ev.data as { action?: string; value?: number } | undefined;
+			switch (data?.action) {
+				case "play":
+					controls.play();
+					break;
+				case "pause":
+					controls.pause();
+					break;
+				case "next":
+					next();
+					break;
+				case "previous":
+					previous();
+					break;
+				case "stop":
+					controls.stop();
+					break;
+				case "seek":
+					if (typeof data.value === "number") controls.seek(data.value / 1000);
+					break;
+			}
+		});
 	}
 }
 
@@ -58,45 +121,66 @@ export function tracks(handlers: { next: () => void; previous: () => void }) {
 	previous = handlers.previous;
 }
 
-export function update(song: Song | null, playing: boolean) {
+export function update(song: Song | null, isPlaying: boolean) {
 	const media = session();
-	if (!media) return;
-
-	if (song) {
-		media.metadata = new MediaMetadata({
-			title: song.name,
-			artist: song.artists.map((artist) => artist.name).join(", "),
-			album: song.album.title,
-			artwork: song.album.covers?.[0]
-				? [{ src: song.album.covers[0], sizes: "512x512" }]
-				: [],
-		});
+	if (media) {
+		if (song) {
+			media.metadata = new MediaMetadata({
+				title: song.name,
+				artist: song.artists.map((artist) => artist.name).join(", "),
+				album: song.album.title,
+				artwork: song.album.covers?.[0]
+					? [{ src: song.album.covers[0], sizes: "512x512" }]
+					: [],
+			});
+		}
+		media.playbackState = isPlaying ? "playing" : "paused";
 	}
-	media.playbackState = playing ? "playing" : "paused";
+
+	const changed = song?.id !== current?.id;
+	current = song;
+	playing = isPlaying;
+	if (song) {
+		if (changed) {
+			storedDuration = 0;
+			storedPosition = 0;
+		}
+		lastPush = 0;
+		pushNative(true);
+	} else {
+		native()?.mediaClear?.();
+	}
 }
 
 export function position(audio: HTMLAudioElement) {
 	const media = session();
 	if (
-		!media ||
-		!Number.isFinite(audio.duration) ||
-		audio.duration <= 0 ||
-		!Number.isFinite(audio.currentTime)
-	)
-		return;
+		media &&
+		Number.isFinite(audio.duration) &&
+		audio.duration > 0 &&
+		Number.isFinite(audio.currentTime)
+	) {
+		try {
+			media.setPositionState({
+				duration: audio.duration,
+				playbackRate: audio.playbackRate,
+				position: Math.min(audio.currentTime, audio.duration),
+			});
+		} catch {}
+	}
 
-	try {
-		media.setPositionState({
-			duration: audio.duration,
-			playbackRate: audio.playbackRate,
-			position: Math.min(audio.currentTime, audio.duration),
-		});
-	} catch {}
+	if (Number.isFinite(audio.duration)) storedDuration = audio.duration;
+	if (Number.isFinite(audio.currentTime)) storedPosition = audio.currentTime;
+	pushNative();
 }
 
 export function clear() {
 	const media = session();
-	if (!media) return;
-	media.metadata = null;
-	media.playbackState = "none";
+	if (media) {
+		media.metadata = null;
+		media.playbackState = "none";
+	}
+	current = null;
+	playing = false;
+	native()?.mediaClear?.();
 }

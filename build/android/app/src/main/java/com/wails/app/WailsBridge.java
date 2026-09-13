@@ -102,6 +102,8 @@ public class WailsBridge {
     private boolean proximityWanted = false;
     private boolean torchOn = false;
     private boolean pendingLocationRequest = false;
+    private boolean mediaNotificationPermissionRequested = false;
+    private boolean mediaServiceRunning = false;
 
     // Native methods - implemented in Go
     private static native void nativeInit(WailsBridge bridge);
@@ -1315,6 +1317,55 @@ public class WailsBridge {
                 emitEvent("android:foregroundService", "{\"running\":false}");
             } catch (Exception e) {
                 Log.e(TAG, "stopForegroundService failed", e);
+            }
+        });
+    }
+
+    /**
+     * Publish or update the system media notification. json carries the track
+     * metadata (title/artist/album/artwork) plus playing/duration/position. The
+     * media notification replaces the generic background-service one because
+     * WebView's navigator.mediaSession is disabled on Android.
+     */
+    public void updateMediaSession(final String json) {
+        mainHandler.post(() -> {
+            try {
+                if (Build.VERSION.SDK_INT >= 33
+                        && !mediaNotificationPermissionRequested
+                        && activity.checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                                != PackageManager.PERMISSION_GRANTED) {
+                    mediaNotificationPermissionRequested = true;
+                    activity.requestPermissions(
+                            new String[]{"android.permission.POST_NOTIFICATIONS"}, 1004);
+                }
+                Intent i = new Intent(activity, MediaPlaybackService.class);
+                i.setAction(MediaPlaybackService.ACTION_UPDATE);
+                i.putExtra("json", json);
+                // The first update promotes the service to the foreground; later
+                // ones are plain commands so background updates don't trigger the
+                // Android 12+ foreground-service start restriction.
+                if (mediaServiceRunning) {
+                    activity.startService(i);
+                } else {
+                    ContextCompat.startForegroundService(activity, i);
+                    mediaServiceRunning = true;
+                }
+            } catch (Exception e) {
+                mediaServiceRunning = false;
+                Log.e(TAG, "updateMediaSession failed", e);
+            }
+        });
+    }
+
+    /** Remove the media notification and tear down the playback service. */
+    public void clearMediaSession() {
+        mainHandler.post(() -> {
+            try {
+                activity.stopService(new Intent(activity, MediaPlaybackService.class));
+            } catch (Exception e) {
+                Log.e(TAG, "clearMediaSession failed", e);
+            } finally {
+                mediaServiceRunning = false;
             }
         });
     }
