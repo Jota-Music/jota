@@ -62,11 +62,11 @@ function getInitialMuted() {
 	return false;
 }
 
-function waitUntilBufferedEnough(el: HTMLAudioElement): Promise<void> {
+function waitForPlayable(el: HTMLAudioElement): Promise<boolean> {
 	if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-		return Promise.resolve();
+		return Promise.resolve(true);
 	}
-	return new Promise((resolve, reject) => {
+	return new Promise((resolve) => {
 		const done = () => {
 			el.removeEventListener("canplaythrough", onReady);
 			el.removeEventListener("canplay", onReady);
@@ -74,16 +74,21 @@ function waitUntilBufferedEnough(el: HTMLAudioElement): Promise<void> {
 		};
 		const onReady = () => {
 			done();
-			resolve();
+			resolve(true);
 		};
 		const onErr = () => {
 			done();
-			reject(new Error("audio load error"));
+			resolve(false);
 		};
 		el.addEventListener("canplaythrough", onReady, { once: true });
 		el.addEventListener("canplay", onReady, { once: true });
 		el.addEventListener("error", onErr, { once: true });
 	});
+}
+
+async function waitUntilBufferedEnough(el: HTMLAudioElement): Promise<void> {
+	if (await waitForPlayable(el)) return;
+	throw new Error("audio load error");
 }
 
 function clampStartSeconds(
@@ -231,43 +236,23 @@ export async function prepareSong(
 }
 
 export async function warm(song: Song, timeoutMs = 6000): Promise<boolean> {
-	const timeout = new Promise<boolean>((resolve) => {
-		setTimeout(() => resolve(false), timeoutMs);
-	});
-	const load = (async () => {
-		let el: HTMLAudioElement;
-		try {
-			el = await AudioCache.getAudioElement(song);
-		} catch {
-			return false;
-		}
-		if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) return true;
+	let el: HTMLAudioElement;
+	try {
+		el = await AudioCache.getAudioElement(song);
+	} catch {
+		return false;
+	}
+	if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) return true;
 
-		return await new Promise<boolean>((resolve) => {
-			const done = () => {
-				el.removeEventListener("canplaythrough", ok);
-				el.removeEventListener("canplay", ok);
-				el.removeEventListener("error", err);
-				clearTimeout(timer);
-			};
-			const ok = () => {
-				done();
-				resolve(true);
-			};
-			const err = () => {
-				done();
-				resolve(false);
-			};
-			const timer = setTimeout(() => {
-				done();
-				resolve(el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA);
-			}, timeoutMs);
-			el.addEventListener("canplaythrough", ok, { once: true });
-			el.addEventListener("canplay", ok, { once: true });
-			el.addEventListener("error", err, { once: true });
-		});
-	})();
-	return await Promise.race([load, timeout]);
+	return await Promise.race([
+		waitForPlayable(el),
+		new Promise<boolean>((resolve) => {
+			setTimeout(
+				() => resolve(el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA),
+				timeoutMs,
+			);
+		}),
+	]);
 }
 
 export function getPlaybackSeconds(): number {
