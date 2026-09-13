@@ -3,6 +3,7 @@ import Queue from "@/lib/music/views/ui/queue";
 import { cn } from "@/lib/shared/utils/tw";
 import { Header } from "@/lib/shared/views/ui/components/header";
 import { ErrorBar } from "@/lib/shared/views/ui/error-bar";
+import { SyncPanel } from "@/lib/sync/views/ui/session";
 
 function ClearLayout({
 	children,
@@ -20,6 +21,7 @@ function ClearLayout({
 			</main>
 
 			<ErrorBar />
+			<SyncPanel />
 		</div>
 	);
 }

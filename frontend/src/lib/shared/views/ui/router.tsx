@@ -13,6 +13,7 @@ import LoginPage from "@/lib/shared/views/ui/pages/login";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
 import { PlaylistPage } from "@/lib/shared/views/ui/pages/playlist";
 import { SearchPage } from "@/lib/shared/views/ui/pages/search";
+import SettingsPage from "@/lib/shared/views/ui/pages/settings";
 import { UserPage } from "@/lib/shared/views/ui/pages/user";
 import { YouTubeSearchPage } from "@/lib/shared/views/ui/pages/youtube-search";
 
@@ -59,6 +60,7 @@ function Router() {
 					<Route path="/album/:id" component={AlbumPage} />
 					<Route path="/search/youtube/:query" component={YouTubeSearchPage} />
 					<Route path="/search/:type/:query" component={SearchPage} />
+					<Route path="/settings" component={SettingsPage} />
 					<Route path="/:user" component={UserPage} />
 					<Route path="/" component={MainPage} />
 					<Route>404: No such page!</Route>

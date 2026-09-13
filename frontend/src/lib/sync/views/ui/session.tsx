@@ -3,12 +3,12 @@ import {
 	LogOut,
 	Radio,
 	RefreshCw,
-	ShieldAlert,
 	Unplug,
 	Users,
 	X,
 } from "lucide-preact";
-import { useEffect, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
+import { useLocation } from "wouter-preact";
 import { cn } from "@/lib/shared/utils/tw";
 import { Sheet } from "@/lib/shared/views/ui/components/sheet";
 import * as transport from "@/lib/sync/app/transport";
@@ -75,76 +75,19 @@ function SessionForm() {
 	const role = store.role.value;
 	const status = store.status.value;
 	const [code, setCode] = useState(store.room.value);
-	const [relay, setRelay] = useState<"idle" | "checking" | "ok" | "error">(
-		"idle",
-	);
-	const url = store.relayUrl.value;
-	const showToken = store.tokenRequired.value;
-	const ready = url.trim() !== "" && code.trim() !== "";
+	const [, setLocation] = useLocation();
+	const relay = store.relayUrl.value.trim();
+	const ready = relay !== "" && code.trim() !== "";
 	const connecting = status === "connecting";
 	const active = role !== "off";
 
-	useEffect(() => {
-		const trimmed = url.trim();
-		if (trimmed === "") {
-			setRelay("idle");
-			store.tokenRequired.value = false;
-			return;
-		}
-		let alive = true;
-		setRelay("checking");
-		const timer = setTimeout(() => {
-			transport
-				.check(trimmed)
-				.then((required) => {
-					if (!alive) return;
-					setRelay("ok");
-					store.tokenRequired.value = required;
-				})
-				.catch(() => alive && setRelay("error"));
-		}, 500);
-		return () => {
-			alive = false;
-			clearTimeout(timer);
-		};
-	}, [url]);
+	const openSettings = () => {
+		showSync.value = false;
+		setLocation("/settings");
+	};
 
 	return (
 		<div class="flex flex-col gap-3">
-			<label for="sync-relay" class="text-xs text-zinc-500">
-				Relay server
-			</label>
-			<input
-				id="sync-relay"
-				class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
-				placeholder="relay.example.com"
-				value={url}
-				onInput={(e) => (store.relayUrl.value = e.currentTarget.value)}
-			/>
-			{relay === "checking" && (
-				<p class="text-xs text-zinc-500">Checking relay…</p>
-			)}
-			{relay === "ok" && <p class="text-xs text-green-400">Relay reachable</p>}
-			{relay === "error" && (
-				<p class="text-xs text-red-400">Relay not reachable</p>
-			)}
-			{showToken && (
-				<>
-					<p class="flex items-center gap-1.5 text-xs text-yellow-400">
-						<ShieldAlert size={14} class="shrink-0" />
-						This server requires an auth token.
-					</p>
-					<input
-						id="sync-token"
-						type="password"
-						class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
-						placeholder="Insert your token here"
-						aria-label="Auth token"
-						value={store.token.value}
-						onInput={(e) => (store.token.value = e.currentTarget.value)}
-					/>
-				</>
-			)}
 			<label for="sync-room" class="text-xs text-zinc-500">
 				Room code
 			</label>
@@ -203,6 +146,22 @@ function SessionForm() {
 			{store.error.value && (
 				<p class="text-xs text-red-400">{store.error.value}</p>
 			)}
+			<p class="pt-1 text-xs text-zinc-600">
+				{relay ? (
+					<>
+						Relay: <span class="text-zinc-400">{relay}</span>
+					</>
+				) : (
+					"No relay configured."
+				)}{" "}
+				<button
+					type="button"
+					class="underline hover:text-zinc-400 cursor-pointer"
+					onClick={openSettings}
+				>
+					Settings
+				</button>
+			</p>
 		</div>
 	);
 }

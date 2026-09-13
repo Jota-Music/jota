@@ -5,6 +5,7 @@ import {
 	House,
 	LogOut,
 	Search,
+	Settings,
 	Users,
 } from "lucide-preact";
 import { useCallback, useState } from "preact/hooks";
@@ -106,6 +107,14 @@ export function Header({
 				</button>
 
 				<div class="flex items-center gap-3 pr-1 h-full">
+					<Link
+						href="/settings"
+						title="Settings"
+						class="text-zinc-400 hover:text-zinc-100"
+					>
+						<Settings class="size-4" />
+					</Link>
+
 					<button
 						onClick={() => (showSync.value = !showSync.value)}
 						type="button"
