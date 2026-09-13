@@ -3,14 +3,12 @@ import {
 	ArrowLeft,
 	ChevronDown,
 	House,
-	LogOut,
 	Search,
 	Settings,
 	Users,
 } from "lucide-preact";
 import { useCallback, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
-import { disconnectSpotify } from "@/lib/auth/views/stores/session";
 import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
 import { showSync } from "@/lib/sync/views/stores";
@@ -118,15 +116,6 @@ export function Header({
 				</div>
 
 				<div class="flex items-center gap-3 pr-1 h-full">
-					<button
-						onClick={() => void disconnectSpotify()}
-						type="button"
-						title="Disconnect Spotify"
-						class="cursor-pointer"
-					>
-						<LogOut class="size-4 text-zinc-400 hover:text-zinc-100" />
-					</button>
-
 					<Link
 						href="/settings"
 						title="Settings"
