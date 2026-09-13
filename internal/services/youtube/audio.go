@@ -13,20 +13,27 @@ import (
 
 var audioBucket = kv.UseBucket("youtube-audio")
 
+// bestAudio picks the audio format with the fastest, most compatible start.
+// audio/mp4 (AAC) is preferred over audio/webm (Opus): WebKitGTK's GStreamer
+// backend streams MP4/AAC instantly but can stall on googlevideo's WebM/Opus,
+// so "highest itag" alone would pick the slow one on desktop Linux.
 func bestAudio(formats []format) (format, bool) {
-	best, idx := -1, -1
-	for i, f := range formats {
+	var pick format
+	bestTier := -1
+	bestItag := -1
+	for _, f := range formats {
 		if !strings.HasPrefix(f.MimeType, "audio/") || f.URL == "" {
 			continue
 		}
-		if f.Itag > best {
-			best, idx = f.Itag, i
+		tier := 0
+		if strings.HasPrefix(f.MimeType, "audio/mp4") {
+			tier = 1
+		}
+		if tier > bestTier || (tier == bestTier && f.Itag > bestItag) {
+			bestTier, bestItag, pick = tier, f.Itag, f
 		}
 	}
-	if idx < 0 {
-		return format{}, false
-	}
-	return formats[idx], true
+	return pick, bestTier >= 0
 }
 
 func getExpireAndDurationFromURL(raw string) (*expireAndDuration, bool) {
@@ -187,12 +194,4 @@ func GetCachedAudioByYoutubeId(youtubeId string) *Audio {
 
 func SaveAudioForSpotifyId(spotifyId string, audio Audio, ttl time.Duration) {
 	_ = audioBucket.SetObject("spotify:"+spotifyId, audio, ttl)
-}
-
-func CookiesPath() string {
-	return "storage/cookies.txt"
-}
-
-func HasCookies() bool {
-	return false
 }
