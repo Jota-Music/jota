@@ -176,13 +176,13 @@ effect(() => {
 });
 
 effect(() => {
+	const active = store.role.value !== "off";
 	if (store.role.value === "guest") {
 		autoAdvance.value = false;
-		ignoreTabMute.value = true;
-	} else {
-		if (!autoAdvance.value) autoAdvance.value = true;
-		if (ignoreTabMute.value) ignoreTabMute.value = false;
+	} else if (!autoAdvance.value) {
+		autoAdvance.value = true;
 	}
+	ignoreTabMute.value = active;
 });
 
 effect(() => {
