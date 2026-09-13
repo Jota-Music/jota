@@ -7,6 +7,7 @@ import (
 	"jota/server/internal/env"
 	"jota/server/internal/kv"
 	"jota/server/internal/music"
+	"jota/server/internal/services/p2p"
 	"jota/server/internal/services/spotify"
 	"jota/server/internal/services/youtube"
 
@@ -18,6 +19,7 @@ type App struct {
 	Spotify *spotify.SpotifyService
 	Music   *music.MusicRepository
 	YouTube *youtube.Service
+	P2P     *p2p.Service
 }
 
 func New() *App {
@@ -27,6 +29,7 @@ func New() *App {
 		Spotify: spotifySvc,
 		Music:   music.NewMusicRepository(spotifySvc),
 		YouTube: youtube.NewService(),
+		P2P:     p2p.New(p2p.Config{TURNURL: cfg.TURNURL, TURNUser: cfg.TURNUser, TURNPass: cfg.TURNPass}),
 	}
 }
 
@@ -151,4 +154,35 @@ func (a *App) SetYouTubeId(spotifyId string, youtubeId string) error {
 
 func (a *App) SearchYouTube(query string) ([]youtube.Video, error) {
 	return youtube.Search(query)
+}
+
+// ----- P2P bindings -----
+
+func (a *App) P2PHostStart() (string, error) {
+	return a.P2P.StartHost()
+}
+
+func (a *App) P2PGuestJoin(offerCode string) (string, error) {
+	return a.P2P.JoinGuest(offerCode)
+}
+
+func (a *App) P2PHostAccept(answerCode string) error {
+	return a.P2P.AcceptAnswer(answerCode)
+}
+
+func (a *App) P2PStop() {
+	a.P2P.Stop()
+}
+
+func (a *App) P2PSend(payload string) error {
+	return a.P2P.Send(payload)
+}
+
+func (a *App) P2PReadClipboard() string {
+	app := application.Get()
+	if app == nil {
+		return ""
+	}
+	text, _ := app.Clipboard.Text()
+	return text
 }

@@ -65,6 +65,30 @@ export function OpenURL(url: string): $CancellablePromise<void> {
     return $Call.ByID(3376742245, url);
 }
 
+export function P2PGuestJoin(offerCode: string): $CancellablePromise<string> {
+    return $Call.ByID(1494923902, offerCode);
+}
+
+export function P2PHostAccept(answerCode: string): $CancellablePromise<void> {
+    return $Call.ByID(761557480, answerCode);
+}
+
+export function P2PHostStart(): $CancellablePromise<string> {
+    return $Call.ByID(1416333420);
+}
+
+export function P2PReadClipboard(): $CancellablePromise<string> {
+    return $Call.ByID(3439012104);
+}
+
+export function P2PSend(payload: string): $CancellablePromise<void> {
+    return $Call.ByID(2383840092, payload);
+}
+
+export function P2PStop(): $CancellablePromise<void> {
+    return $Call.ByID(3352322574);
+}
+
 export function RevalidateFullPlaylist(id: string): $CancellablePromise<void> {
     return $Call.ByID(647509752, id);
 }

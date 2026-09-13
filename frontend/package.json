@@ -15,14 +15,16 @@
 	},
 	"dependencies": {
 		"@preact/signals": "^2.9.0",
-		"@wailsio/runtime": "latest",
 		"@tailwindcss/vite": "^4.2.2",
 		"@tanstack/preact-query": "^5.99.0",
 		"@tanstack/react-virtual": "^3.13.23",
+		"@wailsio/runtime": "latest",
 		"fast-average-color": "^9.5.2",
 		"lucide-preact": "^1.8.0",
 		"preact": "^10.29.1",
+		"qr-scanner": "^1.4.2",
 		"tailwindcss": "^4.2.2",
+		"uqr": "^0.1.3",
 		"vite-plugin-pwa": "^1.3.0",
 		"wouter-preact": "^3.9.0"
 	},

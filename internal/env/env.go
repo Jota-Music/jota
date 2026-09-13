@@ -9,6 +9,9 @@ import (
 
 type Config struct {
 	SpotifyClientID string
+	TURNURL         string
+	TURNUser        string
+	TURNPass        string
 }
 
 func Load() Config {
@@ -18,5 +21,8 @@ func Load() Config {
 
 	return Config{
 		SpotifyClientID: os.Getenv("SPOTIFY_CLIENT_ID"),
+		TURNURL:         os.Getenv("TURN_URL"),
+		TURNUser:        os.Getenv("TURN_USER"),
+		TURNPass:        os.Getenv("TURN_PASS"),
 	}
 }
