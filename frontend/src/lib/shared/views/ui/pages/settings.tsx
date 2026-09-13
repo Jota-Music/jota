@@ -115,25 +115,23 @@ function RelaySettings() {
 				/>
 			</div>
 
-			<div class="space-y-1.5">
-				<label for="sync-token" class="text-xs font-medium text-zinc-400">
-					Auth token
-				</label>
-				<PasswordInput
-					id="sync-token"
-					class={inputClass}
-					placeholder="optional"
-					label="Auth token"
-					value={store.token.value}
-					onValue={(v) => (store.token.value = v)}
-				/>
-			</div>
-
 			{store.tokenRequired.value && (
-				<p class="flex items-center gap-1.5 text-xs text-yellow-400">
-					<TriangleAlert size={14} class="shrink-0" />
-					This relay requires an auth token.
-				</p>
+				<div class="space-y-1.5">
+					<label for="sync-token" class="text-xs font-medium text-zinc-400">
+						Auth token
+					</label>
+					<PasswordInput
+						id="sync-token"
+						class={inputClass}
+						label="Auth token"
+						value={store.token.value}
+						onValue={(v) => (store.token.value = v)}
+					/>
+					<p class="flex items-center gap-1.5 text-xs text-yellow-400">
+						<TriangleAlert size={14} class="shrink-0" />
+						This relay requires an auth token.
+					</p>
+				</div>
 			)}
 		</section>
 	);
