@@ -48,6 +48,10 @@ func tracksFromAlbum(album *metadatapb.Album) []Track {
 
 func coverURLFromAlbum(album *metadatapb.Album) string {
 	images := append(album.GetCover(), album.GetCoverGroup().GetImage()...)
+	return bestImageURL(images)
+}
+
+func bestImageURL(images []*metadatapb.Image) string {
 	var bestW int32
 	var best string
 	for _, img := range images {

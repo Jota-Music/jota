@@ -2,7 +2,6 @@ package spotify
 
 import (
 	"context"
-	"encoding/hex"
 
 	librespot "github.com/devgianlu/go-librespot"
 	extmetadatapb "github.com/devgianlu/go-librespot/proto/spotify/extendedmetadata"
@@ -22,21 +21,7 @@ func portraitURLFromArtist(artist *metadatapb.Artist) string {
 	if g := artist.GetPortraitGroup(); g != nil {
 		images = append(images, g.GetImage()...)
 	}
-	var bestW int32
-	var best string
-	for _, img := range images {
-		if img == nil || len(img.GetFileId()) == 0 {
-			continue
-		}
-		if w := img.GetWidth(); w >= bestW {
-			bestW = w
-			best = hex.EncodeToString(img.GetFileId())
-		}
-	}
-	if best == "" {
-		return ""
-	}
-	return "https://i.scdn.co/image/" + best
+	return bestImageURL(images)
 }
 
 func GetArtist(ctx context.Context, sess *session.Session, uri string) (ArtistInfo, error) {
