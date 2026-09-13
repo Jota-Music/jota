@@ -19,7 +19,7 @@ release: "1"
 contents:
   - src: "./bin/jota"
     dst: "/usr/local/bin/jota"
-  - src: "./build/appicon.png"
+  - src: "./build/linux/appicon.png"
     dst: "/usr/share/icons/hicolor/128x128/apps/jota.png"
   - src: "./build/linux/jota.desktop"
     dst: "/usr/share/applications/jota.desktop"

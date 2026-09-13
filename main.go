@@ -16,9 +16,6 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-//go:embed build/appicon.png
-var icon []byte
-
 type windowState struct {
 	X, Y, Width, Height int
 	Maximised           bool
