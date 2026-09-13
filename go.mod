@@ -48,3 +48,5 @@ require (
 	golang.org/x/sys v0.46.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/devgianlu/go-librespot => github.com/salvadorsru/go-librespot v0.9.0-jota.2
