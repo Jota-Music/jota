@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -57,7 +58,11 @@ func (c *callbackServer) handle(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, callbackSuccessPage)
+	if runtime.GOOS == "android" {
+		fmt.Fprint(w, androidCallbackSuccessPage)
+	} else {
+		fmt.Fprint(w, callbackSuccessPage)
+	}
 }
 
 func (c *callbackServer) wait(ctx context.Context) (string, error) {
@@ -92,9 +97,37 @@ const callbackSuccessPage = `<!doctype html>
 <body>
   <div class="card">
     <h1>Login complete</h1>
+    <p>You can close this tab and return to Jota.</p>
+  </div>
+  <script>
+    setTimeout(function(){ window.close(); }, 800);
+  </script>
+</body>
+</html>`
+
+// androidCallbackSuccessPage runs inside the Chrome Custom Tab opened for
+// OAuth. It deep-links back into the app (scheme registered in Jota's own
+// manifest, no Spotify changes); handing control to the app closes the
+// custom tab automatically.
+const androidCallbackSuccessPage = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jota</title>
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#0c0a09;color:#e4e7eb;display:grid;place-items:center;min-height:100vh}
+  .card{text-align:center;padding:2rem;max-width:30rem}
+  h1{color:#22c55e;margin:0 0 0.5rem;font-size:1.5rem}
+  p{color:#a1a1aa;margin:0.5rem 0}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Login complete</h1>
     <p>Returning you to Jota...</p>
   </div>
   <script>
+    location.replace('intent://callback#Intent;scheme=jota;package=com.wails.app;end');
     setTimeout(function(){ window.close(); }, 800);
   </script>
 </body>

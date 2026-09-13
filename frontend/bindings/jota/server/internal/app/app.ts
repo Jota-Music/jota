@@ -56,6 +56,15 @@ export function GetYouTubeAudio(spotifyId: string, search: string): $Cancellable
     return $Call.ByID(997358013, spotifyId, search);
 }
 
+/**
+ * OpenURL opens the URL in the system browser. On Android it uses the app's
+ * native Intent.ACTION_VIEW so OAuth runs outside the WebView; on other
+ * platforms the frontend opens the URL itself.
+ */
+export function OpenURL(url: string): $CancellablePromise<void> {
+    return $Call.ByID(3376742245, url);
+}
+
 export function RevalidateFullPlaylist(id: string): $CancellablePromise<void> {
     return $Call.ByID(647509752, id);
 }

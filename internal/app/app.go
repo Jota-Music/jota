@@ -82,6 +82,13 @@ func (a *App) SpotifyDisconnect() error {
 	return a.Spotify.Disconnect()
 }
 
+// OpenURL opens the URL in the system browser. On Android it uses the app's
+// native Intent.ACTION_VIEW so OAuth runs outside the WebView; on other
+// platforms the frontend opens the URL itself.
+func (a *App) OpenURL(url string) error {
+	return openExternal(url)
+}
+
 // ----- Music bindings -----
 
 func (a *App) GetFullPlaylist(id string) (music.Playlist, error) {

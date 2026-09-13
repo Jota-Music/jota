@@ -1,4 +1,5 @@
 import {
+	OpenURL,
 	SpotifyDisconnect,
 	SpotifyGetStatus,
 	SpotifyLogin,
@@ -49,20 +50,14 @@ export async function loginSpotifyAndWait(): Promise<boolean> {
 	try {
 		const url = await SpotifyLogin();
 		console.log("[auth] SpotifyLogin returned:", url);
-		if (url) {
+		if (!url) return false;
+
+		if (isAndroid()) {
+			await OpenURL(url);
+		} else {
 			await Browser.OpenURL(url);
 		}
-
-		// On Android, the OAuth callback is handled via custom scheme intent
-		// (jota://callback), so we don't call SpotifyLoginAndWait.
-		// The callback is handled by the native Android intent handler.
-		const isAndroid = navigator.userAgent.toLowerCase().includes("android");
-		if (!isAndroid) {
-			console.log("[auth] Calling SpotifyLoginAndWait...");
-			await SpotifyLoginAndWait();
-		} else {
-			console.log("[auth] Android detected, skipping SpotifyLoginAndWait (handled by custom scheme)");
-		}
+		await SpotifyLoginAndWait();
 
 		console.log("[auth] Login complete");
 		await syncSpotifyStatus();
@@ -72,4 +67,8 @@ export async function loginSpotifyAndWait(): Promise<boolean> {
 		await syncSpotifyStatus();
 		return false;
 	}
+}
+
+function isAndroid(): boolean {
+	return navigator.userAgent.toLowerCase().includes("android");
 }
