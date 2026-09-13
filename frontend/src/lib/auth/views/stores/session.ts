@@ -9,15 +9,6 @@ import {
 import { signal } from "@preact/signals";
 import { Browser } from "@wailsio/runtime";
 
-export const currentUser = signal<string | null>(null);
-export const authKnown = signal(false);
-
-export async function syncAuth(): Promise<void> {
-	authKnown.value = true;
-}
-
-export async function logOut(): Promise<void> {}
-
 export const spotifyConnected = signal(false);
 export const spotifyUser = signal<string | null>(null);
 

@@ -1,7 +1,3 @@
-export function vs(to_get: string, options: Record<string, string>) {
-	return options[to_get];
-}
-
 export function cn(...classes: Array<string | false | null | undefined>) {
 	const to_join: string[] = [];
 
