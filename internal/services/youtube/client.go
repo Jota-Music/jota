@@ -11,6 +11,13 @@ import (
 
 const defaultAPIKey = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
 
+const visitorTTL = 5 * time.Minute
+
+var (
+	innertubeApiKeyRe = regexp.MustCompile(`"INNERTUBE_API_KEY":"([^"]+)"`)
+	visitorDataRe     = regexp.MustCompile(`"VISITOR_DATA":"([^"]+)"`)
+)
+
 var (
 	client = struct {
 		Name        string
@@ -39,6 +46,12 @@ var (
 	lastFetch     time.Time
 )
 
+func currentAPIKey() string {
+	apiKeyMu.RLock()
+	defer apiKeyMu.RUnlock()
+	return apiKey
+}
+
 func clientContext() map[string]any {
 	return map[string]any{
 		"clientName":    client.Name,
@@ -51,20 +64,23 @@ func clientContext() map[string]any {
 	}
 }
 
+// getVisitorData returns the cached visitor data and API key, refreshing them
+// from YouTube's homepage at most once per visitorTTL. Freshness is tracked by
+// lastFetch regardless of whether the homepage carried VISITOR_DATA, so a
+// homepage variant without it does not trigger a full fetch on every request.
 func getVisitorData() (string, string, error) {
 	visitorDataMu.RLock()
-	if visitorData != "" && time.Since(lastFetch) < 5*time.Minute {
+	if !lastFetch.IsZero() && time.Since(lastFetch) < visitorTTL {
 		vd := visitorData
-		key := func() string { apiKeyMu.RLock(); defer apiKeyMu.RUnlock(); return apiKey }()
 		visitorDataMu.RUnlock()
-		return vd, key, nil
+		return vd, currentAPIKey(), nil
 	}
 	visitorDataMu.RUnlock()
 
 	visitorDataMu.Lock()
 	defer visitorDataMu.Unlock()
-	if visitorData != "" && time.Since(lastFetch) < 5*time.Minute {
-		return visitorData, apiKey, nil
+	if !lastFetch.IsZero() && time.Since(lastFetch) < visitorTTL {
+		return visitorData, currentAPIKey(), nil
 	}
 
 	req, err := http.NewRequest("GET", "https://www.youtube.com/", nil)
@@ -89,17 +105,16 @@ func getVisitorData() (string, string, error) {
 		return "", "", err
 	}
 
-	if m := regexp.MustCompile(`"INNERTUBE_API_KEY":"([^"]+)"`).FindSubmatch(body); len(m) > 1 {
-		key := string(m[1])
+	if m := innertubeApiKeyRe.FindSubmatch(body); len(m) > 1 {
 		apiKeyMu.Lock()
-		apiKey = key
+		apiKey = string(m[1])
 		apiKeyMu.Unlock()
 	}
 
-	if m := regexp.MustCompile(`"VISITOR_DATA":"([^"]+)"`).FindSubmatch(body); len(m) > 1 {
+	if m := visitorDataRe.FindSubmatch(body); len(m) > 1 {
 		visitorData = string(m[1])
-		lastFetch = time.Now()
 	}
+	lastFetch = time.Now()
 
-	return visitorData, apiKey, nil
+	return visitorData, currentAPIKey(), nil
 }
