@@ -66,4 +66,4 @@ require (
 	golang.org/x/time v0.14.0 // indirect
 )
 
-replace github.com/devgianlu/go-librespot => github.com/salvadorsru/go-librespot v0.9.0-jota.2
+replace github.com/devgianlu/go-librespot => github.com/Jota-Music/go-librespot v0.9.0-jota.2
