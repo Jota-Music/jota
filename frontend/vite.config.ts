@@ -11,7 +11,7 @@ export default defineConfig({
 		tsconfigPaths: true,
 		alias: {
 			"@bindings/": fileURLToPath(
-				new URL("bindings/jota/server/internal/app/", import.meta.url),
+				new URL("bindings/github.com/Jota-Music/jota/internal/app/", import.meta.url),
 			),
 		},
 	},

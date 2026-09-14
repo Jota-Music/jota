@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"jota/server/internal/music"
+	"github.com/Jota-Music/jota/internal/music"
 )
 
 type Service struct{}

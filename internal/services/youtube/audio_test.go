@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"jota/server/internal/music"
+	"github.com/Jota-Music/jota/internal/music"
 )
 
 func TestBestAudioPrefersMP4(t *testing.T) {

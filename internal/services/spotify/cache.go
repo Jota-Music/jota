@@ -1,8 +1,8 @@
 package spotify
 
 import (
-	"jota/server/internal/kv"
-	"jota/server/internal/music"
+	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/music"
 	"time"
 )
 

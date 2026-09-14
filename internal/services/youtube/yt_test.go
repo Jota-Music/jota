@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"jota/server/internal/music"
+	"github.com/Jota-Music/jota/internal/music"
 )
 
 func TestSetYoutubeIdInvalidatesAudioCache(t *testing.T) {

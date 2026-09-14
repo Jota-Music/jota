@@ -4,12 +4,12 @@ import (
 	"context"
 	"log"
 
-	"jota/server/internal/env"
-	"jota/server/internal/kv"
-	"jota/server/internal/music"
-	"jota/server/internal/services/spotify"
-	"jota/server/internal/services/sync"
-	"jota/server/internal/services/youtube"
+	"github.com/Jota-Music/jota/internal/env"
+	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/services/spotify"
+	"github.com/Jota-Music/jota/internal/services/sync"
+	"github.com/Jota-Music/jota/internal/services/youtube"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )

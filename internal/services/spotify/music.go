@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"jota/server/internal/music"
+	"github.com/Jota-Music/jota/internal/music"
 )
 
 func (s *SpotifyService) GetSong(id string) (music.Song, error) {

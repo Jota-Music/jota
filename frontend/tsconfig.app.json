@@ -10,7 +10,7 @@
 			"react": ["./node_modules/preact/compat/"],
 			"react-dom": ["./node_modules/preact/compat/"],
 			"@/*": ["./src/*"],
-			"@bindings/*": ["./bindings/jota/server/internal/app/*"]
+			"@bindings/*": ["./bindings/github.com/Jota-Music/jota/internal/app/*"]
 		},
 
 		/* Bundler mode */

@@ -6,8 +6,8 @@ import (
 	"os"
 	"sync/atomic"
 
-	"jota/server/internal/app"
-	"jota/server/internal/kv"
+	"github.com/Jota-Music/jota/internal/app"
+	"github.com/Jota-Music/jota/internal/kv"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"

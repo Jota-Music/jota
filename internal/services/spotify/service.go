@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"jota/server/internal/kv"
+	"github.com/Jota-Music/jota/internal/kv"
 
 	librespot "github.com/devgianlu/go-librespot"
 	devicespb "github.com/devgianlu/go-librespot/proto/spotify/connectstate/devices"

@@ -1,4 +1,4 @@
-module jota/server
+module github.com/Jota-Music/jota
 
 go 1.26.1
 
