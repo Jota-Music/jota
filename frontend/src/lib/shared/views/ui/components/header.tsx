@@ -6,9 +6,11 @@ import {
 	Search,
 	Settings,
 	Users,
+	X,
 } from "lucide-preact";
 import { useCallback, useEffect, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
+import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
@@ -56,6 +58,8 @@ export function Header({
 	const [source, setSource] = useState<Source>(loadSource);
 	const [searchType, setSearchType] = useState<SpotifyType>(loadType);
 
+	const liveSource: Source = spotifyConnected.value ? source : "youtube";
+
 	useEffect(() => {
 		localStorage.setItem(sourceKey, source);
 	}, [source]);
@@ -71,12 +75,12 @@ export function Header({
 			if (!query) return;
 			const encoded = encodeURIComponent(query);
 			setLocation(
-				source === "youtube"
+				liveSource === "youtube"
 					? `/search/youtube/${encoded}`
 					: `/search/${searchType}/${encoded}`,
 			);
 		},
-		[searchDraft, searchType, source, setLocation],
+		[searchDraft, searchType, liveSource, setLocation],
 	);
 
 	const goBack = useCallback(() => {
@@ -99,7 +103,7 @@ export function Header({
 	}
 
 	const placeholder =
-		source === "youtube"
+		liveSource === "youtube"
 			? "Search in YouTube (videos or playlists)"
 			: searchType === "user"
 				? "Spotify username..."
@@ -117,30 +121,46 @@ export function Header({
 			)}
 		>
 			<div class="mx-auto flex items-center justify-between text-sm text-zinc-300 h-10 px-4">
-				<div class="flex items-center gap-3 pl-1">
-					{location !== "/" && (
-						<button
-							type="button"
-							onClick={goBack}
-							class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
-						>
-							<ArrowLeft class="size-5 md:size-4" />
-						</button>
-					)}
+				<div class="flex h-full items-center gap-1 pl-1">
+					<button
+						type="button"
+						onClick={goBack}
+						disabled={location === "/"}
+						title="Back"
+						class={cn(
+							"flex aspect-square h-full items-center justify-center cursor-pointer transition-colors",
+							location === "/"
+								? "text-zinc-400 disabled:opacity-30"
+								: "text-zinc-400 hover:text-zinc-100",
+							location !== "/" && "hover:text-zinc-100",
+						)}
+					>
+						<ArrowLeft class="size-5 md:size-4" />
+					</button>
+
+					<Link
+						href="/"
+						class={cn(
+							"flex aspect-square h-full items-center justify-center transition-colors",
+							location === "/"
+								? "bg-(--dominant-color) text-(--binary-color)"
+								: "text-zinc-400 hover:text-zinc-100",
+						)}
+					>
+						<House class="size-5 md:size-4" />
+					</Link>
 
 					<Link
 						href="/settings"
 						title="Settings"
-						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100"
+						class={cn(
+							"flex aspect-square h-full items-center justify-center transition-colors",
+							location.startsWith("/settings")
+								? "bg-(--dominant-color) text-(--binary-color)"
+								: "text-zinc-400 hover:text-zinc-100",
+						)}
 					>
 						<Settings class="size-5 md:size-4" />
-					</Link>
-
-					<Link
-						href="/"
-						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100"
-					>
-						<House class="size-5 md:size-4" />
 					</Link>
 				</div>
 
@@ -176,28 +196,35 @@ export function Header({
 				)}
 			>
 				<form onSubmit={onSearchSubmit}>
-					{/* Mobile: input on its own row, controls + submit below */}
-					<div class="flex flex-col gap-2 md:hidden">
-						<div class="flex h-11 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 transition-all focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600">
-							<SearchInput
-								value={searchDraft}
-								placeholder={placeholder}
-								onInput={setSearchDraft}
+					{/* Mobile: source/type on top row, input + submit below */}
+					<div class="flex flex-col gap-1.5 md:hidden">
+						<div class="flex h-11 w-max items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+							<SourceToggle
+								source={liveSource}
+								showSpotify={spotifyConnected.value}
+								onSelect={setSource}
 							/>
-						</div>
-						<div class="flex h-11 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
-							<SourceToggle source={source} onSelect={setSource} />
-							{source === "spotify" && (
+							{liveSource === "spotify" && (
 								<TypeSelect
 									value={searchType}
 									onChange={setSearchType}
 									stretch
 								/>
 							)}
+						</div>
+						<div class="grid grid-cols-[1fr_max-content] gap-1.5">
+							<div class="flex h-11 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 transition-all focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600">
+								<SearchInput
+									value={searchDraft}
+									placeholder={placeholder}
+									onInput={setSearchDraft}
+									clearable
+								/>
+							</div>
 							<button
 								type="submit"
 								title="Search"
-								class="ml-auto flex w-11 shrink-0 cursor-pointer items-center justify-center text-(--binary-color) bg-(--dominant-color) transition-opacity hover:opacity-75"
+								class="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-(--binary-color) bg-(--dominant-color) transition-opacity hover:opacity-75"
 							>
 								<Search class="size-5" strokeWidth={2.5} />
 							</button>
@@ -207,14 +234,19 @@ export function Header({
 					{/* Desktop: single pill + submit (unchanged) */}
 					<div class="hidden gap-2 md:grid md:grid-cols-[1fr_max-content]">
 						<div class="flex h-10 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 transition-all focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600">
-							<SourceToggle source={source} onSelect={setSource} />
-							{source === "spotify" && (
+							<SourceToggle
+								source={liveSource}
+								showSpotify={spotifyConnected.value}
+								onSelect={setSource}
+							/>
+							{liveSource === "spotify" && (
 								<TypeSelect value={searchType} onChange={setSearchType} />
 							)}
 							<SearchInput
 								value={searchDraft}
 								placeholder={placeholder}
 								onInput={setSearchDraft}
+								clearable
 							/>
 						</div>
 						<button
@@ -233,26 +265,30 @@ export function Header({
 
 function SourceToggle({
 	source,
+	showSpotify,
 	onSelect,
 }: {
 	source: Source;
+	showSpotify: boolean;
 	onSelect: (source: Source) => void;
 }) {
 	return (
 		<div class="flex shrink-0 items-stretch border-r border-zinc-800">
-			<button
-				type="button"
-				title="Search in Spotify"
-				onClick={() => onSelect("spotify")}
-				class={cn(
-					"flex w-11 items-center justify-center transition-colors cursor-pointer md:w-10",
-					source === "spotify"
-						? "bg-zinc-800 text-[#1DB954]"
-						: "text-zinc-500 hover:text-zinc-300",
-				)}
-			>
-				<SpotifyIcon size={16} />
-			</button>
+			{showSpotify && (
+				<button
+					type="button"
+					title="Search in Spotify"
+					onClick={() => onSelect("spotify")}
+					class={cn(
+						"flex w-11 items-center justify-center transition-colors cursor-pointer md:w-10",
+						source === "spotify"
+							? "bg-zinc-800 text-[#1DB954]"
+							: "text-zinc-500 hover:text-zinc-300",
+					)}
+				>
+					<SpotifyIcon size={16} />
+				</button>
+			)}
 			<button
 				type="button"
 				title="Search in YouTube"
@@ -292,7 +328,7 @@ function TypeSelect({
 					onChange((e.target as HTMLSelectElement).value as SpotifyType)
 				}
 				class={cn(
-					"h-full cursor-pointer appearance-none bg-transparent pl-2 pr-6 text-sm text-white outline-none md:pl-3 md:pr-7",
+					"h-full w-full cursor-pointer appearance-none rounded-none bg-transparent pl-2 pr-6 text-sm text-white outline-none md:pl-3 md:pr-7",
 					stretch && "w-full",
 				)}
 			>
@@ -311,10 +347,12 @@ function SearchInput({
 	value,
 	placeholder,
 	onInput,
+	clearable,
 }: {
 	value: string;
 	placeholder: string;
 	onInput: (value: string) => void;
+	clearable?: boolean;
 }) {
 	return (
 		<div class="relative flex min-w-0 flex-1 items-center">
@@ -322,8 +360,21 @@ function SearchInput({
 				value={value}
 				placeholder={placeholder}
 				onInput={(e) => onInput((e.target as HTMLInputElement).value)}
-				class="h-full w-full min-w-0 bg-transparent pl-3 pr-3 text-sm text-white outline-none placeholder:text-zinc-600 md:pl-4"
+				class={cn(
+					"h-full w-full min-w-0 bg-transparent pl-3 text-sm text-white outline-none placeholder:text-zinc-600 md:pl-4",
+					clearable ? "pr-9" : "pr-3",
+				)}
 			/>
+			{clearable && value && (
+				<button
+					type="button"
+					title="Clear"
+					onClick={() => onInput("")}
+					class="absolute right-2 flex size-6 cursor-pointer items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-white"
+				>
+					<X size={14} />
+				</button>
+			)}
 		</div>
 	);
 }
