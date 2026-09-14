@@ -12,7 +12,7 @@ Self-hosted music streaming desktop app — Go backend with Preact frontend, pac
 
 ## Commands
 
-Requisitos generales: Go, `wails3` en `PATH` (`~/go/bin/wails3`), `bun` para la frontend.
+Prerequisites: Go, `wails3` in `PATH` (`~/go/bin/wails3`), `bun` for the frontend.
 `WEBKIT_DISABLE_DMABUF_RENDERER=1` evita errores Wayland/DMA-BUF en Linux.
 
 ### Linux (nativo)
@@ -83,7 +83,7 @@ wails3 task windows:create:msix:package      # paquete MSIX -> bin/
 ### Utilidades
 
 ```bash
-wails3 generate bindings -ts -clean=true   # regenera frontend/bindings/
+wails3 generate bindings -ts -i -clean=true   # regenera frontend/bindings/
 wails3 task build GOOS=windows             # dispatcher genérico de build (Taskfile raíz)
 ```
 
@@ -134,7 +134,7 @@ main.go                          # Wails entry point; embeds frontend/dist
 │   │   │   ├── id.go
 │   │   │   └── metadata.go
 │   │   └── youtube/             # innertube API stream URL retrieval
-│   ├── music/                    # Domain types + MusicRepository
+│   ├── music/                    # Domain types + Source catalog
 │   ├── kv/                       # BadgerDB key-value abstraction
 │   ├── session/                  # Spotify session persistence (BadgerDB)
 │   └── env/                      # env.Load() configuration
@@ -160,15 +160,19 @@ main.go                          # Wails entry point; embeds frontend/dist
 | `SpotifyReconnect()` | `void` | Reconnect using stored credentials |
 | `SpotifyDisconnect()` | `void` | Drop session and clear stored credentials |
 | `Search(query, type)` | `SearchResult[]` | Spotify search |
-| `GetFullPlaylist(id)` | `Playlist` | Full playlist with all tracks (12h cache) |
-| `GetPlaylist(id, page, size)` | `Playlist` | Paginated playlist |
+| `GetFullPlaylist(id)` | `Playlist` | Full playlist (12h cache); routes to YouTube when `id` starts with `youtube:` |
 | `GetUserPlaylists(user)` | `PlaylistSummary[]` | User's playlists |
 | `GetSong(id)` | `Song` | Track details |
 | `GetArtist(uri)` | `ArtistInfo` | Artist + top tracks |
 | `GetArtistDiscography(uri)` | `ArtistDiscography` | Artist + albums |
 | `GetAlbumTracks(uri)` | `Song[]` | Album tracks |
-| `GetYouTubeAudio(spotifyId, search)` | `Audio` | YouTube audio stream URL |
-| `SetYouTubeId(spotifyId, youtubeId)` | `void` | Manually link a YouTube ID |
+| `ResolveAudio(song)` | `Audio` | Resolve a stream for any song: use its YouTube ID or search by metadata |
+| `SetYouTubeId(cacheKey, youtubeId)` | `void` | Manually link a YouTube ID |
+| `SearchYouTube(query)` | `Video[]` | YouTube video search |
+| `SearchYouTubePlaylists(query)` | `PlaylistSummary[]` | YouTube playlist search |
+| `GetYouTubePlaylists()` | `PlaylistSummary[]` | Saved YouTube playlists |
+| `AddYouTubePlaylist(id)` | `PlaylistSummary` | Fetch playlist metadata and persist it locally |
+| `RemoveYouTubePlaylist(id)` | `void` | Remove a saved YouTube playlist |
 
 ## Spotify OAuth Flow
 
@@ -210,5 +214,5 @@ cd frontend && bun run lint
 ## Common Tasks
 
 - **Add a new binding**: Add a method to `App` in `internal/app/app.go` and rebuild with `wails3 task build` to regenerate TypeScript bindings at `frontend/bindings/`
-- **Add a new Spotify endpoint**: Add to `internal/services/spotify/`, expose via `Music` (MusicRepository), call from `App` in `internal/app/app.go`
+- **Add a new Spotify endpoint**: Add to `internal/services/spotify/`, call from `App` in `internal/app/app.go`
 - **Add a new YouTube helper**: Add to `internal/services/youtube/`, expose via `YouTube` in `App`
