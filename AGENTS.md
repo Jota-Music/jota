@@ -13,35 +13,35 @@ Self-hosted music streaming desktop app — Go backend with Preact frontend, pac
 ## Commands
 
 Prerequisites: Go, `wails3` in `PATH` (`~/go/bin/wails3`), `bun` for the frontend.
-`WEBKIT_DISABLE_DMABUF_RENDERER=1` evita errores Wayland/DMA-BUF en Linux.
+`WEBKIT_DISABLE_DMABUF_RENDERER=1` avoids Wayland/DMA-BUF errors on Linux.
 
-### Linux (nativo)
+### Linux (native)
 
 ```bash
-WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev   # live-reload; vite dev server en :9245
-wails3 task build                             # binario release -> bin/jota
+WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev   # live-reload; vite dev server on :9245
+wails3 task build                             # release binary -> bin/jota
 wails3 task package                           # .deb + .rpm + archlinux -> bin/
-wails3 task linux:create:deb                  # solo .deb -> bin/
+wails3 task linux:create:deb                  # .deb only -> bin/
 wails3 task linux:create:appimage             # AppImage -> bin/
-wails3 task linux:create:rpm                  # solo .rpm -> bin/
+wails3 task linux:create:rpm                  # .rpm only -> bin/
 ```
 
 ### Android
 
-**JDK <= 24 obligatorio** (Gradle 9 rechaza Java 26; el default apunta a `~/.local/share/jota-jdk21`).
-El `build/android/Taskfile.yml` setea `JAVA_HOME` y `PATH` automáticamente para todas las tareas de Android;
-no hace falta exportarlos a mano salvo que uses las tareas internas directamente.
+**JDK <= 24 required** (Gradle 9 rejects Java 26; default points to `~/.local/share/jota-jdk21`).
+The `build/android/Taskfile.yml` sets `JAVA_HOME` and `PATH` automatically for all Android tasks;
+no need to export them manually unless running internal tasks directly.
 
 ```bash
-wails3 task android              # APK release arm64 (teléfonos) -> bin/jota.apk
-wails3 task android:emu          # APK release x86_64 (emulador) -> bin/jota.apk
-wails3 task android:fat          # APK con arm64 + x86_64 -> bin/jota.apk
-wails3 task aab                  # AAB para Play Store -> bin/jota.aab
-wails3 task run:android          # build debug en emulador
-wails3 task deploy:android       # APK release en teléfono (USB)
+wails3 task android              # release APK arm64 (phones) -> bin/jota.apk
+wails3 task android:emu          # release APK x86_64 (emulator) -> bin/jota.apk
+wails3 task android:fat          # APK with arm64 + x86_64 -> bin/jota.apk
+wails3 task aab                  # AAB for Play Store -> bin/jota.aab
+wails3 task run:android          # debug build in emulator
+wails3 task deploy:android       # release APK on phone (USB)
 ```
 
-Tareas internas (requieren `JAVA_HOME` manual si no usás las de arriba):
+Internal tasks (require manual `JAVA_HOME` if not using the above):
 ```bash
 wails3 task android:package ARCH=arm64
 wails3 task android:bundle ARCH=arm64
@@ -49,46 +49,46 @@ wails3 task android:run
 wails3 task android:deploy-device ARCH=arm64
 ```
 
-Notas: `package`/`bundle` fuerzan el build con flags de producción
-(`-trimpath -ldflags="-w -s"`); `run`/`deploy-emulator` compilan en debug y no
-strippan el `.so`. Los builds de Android **limpian** `build/android/app/src/main/jniLibs`
-para no arrastrar ABIs/artefactos de builds anteriores.
+Notes: `package`/`bundle` force production flags
+(`-trimpath -ldflags="-w -s"`); `run`/`deploy-emulator` compile in debug and do not
+strip the `.so`. Android builds **clean** `build/android/app/src/main/jniLibs`
+to avoid carrying over ABIs/artifacts from previous builds.
 
-### iOS (solo macOS)
+### iOS (macOS only)
 
 ```bash
-wails3 task ios:package:ipa                  # .ipa (requiere IOS_PLATFORM=device + signing)
-wails3 task ios:deploy-device                # instala en dispositivos conectados
-wails3 task ios:run                          # simulador
+wails3 task ios:package:ipa                  # .ipa (requires IOS_PLATFORM=device + signing)
+wails3 task ios:deploy-device                # install on connected devices
+wails3 task ios:run                          # simulator
 ```
 
-### macOS (solo macOS)
+### macOS (macOS only)
 
 ```bash
-wails3 task darwin:build                     # binario -> bin/jota
+wails3 task darwin:build                     # binary -> bin/jota
 wails3 task darwin:package                   # .app bundle -> bin/ (macOS)
 wails3 task darwin:package:dmg               # .dmg -> bin/
-wails3 task darwin:package:universal         # .app universal (arm64 + x86_64)
+wails3 task darwin:package:universal         # universal .app (arm64 + x86_64)
 ```
 
-### Windows (solo Windows; cross-compile Go funciona desde Linux)
+### Windows (Windows only; Go cross-compile works from Linux)
 
 ```bash
 wails3 task windows:build                    # -> bin/jota.exe
-wails3 task windows:package                  # instala MSIX + crea instalador
-wails3 task windows:create:nsis:installer    # instalador NSIS -> bin/
-wails3 task windows:create:msix:package      # paquete MSIX -> bin/
+wails3 task windows:package                  # installs MSIX + creates installer
+wails3 task windows:create:nsis:installer    # NSIS installer -> bin/
+wails3 task windows:create:msix:package      # MSIX package -> bin/
 ```
 
-### Utilidades
+### Utilities
 
 ```bash
-wails3 generate bindings -ts -i -clean=true   # regenera frontend/bindings/
-wails3 task build GOOS=windows             # dispatcher genérico de build (Taskfile raíz)
+wails3 generate bindings -ts -i -clean=true   # regenerates frontend/bindings/
+wails3 task build GOOS=windows               # generic build dispatcher (root Taskfile)
 ```
 
-`wails3 task <target>:<tarea>` llama directamente el Taskfile de la plataforma;
-`wails3 task <tarea>` desde la raíz rutea por `GOOS` a la plataforma del host.
+`wails3 task <target>:<task>` calls the platform Taskfile directly;
+`wails3 task <task>` from the root routes by `GOOS` to the host platform.
 
 `wails3` lives at `~/go/bin/wails3` (add to PATH). The Linux build hard-codes the `gtk3` tag (webkit2gtk-4.1); the default compiles against GTK4/webkitgtk-6.0 which crashes gcc 16 on this machine.
 
