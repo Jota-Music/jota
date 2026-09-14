@@ -4,7 +4,6 @@ import {
 	SpotifyGetStatus,
 	SpotifyLogin,
 	SpotifyLoginAndWait,
-	SpotifyReconnect,
 } from "@bindings/app";
 import { signal } from "@preact/signals";
 import { Browser } from "@wailsio/runtime";
@@ -21,13 +20,6 @@ export async function syncSpotifyStatus(): Promise<void> {
 		spotifyConnected.value = false;
 		spotifyUser.value = null;
 	}
-}
-
-export async function reconnectSpotify(): Promise<void> {
-	try {
-		await SpotifyReconnect();
-	} catch {}
-	await syncSpotifyStatus();
 }
 
 export async function disconnectSpotify(): Promise<void> {
