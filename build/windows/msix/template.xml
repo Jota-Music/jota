@@ -8,27 +8,27 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="w3ref"
+        Path="jota"
         Arguments=""
-        InstallLocation="C:\Program Files\My Company\My Product">
+        InstallLocation="C:\Program Files\Jota">
     </Installer>
     <PackageInformation
-        PackageName="My Product"
-        PackageDisplayName="My Product"
-        PublisherName="CN=My Company"
-        PublisherDisplayName="My Company"
+        PackageName="Jota"
+        PackageDisplayName="Jota"
+        PublisherName="CN=Jota"
+        PublisherDisplayName="Jota"
         Version="0.1.0.0"
-        PackageDescription="A w3ref application">
+        PackageDescription="Self-hosted music streaming app">
         <Capabilities>
             <Capability Name="runFullTrust" />
             
         </Capabilities>
         <Applications>
             <Application
-                Id="com.example.w3ref"
-                Description="A w3ref application"
-                DisplayName="My Product"
-                ExecutableName="w3ref"
+                Id="com.jotamusic.jota"
+                Description="Self-hosted music streaming app"
+                DisplayName="Jota"
+                ExecutableName="jota"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>My Product</DisplayName>
-            <PublisherDisplayName>My Company</PublisherDisplayName>
-            <Description>A w3ref application</Description>
+            <DisplayName>Jota</DisplayName>
+            <PublisherDisplayName>Jota</PublisherDisplayName>
+            <Description>Self-hosted music streaming app</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="w3ref.msix" />
+    <SaveLocation PackagePath="jota.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>

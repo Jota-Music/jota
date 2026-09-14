@@ -9,9 +9,9 @@ info:
   companyName: "Jota" # The name of the company
   productName: "Jota" # The name of the application
   productIdentifier: "com.jotamusic.jota" # The unique product identifier
-  description: "Jota a simple self-hosted music service" # The application description
+  description: "Self-hosted music streaming app" # The application description
   copyright: "(c) 2025, salvadorsru" # Copyright text
-  comments: "Jota a simple self-hosted music service" # Comments
+  comments: "Self-hosted music streaming app" # Comments
   version: "1.0.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension

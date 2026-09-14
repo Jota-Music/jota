@@ -10,9 +10,9 @@ version: "${VERSION}"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "Jota a simple self-hosted music service"
+description: "Self-hosted music streaming app"
 vendor: "Jota"
-homepage: "https://wails.io"
+homepage: "https://github.com/Jota-Music/jota"
 license: "GPL-3.0-only"
 release: "1"
 

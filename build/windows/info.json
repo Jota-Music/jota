@@ -6,10 +6,10 @@
 		"0000": {
 			"ProductVersion": "1.0.0",
 			"CompanyName": "Jota",
-			"FileDescription": "Jota a simple self-hosted music service",
+			"FileDescription": "Self-hosted music streaming app",
 			"LegalCopyright": "(c) 2025, salvadorsru",
 			"ProductName": "Jota",
-			"Comments": "Jota a simple self-hosted music service"
+			"Comments": "Self-hosted music streaming app"
 		}
 	}
 }

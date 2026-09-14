@@ -8,15 +8,15 @@
   IgnorableNamespaces="uap3">
   
   <Identity 
-    Name="com.example.w3ref"
-    Publisher="CN=My Company"
+    Name="com.jotamusic.jota"
+    Publisher="CN=Jota"
     Version="0.1.0.0" 
     ProcessorArchitecture="x64" />
   
   <Properties>
-    <DisplayName>My Product</DisplayName>
-    <PublisherDisplayName>My Company</PublisherDisplayName>
-    <Description>A w3ref application</Description>
+    <DisplayName>Jota</DisplayName>
+    <PublisherDisplayName>Jota</PublisherDisplayName>
+    <Description>Self-hosted music streaming app</Description>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   
@@ -29,10 +29,10 @@
   </Resources>
   
   <Applications>
-    <Application Id="com.example.w3ref" Executable="w3ref" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="com.jotamusic.jota" Executable="jota" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="My Product"
-        Description="A w3ref application"
+        DisplayName="Jota"
+        Description="Self-hosted music streaming app"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
@@ -41,7 +41,7 @@
       </uap:VisualElements>
       
       <Extensions>
-        <desktop:Extension Category="windows.fullTrustProcess" Executable="w3ref" />
+        <desktop:Extension Category="windows.fullTrustProcess" Executable="jota" />
         
         
       </Extensions>
