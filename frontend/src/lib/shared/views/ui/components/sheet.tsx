@@ -135,7 +135,7 @@ export function Sheet({
 				aria-labelledby={labelledBy}
 			>
 				<div
-					class="flex shrink-0 cursor-grab touch-none justify-center pt-2 pb-1 active:cursor-grabbing sm:hidden"
+					class="flex shrink-0 cursor-grab touch-none justify-center active:cursor-grabbing sm:hidden"
 					onPointerDown={onDragStart}
 					onPointerMove={onDragMove}
 					onPointerUp={onDragEnd}
