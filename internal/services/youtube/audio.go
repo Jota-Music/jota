@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"jota/server/internal/kv"
 	"jota/server/internal/music"
+	"log"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -13,6 +15,8 @@ import (
 )
 
 var audioBucket = kv.UseBucket("youtube-audio")
+
+var probeClient = &http.Client{Timeout: 8 * time.Second}
 
 // bestAudio picks the audio format with the fastest, most compatible start.
 // audio/mp4 (AAC) is preferred over audio/webm (Opus): WebKitGTK's GStreamer
@@ -87,27 +91,46 @@ func ttlFromExpire(expireAt int64) (time.Duration, bool) {
 	return time.Duration(ttl) * time.Second, true
 }
 
+func clientByName(name string) (clientConfig, bool) {
+	if name == "" || name == preferredClient.Name {
+		return preferredClient, true
+	}
+	for _, c := range fallbackClients {
+		if c.Name == name {
+			return c, true
+		}
+	}
+	return clientConfig{}, false
+}
+
+// audioCacheStillValid reports whether a cached stream can still be used: not
+// expired and actually answering the player's first request with the same
+// client headers it was resolved with. A cached URL that googlevideo now 403s
+// must be re-resolved, or the player retries it forever.
 func audioCacheStillValid(a *music.Audio) bool {
 	if a == nil || a.Url == "" || a.ExpireAt <= 0 {
 		return false
 	}
 	now := time.Now().UTC().Unix()
-	return a.ExpireAt > now+30
+	if a.ExpireAt <= now+30 {
+		return false
+	}
+	c, _ := clientByName(a.ClientName)
+	return streamPlayable(c, a.Url)
 }
 
-func audioURL(videoID string) (string, error) {
-	if len(videoID) != 11 {
-		return "", errors.New("invalid video ID length")
-	}
+// playerStreamURLFn is a test hook; do not assign in production code.
+var playerStreamURLFn = playerStreamURL
 
+func playerStreamURL(c clientConfig, videoID string) (string, error) {
 	payload := map[string]any{
 		"videoId":        videoID,
-		"context":        map[string]any{"client": clientContext()},
+		"context":        map[string]any{"client": clientContext(c)},
 		"contentCheckOk": true,
 		"racyCheckOk":    true,
 	}
 
-	data, err := retryRequest("https://www.youtube.com/youtubei/v1/player", payload, true, 3)
+	data, err := retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, true, 3)
 	if err != nil {
 		return "", fmt.Errorf("player request failed: %w", err)
 	}
@@ -119,7 +142,7 @@ func audioURL(videoID string) (string, error) {
 
 	if pr.PlayabilityStatus.Status == "LOGIN_REQUIRED" {
 		invalidateVisitor()
-		data, err = retryRequest("https://www.youtube.com/youtubei/v1/player", payload, true, 3)
+		data, err = retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, true, 3)
 		if err != nil {
 			return "", fmt.Errorf("player request failed: %w", err)
 		}
@@ -141,6 +164,65 @@ func audioURL(videoID string) (string, error) {
 	return f.URL, nil
 }
 
+// streamPlayable reports whether the stream answers the plain/HEAD request that
+// GStreamer's souphttpsrc issues first. Some clients return URLs that only
+// answer bounded Range requests (403 otherwise), which stalls playback.
+func streamPlayable(c clientConfig, raw string) bool {
+	req, err := http.NewRequest(http.MethodHead, raw, nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("User-Agent", c.UserAgent)
+	resp, err := probeClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound:
+		return false
+	default:
+		return true
+	}
+}
+
+// audioURL resolves a playable stream, trying the preferred innertube client
+// first and falling back to others when its URL is not usable by the player.
+// It only returns URLs that pass a HEAD probe with the same headers the player
+// will use.
+func audioURL(videoID string) (string, clientConfig, error) {
+	if len(videoID) != 11 {
+		return "", clientConfig{}, errors.New("invalid video ID length")
+	}
+
+	var firstErr error
+
+	for _, c := range allClients() {
+		raw, err := playerStreamURLFn(c, videoID)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if streamPlayable(c, raw) {
+			if c.Name != preferredClient.Name {
+				log.Printf("youtube: %s fell back to client %s", videoID, c.Name)
+			}
+			return raw, c, nil
+		}
+		if firstErr == nil {
+			firstErr = fmt.Errorf("client %s returned unplayable URL", c.Name)
+		}
+	}
+
+	if firstErr != nil {
+		return "", clientConfig{}, firstErr
+	}
+	return "", clientConfig{}, errors.New("no playable stream found")
+}
+
 func fetchAudio(youtubeId string) (*music.Audio, error) {
 	if strings.TrimSpace(youtubeId) == "" {
 		return nil, errors.New("no video ID provided")
@@ -155,7 +237,7 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 		return nil, fmt.Errorf("cache error: %w", err)
 	}
 
-	streamURL, err := audioURL(youtubeId)
+	streamURL, client, err := audioURL(youtubeId)
 	if err != nil {
 		return nil, err
 	}
@@ -171,10 +253,11 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 	}
 
 	audio := music.Audio{
-		Url:      streamURL,
-		Duration: info.Duration,
-		ExpireAt: info.ExpireAt,
-		VideoID:  youtubeId,
+		Url:        streamURL,
+		Duration:   info.Duration,
+		ExpireAt:   info.ExpireAt,
+		VideoID:    youtubeId,
+		ClientName: client.Name,
 	}
 
 	if err := audioBucket.SetObject(youtubeId, audio, ttl); err != nil {

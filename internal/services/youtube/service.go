@@ -28,11 +28,14 @@ func (s *Service) GetAudio(id string) (music.Audio, error) {
 }
 
 // ResolveAudio returns a stream for any song. When the song already carries a
-// linked YouTube ID it is used directly; otherwise the track is searched by
-// its own metadata.
+// linked YouTube ID it is used directly; if that video is unavailable it falls
+// back to searching by the song's own metadata.
 func (s *Service) ResolveAudio(song music.Song) (music.Audio, error) {
 	if song.YoutubeId != "" {
-		return s.GetAudio(song.YoutubeId)
+		audio, err := s.GetAudio(song.YoutubeId)
+		if err == nil {
+			return audio, nil
+		}
 	}
 	return s.searchAudio(song.Id, audioQuery(song))
 }

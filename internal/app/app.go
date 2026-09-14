@@ -142,7 +142,12 @@ func (a *App) GetAlbumTracks(uri string) ([]music.Song, error) {
 // ----- YouTube bindings -----
 
 func (a *App) ResolveAudio(song music.Song) (music.Audio, error) {
-	return a.YouTube.ResolveAudio(song)
+	audio, err := a.YouTube.ResolveAudio(song)
+	if err != nil {
+		log.Printf("resolve-audio failed id=%q youtubeId=%q name=%q err=%v",
+			song.Id, song.YoutubeId, song.Name, err)
+	}
+	return audio, err
 }
 
 func (a *App) SetYouTubeId(cacheKey string, youtubeId string) error {

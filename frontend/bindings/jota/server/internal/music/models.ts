@@ -39,6 +39,7 @@ export interface Audio {
     "duration": number;
     "expireAt": number;
     "videoId": string;
+    "clientName"?: string;
 }
 
 export interface Page {
