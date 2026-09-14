@@ -11,6 +11,7 @@ import { AlbumPage } from "@/lib/shared/views/ui/pages/album";
 import { ArtistPage } from "@/lib/shared/views/ui/pages/artist";
 import LoginPage from "@/lib/shared/views/ui/pages/login";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
+import { NotFoundPage } from "@/lib/shared/views/ui/pages/not-found";
 import { PlaylistPage } from "@/lib/shared/views/ui/pages/playlist";
 import { SearchPage } from "@/lib/shared/views/ui/pages/search";
 import SettingsPage from "@/lib/shared/views/ui/pages/settings";
@@ -63,7 +64,7 @@ function Router() {
 					<Route path="/settings" component={SettingsPage} />
 					<Route path="/:user" component={UserPage} />
 					<Route path="/" component={MainPage} />
-					<Route>404: No such page!</Route>
+					<Route component={NotFoundPage} />
 				</Switch>
 			</SpotifyGate>
 		</QueryClientProvider>
