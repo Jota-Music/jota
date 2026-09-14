@@ -233,7 +233,7 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 	if err == nil && audioCacheStillValid(&cached) {
 		return &cached, nil
 	}
-	if err != nil && !errors.Is(err, kv.KeyNotFoundError) {
+	if err != nil && !errors.Is(err, kv.ErrKeyNotFound) {
 		return nil, fmt.Errorf("cache error: %w", err)
 	}
 

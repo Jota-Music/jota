@@ -176,7 +176,7 @@ func (s *Service) AddPlaylist(id string) (music.PlaylistSummary, error) {
 
 	var index []music.PlaylistSummary
 	if err := playlistBucket.GetObject("index", &index); err != nil &&
-		!errors.Is(err, kv.KeyNotFoundError) && !errors.Is(err, kv.KvNotStartedError) {
+		!errors.Is(err, kv.ErrKeyNotFound) && !errors.Is(err, kv.ErrNotStarted) {
 		return music.PlaylistSummary{}, err
 	}
 
@@ -196,7 +196,7 @@ func (s *Service) AddPlaylist(id string) (music.PlaylistSummary, error) {
 func (s *Service) Playlists() ([]music.PlaylistSummary, error) {
 	var index []music.PlaylistSummary
 	if err := playlistBucket.GetObject("index", &index); err != nil {
-		if errors.Is(err, kv.KeyNotFoundError) || errors.Is(err, kv.KvNotStartedError) {
+		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
 			return nil, nil
 		}
 		return nil, err
@@ -212,7 +212,7 @@ func (s *Service) RemovePlaylist(id string) error {
 
 	var index []music.PlaylistSummary
 	if err := playlistBucket.GetObject("index", &index); err != nil &&
-		!errors.Is(err, kv.KeyNotFoundError) && !errors.Is(err, kv.KvNotStartedError) {
+		!errors.Is(err, kv.ErrKeyNotFound) && !errors.Is(err, kv.ErrNotStarted) {
 		return err
 	}
 

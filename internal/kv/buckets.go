@@ -71,7 +71,7 @@ func (b *Bucket) GetObject(key string, out any) error {
 		item, err := txn.Get(b.key(key))
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
-				return KeyNotFoundError
+				return ErrKeyNotFound
 			}
 			return err
 		}
@@ -117,7 +117,7 @@ func (b *Bucket) GetString(key string) (string, error) {
 		item, err := txn.Get(b.key(key))
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
-				return KeyNotFoundError
+				return ErrKeyNotFound
 			}
 			return err
 		}

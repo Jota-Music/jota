@@ -10,16 +10,15 @@ import (
 	"github.com/dgraph-io/badger/v4"
 )
 
-// Errores personalizados
 var (
-	KvNotStartedError = errors.New("database is not initialized")
-	KeyNotFoundError  = errors.New("key not found")
+	ErrNotStarted  = errors.New("database is not initialized")
+	ErrKeyNotFound = errors.New("key not found")
 )
 
 var (
-	db        *badger.DB
-	startOnce sync.Once
-	startErr  error
+	db      *badger.DB
+	mu      sync.Mutex
+	openErr error
 )
 
 func getDatabasePath() (string, error) {
@@ -31,31 +30,34 @@ func getDatabasePath() (string, error) {
 }
 
 func EnsureStarted() error {
-	startOnce.Do(func() {
-		if db != nil {
-			return
-		}
+	mu.Lock()
+	defer mu.Unlock()
 
-		path, err := getDatabasePath()
-		if err != nil {
-			startErr = err
-			return
-		}
+	if db != nil {
+		return nil
+	}
+	if openErr != nil {
+		return openErr
+	}
 
-		err = os.MkdirAll(path, 0755)
-		if err != nil {
-			startErr = err
-			return
-		}
+	path, err := getDatabasePath()
+	if err != nil {
+		openErr = err
+		return err
+	}
 
-		opts := badger.DefaultOptions(path).
-			WithLogger(nil).
-			WithBlockCacheSize(8 << 20).
-			WithMemTableSize(8 << 20).
-			WithNumMemtables(1)
-		db, startErr = badger.Open(opts)
-	})
-	return startErr
+	if err := os.MkdirAll(path, 0755); err != nil {
+		openErr = err
+		return err
+	}
+
+	opts := badger.DefaultOptions(path).
+		WithLogger(nil).
+		WithBlockCacheSize(8 << 20).
+		WithMemTableSize(8 << 20).
+		WithNumMemtables(1)
+	db, openErr = badger.Open(opts)
+	return openErr
 }
 
 func Start() {
@@ -65,14 +67,20 @@ func Start() {
 }
 
 func Close() {
-	if db != nil {
-		db.Close()
+	mu.Lock()
+	defer mu.Unlock()
+
+	if db == nil {
+		return
 	}
+	_ = db.Close()
+	db = nil
+	openErr = nil
 }
 
 func checkDB() error {
 	if db == nil {
-		return KvNotStartedError
+		return ErrNotStarted
 	}
 	return nil
 }
