@@ -7,6 +7,7 @@ func TestReopenAfterClose(t *testing.T) {
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	t.Setenv("APPDATA", dir)
+	Close()
 
 	if err := EnsureStarted(); err != nil {
 		t.Fatalf("open: %v", err)
