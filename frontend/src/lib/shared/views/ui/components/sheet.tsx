@@ -24,7 +24,7 @@ export function Sheet({
 	open,
 	close,
 	labelledBy,
-	closeLabel = "Cerrar",
+	closeLabel = "Close",
 	mobileOnly = false,
 	children,
 }: SheetProps) {

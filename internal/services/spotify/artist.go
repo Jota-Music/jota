@@ -100,9 +100,9 @@ func albumRefsFromArtist(artist *metadatapb.Artist) []AlbumRef {
 		label string
 		group []*metadatapb.AlbumGroup
 	}{
-		{"álbum", artist.GetAlbumGroup()},
+		{"album", artist.GetAlbumGroup()},
 		{"single", artist.GetSingleGroup()},
-		{"compilación", artist.GetCompilationGroup()},
+		{"compilation", artist.GetCompilationGroup()},
 	}
 	var out []AlbumRef
 	for _, s := range sections {

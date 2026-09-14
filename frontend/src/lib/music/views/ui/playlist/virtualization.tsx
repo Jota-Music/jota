@@ -93,7 +93,7 @@ function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
 				<SaveYoutubeId song={song} compact />
 				<button
 					type="button"
-					title="Encolar después del tema actual"
+					title="Enqueue after current track"
 					onClick={(e) => {
 						e.stopPropagation();
 						enqueue(song);
@@ -130,7 +130,7 @@ export function Virtualization({ songs }: Props) {
 		>
 			{songs.length === 0 ? (
 				<div className="flex min-h-32 flex-1 items-center justify-center px-4 py-8 text-sm text-zinc-500">
-					Sin canciones
+					No songs
 				</div>
 			) : (
 				<div

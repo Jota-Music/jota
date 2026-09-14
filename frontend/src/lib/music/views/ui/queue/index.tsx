@@ -157,7 +157,7 @@ function Queue() {
 			open={panel.open}
 			close={handleMaskClick}
 			labelledBy="queue-panel-title"
-			closeLabel="Cerrar cola"
+			closeLabel="Close queue"
 		>
 			<header class="flex shrink-0 flex-col gap-1 border-b border-zinc-800 px-4 py-3">
 				<div class="flex items-center justify-between gap-2 text-white">
@@ -168,14 +168,14 @@ function Queue() {
 						</h2>
 						<span class="text-xs text-zinc-500 tabular-nums">
 							{songs.length === 0
-								? "vacía"
+								? "empty"
 								: `${songs.length} tema${songs.length === 1 ? "" : "s"}`}
 						</span>
 					</div>
 					<button
 						type="button"
 						class="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white cursor-pointer"
-						aria-label="Cerrar"
+						aria-label="Close"
 						onClick={handleCloseClick}
 					>
 						<X size={20} />
@@ -309,7 +309,7 @@ function Queue() {
 										<button
 											type="button"
 											draggable={false}
-											title="Reproducir ahora"
+											title="Play now"
 											disabled={isCurrent}
 											class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-(--dominant-color) disabled:cursor-not-allowed disabled:opacity-30"
 											onClick={() => handlePlayClick(globalIndex)}
@@ -319,7 +319,7 @@ function Queue() {
 										<button
 											type="button"
 											draggable={false}
-											title="Bajar una posición"
+											title="Move down one position"
 											disabled={!canMoveDown}
 											class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
 											onClick={() => handleMoveDownClick(globalIndex)}
@@ -329,7 +329,7 @@ function Queue() {
 										<button
 											type="button"
 											draggable={false}
-											title="Poner justo debajo del tema en reproducción"
+											title="Place just below the playing track"
 											disabled={!canSnapBelow}
 											class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
 											onClick={() => handleMoveBelowClick(globalIndex)}

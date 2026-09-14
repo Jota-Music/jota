@@ -150,9 +150,7 @@ function FullPlayerContent({
 					<div class="flex items-center gap-2">
 						<button
 							type="button"
-							title={
-								shuffle.value ? "Desactivar aleatorio" : "Activar aleatorio"
-							}
+							title={shuffle.value ? "Disable shuffle" : "Enable shuffle"}
 							onClick={toggleShuffle}
 							aria-pressed={shuffle.value}
 							class={cn(
@@ -169,13 +167,13 @@ function FullPlayerContent({
 							type="button"
 							title={
 								repeat.value === "off"
-									? "Repetir todo"
+									? "Repeat all"
 									: repeat.value === "all"
-										? "Repetir uno"
-										: "Sin repetición"
+										? "Repeat one"
+										: "No repeat"
 							}
 							onClick={cycleRepeat}
-							aria-label="Modo de repetición"
+							aria-label="Repeat mode"
 							aria-pressed={repeat.value !== "off"}
 							class={cn(
 								"rounded-md p-1 transition cursor-pointer",
@@ -204,7 +202,7 @@ function FullPlayerContent({
 
 					<button
 						type="button"
-						title="Cola de reproducción"
+						title="Playback queue"
 						aria-expanded={showQueue.value}
 						onClick={() => {
 							showQueue.value = !showQueue.value;
@@ -371,7 +369,7 @@ export function Player() {
 					playerModalOpen.value = false;
 				}}
 				mobileOnly
-				closeLabel="Cerrar reproductor"
+				closeLabel="Close player"
 			>
 				<div class="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-8">
 					<FullPlayerContent {...player} />

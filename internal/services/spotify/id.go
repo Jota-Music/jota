@@ -30,7 +30,7 @@ type TypeMismatchError struct {
 }
 
 func (e *TypeMismatchError) Error() string {
-	return fmt.Sprintf("se esperaba spotify:%s:..., se recibió spotify:%s: (%s)", e.Expected, e.Got, e.URI)
+	return fmt.Sprintf("expected spotify:%s:..., got spotify:%s: (%s)", e.Expected, e.Got, e.URI)
 }
 
 func resolveContextTracks(ctx context.Context, sess *session.Session, uri string) ([]*connectpb.ContextTrack, error) {

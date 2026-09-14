@@ -20,9 +20,9 @@ type Playlist struct {
 	Name       string
 	Owner      string
 	CoverURL   string
-	UpdatedAt  int64 // epoch ms; 0 si no disponible
-	CreatedAt  int64 // epoch ms; 0 si no disponible
-	TrackCount int32 // -1 si no disponible
+	UpdatedAt  int64 // epoch ms; 0 if not available
+	CreatedAt  int64 // epoch ms; 0 if not available
+	TrackCount int32 // -1 if not available
 }
 
 func coverFromImageURL(s string) string {
@@ -239,7 +239,7 @@ func getPublicPlaylists(ctx context.Context, sess *session.Session, username str
 
 	resp, err := sess.Spclient().Request(ctx, "GET", path, nil, nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("petición perfil público: %w", err)
+		return nil, fmt.Errorf("public profile request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -248,7 +248,7 @@ func getPublicPlaylists(ctx context.Context, sess *session.Session, username str
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("perfil público devolvió %d", resp.StatusCode)
+		return nil, fmt.Errorf("public profile returned %d", resp.StatusCode)
 	}
 
 	var result struct {

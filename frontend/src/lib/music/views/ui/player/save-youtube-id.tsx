@@ -109,7 +109,7 @@ export default function SaveYoutubeId({
 				open={open}
 				close={() => setOpen(false)}
 				labelledBy="youtube-id-title"
-				closeLabel="Cerrar editor de YouTube ID"
+				closeLabel="Close YouTube ID editor"
 			>
 				<form class="flex flex-col gap-4 p-5" onSubmit={handlSubmit}>
 					<div class="flex flex-col gap-1">

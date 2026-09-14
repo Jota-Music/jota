@@ -30,7 +30,7 @@ export function SyncPanel() {
 			open={showSync.value}
 			close={() => (showSync.value = false)}
 			labelledBy="sync-panel-title"
-			closeLabel="Cerrar Sync"
+			closeLabel="Close Sync"
 		>
 			<header class="flex shrink-0 flex-col gap-1 border-b border-zinc-800 px-4 py-3">
 				<div class="flex items-center justify-between gap-2 text-white">
@@ -59,7 +59,7 @@ export function SyncPanel() {
 					<button
 						type="button"
 						class="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white cursor-pointer"
-						aria-label="Cerrar"
+						aria-label="Close"
 						onClick={() => (showSync.value = false)}
 					>
 						<X size={20} />

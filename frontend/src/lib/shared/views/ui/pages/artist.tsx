@@ -15,12 +15,12 @@ import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 const view = signal<string>("tracks");
 
-const groupOrder = ["álbum", "single", "compilación"] as const;
+const groupOrder = ["album", "single", "compilation"] as const;
 
 const groupLabels: Record<string, string> = {
-	álbum: "Albums",
+	album: "Albums",
 	single: "Singles",
-	compilación: "Compilations",
+	compilation: "Compilations",
 	appears_on: "Appears on",
 };
 
@@ -32,7 +32,7 @@ function groupKeysOf(albums: AlbumSummary[] | undefined): string[] {
 	if (!albums) return [];
 	const keys: string[] = [];
 	for (const key of groupOrder) {
-		if (albums.some((a) => (a.group?.trim() || "álbum") === key)) {
+		if (albums.some((a) => (a.group?.trim() || "album") === key)) {
 			keys.push(key);
 		}
 	}
@@ -50,7 +50,7 @@ function groupCounts(
 ): Record<string, number> {
 	const counts: Record<string, number> = {};
 	for (const a of albums ?? []) {
-		const key = a.group?.trim() || "álbum";
+		const key = a.group?.trim() || "album";
 		counts[key] = (counts[key] ?? 0) + 1;
 	}
 	return counts;
@@ -85,7 +85,7 @@ export function ArtistPage() {
 		activeTab === "tracks"
 			? []
 			: (disco?.albums ?? []).filter(
-					(a) => (a.group?.trim() || "álbum") === activeTab,
+					(a) => (a.group?.trim() || "album") === activeTab,
 				);
 
 	if (isError) {
@@ -115,7 +115,7 @@ export function ArtistPage() {
 					)}
 					<div class="min-w-0">
 						<h2 class="truncate text-xl font-semibold leading-tight">
-							{data?.name ?? "Artista"}
+							{data?.name ?? "Artist"}
 						</h2>
 					</div>
 				</header>
