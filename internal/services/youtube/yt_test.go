@@ -27,6 +27,9 @@ func TestSetYoutubeIdInvalidatesAudioCache(t *testing.T) {
 }
 
 func TestGetAudioURL(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: reaches YouTube")
+	}
 	url, client, err := audioURL("E9s9BNZFQLA")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
