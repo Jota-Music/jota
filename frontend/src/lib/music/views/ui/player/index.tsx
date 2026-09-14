@@ -122,7 +122,7 @@ function FullPlayerContent({
 					<ArtistLinks artists={song.artists} />
 				</p>
 
-				<SaveYoutubeId song={song} isPlaying={isPlaying} />
+				<SaveYoutubeId song={song} />
 
 				<div class="mt-3 flex gap-2 justify-between items-center">
 					<span class="text-white text-sm opacity-70 tabular-nums shrink-0">

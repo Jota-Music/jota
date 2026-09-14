@@ -11,6 +11,7 @@ import {
 	enqueue,
 	playFromQueueSelection,
 } from "@/lib/music/views/stores/player";
+import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
@@ -127,6 +128,7 @@ export function Virtualization({ songs }: Props) {
 								</div>
 
 								<div class="flex shrink-0 items-center gap-2">
+									<SaveYoutubeId song={song} compact />
 									<button
 										type="button"
 										title="Encolar después del tema actual"

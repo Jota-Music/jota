@@ -4,35 +4,38 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { updateYoutubeId } from "@/lib/music/app/get-audio";
 import type { Song } from "@/lib/music/model";
 import {
+	currentSong,
 	getPlaybackSeconds,
+	isPlaying,
 	play,
 	prepareSong,
 } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
+import { Sheet } from "@/lib/shared/views/ui/components/sheet";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 export default function SaveYoutubeId({
 	song,
-	isPlaying,
+	compact = false,
 }: {
 	song: Song;
-	isPlaying: boolean;
+	compact?: boolean;
 }) {
-	const [isEditing, setIsEditing] = useState(false);
-	const currentYoutubeId = useSignal(song.youtubeId ?? "");
+	const [open, setOpen] = useState(false);
+	const youtubeId = useSignal(song.youtubeId ?? "");
 	const $input = useRef<HTMLInputElement>(null);
 
-	const onStartEdit = () => {
-		currentYoutubeId.value = song.youtubeId ?? "";
-		setIsEditing(true);
+	const start = () => {
+		youtubeId.value = song.youtubeId ?? "";
+		setOpen(true);
 	};
 
 	useEffect(() => {
-		if (isEditing) {
+		if (open) {
 			$input.current?.focus();
 			$input.current?.select();
 		}
-	}, [isEditing]);
+	}, [open]);
 
 	async function handlSubmit(e: Event) {
 		e.preventDefault();
@@ -40,103 +43,120 @@ export default function SaveYoutubeId({
 		const youtube = formData.get("youtube") as string;
 
 		if (song.youtubeId === youtube) {
-			setIsEditing(false);
+			setOpen(false);
 			return;
 		}
 
 		await updateYoutubeId(song.id, youtube);
 		song.youtubeId = youtube;
-		currentYoutubeId.value = youtube;
+		youtubeId.value = youtube;
 		AudioCache.remove(song.id);
-		const at = getPlaybackSeconds();
-		if (isPlaying) {
-			await play(song, at);
-		} else {
-			await prepareSong(song, at);
+
+		if (currentSong.value?.id === song.id) {
+			const at = getPlaybackSeconds();
+			if (isPlaying.value) {
+				await play(song, at);
+			} else {
+				await prepareSong(song, at);
+			}
 		}
 
-		setIsEditing(false);
+		setOpen(false);
 	}
 
 	return (
-		<div class="mt-2 flex gap-2 items-center">
-			<YoutubeIcon class="size-4 text-white/20" />
-
-			{isEditing ? (
-				<form class="flex gap-2 items-center h-8" onSubmit={handlSubmit}>
-					<input
-						ref={$input}
-						type="text"
-						value={currentYoutubeId.value}
-						name="youtube"
-						placeholder="YouTube ID"
-						class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1 text-sm text-white outline-none focus:border-zinc-600"
-						onBlur={(e) => {
-							if (
-								e.relatedTarget &&
-								(e.target as HTMLElement)
-									.closest("form")
-									?.contains(e.relatedTarget as HTMLElement)
-							) {
-								return;
-							}
-							setIsEditing(false);
-						}}
-						onInput={(e) => {
-							currentYoutubeId.value = (e.target as HTMLInputElement).value;
-						}}
-						onKeyDown={(e) => {
-							if (e.key === "Escape") {
-								setIsEditing(false);
-							}
-						}}
-					/>
-
-					<button
-						type="submit"
-						class="cursor-pointer p-1 rounded hover:brightness-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-						title="Guardar"
-					>
-						<Check class="size-4" />
-					</button>
-
-					<button
-						type="button"
-						class="cursor-pointer p-1 rounded hover:brightness-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-						title="Cancelar"
-						onClick={() => setIsEditing(false)}
-					>
-						<X class="size-4" />
-					</button>
-				</form>
+		<>
+			{compact ? (
+				<button
+					type="button"
+					title={
+						song.youtubeId
+							? `Edit YouTube ID (${song.youtubeId})`
+							: "Add YouTube ID"
+					}
+					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-amber-300"
+					onClick={(e) => {
+						e.stopPropagation();
+						start();
+					}}
+				>
+					<YoutubeIcon class="size-4" />
+				</button>
 			) : (
 				<button
 					type="button"
-					class="flex gap-2 items-center group h-8"
-					onClick={onStartEdit}
+					class="group mt-2 flex h-8 items-center gap-2"
+					onClick={start}
 				>
-					<p class="text-white text-xs opacity-50 flex-1 truncate flex items-center gap-2">
-						{song.youtubeId ? (
-							<span class="font-mono bg-white/10 px-1.5 py-0.5 rounded">
-								{song.youtubeId}
-							</span>
-						) : (
-							<span class="font-mono bg-white/10 px-1.5 py-0.5 rounded">
-								...
-							</span>
-						)}
-					</p>
-
+					<YoutubeIcon class="size-4 text-white/20" />
+					<span class="flex flex-1 items-center gap-2 truncate text-xs text-white opacity-50">
+						<span class="rounded bg-white/10 px-1.5 py-0.5 font-mono">
+							{song.youtubeId || "..."}
+						</span>
+					</span>
 					{song.youtubeId && (
 						<span
-							class="cursor-pointer p-1 rounded hover:brightness-200 transition opacity-0 group-hover:opacity-100"
-							title="Editar YouTube ID"
+							class="cursor-pointer rounded p-1 opacity-0 transition hover:brightness-200 group-hover:opacity-100"
+							title="Edit YouTube ID"
 						>
 							<Edit2 class="size-4" />
 						</span>
 					)}
 				</button>
 			)}
-		</div>
+
+			<Sheet
+				open={open}
+				close={() => setOpen(false)}
+				labelledBy="youtube-id-title"
+				closeLabel="Cerrar editor de YouTube ID"
+			>
+				<form class="flex flex-col gap-4 p-5" onSubmit={handlSubmit}>
+					<div class="flex flex-col gap-1">
+						<h2 id="youtube-id-title" class="text-sm font-semibold text-white">
+							YouTube ID
+						</h2>
+						<p class="truncate text-xs text-zinc-500">{song.name}</p>
+					</div>
+
+					<input
+						ref={$input}
+						type="text"
+						value={youtubeId.value}
+						name="youtube"
+						placeholder="YouTube ID"
+						class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+						onInput={(e) => {
+							youtubeId.value = (e.target as HTMLInputElement).value;
+						}}
+						onKeyDown={(e) => {
+							if (e.key === "Escape") {
+								setOpen(false);
+							}
+						}}
+					/>
+
+					<div class="flex justify-end gap-2">
+						<button
+							type="button"
+							title="Cancel"
+							aria-label="Cancel"
+							class="cursor-pointer rounded-md p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+							onClick={() => setOpen(false)}
+						>
+							<X class="size-4" />
+						</button>
+						<button
+							type="submit"
+							title="Save"
+							aria-label="Save"
+							class="cursor-pointer rounded-md p-2 text-white transition hover:bg-zinc-700"
+						>
+							<Check class="size-4" />
+						</button>
+					</div>
+				</form>
+			</Sheet>
+		</>
 	);
 }
