@@ -41,7 +41,7 @@ listening — all on devices you control.
 
 - Go 1.26+
 - Bun 1.x (frontend)
-- `webkit2gtk-4.1` dev libraries (Linux)
+- Linux dev libraries: `webkit2gtk-4.1`, `gtk+-3.0`, `vorbis`, `flac`, `mpg123`, `alsa`
 - `wails3` CLI at `~/go/bin/wails3`
 - JDK ≤ 24 for Android builds (Gradle 9)
 

@@ -10,7 +10,8 @@ Self-hosted music streaming app — Go + Wails v3 backend, Preact frontend.
 
 ## Commands
 
-Prereqs: Go, `wails3` (`~/go/bin/wails3`), `bun`.
+Prereqs: Go, `wails3` (`~/go/bin/wails3`), `bun`. Linux also needs `webkit2gtk-4.1`/`gtk+-3.0`
+and the audio dev libs (`vorbis`, `flac`, `mpg123`, `alsa`) for go-librespot's CGO build.
 
 ```bash
 WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev   # live reload (vite on :9245)
