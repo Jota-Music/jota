@@ -29,7 +29,7 @@ export function MainPage() {
 
 	return (
 		<DefaultLayout class="gap-6">
-			<div class="flex flex-col gap-6 min-h-0 flex-1">
+			<div class="flex flex-col gap-6 min-h-0 flex-1 pb-6">
 				{spotifyConnected.value && (
 					<h3 class="text-base font-semibold text-zinc-200 shrink-0">
 						{spotifyHandle === "default"
