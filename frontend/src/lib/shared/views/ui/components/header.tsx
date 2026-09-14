@@ -7,7 +7,7 @@ import {
 	Settings,
 	Users,
 } from "lucide-preact";
-import { useCallback, useState } from "preact/hooks";
+import { useCallback, useEffect, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
@@ -26,6 +26,20 @@ const spotifyTypeOptions = [
 	{ value: "artist", label: "Artist" },
 ] as const;
 
+const sourceKey = "search_source";
+const typeKey = "search_type";
+
+function loadSource(): Source {
+	return localStorage.getItem(sourceKey) === "youtube" ? "youtube" : "spotify";
+}
+
+function loadType(): SpotifyType {
+	const raw = localStorage.getItem(typeKey);
+	return spotifyTypeOptions.some((option) => option.value === raw)
+		? (raw as SpotifyType)
+		: "user";
+}
+
 export function Header({
 	class: _class,
 	className,
@@ -39,8 +53,16 @@ export function Header({
 	const desktop = System.IsDesktop();
 	const [openSearch, setOpenSearch] = useState(false);
 	const [searchDraft, setSearchDraft] = useState("");
-	const [source, setSource] = useState<Source>("spotify");
-	const [searchType, setSearchType] = useState<SpotifyType>("user");
+	const [source, setSource] = useState<Source>(loadSource);
+	const [searchType, setSearchType] = useState<SpotifyType>(loadType);
+
+	useEffect(() => {
+		localStorage.setItem(sourceKey, source);
+	}, [source]);
+
+	useEffect(() => {
+		localStorage.setItem(typeKey, searchType);
+	}, [searchType]);
 
 	const onSearchSubmit = useCallback(
 		(e: Event) => {
