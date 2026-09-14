@@ -119,12 +119,14 @@ async function loadSongIntoPlayer(
 	startSeconds?: number | (() => number),
 ): Promise<boolean> {
 	if (audio) {
+		const prevId = loadedSongId;
 		audio.pause();
 		audio.src = "";
 		audio.load();
 		audio = null;
 		loadedSongId = null;
 		AudioCache.pin(null);
+		if (prevId) AudioCache.releaseElement(prevId);
 	}
 
 	progress.value = 0;
@@ -330,12 +332,14 @@ export async function togglePlayPause(): Promise<boolean> {
 
 export function stopPlayer() {
 	if (audio) {
+		const prevId = loadedSongId;
 		audio.pause();
 		audio.src = "";
 		audio.load();
 		audio = null;
+		loadedSongId = null;
+		if (prevId) AudioCache.releaseElement(prevId);
 	}
-	loadedSongId = null;
 	AudioCache.pin(null);
 	currentSong.value = null;
 	media.clear();

@@ -194,6 +194,13 @@ export class AudioCache {
 		AudioCache.pending.delete(id);
 	}
 
+	// Drop a cached audio element that the player has emptied (src=""), so a
+	// later replay rebuilds it instead of reusing a src-less element.
+	static releaseElement(id: string): void {
+		const item = AudioCache.cache.get(id);
+		if (item) AudioCache.release(item);
+	}
+
 	/* -------------------------------------------------
        DEBUG
     -------------------------------------------------- */
