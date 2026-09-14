@@ -890,6 +890,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         MediaPlaybackService.setListener(null);
+        stopService(new Intent(this, MediaPlaybackService.class));
         unregisterSystemEventReceivers();
         if (bridge != null) {
             bridge.shutdown();
