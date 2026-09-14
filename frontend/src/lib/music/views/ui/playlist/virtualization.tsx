@@ -1,5 +1,7 @@
+import { computed } from "@preact/signals";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ListPlus, Loader, Music, Pause } from "lucide-preact";
+import { memo } from "preact/compat";
 import { useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import {
@@ -23,17 +25,101 @@ type Props = {
 
 const ROW_PX = 64;
 
+const currentId = computed(() => currentSong.value?.id);
+
+function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
+	const isCurrent = song.id === currentId.value;
+
+	return (
+		<div
+			data-id={song.id}
+			role="none"
+			onClick={() => void playFromQueueSelection(songs, song)}
+			className={cn(
+				"absolute left-0 flex h-full w-full items-center justify-between gap-2 border-b border-zinc-900 px-3 transition hover:cursor-pointer hover:bg-zinc-900/40",
+				isCurrent ? "font-medium text-(--dominant-color)!" : "",
+			)}
+		>
+			<div class="grid grid-cols-[auto_1fr] gap-2">
+				<div
+					class={cn(
+						"relative",
+						isCurrent && "rounded-md outline-2 outline-(--dominant-color)",
+					)}
+				>
+					{isCurrent &&
+						(isLoading.value ? (
+							<Loader
+								size={23}
+								class="absolute inset-0 z-10 m-auto animate-spin text-zinc-400 drop-shadow-md drop-shadow-black"
+							/>
+						) : isPlaying.value ? (
+							<Music
+								size={25}
+								class="absolute inset-0 z-10 m-auto text-(--dominant-color) drop-shadow-md drop-shadow-black"
+							/>
+						) : (
+							<Pause
+								size={25}
+								class="absolute inset-0 z-10 m-auto fill-(--dominant-color) drop-shadow-md drop-shadow-black"
+							/>
+						))}
+
+					<img
+						loading="lazy"
+						decoding="async"
+						src={song.album?.covers?.[0]}
+						alt={song.name}
+						className={cn("h-10 w-10 rounded-md", isCurrent && "brightness-40")}
+					/>
+				</div>
+
+				<div class="flex min-w-0 flex-col text-start">
+					<span className="truncate text-sm text-white">{song.name}</span>
+
+					<span className="truncate text-xs text-zinc-400">
+						<ArtistLinks artists={song.artists} />
+						{song.album?.title && (
+							<>
+								{" • "}
+								<AlbumLink album={song.album} />
+							</>
+						)}
+					</span>
+				</div>
+			</div>
+
+			<div class="flex shrink-0 items-center gap-2">
+				<SaveYoutubeId song={song} compact />
+				<button
+					type="button"
+					title="Encolar después del tema actual"
+					onClick={(e) => {
+						e.stopPropagation();
+						enqueue(song);
+					}}
+					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-amber-300"
+				>
+					<ListPlus size={18} strokeWidth={2} />
+				</button>
+				<div className="tabular-nums text-xs text-zinc-500">
+					{secondsToTime(song.duration)}
+				</div>
+			</div>
+		</div>
+	);
+}
+
+const PlaylistRowMemo = memo(PlaylistRow);
+
 export function Virtualization({ songs }: Props) {
 	const parentRef = useRef<HTMLDivElement>(null);
-	const current = currentSong.value;
-	const loading = isLoading.value;
-	const playing = isPlaying.value;
 
 	const rowVirtualizer = useVirtualizer({
 		count: songs.length,
 		getScrollElement: () => parentRef.current,
 		estimateSize: () => ROW_PX,
-		overscan: 12,
+		overscan: 5,
 		getItemKey: (index) => songs[index]?.id ?? index,
 	});
 
@@ -55,95 +141,17 @@ export function Virtualization({ songs }: Props) {
 				>
 					{rowVirtualizer.getVirtualItems().map((virtualRow) => {
 						const song = songs[virtualRow.index];
-						const isCurrent = song.id === current?.id;
 
 						return (
 							<div
 								key={`${song.id}-${virtualRow.index}`}
-								data-id={song.id}
-								role="none"
-								onClick={() => void playFromQueueSelection(songs, song)}
-								className={cn(
-									"absolute left-0 flex w-full items-center justify-between gap-2 border-b border-zinc-900 px-3 transition hover:cursor-pointer hover:bg-zinc-900/40",
-									isCurrent ? "font-medium text-(--dominant-color)!" : "",
-								)}
+								class="absolute left-0 w-full"
 								style={{
 									height: `${virtualRow.size}px`,
 									transform: `translateY(${virtualRow.start}px)`,
 								}}
 							>
-								<div class="grid grid-cols-[auto_1fr] gap-2">
-									<div
-										class={cn(
-											"relative",
-											isCurrent &&
-												"rounded-md outline-2 outline-(--dominant-color)",
-										)}
-									>
-										{isCurrent &&
-											(loading ? (
-												<Loader
-													size={23}
-													class="absolute inset-0 z-10 m-auto animate-spin text-zinc-400 drop-shadow-md drop-shadow-black"
-												/>
-											) : playing ? (
-												<Music
-													size={25}
-													class="absolute inset-0 z-10 m-auto text-(--dominant-color) drop-shadow-md drop-shadow-black"
-												/>
-											) : (
-												<Pause
-													size={25}
-													class="absolute inset-0 z-10 m-auto fill-(--dominant-color) drop-shadow-md drop-shadow-black"
-												/>
-											))}
-
-										<img
-											loading="lazy"
-											decoding="async"
-											src={song.album?.covers?.[0]}
-											alt={song.name}
-											className={cn(
-												"h-10 w-10 rounded-md",
-												isCurrent && "brightness-40",
-											)}
-										/>
-									</div>
-
-									<div class="flex min-w-0 flex-col text-start">
-										<span className="truncate text-sm text-white">
-											{song.name}
-										</span>
-
-										<span className="truncate text-xs text-zinc-400">
-											<ArtistLinks artists={song.artists} />
-											{song.album?.title && (
-												<>
-													{" • "}
-													<AlbumLink album={song.album} />
-												</>
-											)}
-										</span>
-									</div>
-								</div>
-
-								<div class="flex shrink-0 items-center gap-2">
-									<SaveYoutubeId song={song} compact />
-									<button
-										type="button"
-										title="Encolar después del tema actual"
-										onClick={(e) => {
-											e.stopPropagation();
-											enqueue(song);
-										}}
-										class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-amber-300"
-									>
-										<ListPlus size={18} strokeWidth={2} />
-									</button>
-									<div className="tabular-nums text-xs text-zinc-500">
-										{secondsToTime(song.duration)}
-									</div>
-								</div>
+								<PlaylistRowMemo song={song} songs={songs} />
 							</div>
 						);
 					})}
