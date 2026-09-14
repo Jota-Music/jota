@@ -1,7 +1,11 @@
-import type { ComponentChildren } from "preact";
+import { type ComponentChildren, createContext, type RefObject } from "preact";
 import { createPortal } from "preact/compat";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import { cn } from "@/lib/shared/utils/tw";
+
+export const OverlayHost = createContext<RefObject<HTMLDivElement> | null>(
+	null,
+);
 
 interface SheetProps {
 	open: boolean;
@@ -28,6 +32,7 @@ export function Sheet({
 	const [shown, setShown] = useState(false);
 	const panelRef = useRef<HTMLDivElement>(null);
 	const drag = useRef({ active: false, startY: 0, startTime: 0, offset: 0 });
+	const host = useContext(OverlayHost)?.current ?? null;
 
 	const clearInline = () => {
 		const el = panelRef.current;
@@ -93,7 +98,8 @@ export function Sheet({
 	return createPortal(
 		<div
 			class={cn(
-				"fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4",
+				"z-50 flex items-end justify-center p-0 sm:items-center sm:p-4",
+				host ? "absolute inset-0" : "fixed inset-0",
 				mobileOnly && "md:hidden",
 			)}
 			role="presentation"
@@ -114,7 +120,8 @@ export function Sheet({
 					if (e.propertyName === "translate") clearInline();
 				}}
 				class={cn(
-					"relative z-10 flex max-h-[85dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)] shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out sm:rounded-2xl",
+					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)] shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out sm:rounded-2xl",
+					host ? "max-h-full" : "max-h-[85dvh]",
 					shown
 						? "translate-y-0 opacity-100 sm:scale-100"
 						: "translate-y-full opacity-0 sm:translate-y-0 sm:scale-95",
@@ -136,6 +143,6 @@ export function Sheet({
 				{children}
 			</div>
 		</div>,
-		document.body,
+		host ?? document.body,
 	);
 }
