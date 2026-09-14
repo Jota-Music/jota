@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { CirclePlay, Heart, ListPlus, ListVideo, Loader } from "lucide-preact";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
 	searchYouTube,
@@ -23,6 +23,54 @@ import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type Tab = "videos" | "playlists";
 
+const videoIdPattern = /^[A-Za-z0-9_-]{11}$/;
+const playlistIdPattern = /^(PL|LL|FL|RD|UU|OL|PU)[A-Za-z0-9_-]{10,}$/;
+
+// A pasted YouTube link/ID decides which category it points to. A video (song)
+// wins over a playlist, so a "song inside a playlist" link opens the song.
+function queryTarget(query: string): Tab {
+	const trimmed = query.trim();
+
+	try {
+		const u = new URL(trimmed);
+		const host = u.hostname.replace(/^(www|music|m)\./, "");
+		const v = u.searchParams.get("v");
+		if (v && videoIdPattern.test(v)) return "videos";
+		if (host === "youtu.be" && videoIdPattern.test(u.pathname.slice(1))) {
+			return "videos";
+		}
+		const [, kind, id] = u.pathname.split("/");
+		if (
+			(kind === "shorts" || kind === "embed" || kind === "live") &&
+			videoIdPattern.test(id ?? "")
+		) {
+			return "videos";
+		}
+		if (u.searchParams.get("list")) return "playlists";
+	} catch {
+		// not a URL
+	}
+
+	if (videoIdPattern.test(trimmed)) return "videos";
+	if (playlistIdPattern.test(trimmed)) return "playlists";
+	return "videos";
+}
+
+// A direct query is a YouTube URL or a bare video/playlist ID: it resolves to a
+// single known category, so there is nothing to switch between.
+function isDirectQuery(query: string): boolean {
+	const trimmed = query.trim();
+	if (videoIdPattern.test(trimmed) || playlistIdPattern.test(trimmed)) {
+		return true;
+	}
+	try {
+		const protocol = new URL(trimmed).protocol;
+		return protocol === "http:" || protocol === "https:";
+	} catch {
+		return false;
+	}
+}
+
 export function YouTubeSearchPage() {
 	const [, params] = useRoute<{ query: string }>("/search/youtube/:query");
 
@@ -30,25 +78,50 @@ export function YouTubeSearchPage() {
 
 	useMeta(`Jota | YouTube: ${query}`, `YouTube results for "${query}"`);
 
-	const [tab, setTab] = useState<Tab>("videos");
+	const target = queryTarget(query);
+	const direct = isDirectQuery(query);
+	const [tab, setTab] = useState<Tab>(target);
 	const queryClient = useQueryClient();
+
+	useEffect(() => {
+		setTab(target);
+	}, [target]);
+
+	const wantVideos = !!query && (!direct || target === "videos");
+	const wantPlaylists = !!query && (!direct || target === "playlists");
 
 	const videosQuery = useQuery({
 		queryKey: ["youtube-search", query],
 		queryFn: () => searchYouTube(query),
-		enabled: !!query && tab === "videos",
+		enabled: wantVideos,
 	});
 
 	const playlistsQuery = useQuery({
 		queryKey: ["youtube-playlist-search", query],
 		queryFn: () => searchYouTubePlaylists(query),
-		enabled: !!query && tab === "playlists",
+		enabled: wantPlaylists,
 	});
+
+	const videos = videosQuery.data ?? [];
+	const playlists = playlistsQuery.data ?? [];
+
+	const videosAvailable =
+		wantVideos && (videosQuery.isSuccess ? videos.length > 0 : true);
+	const playlistsAvailable =
+		wantPlaylists && (playlistsQuery.isSuccess ? playlists.length > 0 : true);
+
+	// Only offer the switcher when both categories actually have content.
+	const bothAvailable = videosAvailable && playlistsAvailable;
+	const activeTab: Tab = bothAvailable
+		? tab
+		: videosAvailable
+			? "videos"
+			: "playlists";
 
 	const savedQuery = useQuery({
 		queryKey: ["youtube-playlists"],
 		queryFn: getYouTubePlaylists,
-		enabled: tab === "playlists",
+		enabled: activeTab === "playlists",
 	});
 
 	const saved = new Set((savedQuery.data ?? []).map((p) => p.id));
@@ -77,47 +150,55 @@ export function YouTubeSearchPage() {
 			queryClient.invalidateQueries({ queryKey: ["youtube-playlists"] }),
 	});
 
-	const songs: Song[] = (videosQuery.data ?? []).map(youtubeVideoToSong);
-	const playlists = playlistsQuery.data ?? [];
+	const songs: Song[] = videos.map(youtubeVideoToSong);
 
 	function handleClick(song: Song) {
 		void playFromQueueSelection(songs, song);
 	}
+
+	const loading =
+		(wantVideos && videosQuery.isLoading) ||
+		(wantPlaylists && playlistsQuery.isLoading);
+	const hasResults = videosAvailable || playlistsAvailable;
 
 	return (
 		<DefaultLayout class="gap-4">
 			<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
 				<header class="flex shrink-0 flex-col gap-3">
 					<h2 class="text-xl font-semibold leading-tight">{query}</h2>
-					<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-						<button
-							type="button"
-							title="Videos"
-							onClick={() => setTab("videos")}
-							class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors ${
-								tab === "videos"
-									? "bg-zinc-800 text-white"
-									: "text-zinc-500 hover:text-zinc-300"
-							}`}
-						>
-							<CirclePlay size={18} />
-						</button>
-						<button
-							type="button"
-							title="Playlists"
-							onClick={() => setTab("playlists")}
-							class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors ${
-								tab === "playlists"
-									? "bg-zinc-800 text-white"
-									: "text-zinc-500 hover:text-zinc-300"
-							}`}
-						>
-							<ListVideo size={16} />
-						</button>
-					</div>
+					{bothAvailable && (
+						<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+							<button
+								type="button"
+								title="Videos"
+								onClick={() => setTab("videos")}
+								class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors ${
+									activeTab === "videos"
+										? "bg-zinc-800 text-white"
+										: "text-zinc-500 hover:text-zinc-300"
+								}`}
+							>
+								<CirclePlay size={18} />
+							</button>
+							<button
+								type="button"
+								title="Playlists"
+								onClick={() => setTab("playlists")}
+								class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors ${
+									activeTab === "playlists"
+										? "bg-zinc-800 text-white"
+										: "text-zinc-500 hover:text-zinc-300"
+								}`}
+							>
+								<ListVideo size={16} />
+							</button>
+						</div>
+					)}
 				</header>
 
-				{tab === "playlists" ? (
+				{!hasResults && !loading ? (
+					<p class="text-sm text-zinc-500">No results found.</p>
+				) : activeTab === "playlists" ? (
 					<section class="flex min-h-0 flex-1 flex-col overflow-y-auto">
 						{playlistsQuery.isLoading ? (
 							<div class="flex items-center gap-2 text-sm text-zinc-500">

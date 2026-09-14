@@ -187,6 +187,47 @@ func TestPlaylistSearchParsing(t *testing.T) {
 	}
 }
 
+func TestPlaylistIdFromQuery(t *testing.T) {
+	cases := map[string]string{
+		"https://www.youtube.com/playlist?list=PLabc1234567":       "PLabc1234567",
+		"https://www.youtube.com/watch?v=x&list=PLabc1234567&t=1s": "PLabc1234567",
+		"PLabc1234567": "PLabc1234567",
+		"dQw4w9WgXcQ":  "",
+		"peso pluma":   "",
+		"PLshort":      "",
+	}
+	for in, want := range cases {
+		if got := playlistIdFromQuery(in); got != want {
+			t.Fatalf("playlistIdFromQuery(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestVideoIdFromQuery(t *testing.T) {
+	cases := map[string]string{
+		"https://www.youtube.com/watch?v=dQw4w9WgXcQ":                   "dQw4w9WgXcQ",
+		"https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLabc1234567": "dQw4w9WgXcQ",
+		"https://youtu.be/dQw4w9WgXcQ":                                  "dQw4w9WgXcQ",
+		"https://www.youtube.com/shorts/dQw4w9WgXcQ":                    "dQw4w9WgXcQ",
+		"dQw4w9WgXcQ": "dQw4w9WgXcQ",
+		"https://www.youtube.com/playlist?list=PLabc1234567": "",
+		"PLabc1234567": "",
+		"peso pluma":   "",
+	}
+	for in, want := range cases {
+		got, ok := videoIdFromQuery(in)
+		if want == "" {
+			if ok {
+				t.Fatalf("videoIdFromQuery(%q) = %q, want none", in, got)
+			}
+			continue
+		}
+		if !ok || got != want {
+			t.Fatalf("videoIdFromQuery(%q) = %q/%v, want %q", in, got, ok, want)
+		}
+	}
+}
+
 func TestNormalizePlaylistId(t *testing.T) {
 	cases := map[string]string{
 		"PLabc":             "PLabc",

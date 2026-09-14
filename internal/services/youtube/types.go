@@ -14,6 +14,9 @@ type format struct {
 }
 
 type playerResponse struct {
+	VideoDetails struct {
+		Title string `json:"title"`
+	} `json:"videoDetails"`
 	StreamingData struct {
 		Formats         []format `json:"formats"`
 		AdaptiveFormats []format `json:"adaptiveFormats"`

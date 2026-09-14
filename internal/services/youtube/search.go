@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"jota/server/internal/kv"
 	"jota/server/internal/music"
+	"net/url"
+	"regexp"
+	"strings"
 )
 
 var youtubeSourceBucket = kv.UseBucket("youtube-source")
@@ -13,6 +16,12 @@ var youtubeSourceBucket = kv.UseBucket("youtube-source")
 func (s *Service) Search(query string) ([]Video, error) {
 	if query == "" {
 		return nil, errors.New("empty query")
+	}
+
+	if id, ok := videoIdFromQuery(query); ok {
+		if v, err := fetchVideo(id); err == nil {
+			return []Video{v}, nil
+		}
 	}
 
 	payload := map[string]any{
@@ -50,12 +59,95 @@ func (s *Service) Search(query string) ([]Video, error) {
 	return videos, nil
 }
 
+var videoIdPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
+
+// videoIdFromQuery extracts a video ID when the query is a YouTube video URL
+// (watch?v=, youtu.be, /shorts, /embed, /live) or a bare 11-char video ID.
+// A `list=` param does not override the video, so shared "song in playlist"
+// links resolve to the song.
+func videoIdFromQuery(query string) (string, bool) {
+	query = strings.TrimSpace(query)
+	u, err := url.Parse(query)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		if videoIdPattern.MatchString(query) {
+			return query, true
+		}
+		return "", false
+	}
+
+	host := strings.TrimPrefix(strings.ToLower(u.Hostname()), "www.")
+	if host == "youtu.be" {
+		id := strings.Trim(u.Path, "/")
+		if videoIdPattern.MatchString(id) {
+			return id, true
+		}
+	}
+	if id := u.Query().Get("v"); videoIdPattern.MatchString(id) {
+		return id, true
+	}
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(parts) == 2 && (parts[0] == "shorts" || parts[0] == "embed" || parts[0] == "live") &&
+		videoIdPattern.MatchString(parts[1]) {
+		return parts[1], true
+	}
+	return "", false
+}
+
+func fetchVideo(id string) (Video, error) {
+	payload := map[string]any{
+		"videoId":        id,
+		"context":        map[string]any{"client": clientContext()},
+		"contentCheckOk": true,
+		"racyCheckOk":    true,
+	}
+
+	data, err := retryRequest("https://www.youtube.com/youtubei/v1/player", payload, true, 3)
+	if err != nil {
+		return Video{}, fmt.Errorf("player request failed: %w", err)
+	}
+
+	var pr playerResponse
+	if err := json.Unmarshal(data, &pr); err != nil {
+		return Video{}, fmt.Errorf("invalid JSON: %w", err)
+	}
+	if pr.VideoDetails.Title == "" {
+		return Video{}, errors.New("video unavailable")
+	}
+
+	return Video{ID: id, Title: pr.VideoDetails.Title}, nil
+}
+
 // playlistFilter is the innertube search params that restricts results to playlists.
 const playlistFilter = "EgIQAw=="
+
+// playlistIdPattern matches bare playlist IDs (PL…, LL…, FL…, RD…, UU…, OL…, PU…).
+var playlistIdPattern = regexp.MustCompile(`^(?:PL|LL|FL|RD|UU|OL|PU)[A-Za-z0-9_-]{10,}$`)
+
+// playlistIdFromQuery extracts a playlist ID when the query is a YouTube URL with
+// a list= param or a bare playlist ID, so pasting a link resolves directly.
+func playlistIdFromQuery(query string) string {
+	query = strings.TrimSpace(query)
+	if u, err := url.Parse(query); err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		if id := u.Query().Get("list"); id != "" {
+			return normalizePlaylistId(id)
+		}
+	}
+	if playlistIdPattern.MatchString(query) {
+		return normalizePlaylistId(query)
+	}
+	return ""
+}
 
 func (s *Service) SearchPlaylists(query string) ([]music.PlaylistSummary, error) {
 	if query == "" {
 		return nil, errors.New("empty query")
+	}
+
+	if id := playlistIdFromQuery(query); id != "" {
+		if summary, err := fetchPlaylistSummary(id); err == nil {
+			summary.Id = "youtube:" + id
+			return []music.PlaylistSummary{summary}, nil
+		}
 	}
 
 	payload := map[string]any{
