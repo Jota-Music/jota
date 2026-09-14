@@ -35,7 +35,7 @@ export function Header({
 	className?: string;
 	onDragStart?: (e: MouseEvent) => void;
 }) {
-	const [, setLocation] = useLocation();
+	const [location, setLocation] = useLocation();
 	const desktop = System.IsDesktop();
 	const [openSearch, setOpenSearch] = useState(false);
 	const [searchDraft, setSearchDraft] = useState("");
@@ -96,13 +96,15 @@ export function Header({
 		>
 			<div class="mx-auto flex items-center justify-between text-sm text-zinc-300 h-10 px-4">
 				<div class="flex items-center gap-3 pl-1">
-					<button
-						type="button"
-						onClick={goBack}
-						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
-					>
-						<ArrowLeft class="size-5 md:size-4" />
-					</button>
+					{location !== "/" && (
+						<button
+							type="button"
+							onClick={goBack}
+							class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
+						>
+							<ArrowLeft class="size-5 md:size-4" />
+						</button>
+					)}
 
 					<Link
 						href="/settings"
