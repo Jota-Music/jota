@@ -87,12 +87,15 @@ export function Header({
 					<button
 						type="button"
 						onClick={goBack}
-						class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
+						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
 					>
 						<ArrowLeft class="size-5 md:size-4" />
 					</button>
 
-					<Link href="/" class="text-zinc-400 hover:text-zinc-100">
+					<Link
+						href="/"
+						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100"
+					>
 						<House class="size-5 md:size-4" />
 					</Link>
 				</div>
@@ -101,7 +104,7 @@ export function Header({
 					<button
 						type="button"
 						onClick={() => setOpenSearch((v) => !v)}
-						class="text-zinc-400 hover:text-zinc-100 cursor-pointer"
+						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
 					>
 						<Search class="size-5 md:size-4" />
 					</button>
@@ -110,7 +113,7 @@ export function Header({
 						onClick={() => (showSync.value = !showSync.value)}
 						type="button"
 						title="Listen together"
-						class="cursor-pointer"
+						class="flex size-8 items-center justify-center cursor-pointer"
 					>
 						<Users class="size-5 md:size-4 text-zinc-400 hover:text-zinc-100" />
 					</button>
@@ -120,7 +123,7 @@ export function Header({
 					<Link
 						href="/settings"
 						title="Settings"
-						class="text-zinc-400 hover:text-zinc-100"
+						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100"
 					>
 						<Settings class="size-5 md:size-4" />
 					</Link>
