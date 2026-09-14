@@ -93,6 +93,14 @@ export function Header({
 					</button>
 
 					<Link
+						href="/settings"
+						title="Settings"
+						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100"
+					>
+						<Settings class="size-5 md:size-4" />
+					</Link>
+
+					<Link
 						href="/"
 						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100"
 					>
@@ -120,14 +128,6 @@ export function Header({
 				</div>
 
 				<div class="flex items-center gap-3 pr-1 h-full">
-					<Link
-						href="/settings"
-						title="Settings"
-						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100"
-					>
-						<Settings class="size-5 md:size-4" />
-					</Link>
-
 					{desktop && <div class="h-full w-26" aria-hidden />}
 					<WindowControlsBar />
 				</div>
