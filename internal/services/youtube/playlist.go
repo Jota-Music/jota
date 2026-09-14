@@ -91,7 +91,15 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 		continuation = list.next()
 	}
 
+	name, cover := "", ""
+	if header, ok := res.headerRenderer(); ok {
+		name = header.Title.first()
+		cover = header.Banner.HeroPlaylistThumbnailRenderer.Thumbnail.url()
+	}
+
 	return music.Playlist{
+		Name:  name,
+		Cover: cover,
 		Songs: songs,
 		Page: music.Page{
 			Size:    len(songs),

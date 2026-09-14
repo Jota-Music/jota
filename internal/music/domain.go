@@ -38,6 +38,8 @@ type Page struct {
 }
 
 type Playlist struct {
+	Name  string `json:"name,omitempty"`
+	Cover string `json:"cover,omitempty"`
 	Songs []Song `json:"songs"`
 	Page  Page   `json:"page"`
 }

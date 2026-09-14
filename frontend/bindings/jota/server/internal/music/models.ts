@@ -49,6 +49,8 @@ export interface Page {
 }
 
 export interface Playlist {
+    "name"?: string;
+    "cover"?: string;
     "songs": Song[] | null;
     "page": Page;
 }

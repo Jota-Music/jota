@@ -101,7 +101,11 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 		allSongs = append(allSongs, r.songs...)
 	}
 
+	meta, _ := getPlaylistMetadata(ctx, sess, uri)
+
 	return music.Playlist{
+		Name:  meta.name,
+		Cover: meta.cover,
 		Songs: allSongs,
 		Page: music.Page{
 			Size:    total,
