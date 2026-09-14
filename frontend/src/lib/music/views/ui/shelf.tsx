@@ -1,8 +1,8 @@
 import { Disc3, LayoutGrid, List, X } from "lucide-preact";
 import { useState } from "preact/hooks";
 import { Link } from "wouter-preact";
-import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
+import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
 import { cn } from "@/lib/shared/utils/tw";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
