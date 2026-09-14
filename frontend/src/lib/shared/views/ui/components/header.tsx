@@ -128,7 +128,7 @@ export function Header({
 						onClick={() => setOpenSearch((v) => !v)}
 						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
 					>
-						<Search class="size-5 md:size-4" />
+						<Search class="size-5 md:size-4" strokeWidth={2.5} />
 					</button>
 
 					<button
@@ -177,7 +177,7 @@ export function Header({
 								title="Search"
 								class="ml-auto flex w-11 shrink-0 cursor-pointer items-center justify-center text-(--binary-color) bg-(--dominant-color) transition-opacity hover:opacity-75"
 							>
-								<Search class="size-5" />
+								<Search class="size-5" strokeWidth={2.5} />
 							</button>
 						</div>
 					</div>
@@ -200,7 +200,7 @@ export function Header({
 							type="submit"
 							title="Search"
 						>
-							<Search class="size-4" />
+							<Search class="size-4" strokeWidth={2.5} />
 						</button>
 					</div>
 				</form>
