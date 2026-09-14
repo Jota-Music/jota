@@ -34,6 +34,13 @@ export interface ArtistInfo {
     "tracks": Song[] | null;
 }
 
+export interface Audio {
+    "url": string;
+    "duration": number;
+    "expireAt": number;
+    "videoId": string;
+}
+
 export interface Page {
     "size": number;
     "offset": number;

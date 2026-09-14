@@ -10,7 +10,7 @@ import (
 
 var youtubeSourceBucket = kv.UseBucket("youtube-source")
 
-func Search(query string) ([]Video, error) {
+func (s *Service) Search(query string) ([]Video, error) {
 	if query == "" {
 		return nil, errors.New("empty query")
 	}
@@ -98,22 +98,22 @@ func extractPlaylists(res playlistSearchResponse) []music.PlaylistSummary {
 	return out
 }
 
-func candidates(id, search string) ([]string, error) {
+func (s *Service) candidates(cacheKey, search string) ([]string, error) {
 	if search == "" {
-		if !isYoutubeId(id) {
+		if !isYoutubeId(cacheKey) {
 			return nil, errors.New("no search query and not a youtube id")
 		}
-		return []string{id}, nil
+		return []string{cacheKey}, nil
 	}
 
 	var ids []string
 	seen := map[string]bool{}
-	if cached, err := youtubeSourceBucket.GetString(id); err == nil && cached != "" {
+	if cached, err := youtubeSourceBucket.GetString(cacheKey); err == nil && cached != "" {
 		ids = append(ids, cached)
 		seen[cached] = true
 	}
 
-	videos, err := Search(search)
+	videos, err := s.Search(search)
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}
@@ -130,13 +130,4 @@ func candidates(id, search string) ([]string, error) {
 	}
 
 	return ids, nil
-}
-
-func SetYoutubeId(id string, youtubeId string) error {
-	// Invalidate cached audio so the new video is resolved on the next request.
-	if old, err := youtubeSourceBucket.GetString(id); err == nil && old != "" && old != youtubeId {
-		_ = audioBucket.Delete(old)
-	}
-	_ = audioBucket.Delete("spotify:" + id)
-	return youtubeSourceBucket.SetString(id, youtubeId)
 }

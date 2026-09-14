@@ -17,7 +17,7 @@ import (
 type App struct {
 	ctx     context.Context
 	Spotify *spotify.SpotifyService
-	Music   *music.MusicRepository
+	Catalog *music.Catalog
 	YouTube *youtube.Service
 	Sync    *sync.Service
 }
@@ -25,10 +25,11 @@ type App struct {
 func New() *App {
 	cfg := env.Load()
 	spotifySvc := spotify.NewSpotifyService(cfg.SpotifyClientID)
+	youTubeSvc := youtube.NewService()
 	return &App{
 		Spotify: spotifySvc,
-		Music:   music.NewMusicRepository(spotifySvc),
-		YouTube: youtube.NewService(),
+		Catalog: music.NewCatalog(spotifySvc, youTubeSvc),
+		YouTube: youTubeSvc,
 		Sync:    sync.New(),
 	}
 }
@@ -95,65 +96,61 @@ func (a *App) OpenURL(url string) error {
 // ----- Music bindings -----
 
 func (a *App) GetFullPlaylist(id string) (music.Playlist, error) {
-	return a.Music.GetFullPlaylist(id)
+	return a.Catalog.GetFullPlaylist(id)
 }
 
 func (a *App) GetFullPlaylistNoCache(id string) (music.Playlist, error) {
-	return a.Music.GetFullPlaylistNoCache(id)
+	return a.Catalog.GetFullPlaylistNoCache(id)
 }
 
 func (a *App) RevalidateFullPlaylist(id string) error {
-	return a.Music.RevalidateFullPlaylist(id)
-}
-
-func (a *App) GetPlaylist(id string, page int, size int) (music.Playlist, error) {
-	return a.Music.GetPlaylist(id, page, size)
+	return a.Catalog.RevalidateFullPlaylist(id)
 }
 
 func (a *App) GetUserPlaylists(user string) ([]music.PlaylistSummary, error) {
-	return a.Music.GetUserPlaylists(user)
+	return a.Spotify.GetUserPlaylists(user)
 }
 
 func (a *App) GetUserPlaylistsNoCache(user string) ([]music.PlaylistSummary, error) {
-	return a.Music.GetUserPlaylistsNoCache(user)
+	return a.Spotify.GetUserPlaylistsNoCache(user)
 }
 
 func (a *App) RevalidateUserPlaylists(user string) error {
-	return a.Music.RevalidateUserPlaylists(user)
+	return a.Spotify.RevalidateUserPlaylists(user)
 }
 
 func (a *App) GetSong(id string) (music.Song, error) {
-	return a.Music.GetSong(id)
+	return a.Spotify.GetSong(id)
 }
 
 func (a *App) Search(query string, searchType string) ([]music.SearchResult, error) {
-	return a.Music.Search(query, searchType)
+	return a.Spotify.Search(query, searchType)
 }
 
 func (a *App) GetArtist(uri string) (music.ArtistInfo, error) {
-	return a.Music.GetArtist(uri)
+	return a.Spotify.GetArtist(uri)
 }
 
 func (a *App) GetArtistDiscography(uri string) (music.ArtistDiscography, error) {
-	return a.Music.GetArtistDiscography(uri)
+	return a.Spotify.GetArtistDiscography(uri)
 }
 
 func (a *App) GetAlbumTracks(uri string) ([]music.Song, error) {
-	return a.Music.GetAlbumTracks(uri)
+	return a.Spotify.GetAlbumTracks(uri)
 }
 
 // ----- YouTube bindings -----
 
-func (a *App) GetYouTubeAudio(spotifyId string, search string) (youtube.Audio, error) {
-	return a.YouTube.GetAudio(spotifyId, search)
+func (a *App) ResolveAudio(song music.Song) (music.Audio, error) {
+	return a.YouTube.ResolveAudio(song)
 }
 
-func (a *App) SetYouTubeId(spotifyId string, youtubeId string) error {
-	return a.YouTube.SetYoutubeId(spotifyId, youtubeId)
+func (a *App) SetYouTubeId(cacheKey string, youtubeId string) error {
+	return a.YouTube.SetYoutubeId(cacheKey, youtubeId)
 }
 
 func (a *App) SearchYouTube(query string) ([]youtube.Video, error) {
-	return youtube.Search(query)
+	return a.YouTube.Search(query)
 }
 
 func (a *App) SearchYouTubePlaylists(query string) ([]music.PlaylistSummary, error) {

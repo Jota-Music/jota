@@ -2,7 +2,7 @@ import { computed, effect, signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
 import { getFullPlaylist } from "@/lib/music/app/get-playlist";
-import type { Song } from "@/lib/music/model";
+import type { Playlist, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 
 const storageKey = "playlist_filters";
@@ -13,15 +13,6 @@ type Filters = {
 	search: string;
 	order: OrderType;
 };
-
-type PlaylistTrackItem = {
-	track: Song;
-};
-
-type PlaylistResponse =
-	| { songs: Song[] }
-	| { items: PlaylistTrackItem[] }
-	| { tracks: PlaylistTrackItem[] };
 
 /* ------------------ Filters ------------------ */
 
@@ -63,24 +54,6 @@ function saveFilters(data: Filters): void {
 }
 
 /* ------------------ Data helpers ------------------ */
-
-function normalizeSongs(data: PlaylistResponse | undefined): Song[] {
-	if (!data) return [];
-
-	if ("songs" in data && Array.isArray(data.songs)) {
-		return data.songs;
-	}
-
-	if ("items" in data && Array.isArray(data.items)) {
-		return data.items.map((item) => item.track);
-	}
-
-	if ("tracks" in data && Array.isArray(data.tracks)) {
-		return data.tracks.map((item) => item.track);
-	}
-
-	return [];
-}
 
 function sortSongs(songs: Song[], order: OrderType): Song[] {
 	switch (order) {
@@ -127,7 +100,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	const queryClient = useQueryClient();
 	const refreshing = signal(false);
 
-	const { data, isLoading, isError } = useQuery<PlaylistResponse>({
+	const { data, isLoading, isError } = useQuery<Playlist>({
 		queryKey: ["playlist", id],
 		queryFn: () => getFullPlaylist(id),
 	});
@@ -142,7 +115,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		refreshing.value = false;
 	}
 
-	const songs = normalizeSongs(data);
+	const songs = data?.songs ?? [];
 
 	const filteredSongs = computed(() => {
 		const query = search.value.trim().toLowerCase();

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"jota/server/internal/kv"
+	"jota/server/internal/music"
 	"net/url"
 	"strconv"
 	"strings"
@@ -86,7 +87,7 @@ func ttlFromExpire(expireAt int64) (time.Duration, bool) {
 	return time.Duration(ttl) * time.Second, true
 }
 
-func audioCacheStillValid(a *Audio) bool {
+func audioCacheStillValid(a *music.Audio) bool {
 	if a == nil || a.Url == "" || a.ExpireAt <= 0 {
 		return false
 	}
@@ -94,7 +95,7 @@ func audioCacheStillValid(a *Audio) bool {
 	return a.ExpireAt > now+30
 }
 
-func GetAudioURL(videoID string) (string, error) {
+func audioURL(videoID string) (string, error) {
 	if len(videoID) != 11 {
 		return "", errors.New("invalid video ID length")
 	}
@@ -140,12 +141,12 @@ func GetAudioURL(videoID string) (string, error) {
 	return f.URL, nil
 }
 
-func GetAudio(youtubeId string) (*Audio, error) {
+func fetchAudio(youtubeId string) (*music.Audio, error) {
 	if strings.TrimSpace(youtubeId) == "" {
 		return nil, errors.New("no video ID provided")
 	}
 
-	var cached Audio
+	var cached music.Audio
 	err := audioBucket.GetObject(youtubeId, &cached)
 	if err == nil && audioCacheStillValid(&cached) {
 		return &cached, nil
@@ -154,7 +155,7 @@ func GetAudio(youtubeId string) (*Audio, error) {
 		return nil, fmt.Errorf("cache error: %w", err)
 	}
 
-	streamURL, err := GetAudioURL(youtubeId)
+	streamURL, err := audioURL(youtubeId)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +170,7 @@ func GetAudio(youtubeId string) (*Audio, error) {
 		return nil, errors.New("stream URL expired before it could be cached")
 	}
 
-	audio := Audio{
+	audio := music.Audio{
 		Url:      streamURL,
 		Duration: info.Duration,
 		ExpireAt: info.ExpireAt,
@@ -183,9 +184,9 @@ func GetAudio(youtubeId string) (*Audio, error) {
 	return &audio, nil
 }
 
-func GetCachedAudioBySpotifyId(spotifyId string) *Audio {
-	var cached Audio
-	if err := audioBucket.GetObject("spotify:"+spotifyId, &cached); err == nil {
+func cachedAudioBySong(cacheKey string) *music.Audio {
+	var cached music.Audio
+	if err := audioBucket.GetObject("spotify:"+cacheKey, &cached); err == nil {
 		if audioCacheStillValid(&cached) {
 			return &cached
 		}
@@ -193,8 +194,8 @@ func GetCachedAudioBySpotifyId(spotifyId string) *Audio {
 	return nil
 }
 
-func GetCachedAudioByYoutubeId(youtubeId string) *Audio {
-	var cached Audio
+func cachedAudioByYoutube(youtubeId string) *music.Audio {
+	var cached music.Audio
 	if err := audioBucket.GetObject(youtubeId, &cached); err == nil {
 		if audioCacheStillValid(&cached) {
 			return &cached
@@ -203,6 +204,6 @@ func GetCachedAudioByYoutubeId(youtubeId string) *Audio {
 	return nil
 }
 
-func SaveAudioForSpotifyId(spotifyId string, audio Audio, ttl time.Duration) {
-	_ = audioBucket.SetObject("spotify:"+spotifyId, audio, ttl)
+func saveAudioBySong(cacheKey string, audio music.Audio) {
+	_ = audioBucket.SetObject("spotify:"+cacheKey, audio)
 }

@@ -7,6 +7,7 @@ export type {
     Artist,
     ArtistDiscography,
     ArtistInfo,
+    Audio,
     Page,
     Playlist,
     PlaylistSummary,

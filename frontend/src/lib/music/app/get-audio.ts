@@ -1,23 +1,26 @@
-import { GetYouTubeAudio, SetYouTubeId } from "@bindings/app";
+import { ResolveAudio, SetYouTubeId } from "@bindings/app";
 import type { Audio, Song } from "@/lib/music/model";
 
 export type { Audio };
+
+function toAudio(data: Audio, fallback: string): Audio & { youtube: string } {
+	return {
+		url: data.url,
+		duration: data.duration,
+		expireAt: data.expireAt,
+		videoId: data.videoId,
+		youtube: data.videoId ?? fallback,
+	};
+}
 
 export async function getAudio(
 	song: Song,
 ): Promise<Audio & { youtube: string }> {
 	try {
-		const data = (await GetYouTubeAudio(
-			song.id,
-			`${song.name} ${song.artists.map((artist: { name: string }) => artist.name).join(", ")}`,
+		const data = (await ResolveAudio(
+			song as unknown as Parameters<typeof ResolveAudio>[0],
 		)) as unknown as Audio;
-		return {
-			url: data.url,
-			duration: data.duration,
-			expireAt: data.expireAt,
-			videoId: data.videoId,
-			youtube: data.videoId ?? song.id,
-		};
+		return toAudio(data, song.youtubeId ?? song.id);
 	} catch (error) {
 		console.error(error);
 		throw error;

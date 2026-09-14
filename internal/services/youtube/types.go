@@ -7,13 +7,6 @@ type Video struct {
 	Title string
 }
 
-type Audio struct {
-	Url      string `json:"url"`
-	Duration int    `json:"duration"`
-	ExpireAt int64  `json:"expireAt"`
-	VideoID  string `json:"videoId"`
-}
-
 type format struct {
 	Itag     int    `json:"itag"`
 	MimeType string `json:"mimeType"`

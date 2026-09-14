@@ -112,64 +112,6 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 	}, nil
 }
 
-func (s *SpotifyService) GetPlaylist(playlistID string, page, size int) (music.Playlist, error) {
-	if page < 0 {
-		page = 0
-	}
-	if size <= 0 {
-		size = 20
-	}
-
-	uri := normalizePlaylistID(playlistID)
-	offset := page * size
-
-	ctx := context.Background()
-	sess := s.Session()
-	if sess == nil {
-		return music.Playlist{}, ErrNotConnected
-	}
-
-	ctxTracks, err := resolveContextTracks(ctx, sess, uri)
-	if err != nil {
-		return music.Playlist{}, fmt.Errorf("resolve playlist: %w", err)
-	}
-	total := len(ctxTracks)
-
-	if offset >= total {
-		return music.Playlist{
-			Songs: []music.Song{},
-			Page: music.Page{
-				Size:    size,
-				Offset:  offset,
-				Total:   total,
-				HasNext: false,
-			},
-		}, nil
-	}
-	end := offset + size
-	if end > total {
-		end = total
-	}
-
-	tracks := tracksFromContext(ctxTracks[offset:end])
-	enrichTracks(ctx, sess, tracks)
-
-	songs := make([]music.Song, 0, len(tracks))
-	for _, t := range tracks {
-		songs = append(songs, trackToSong(t))
-	}
-
-	return music.Playlist{
-		Songs: songs,
-		Page: music.Page{
-			Size:    size,
-			Offset:  offset,
-			Total:   total,
-			HasNext: end < total,
-		},
-	}, nil
-}
-
 func (s *SpotifyService) GetUserPlaylists(user string) ([]music.PlaylistSummary, error) {
 	return cachedUserPlaylists(user, func() ([]music.PlaylistSummary, error) {
 		return s.userPlaylists(user)

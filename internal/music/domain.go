@@ -42,6 +42,13 @@ type Playlist struct {
 	Page  Page   `json:"page"`
 }
 
+type Audio struct {
+	Url      string `json:"url"`
+	Duration int    `json:"duration"`
+	ExpireAt int64  `json:"expireAt"`
+	VideoID  string `json:"videoId"`
+}
+
 type PlaylistSummary struct {
 	Id       string `json:"id"`
 	Name     string `json:"name"`

@@ -132,31 +132,12 @@ func fetchPlaylistSummary(playlistID string) (music.PlaylistSummary, error) {
 	}, nil
 }
 
-func cachedPlaylist(playlistID string, fetch func() (music.Playlist, error)) (music.Playlist, error) {
-	if err := kv.EnsureStarted(); err != nil {
-		return fetch()
-	}
-
-	var cached music.Playlist
-	if err := playlistBucket.GetObject("playlist:"+playlistID, &cached); err == nil {
-		return cached, nil
-	}
-
-	playlist, err := fetch()
-	if err != nil {
-		return music.Playlist{}, err
-	}
-
-	_ = playlistBucket.SetObject("playlist:"+playlistID, &playlist, playlistCacheTTL)
-	return playlist, nil
-}
-
 func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 	playlistID := normalizePlaylistId(id)
 	if playlistID == "" {
 		return music.Playlist{}, errors.New("invalid playlist id")
 	}
-	return cachedPlaylist(playlistID, func() (music.Playlist, error) {
+	return kv.Cached(playlistBucket, "playlist:"+playlistID, playlistCacheTTL, func() (music.Playlist, error) {
 		return fetchFullPlaylist(playlistID)
 	})
 }
