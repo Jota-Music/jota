@@ -77,7 +77,7 @@ func main() {
 		Title:            "Jota",
 		Width:            1100,
 		Height:           720,
-		MinWidth:         320,
+		MinWidth:         500,
 		MinHeight:        480,
 		Frameless:        true,
 		AlwaysOnTop:      state.AlwaysOnTop,
