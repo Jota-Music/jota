@@ -1,10 +1,7 @@
 import { Link } from "wouter-preact";
-import useMeta from "@/lib/shared/views/hooks/use-meta";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function NotFoundPage() {
-	useMeta("Jota | Not found", "Page not found");
-
 	return (
 		<DefaultLayout className="gap-4">
 			<div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-sm">

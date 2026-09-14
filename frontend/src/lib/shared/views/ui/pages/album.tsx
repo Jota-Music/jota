@@ -6,12 +6,10 @@ import { useParams } from "wouter-preact";
 import { getAlbumTracks } from "@/lib/music/app/get-album";
 import type { Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
-import useMeta from "@/lib/shared/views/hooks/use-meta";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function AlbumPage() {
 	const { id } = useParams<{ id: string }>();
-	useMeta(`Jota | Album`, `Browse and listen to an album on Jota`);
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["album-tracks", id],

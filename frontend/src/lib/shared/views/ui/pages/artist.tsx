@@ -10,7 +10,6 @@ import type { AlbumSummary, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { cn } from "@/lib/shared/utils/tw";
-import useMeta from "@/lib/shared/views/hooks/use-meta";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 const view = signal<string>("tracks");
@@ -58,7 +57,6 @@ function groupCounts(
 
 export function ArtistPage() {
 	const { id } = useParams<{ id: string }>();
-	useMeta(`Jota | Artist`, `Browse and listen to an artist on Jota`);
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["artist", id],

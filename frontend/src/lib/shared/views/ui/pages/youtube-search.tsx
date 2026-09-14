@@ -17,7 +17,7 @@ import {
 	enqueue,
 	playFromQueueSelection,
 } from "@/lib/music/views/stores/player";
-import useMeta from "@/lib/shared/views/hooks/use-meta";
+import { cn } from "@/lib/shared/utils/tw";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
@@ -75,8 +75,6 @@ export function YouTubeSearchPage() {
 	const [, params] = useRoute<{ query: string }>("/search/youtube/:query");
 
 	const query = params?.query ? decodeURIComponent(params.query) : "";
-
-	useMeta(`Jota | YouTube: ${query}`, `YouTube results for "${query}"`);
 
 	const target = queryTarget(query);
 	const direct = isDirectQuery(query);
@@ -172,11 +170,12 @@ export function YouTubeSearchPage() {
 								type="button"
 								title="Videos"
 								onClick={() => setTab("videos")}
-								class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors ${
+								class={cn(
+									"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
 									activeTab === "videos"
 										? "bg-zinc-800 text-white"
-										: "text-zinc-500 hover:text-zinc-300"
-								}`}
+										: "text-zinc-500 hover:text-zinc-300",
+								)}
 							>
 								<CirclePlay size={18} />
 							</button>
@@ -184,11 +183,12 @@ export function YouTubeSearchPage() {
 								type="button"
 								title="Playlists"
 								onClick={() => setTab("playlists")}
-								class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors ${
+								class={cn(
+									"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
 									activeTab === "playlists"
 										? "bg-zinc-800 text-white"
-										: "text-zinc-500 hover:text-zinc-300"
-								}`}
+										: "text-zinc-500 hover:text-zinc-300",
+								)}
 							>
 								<ListVideo size={16} />
 							</button>
@@ -279,9 +279,10 @@ function PlaylistCard({
 						e.stopPropagation();
 						onToggle();
 					}}
-					class={`absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/70 backdrop-blur transition hover:bg-black/90 ${
-						saved ? "text-red-400" : "text-zinc-300 hover:text-white"
-					}`}
+					class={cn(
+						"absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/70 backdrop-blur transition hover:bg-black/90",
+						saved ? "text-red-400" : "text-zinc-300 hover:text-white",
+					)}
 				>
 					<Heart size={16} class={saved ? "fill-current" : ""} />
 				</button>

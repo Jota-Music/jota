@@ -4,16 +4,11 @@ import { Heart, RefreshCw } from "lucide-preact";
 import { useParams } from "wouter-preact";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
-import useMeta from "@/lib/shared/views/hooks/use-meta";
 import { followedUsers, toggleFollow } from "@/lib/shared/views/stores/follows";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function UserPage() {
 	const { user } = useParams<{ user: string }>();
-	useMeta(
-		`Jota | ${user}'s playlists`,
-		`Browse playlists shared by ${user} on Jota`,
-	);
 
 	const queryClient = useQueryClient();
 	const refreshing = signal(false);

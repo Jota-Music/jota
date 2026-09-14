@@ -5,7 +5,6 @@ import { Link, useLocation } from "wouter-preact";
 import { type SearchResult, searchSpotify } from "@/lib/music/app/search";
 import type { Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
-import useMeta from "@/lib/shared/views/hooks/use-meta";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type SearchType = "user" | "track" | "album" | "playlist" | "artist";
@@ -123,11 +122,6 @@ function getSearchParams(): {
 export function SearchPage() {
 	const { type, query } = getSearchParams();
 	const [, setLocation] = useLocation();
-
-	useMeta(
-		`Jota | Search ${type ?? ""}: ${query}`,
-		`Search results for ${type ?? ""} "${query}"`,
-	);
 
 	const detailRoute = type ? detailRoutes[type] : undefined;
 	const redirectId = detailRoute && type ? stripUriPrefix(query, type) : "";
