@@ -65,6 +65,7 @@ export async function connect(code: string): Promise<void> {
 	const password = store.password.value.trim();
 	localStorage.setItem("sync:relay", url);
 	localStorage.setItem("sync:token", token);
+	localStorage.setItem("sync:room", code);
 	localStorage.setItem("sync:password", password);
 	store.room.value = code;
 	store.status.value = "connecting";
