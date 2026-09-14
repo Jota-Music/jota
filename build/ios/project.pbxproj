@@ -97,7 +97,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1500;
-				ORGANIZATIONNAME = "Salvador Sánchez";
+				ORGANIZATIONNAME = "Jota";
 				TargetAttributes = {
 					C0DEBEEF0000000000000040 = {
 						CreatedOnToolsVersion = 15.0;
@@ -180,7 +180,7 @@
 					"$(inherited)",
 					"-ObjC",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.salvadorsru.jota";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.jotamusic.jota";
 				PRODUCT_NAME = "Jota";
 				CODE_SIGNING_ALLOWED = NO;
 				SDKROOT = iphoneos;
@@ -196,7 +196,7 @@
 					"$(inherited)",
 					"-ObjC",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.salvadorsru.jota";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.jotamusic.jota";
 				PRODUCT_NAME = "Jota";
 				CODE_SIGNING_ALLOWED = NO;
 				SDKROOT = iphoneos;

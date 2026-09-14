@@ -6,11 +6,11 @@ formatter: true
 
 # This information is used to generate the build assets.
 info:
-  companyName: "Salvador Sánchez" # The name of the company
+  companyName: "Jota" # The name of the company
   productName: "Jota" # The name of the application
-  productIdentifier: "com.salvadorsru.jota" # The unique product identifier
+  productIdentifier: "com.jotamusic.jota" # The unique product identifier
   description: "Jota a simple self-hosted music service" # The application description
-  copyright: "(c) 2025, Salvador Sánchez" # Copyright text
+  copyright: "(c) 2025, salvadorsru" # Copyright text
   comments: "Jota a simple self-hosted music service" # Comments
   version: "1.0.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
