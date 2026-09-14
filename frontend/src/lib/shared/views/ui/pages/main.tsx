@@ -6,7 +6,7 @@ import {
 	syncSpotifyStatus,
 } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
-import { PlaylistGrid } from "@/lib/music/views/ui/playlist/grid";
+import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
@@ -39,13 +39,18 @@ export function MainPage() {
 				)}
 
 				{spotifyConnected.value && (
-					<section class="flex flex-col gap-3 min-h-0 flex-1 overflow-y-auto pb-8">
-						<PlaylistGrid
-							playlists={playlists ?? []}
-							isLoading={isLoading}
-							emptyMessage="No playlists found."
-						/>
-					</section>
+					<Shelf
+						items={(playlists ?? []).map(
+							(p): Item => ({
+								id: p.id,
+								name: p.name,
+								cover: p.cover ?? p.mosaic,
+							}),
+						)}
+						to={(id) => `/playlist/${id}`}
+						isLoading={isLoading}
+						emptyMessage="No playlists found."
+					/>
 				)}
 			</div>
 		</DefaultLayout>

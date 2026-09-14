@@ -4,10 +4,11 @@ import { signal } from "@preact/signals";
 import { useQuery } from "@tanstack/preact-query";
 import { Disc3, ListMusic, Loader } from "lucide-preact";
 import { useEffect } from "preact/hooks";
-import { Link, useParams } from "wouter-preact";
+import { useParams } from "wouter-preact";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import type { AlbumSummary, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { cn } from "@/lib/shared/utils/tw";
 import useMeta from "@/lib/shared/views/hooks/use-meta";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
@@ -179,47 +180,19 @@ export function ArtistPage() {
 						<Virtualization songs={tracks} />
 					)
 				) : (
-					<div class="min-h-0 flex-1 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-950">
-						{discoLoading ? (
-							<div class="flex items-center justify-center gap-2 p-8 text-sm text-zinc-400">
-								<Loader size={24} class="animate-spin" />
-							</div>
-						) : selectedAlbums.length === 0 ? (
-							<div class="flex min-h-32 items-center justify-center p-8 text-sm text-zinc-500">
-								No {groupLabel(activeTab).toLowerCase()} found.
-							</div>
-						) : (
-							<div class="grid grid-cols-2 gap-3 p-3 md:grid-cols-3">
-								{selectedAlbums.map((a) => (
-									<Link key={a.id} href={`/album/${a.id}`}>
-										<div class="group flex flex-col gap-2 overflow-hidden rounded-md cursor-pointer">
-											<div class="aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
-												{a.cover ? (
-													<img
-														src={a.cover}
-														alt={a.name}
-														loading="lazy"
-														decoding="async"
-														class="h-full w-full object-cover group-hover:opacity-80 transition-opacity"
-													/>
-												) : (
-													<div class="flex h-full w-full items-center justify-center text-zinc-600">
-														<Disc3 size={28} />
-													</div>
-												)}
-											</div>
-											<div class="flex flex-col">
-												<h3 class="truncate text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
-													{a.name}
-												</h3>
-												<p class="text-xs text-zinc-500">{a.year || "—"}</p>
-											</div>
-										</div>
-									</Link>
-								))}
-							</div>
+					<Shelf
+						items={selectedAlbums.map(
+							(a): Item => ({
+								id: a.id,
+								name: a.name,
+								cover: a.cover,
+								subtitle: a.year ? String(a.year) : undefined,
+							}),
 						)}
-					</div>
+						to={(id) => `/album/${id}`}
+						isLoading={discoLoading}
+						emptyMessage={`No ${groupLabel(activeTab).toLowerCase()} found.`}
+					/>
 				)}
 			</div>
 		</DefaultLayout>
