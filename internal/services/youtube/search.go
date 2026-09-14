@@ -26,12 +26,12 @@ func (s *Service) Search(query string) ([]Video, error) {
 
 	payload := map[string]any{
 		"query":          query,
-		"context":        map[string]any{"client": clientContext()},
+		"context":        map[string]any{"client": clientContext(preferredClient)},
 		"contentCheckOk": true,
 		"racyCheckOk":    true,
 	}
 
-	data, err := retryRequest("https://music.youtube.com/youtubei/v1/search", payload, true, 3)
+	data, err := retryRequest(preferredClient, "https://music.youtube.com/youtubei/v1/search", payload, true, 3)
 	if err != nil {
 		return nil, fmt.Errorf("search request failed: %w", err)
 	}
@@ -96,12 +96,12 @@ func videoIdFromQuery(query string) (string, bool) {
 func fetchVideo(id string) (Video, error) {
 	payload := map[string]any{
 		"videoId":        id,
-		"context":        map[string]any{"client": clientContext()},
+		"context":        map[string]any{"client": clientContext(preferredClient)},
 		"contentCheckOk": true,
 		"racyCheckOk":    true,
 	}
 
-	data, err := retryRequest("https://www.youtube.com/youtubei/v1/player", payload, true, 3)
+	data, err := retryRequest(preferredClient, "https://www.youtube.com/youtubei/v1/player", payload, true, 3)
 	if err != nil {
 		return Video{}, fmt.Errorf("player request failed: %w", err)
 	}
@@ -153,12 +153,12 @@ func (s *Service) SearchPlaylists(query string) ([]music.PlaylistSummary, error)
 	payload := map[string]any{
 		"query":          query,
 		"params":         playlistFilter,
-		"context":        map[string]any{"client": clientContext()},
+		"context":        map[string]any{"client": clientContext(preferredClient)},
 		"contentCheckOk": true,
 		"racyCheckOk":    true,
 	}
 
-	data, err := retryRequest("https://www.youtube.com/youtubei/v1/search", payload, true, 3)
+	data, err := retryRequest(preferredClient, "https://www.youtube.com/youtubei/v1/search", payload, true, 3)
 	if err != nil {
 		return nil, fmt.Errorf("search request failed: %w", err)
 	}

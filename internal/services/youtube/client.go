@@ -18,27 +18,59 @@ var (
 	visitorDataRe     = regexp.MustCompile(`"VISITOR_DATA":"([^"]+)"`)
 )
 
-var (
-	client = struct {
-		Name        string
-		Version     string
-		ClientName  int
-		UserAgent   string
-		DeviceMake  string
-		DeviceModel string
-		OsName      string
-		OsVersion   string
-	}{
-		Name:        "VISIONOS",
-		Version:     "1.02",
-		ClientName:  101,
-		UserAgent:   "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
-		DeviceMake:  "Apple",
-		DeviceModel: "RealityDevice17,1",
-		OsName:      "visionOS",
-		OsVersion:   "26.5.23O471",
-	}
+type clientConfig struct {
+	Name        string
+	Version     string
+	ClientName  int
+	UserAgent   string
+	DeviceMake  string
+	DeviceModel string
+	OsName      string
+	OsVersion   string
+}
 
+// preferredClient is tried first. Some clients hand out googlevideo URLs that
+// 403 on a plain/HEAD request and only answer bounded Range requests, which
+// GStreamer/WebKitGTK does not send first; fallbackClients cover that case.
+var preferredClient = clientConfig{
+	Name:        "VISIONOS",
+	Version:     "1.02",
+	ClientName:  101,
+	UserAgent:   "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+	DeviceMake:  "Apple",
+	DeviceModel: "RealityDevice17,1",
+	OsName:      "visionOS",
+	OsVersion:   "26.5.23O471",
+}
+
+var fallbackClients = []clientConfig{
+	{
+		Name:        "ANDROID_VR",
+		Version:     "1.62.27",
+		ClientName:  28,
+		UserAgent:   "com.google.android.apps.youtube.vr.oculus/1.62.27 (Linux; U; Android 12; GB) gzip",
+		DeviceMake:  "Oculus",
+		DeviceModel: "Quest 3",
+		OsName:      "Android",
+		OsVersion:   "12",
+	},
+	{
+		Name:        "IOS",
+		Version:     "20.10.4",
+		ClientName:  5,
+		UserAgent:   "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X)",
+		DeviceMake:  "Apple",
+		DeviceModel: "iPhone16,2",
+		OsName:      "iOS",
+		OsVersion:   "18.3.2.22D82",
+	},
+}
+
+func allClients() []clientConfig {
+	return append([]clientConfig{preferredClient}, fallbackClients...)
+}
+
+var (
 	apiKeyMu      sync.RWMutex
 	apiKey        = defaultAPIKey
 	visitorDataMu sync.RWMutex
@@ -52,14 +84,14 @@ func currentAPIKey() string {
 	return apiKey
 }
 
-func clientContext() map[string]any {
+func clientContext(c clientConfig) map[string]any {
 	return map[string]any{
-		"clientName":    client.Name,
-		"clientVersion": client.Version,
-		"deviceMake":    client.DeviceMake,
-		"deviceModel":   client.DeviceModel,
-		"osName":        client.OsName,
-		"osVersion":     client.OsVersion,
+		"clientName":    c.Name,
+		"clientVersion": c.Version,
+		"deviceMake":    c.DeviceMake,
+		"deviceModel":   c.DeviceModel,
+		"osName":        c.OsName,
+		"osVersion":     c.OsVersion,
 		"hl":            "en",
 	}
 }
@@ -97,7 +129,7 @@ func getVisitorData() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	req.Header.Set("User-Agent", client.UserAgent)
+	req.Header.Set("User-Agent", preferredClient.UserAgent)
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
 	resp, err := http.DefaultClient.Do(req)

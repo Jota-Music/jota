@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func doRequest(url string, payload map[string]any, useVisitor bool) (*http.Response, error) {
+func doRequest(c clientConfig, url string, payload map[string]any, useVisitor bool) (*http.Response, error) {
 	visitor, key, err := getVisitorData()
 	if err != nil {
 		return nil, fmt.Errorf("getting visitor data: %w", err)
@@ -30,9 +30,9 @@ func doRequest(url string, payload map[string]any, useVisitor bool) (*http.Respo
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", client.UserAgent)
-	req.Header.Set("X-YouTube-Client-Name", fmt.Sprintf("%d", client.ClientName))
-	req.Header.Set("X-YouTube-Client-Version", client.Version)
+	req.Header.Set("User-Agent", c.UserAgent)
+	req.Header.Set("X-YouTube-Client-Name", fmt.Sprintf("%d", c.ClientName))
+	req.Header.Set("X-YouTube-Client-Version", c.Version)
 	req.Header.Set("Origin", "https://www.youtube.com")
 	req.Header.Set("Referer", "https://www.youtube.com/")
 	if useVisitor && visitor != "" {
@@ -42,10 +42,10 @@ func doRequest(url string, payload map[string]any, useVisitor bool) (*http.Respo
 	return http.DefaultClient.Do(req)
 }
 
-func retryRequest(url string, payload map[string]any, useVisitor bool, retries int) ([]byte, error) {
+func retryRequest(c clientConfig, url string, payload map[string]any, useVisitor bool, retries int) ([]byte, error) {
 	var lastErr error
 	for i := range retries {
-		resp, err := doRequest(url, payload, useVisitor)
+		resp, err := doRequest(c, url, payload, useVisitor)
 		if err != nil {
 			lastErr = err
 			time.Sleep(time.Duration(100+(i*200)) * time.Millisecond)

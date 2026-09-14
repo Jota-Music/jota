@@ -25,7 +25,7 @@ func normalizePlaylistId(id string) string {
 
 func browseData(playlistID, continuation string) ([]byte, error) {
 	payload := map[string]any{
-		"context": map[string]any{"client": clientContext()},
+		"context": map[string]any{"client": clientContext(preferredClient)},
 	}
 	if continuation != "" {
 		payload["continuation"] = continuation
@@ -33,7 +33,7 @@ func browseData(playlistID, continuation string) ([]byte, error) {
 		payload["browseId"] = "VL" + playlistID
 	}
 
-	data, err := retryRequest(browseEndpoint, payload, true, 3)
+	data, err := retryRequest(preferredClient, browseEndpoint, payload, true, 3)
 	if err != nil {
 		return nil, fmt.Errorf("browse request failed: %w", err)
 	}
