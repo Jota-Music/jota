@@ -63,12 +63,20 @@ function getInitialMuted() {
 	return false;
 }
 
-function waitForPlayable(el: HTMLAudioElement): Promise<boolean> {
+function waitForPlayable(
+	el: HTMLAudioElement,
+	timeoutMs = 15000,
+): Promise<boolean> {
 	if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
 		return Promise.resolve(true);
 	}
 	return new Promise((resolve) => {
+		const timer = setTimeout(() => {
+			done();
+			resolve(false);
+		}, timeoutMs);
 		const done = () => {
+			clearTimeout(timer);
 			el.removeEventListener("canplaythrough", onReady);
 			el.removeEventListener("canplay", onReady);
 			el.removeEventListener("error", onErr);
@@ -143,10 +151,11 @@ async function loadSongIntoPlayer(
 			const current = currentSong.value;
 			currentSong.value = { ...current, youtubeId: data.youtube };
 		}
-	} catch {
+	} catch (err) {
 		isLoading.value = false;
 		isPlaying.value = false;
-		addError("Failed to load audio — check your connection");
+		const detail = err instanceof Error ? err.message : String(err);
+		addError(`Failed to load audio — ${detail}`);
 		return false;
 	}
 
@@ -201,9 +210,11 @@ async function loadSongIntoPlayer(
 		} catch (err) {
 			if (!isAbortError(err)) {
 				isPlaying.value = false;
+				isLoading.value = false;
 				addError(
 					"Playback failed — check your connection or try a different song",
 				);
+				return false;
 			}
 		}
 	} else {
@@ -271,8 +282,31 @@ export function getPlaybackSeconds(): number {
 	return 0;
 }
 
+export function hasLoadedAudio(): boolean {
+	return !!audio && !audio.error;
+}
+
 export function pause() {
 	audio?.pause();
+}
+
+// Recover playback after a failed stream: reload the current song from a
+// freshly resolved URL instead of reusing the dead element/URL.
+export async function resume(): Promise<boolean> {
+	if (audio && !audio.error) {
+		try {
+			await audio.play();
+			return true;
+		} catch (err) {
+			if (isAbortError(err)) return false;
+			addError("Playback failed — check your connection");
+			return false;
+		}
+	}
+	const song = currentSong.value;
+	if (!song) return false;
+	AudioCache.remove(song.id);
+	return await play(song);
 }
 
 export function seek(time: number) {
@@ -314,20 +348,11 @@ export function setMuted(value: boolean) {
 }
 
 export async function togglePlayPause(): Promise<boolean> {
-	if (!audio) return false;
-	if (audio.paused) {
-		try {
-			await audio.play();
-		} catch (err) {
-			if (!isAbortError(err)) {
-				addError("Playback failed — check your connection");
-				return false;
-			}
-		}
-	} else {
+	if (audio && !audio.error && !audio.paused) {
 		audio.pause();
+		return false;
 	}
-	return !audio.paused;
+	return await resume();
 }
 
 export function stopPlayer() {
@@ -376,6 +401,19 @@ function bindEvents(a: HTMLAudioElement) {
 		progress.value = 0;
 		onTrackEndedCallback?.();
 	};
+
+	a.onerror = () => {
+		if (audio !== a) return;
+		a.onerror = null;
+		isPlaying.value = false;
+		isLoading.value = false;
+		if (loadedSongId) AudioCache.remove(loadedSongId);
+		audio = null;
+		loadedSongId = null;
+		AudioCache.pin(null);
+		media.update(currentSong.value, false);
+		addError("Playback stopped — check your connection");
+	};
 }
 
 export function toggleMute() {
@@ -403,7 +441,7 @@ if (typeof window !== "undefined") {
 }
 
 media.setup({
-	play: () => void audio?.play(),
+	play: () => void resume(),
 	pause: () => audio?.pause(),
 	stop: stopPlayer,
 	seek,

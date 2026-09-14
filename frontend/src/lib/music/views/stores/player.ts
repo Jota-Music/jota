@@ -4,6 +4,7 @@ import {
 	audioDuration,
 	currentSong,
 	dragSeeking,
+	hasLoadedAudio,
 	play,
 	progress,
 	seek,
@@ -235,7 +236,13 @@ export async function playAt(i: number): Promise<void> {
 	const q = queue.value;
 
 	if (i < 0 || i >= q.length) return;
-	if (i === currentIndex.value) return;
+	if (
+		i === currentIndex.value &&
+		currentSong.value?.id === q[i].id &&
+		hasLoadedAudio()
+	) {
+		return;
+	}
 
 	forward({ action: "play", index: i });
 

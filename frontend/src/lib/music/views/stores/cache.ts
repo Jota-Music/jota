@@ -6,6 +6,7 @@ type CachedAudio = {
 	audio?: HTMLAudioElement;
 	lastUsed: number;
 	youtube: string;
+	expireAt: number;
 };
 
 // biome-ignore lint/complexity/noStaticOnlyClass: <   >
@@ -18,6 +19,24 @@ export class AudioCache {
 	private static maxElements = 3;
 
 	private static pinnedId: string | null = null;
+
+	private static expiryMarginSeconds = 30;
+
+	// Stream URLs carry a YouTube expiry; a cached URL past it must be re-resolved.
+	private static isExpired(item: CachedAudio): boolean {
+		if (!item.expireAt) return false;
+		const now = Math.floor(Date.now() / 1000);
+		return item.expireAt <= now + AudioCache.expiryMarginSeconds;
+	}
+
+	// An element whose load failed stays dead until rebuilt, so never reuse it.
+	private static isBroken(audio: HTMLAudioElement | undefined): boolean {
+		return (
+			!!audio &&
+			(audio.error !== null ||
+				audio.networkState === HTMLMediaElement.NETWORK_NO_SOURCE)
+		);
+	}
 
 	/* -------------------------------------------------
        INTERNAL HELPERS
@@ -92,8 +111,12 @@ export class AudioCache {
 	static async get(song: Song): Promise<CachedAudio> {
 		const cached = AudioCache.cache.get(song.id);
 		if (cached) {
-			AudioCache.touch(song.id);
-			return cached;
+			if (AudioCache.isExpired(cached)) {
+				AudioCache.remove(song.id);
+			} else {
+				AudioCache.touch(song.id);
+				return cached;
+			}
 		}
 
 		const existing = AudioCache.pending.get(song.id);
@@ -105,6 +128,7 @@ export class AudioCache {
 					url: data.url,
 					lastUsed: Date.now(),
 					youtube: data.youtube,
+					expireAt: data.expireAt ?? 0,
 				};
 
 				AudioCache.cache.set(song.id, value);
@@ -133,7 +157,8 @@ export class AudioCache {
 
 				const data = await AudioCache.get(song);
 
-				if (data.audio) return;
+				if (data.audio && !AudioCache.isBroken(data.audio)) return;
+				if (data.audio) AudioCache.release(data);
 
 				const audio = new Audio(data.url);
 				audio.preload = "auto";
@@ -157,10 +182,11 @@ export class AudioCache {
 	static async getAudioElement(song: Song): Promise<HTMLAudioElement> {
 		const cached = await AudioCache.get(song);
 
-		if (cached.audio) {
+		if (cached.audio && !AudioCache.isBroken(cached.audio)) {
 			AudioCache.touch(song.id);
 			return cached.audio;
 		}
+		if (cached.audio) AudioCache.release(cached);
 
 		const audio = new Audio(cached.url);
 		audio.preload = "auto";
