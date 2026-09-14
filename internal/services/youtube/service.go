@@ -1,9 +1,6 @@
 package youtube
 
-import (
-	"errors"
-	"regexp"
-)
+import "regexp"
 
 type Service struct{}
 
@@ -16,29 +13,30 @@ func (s *Service) GetAudio(spotifyId, search string) (Audio, error) {
 		return *cached, nil
 	}
 
-	youtubeId := spotifyId
-	if search != "" {
-		var err error
-		youtubeId, err = GetSong(spotifyId, search)
-		if err != nil {
-			return Audio{}, err
-		}
-	} else if !isYoutubeId(spotifyId) {
-		return Audio{}, errors.New("no search query and not a youtube id")
-	}
-
-	if cached := GetCachedAudioByYoutubeId(youtubeId); cached != nil {
-		SaveAudioForSpotifyId(spotifyId, *cached, 0)
-		return *cached, nil
-	}
-
-	audio, err := GetAudio(youtubeId)
+	ids, err := candidates(spotifyId, search)
 	if err != nil {
 		return Audio{}, err
 	}
 
-	SaveAudioForSpotifyId(spotifyId, *audio, 0)
-	return *audio, nil
+	var lastErr error
+	for _, youtubeId := range ids {
+		audio := GetCachedAudioByYoutubeId(youtubeId)
+		if audio == nil {
+			audio, err = GetAudio(youtubeId)
+			if err != nil {
+				lastErr = err
+				continue
+			}
+		}
+
+		if search != "" {
+			_ = SetYoutubeId(spotifyId, youtubeId)
+		}
+		SaveAudioForSpotifyId(spotifyId, *audio, 0)
+		return *audio, nil
+	}
+
+	return Audio{}, lastErr
 }
 
 var youtubeIdRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]{11}$`)

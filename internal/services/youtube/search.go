@@ -49,31 +49,38 @@ func Search(query string) ([]Video, error) {
 	return videos, nil
 }
 
-func GetSong(id, search string) (string, error) {
-	if youtubeId, err := youtubeSourceBucket.GetString(id); err == nil {
-		return youtubeId, nil
+func candidates(id, search string) ([]string, error) {
+	if search == "" {
+		if !isYoutubeId(id) {
+			return nil, errors.New("no search query and not a youtube id")
+		}
+		return []string{id}, nil
 	}
 
-	if search == "" {
-		return "", errors.New("no search query provided — use ?search= parameter")
+	var ids []string
+	seen := map[string]bool{}
+	if cached, err := youtubeSourceBucket.GetString(id); err == nil && cached != "" {
+		ids = append(ids, cached)
+		seen[cached] = true
 	}
 
 	videos, err := Search(search)
 	if err != nil {
-		return "", fmt.Errorf("search failed: %w", err)
+		return nil, fmt.Errorf("search failed: %w", err)
 	}
 
-	if len(videos) == 0 {
-		return "", fmt.Errorf("no results for: %s", search)
+	for _, v := range videos {
+		if v.ID != "" && !seen[v.ID] {
+			ids = append(ids, v.ID)
+			seen[v.ID] = true
+		}
 	}
 
-	videoId := videos[0].ID
-
-	if err := youtubeSourceBucket.SetString(id, videoId); err != nil {
-		return "", fmt.Errorf("cache error: %w", err)
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("no results for: %s", search)
 	}
 
-	return videoId, nil
+	return ids, nil
 }
 
 func SetYoutubeId(id string, youtubeId string) error {
