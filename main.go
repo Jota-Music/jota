@@ -16,6 +16,8 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+var currentVersion = "dev"
+
 type windowState struct {
 	X, Y, Width, Height int
 	Maximised           bool

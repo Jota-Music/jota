@@ -5,6 +5,10 @@ vars:
   BIN_DIR: "bin"
   PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "bun"}}'
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+  # Application version, single source of truth: build/config.yml `info.version`.
+  # Override per-release with: wails3 task build -- VERSION=2.0.0
+  VERSION:
+    sh: 'grep -E "version: *\"[0-9]+\.[0-9]+\.[0-9]+" build/config.yml | head -1 | sed -E "s/.*version: *\"([^\"]+)\".*/\1/"'
   # Target OS for build/package/run. Defaults to the host OS, and is overridden
   # by `wails3 build GOOS=...` (or the GOOS env var) for cross-compilation. The
   # tasks below dispatch to the matching platform Taskfile via this variable.
