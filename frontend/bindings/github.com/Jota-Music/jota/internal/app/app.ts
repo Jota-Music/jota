@@ -17,43 +17,43 @@ import * as youtube$0 from "../services/youtube/models.js";
 import * as $models from "./models.js";
 
 export function AddYouTubePlaylist(id: string): $CancellablePromise<music$0.PlaylistSummary> {
-    return $Call.ByID(4155558714, id);
+    return $Call.ByID(2929125534, id);
 }
 
 export function GetAlbumTracks(uri: string): $CancellablePromise<music$0.Song[] | null> {
-    return $Call.ByID(419118927, uri);
+    return $Call.ByID(2388259083, uri);
 }
 
 export function GetArtist(uri: string): $CancellablePromise<music$0.ArtistInfo> {
-    return $Call.ByID(3239842779, uri);
+    return $Call.ByID(3340326431, uri);
 }
 
 export function GetArtistDiscography(uri: string): $CancellablePromise<music$0.ArtistDiscography> {
-    return $Call.ByID(1355396988, uri);
+    return $Call.ByID(764690128, uri);
 }
 
 export function GetFullPlaylist(id: string): $CancellablePromise<music$0.Playlist> {
-    return $Call.ByID(2338522147, id);
+    return $Call.ByID(3017102079, id);
 }
 
 export function GetFullPlaylistNoCache(id: string): $CancellablePromise<music$0.Playlist> {
-    return $Call.ByID(1881129154, id);
+    return $Call.ByID(3221186334, id);
 }
 
 export function GetSong(id: string): $CancellablePromise<music$0.Song> {
-    return $Call.ByID(363768417, id);
+    return $Call.ByID(2619436861, id);
 }
 
 export function GetUserPlaylists(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
-    return $Call.ByID(119247114, user);
+    return $Call.ByID(1067966734, user);
 }
 
 export function GetUserPlaylistsNoCache(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
-    return $Call.ByID(2339901353, user);
+    return $Call.ByID(882132541, user);
 }
 
 export function GetYouTubePlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
-    return $Call.ByID(3121057724);
+    return $Call.ByID(4268478320);
 }
 
 /**
@@ -62,51 +62,51 @@ export function GetYouTubePlaylists(): $CancellablePromise<music$0.PlaylistSumma
  * platforms the frontend opens the URL itself.
  */
 export function OpenURL(url: string): $CancellablePromise<void> {
-    return $Call.ByID(3376742245, url);
+    return $Call.ByID(3973583225, url);
 }
 
 export function ReadClipboard(): $CancellablePromise<string> {
-    return $Call.ByID(3421753438);
+    return $Call.ByID(4227429682);
 }
 
 export function RemoveYouTubePlaylist(id: string): $CancellablePromise<void> {
-    return $Call.ByID(58376035, id);
+    return $Call.ByID(2138005495, id);
 }
 
 export function ResolveAudio(song: music$0.Song): $CancellablePromise<music$0.Audio> {
-    return $Call.ByID(4046949554, song);
+    return $Call.ByID(1456476822, song);
 }
 
 export function RevalidateFullPlaylist(id: string): $CancellablePromise<void> {
-    return $Call.ByID(647509752, id);
+    return $Call.ByID(3671769412, id);
 }
 
 export function RevalidateUserPlaylists(user: string): $CancellablePromise<void> {
-    return $Call.ByID(690355719, user);
+    return $Call.ByID(771735787, user);
 }
 
 export function Search(query: string, searchType: string): $CancellablePromise<music$0.SearchResult[] | null> {
-    return $Call.ByID(922006544, query, searchType);
+    return $Call.ByID(217880892, query, searchType);
 }
 
 export function SearchYouTube(query: string): $CancellablePromise<youtube$0.Video[] | null> {
-    return $Call.ByID(596564785, query);
+    return $Call.ByID(4098143421, query);
 }
 
 export function SearchYouTubePlaylists(query: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
-    return $Call.ByID(973871348, query);
+    return $Call.ByID(4089111504, query);
 }
 
 export function SetYouTubeId(cacheKey: string, youtubeId: string): $CancellablePromise<void> {
-    return $Call.ByID(1935377904, cacheKey, youtubeId);
+    return $Call.ByID(965987300, cacheKey, youtubeId);
 }
 
 export function SpotifyDisconnect(): $CancellablePromise<void> {
-    return $Call.ByID(2816245328);
+    return $Call.ByID(3257614804);
 }
 
 export function SpotifyGetStatus(): $CancellablePromise<$models.SpotifyStatus> {
-    return $Call.ByID(3825970500);
+    return $Call.ByID(3794811360);
 }
 
 /**
@@ -118,29 +118,29 @@ export function SpotifyGetStatus(): $CancellablePromise<$models.SpotifyStatus> {
  * until the flow finishes (success or timeout).
  */
 export function SpotifyLogin(): $CancellablePromise<string> {
-    return $Call.ByID(3058262523);
+    return $Call.ByID(2894717079);
 }
 
 export function SpotifyLoginAndWait(): $CancellablePromise<void> {
-    return $Call.ByID(1640819277);
+    return $Call.ByID(57797921);
 }
 
 export function SpotifyReconnect(): $CancellablePromise<void> {
-    return $Call.ByID(1784184919);
+    return $Call.ByID(4133825283);
 }
 
 export function SyncCheck(relayURL: string): $CancellablePromise<boolean> {
-    return $Call.ByID(4103377601, relayURL);
+    return $Call.ByID(3718808301, relayURL);
 }
 
 export function SyncConnect(relayURL: string, room: string, role: string, token: string, password: string): $CancellablePromise<void> {
-    return $Call.ByID(3307907283, relayURL, room, role, token, password);
+    return $Call.ByID(799230255, relayURL, room, role, token, password);
 }
 
 export function SyncSend(payload: string): $CancellablePromise<void> {
-    return $Call.ByID(2983863113, payload);
+    return $Call.ByID(111451869, payload);
 }
 
 export function SyncStop(): $CancellablePromise<void> {
-    return $Call.ByID(2010260919);
+    return $Call.ByID(3298596019);
 }
