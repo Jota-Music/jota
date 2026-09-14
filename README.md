@@ -9,15 +9,29 @@ listening — all on devices you control.
 
 ## Features
 
-- **Spotify browsing.** Connect your Spotify account and browse playlists,
-  albums, artists and tracks.
-- **YouTube audio.** Every track is resolved to a YouTube stream and played
-  right in the app.
+- **Two sources, one app.** Browse Spotify and YouTube side by side and play
+  either from the same player, queue and search bar. Spotify is optional — the
+  YouTube side works on its own.
+- **Spotify browsing.** Connect your account and browse playlists, albums,
+  artists, tracks and other users' public playlists, with search across all of
+  them.
+- **YouTube as a first-class source.** Search videos and playlists, save
+  playlists to your home shelf, and paste a YouTube link or ID to jump straight
+  to it. Playlists behave like any other: open, filter, order and play them.
+- **YouTube audio.** Every track is resolved to a YouTube stream at play time —
+  using its saved YouTube ID when it has one, or matching by title and artist.
+  When a match is wrong you can link the correct YouTube ID by hand.
+- **Full player.** Play/pause, seek, volume, shuffle and repeat (off/all/one),
+  plus a queue you can add to, reorder, move after the current track and remove.
+  Upcoming tracks are preloaded so playback stays smooth.
+- **Native media controls.** Playback integrates with the OS media session, so
+  media keys, lock-screen and notification controls work on desktop and mobile.
+- **Listen together.** Sync playback across devices through your own WebSocket
+  relay: queue, play/pause, position, shuffle and repeat. One person hosts the
+  room and shares the code, the rest tune in.
 - **Cross-platform.** Built with Wails 3 — native desktop on Linux, Windows and
-  macOS, plus Android (and iOS) from the same codebase.
-- **Listen together.** Sync playback (queue, play/pause, position) across
-  devices through your own WebSocket relay. One person hosts the room, shares
-  the short code, the rest tune in.
+  macOS, plus Android (and iOS) from the same codebase. The window is frameless
+  with custom controls, remembers its size and position, and can stay on top.
 - **Self-hosted by design.** The relay is a small Go binary you can run
   anywhere — Docker, a VPS, your home server.
 - **Private by default.** Data stays local. No accounts, no telemetry, no
@@ -29,6 +43,7 @@ listening — all on devices you control.
 - Bun 1.x (frontend)
 - `webkit2gtk-4.1` dev libraries (Linux)
 - `wails3` CLI at `~/go/bin/wails3`
+- JDK ≤ 24 for Android builds (Gradle 9)
 
 ## Usage
 
@@ -43,10 +58,14 @@ wails3 task package                            # .deb + .rpm + archlinux -> bin/
 The app can sync playback across multiple devices. It's optional: it needs a
 WebSocket relay that each user hosts wherever they want.
 
-- One person hosts the room and shares the code; the rest join and listen to
-  the same thing (queue, play/pause and position).
+- One person hosts the room and shares the code; the rest join and listen to the
+  same thing — queue, play/pause, position, shuffle and repeat. Late joiners and
+  reconnects catch up from the last cached state.
+- Audio stays aligned across the room as devices keep their clocks in sync.
+- Rooms can be protected with an optional password, and the relay itself can
+  require a shared auth token.
 - The relay is `github.com/Jota-Music/relay`: a small Go binary, self-hostable
-  behind TLS (`wss://`) or with `docker run -p 8080:8080 ghcr.io/jota-music/relay`.
+  behind TLS (`wss://`) or with `docker run -e PORT=8080 -p 8080:8080 ghcr.io/jota-music/relay`.
 - In the app, open "Listen together", paste the relay URL and the room code.
 
 ## Roadmap
