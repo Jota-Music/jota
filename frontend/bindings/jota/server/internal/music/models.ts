@@ -51,6 +51,7 @@ export interface PlaylistSummary {
     "name": string;
     "mosaic"?: string;
     "cover"?: string;
+    "subtitle"?: string;
 }
 
 export interface SearchResult {
@@ -76,4 +77,5 @@ export interface Song {
     "share": Share;
     "album": Album;
     "artists": Artist[] | null;
+    "youtubeId"?: string;
 }

@@ -1,5 +1,5 @@
-import { Search, SearchYouTube } from "@bindings/app";
-import type { Song } from "@/lib/music/model";
+import { Search, SearchYouTube, SearchYouTubePlaylists } from "@bindings/app";
+import type { PlaylistSummary, Song } from "@/lib/music/model";
 
 export type SearchResult = {
 	uri: string;
@@ -34,6 +34,15 @@ export async function searchYouTube(query: string): Promise<YouTubeVideo[]> {
 		Title: string;
 	}>;
 	return results.map((r) => ({ id: r.ID, title: r.Title }));
+}
+
+export async function searchYouTubePlaylists(
+	query: string,
+): Promise<PlaylistSummary[]> {
+	const results = (await SearchYouTubePlaylists(query)) as unknown as
+		| PlaylistSummary[]
+		| null;
+	return results ?? [];
 }
 
 export function youtubeVideoToSong(video: YouTubeVideo): Song {

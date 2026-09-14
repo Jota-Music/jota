@@ -16,6 +16,10 @@ import * as youtube$0 from "../services/youtube/models.js";
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
+export function AddYouTubePlaylist(id: string): $CancellablePromise<music$0.PlaylistSummary> {
+    return $Call.ByID(4155558714, id);
+}
+
 export function GetAlbumTracks(uri: string): $CancellablePromise<music$0.Song[] | null> {
     return $Call.ByID(419118927, uri);
 }
@@ -56,6 +60,10 @@ export function GetYouTubeAudio(spotifyId: string, search: string): $Cancellable
     return $Call.ByID(997358013, spotifyId, search);
 }
 
+export function GetYouTubePlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
+    return $Call.ByID(3121057724);
+}
+
 /**
  * OpenURL opens the URL in the system browser. On Android it uses the app's
  * native Intent.ACTION_VIEW so OAuth runs outside the WebView; on other
@@ -67,6 +75,10 @@ export function OpenURL(url: string): $CancellablePromise<void> {
 
 export function ReadClipboard(): $CancellablePromise<string> {
     return $Call.ByID(3421753438);
+}
+
+export function RemoveYouTubePlaylist(id: string): $CancellablePromise<void> {
+    return $Call.ByID(58376035, id);
 }
 
 export function RevalidateFullPlaylist(id: string): $CancellablePromise<void> {
@@ -83,6 +95,10 @@ export function Search(query: string, searchType: string): $CancellablePromise<m
 
 export function SearchYouTube(query: string): $CancellablePromise<youtube$0.Video[] | null> {
     return $Call.ByID(596564785, query);
+}
+
+export function SearchYouTubePlaylists(query: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
+    return $Call.ByID(973871348, query);
 }
 
 export function SetYouTubeId(spotifyId: string, youtubeId: string): $CancellablePromise<void> {

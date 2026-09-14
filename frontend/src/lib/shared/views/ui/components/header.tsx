@@ -11,15 +11,19 @@ import { useCallback, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
+import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
+import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 import { showSync } from "@/lib/sync/views/stores";
 
-const searchTypeOptions = [
+type Source = "spotify" | "youtube";
+type SpotifyType = "user" | "track" | "album" | "playlist" | "artist";
+
+const spotifyTypeOptions = [
 	{ value: "user", label: "User" },
 	{ value: "track", label: "Track" },
 	{ value: "album", label: "Album" },
 	{ value: "playlist", label: "Playlist" },
 	{ value: "artist", label: "Artist" },
-	{ value: "youtube", label: "YouTube" },
 ] as const;
 
 export function Header({
@@ -35,21 +39,22 @@ export function Header({
 	const desktop = System.IsDesktop();
 	const [openSearch, setOpenSearch] = useState(false);
 	const [searchDraft, setSearchDraft] = useState("");
-	const [searchType, setSearchType] = useState<
-		"user" | "track" | "album" | "playlist" | "artist" | "youtube"
-	>("user");
+	const [source, setSource] = useState<Source>("spotify");
+	const [searchType, setSearchType] = useState<SpotifyType>("user");
 
 	const onSearchSubmit = useCallback(
 		(e: Event) => {
 			e.preventDefault();
-			if (!searchDraft.trim()) return;
+			const query = searchDraft.trim();
+			if (!query) return;
+			const encoded = encodeURIComponent(query);
 			setLocation(
-				`/search/${searchType}/${encodeURIComponent(searchDraft.trim())}`,
+				source === "youtube"
+					? `/search/youtube/${encoded}`
+					: `/search/${searchType}/${encoded}`,
 			);
-			setSearchDraft("");
-			setOpenSearch(false);
 		},
-		[searchDraft, searchType, setLocation],
+		[searchDraft, searchType, source, setLocation],
 	);
 
 	const goBack = useCallback(() => {
@@ -144,32 +149,66 @@ export function Header({
 					class="grid grid-cols-[1fr_max-content] gap-2"
 				>
 					<div class="flex-1 flex items-stretch h-10 rounded-lg border border-zinc-800 bg-zinc-950 overflow-hidden focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600 transition-all">
-						<div class="relative shrink-0">
-							<select
-								value={searchType}
-								onChange={(e) =>
-									setSearchType(
-										(e.target as HTMLSelectElement).value as typeof searchType,
-									)
-								}
-								class="h-full pl-3 pr-7 text-sm text-white outline-none appearance-none cursor-pointer bg-transparent border-r border-zinc-800"
+						<div class="flex shrink-0 items-stretch border-r border-zinc-800">
+							<button
+								type="button"
+								title="Search in Spotify"
+								onClick={() => setSource("spotify")}
+								class={cn(
+									"flex w-10 items-center justify-center transition-colors cursor-pointer",
+									source === "spotify"
+										? "bg-zinc-800 text-[#1DB954]"
+										: "text-zinc-500 hover:text-zinc-300",
+								)}
 							>
-								{searchTypeOptions.map((opt) => (
-									<option key={opt.value} value={opt.value} class="bg-zinc-950">
-										{opt.label}
-									</option>
-								))}
-							</select>
-							<ChevronDown class="absolute right-2 top-1/2 -translate-y-1/2 size-3 pointer-events-none text-zinc-400" />
+								<SpotifyIcon size={16} />
+							</button>
+							<button
+								type="button"
+								title="Search in YouTube"
+								onClick={() => setSource("youtube")}
+								class={cn(
+									"flex w-10 items-center justify-center transition-colors cursor-pointer",
+									source === "youtube"
+										? "bg-zinc-800 text-[#FF0033]"
+										: "text-zinc-500 hover:text-zinc-300",
+								)}
+							>
+								<YoutubeIcon class="size-4" />
+							</button>
 						</div>
+						{source === "spotify" && (
+							<div class="relative shrink-0">
+								<select
+									value={searchType}
+									onChange={(e) =>
+										setSearchType(
+											(e.target as HTMLSelectElement).value as SpotifyType,
+										)
+									}
+									class="h-full pl-3 pr-7 text-sm text-white outline-none appearance-none cursor-pointer bg-transparent border-r border-zinc-800"
+								>
+									{spotifyTypeOptions.map((opt) => (
+										<option
+											key={opt.value}
+											value={opt.value}
+											class="bg-zinc-950"
+										>
+											{opt.label}
+										</option>
+									))}
+								</select>
+								<ChevronDown class="absolute right-2 top-1/2 -translate-y-1/2 size-3 pointer-events-none text-zinc-400" />
+							</div>
+						)}
 						<div class="relative flex-1 flex items-center">
 							<input
 								class="h-full w-full bg-transparent pl-4 pr-3 text-sm text-white outline-none placeholder:text-zinc-600"
 								placeholder={
-									searchType === "user"
-										? "Spotify username..."
-										: searchType === "youtube"
-											? "YouTube video..."
+									source === "youtube"
+										? "Search in YouTube (videos or playlists)"
+										: searchType === "user"
+											? "Spotify username..."
 											: `Spotify ${searchType.charAt(0).toUpperCase() + searchType.slice(1)} ID or URI...`
 								}
 								value={searchDraft}

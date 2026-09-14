@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"jota/server/internal/kv"
+	"jota/server/internal/music"
 )
 
 var youtubeSourceBucket = kv.UseBucket("youtube-source")
@@ -47,6 +48,54 @@ func Search(query string) ([]Video, error) {
 	}
 
 	return videos, nil
+}
+
+// playlistFilter is the innertube search params that restricts results to playlists.
+const playlistFilter = "EgIQAw=="
+
+func (s *Service) SearchPlaylists(query string) ([]music.PlaylistSummary, error) {
+	if query == "" {
+		return nil, errors.New("empty query")
+	}
+
+	payload := map[string]any{
+		"query":          query,
+		"params":         playlistFilter,
+		"context":        map[string]any{"client": clientContext()},
+		"contentCheckOk": true,
+		"racyCheckOk":    true,
+	}
+
+	data, err := retryRequest("https://www.youtube.com/youtubei/v1/search", payload, true, 3)
+	if err != nil {
+		return nil, fmt.Errorf("search request failed: %w", err)
+	}
+
+	var res playlistSearchResponse
+	if err := json.Unmarshal(data, &res); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+
+	return extractPlaylists(res), nil
+}
+
+func extractPlaylists(res playlistSearchResponse) []music.PlaylistSummary {
+	out := make([]music.PlaylistSummary, 0)
+	for _, section := range res.Contents.SectionListRenderer.Contents {
+		for _, item := range section.ItemSectionRenderer.Contents {
+			p := item.CompactPlaylistRenderer
+			if p.PlaylistId == "" {
+				continue
+			}
+			out = append(out, music.PlaylistSummary{
+				Id:       music.YouTubePrefix + p.PlaylistId,
+				Name:     p.Title.first(),
+				Cover:    p.Thumbnail.url(),
+				Subtitle: p.ByLine.first(),
+			})
+		}
+	}
+	return out
 }
 
 func candidates(id, search string) ([]string, error) {

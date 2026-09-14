@@ -44,6 +44,7 @@ export interface PlaylistSummary {
 	name: string;
 	mosaic?: string;
 	cover?: string;
+	subtitle?: string;
 }
 
 export interface Audio {

@@ -156,6 +156,22 @@ func (a *App) SearchYouTube(query string) ([]youtube.Video, error) {
 	return youtube.Search(query)
 }
 
+func (a *App) SearchYouTubePlaylists(query string) ([]music.PlaylistSummary, error) {
+	return a.YouTube.SearchPlaylists(query)
+}
+
+func (a *App) GetYouTubePlaylists() ([]music.PlaylistSummary, error) {
+	return a.YouTube.Playlists()
+}
+
+func (a *App) AddYouTubePlaylist(id string) (music.PlaylistSummary, error) {
+	return a.YouTube.AddPlaylist(id)
+}
+
+func (a *App) RemoveYouTubePlaylist(id string) error {
+	return a.YouTube.RemovePlaylist(id)
+}
+
 // ----- Sync bindings -----
 
 func (a *App) SyncCheck(relayURL string) (bool, error) {

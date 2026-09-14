@@ -1,13 +1,33 @@
-import { Disc3, LayoutGrid, List } from "lucide-preact";
+import { Disc3, LayoutGrid, List, X } from "lucide-preact";
 import { useState } from "preact/hooks";
 import { Link } from "wouter-preact";
+import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
+import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 const storageKey = "cover_grid_view";
 
 type Variant = "grid" | "compact";
 
+export type Source = "spotify" | "youtube";
+
 function loadVariant(): Variant {
 	return localStorage.getItem(storageKey) === "compact" ? "compact" : "grid";
+}
+
+function SourceBadge({ source }: { source?: Source }) {
+	if (!source) return null;
+	return (
+		<span
+			class="flex size-5 items-center justify-center text-zinc-400"
+			title={source === "spotify" ? "Spotify" : "YouTube"}
+		>
+			{source === "spotify" ? (
+				<SpotifyIcon size={14} />
+			) : (
+				<YoutubeIcon class="size-4" />
+			)}
+		</span>
+	);
 }
 
 export interface Item {
@@ -15,6 +35,8 @@ export interface Item {
 	name: string;
 	cover?: string;
 	subtitle?: string;
+	source?: Source;
+	removable?: boolean;
 }
 
 interface Props {
@@ -22,6 +44,7 @@ interface Props {
 	to: (id: string) => string;
 	isLoading?: boolean;
 	emptyMessage?: string;
+	onRemove?: (id: string) => void;
 }
 
 export function Shelf({
@@ -29,6 +52,7 @@ export function Shelf({
 	to,
 	isLoading = false,
 	emptyMessage = "No items found.",
+	onRemove,
 }: Props) {
 	const [variant, setVariant] = useState<Variant>(loadVariant);
 
@@ -84,7 +108,7 @@ export function Shelf({
 								{items.map((item) => (
 									<Link key={item.id} href={to(item.id)}>
 										<div class="group flex cursor-pointer flex-col gap-2 overflow-hidden rounded-md">
-											<div class="aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
+											<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
 												{item.cover ? (
 													<img
 														src={item.cover}
@@ -96,6 +120,25 @@ export function Shelf({
 												) : (
 													<div class="flex h-full w-full items-center justify-center text-zinc-600">
 														<Disc3 size={28} />
+													</div>
+												)}
+												{onRemove && item.removable && (
+													<button
+														type="button"
+														title="Quitar"
+														onClick={(e) => {
+															e.preventDefault();
+															e.stopPropagation();
+															onRemove(item.id);
+														}}
+														class="absolute right-1 top-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-black/70 text-zinc-300 opacity-0 transition group-hover:opacity-100 hover:text-white"
+													>
+														<X size={14} />
+													</button>
+												)}
+												{item.source && (
+													<div class="absolute bottom-1 left-1 rounded-md bg-black/70 p-0.5">
+														<SourceBadge source={item.source} />
 													</div>
 												)}
 											</div>
@@ -116,7 +159,7 @@ export function Shelf({
 								{items.map((item) => (
 									<li key={item.id}>
 										<Link href={to(item.id)}>
-											<div class="group flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-zinc-900">
+											<div class="group relative flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-zinc-900">
 												<div class="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-900">
 													{item.cover ? (
 														<img
@@ -132,7 +175,7 @@ export function Shelf({
 														</div>
 													)}
 												</div>
-												<div class="flex min-w-0 flex-col">
+												<div class="flex min-w-0 flex-1 flex-col">
 													<h3 class="truncate text-sm text-zinc-300 group-hover:text-white">
 														{item.name}
 													</h3>
@@ -142,6 +185,31 @@ export function Shelf({
 														</p>
 													)}
 												</div>
+												{item.source && (
+													<span
+														class={
+															onRemove && item.removable
+																? "shrink-0 transition-opacity group-hover:opacity-0"
+																: "shrink-0"
+														}
+													>
+														<SourceBadge source={item.source} />
+													</span>
+												)}
+												{onRemove && item.removable && (
+													<button
+														type="button"
+														title="Quitar"
+														onClick={(e) => {
+															e.preventDefault();
+															e.stopPropagation();
+															onRemove(item.id);
+														}}
+														class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-zinc-500 opacity-0 transition group-hover:opacity-100 hover:bg-zinc-800 hover:text-white"
+													>
+														<X size={14} />
+													</button>
+												)}
 											</div>
 										</Link>
 									</li>

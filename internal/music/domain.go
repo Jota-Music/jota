@@ -1,13 +1,16 @@
 package music
 
+const YouTubePrefix = "youtube:"
+
 type Song struct {
-	Id       string   `json:"id"`
-	Url      string   `json:"url"`
-	Name     string   `json:"name"`
-	Duration int      `json:"duration"`
-	Share    Share    `json:"share"`
-	Album    Album    `json:"album"`
-	Artists  []Artist `json:"artists"`
+	Id        string   `json:"id"`
+	Url       string   `json:"url"`
+	Name      string   `json:"name"`
+	Duration  int      `json:"duration"`
+	Share     Share    `json:"share"`
+	Album     Album    `json:"album"`
+	Artists   []Artist `json:"artists"`
+	YoutubeId string   `json:"youtubeId,omitempty"`
 }
 
 type Share struct {
@@ -40,10 +43,11 @@ type Playlist struct {
 }
 
 type PlaylistSummary struct {
-	Id     string `json:"id"`
-	Name   string `json:"name"`
-	Mosaic string `json:"mosaic,omitempty"`
-	Cover  string `json:"cover,omitempty"`
+	Id       string `json:"id"`
+	Name     string `json:"name"`
+	Mosaic   string `json:"mosaic,omitempty"`
+	Cover    string `json:"cover,omitempty"`
+	Subtitle string `json:"subtitle,omitempty"`
 }
 
 type SearchResult struct {
