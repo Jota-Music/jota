@@ -32,7 +32,7 @@ export default function SaveYoutubeId({
 
 	useEffect(() => {
 		if (open) {
-			$input.current?.focus();
+			$input.current?.focus({ preventScroll: true });
 			$input.current?.select();
 		}
 	}, [open]);
