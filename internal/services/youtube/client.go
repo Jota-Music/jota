@@ -64,6 +64,16 @@ func clientContext() map[string]any {
 	}
 }
 
+// invalidateVisitor drops the cached visitor token so the next request
+// re-fetches it from the homepage. YouTube's bot check serves LOGIN_REQUIRED
+// (no stream URLs) once a token is stale or used up.
+func invalidateVisitor() {
+	visitorDataMu.Lock()
+	visitorData = ""
+	lastFetch = time.Time{}
+	visitorDataMu.Unlock()
+}
+
 // getVisitorData returns the cached visitor data and API key, refreshing them
 // from YouTube's homepage at most once per visitorTTL. Freshness is tracked by
 // lastFetch regardless of whether the homepage carried VISITOR_DATA, so a

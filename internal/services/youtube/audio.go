@@ -116,6 +116,17 @@ func GetAudioURL(videoID string) (string, error) {
 		return "", fmt.Errorf("invalid JSON: %w", err)
 	}
 
+	if pr.PlayabilityStatus.Status == "LOGIN_REQUIRED" {
+		invalidateVisitor()
+		data, err = retryRequest("https://www.youtube.com/youtubei/v1/player", payload, true, 3)
+		if err != nil {
+			return "", fmt.Errorf("player request failed: %w", err)
+		}
+		if err := json.Unmarshal(data, &pr); err != nil {
+			return "", fmt.Errorf("invalid JSON: %w", err)
+		}
+	}
+
 	if pr.PlayabilityStatus.Status != "OK" {
 		return "", fmt.Errorf("unavailable: %s", pr.PlayabilityStatus.Reason)
 	}
