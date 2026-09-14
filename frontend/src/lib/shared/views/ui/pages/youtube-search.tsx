@@ -163,7 +163,7 @@ export function YouTubeSearchPage() {
 
 	return (
 		<DefaultLayout class="gap-4">
-			<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
+			<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
 				<header class="flex shrink-0 flex-col gap-3">
 					<h2 class="text-xl font-semibold leading-tight">{query}</h2>
 					{bothAvailable && (
