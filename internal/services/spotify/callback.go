@@ -127,7 +127,7 @@ const androidCallbackSuccessPage = `<!doctype html>
     <p>Returning you to Jota...</p>
   </div>
   <script>
-    location.replace('intent://callback#Intent;scheme=jota;package=com.wails.app;end');
+    location.replace('intent://callback#Intent;scheme=jota;package=com.jotamusic.jota;end');
     setTimeout(function(){ window.close(); }, 800);
   </script>
 </body>
