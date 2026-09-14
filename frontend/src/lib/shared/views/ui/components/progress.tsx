@@ -50,6 +50,13 @@ function Progress({
 		setDragging(false);
 	}
 
+	function onWheel(e: WheelEvent) {
+		e.preventDefault();
+		const step = (max - min) * 0.05;
+		const next = value + (e.deltaY < 0 ? step : -step);
+		onChange?.(Math.max(min, Math.min(max, next)));
+	}
+
 	useEffect(() => {
 		window.addEventListener("mousemove", onPointerMove);
 		window.addEventListener("mouseup", onPointerUp);
@@ -75,6 +82,7 @@ function Progress({
 			ref={trackRef}
 			onMouseDown={onPointerDown}
 			onTouchStart={onPointerDown}
+			onWheel={onWheel}
 			class={cn(
 				"relative h-2 w-full cursor-pointer select-none rounded-full bg-neutral-300 touch-none",
 				className,
