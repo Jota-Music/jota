@@ -37,16 +37,16 @@ type SpotifyService struct {
 	sess *session.Session
 	done bool
 
-	clientID       string
-	callbackServer *callbackServer
-	pendingMu      sync.Mutex
-	pending        *pendingLogin
+	clientID  string
+	pendingMu sync.Mutex
+	pending   *pendingLogin
 }
 
 type pendingLogin struct {
 	verifier    string
 	redirectURL string
 	createdAt   time.Time
+	server      *callbackServer
 }
 
 func NewSpotifyService(clientID string) *SpotifyService {
@@ -69,17 +69,23 @@ func (s *SpotifyService) Connect(ctx context.Context) error {
 
 	creds, err := loadCreds()
 	if err == nil {
-		log.Printf("spotify-v2: stored credentials found for %s", creds.Username)
-		sess, err := s.newSession(ctx, session.StoredCredentials{Username: creds.Username, Data: mustHexDecode(creds.Data)})
+		data, decodeErr := hex.DecodeString(creds.Data)
+		if decodeErr != nil {
+			log.Printf("spotify: invalid stored credentials (not hex): %v", decodeErr)
+			_ = sessionBucket.Delete(credsKey)
+			return ErrNotConnected
+		}
+		log.Printf("spotify: stored credentials found for %s", creds.Username)
+		sess, err := s.newSession(ctx, session.StoredCredentials{Username: creds.Username, Data: data})
 		if err == nil {
 			s.sess = sess
-			log.Printf("spotify-v2: connected as %s", sess.Username())
+			log.Printf("spotify: connected as %s", sess.Username())
 			return nil
 		}
-		log.Printf("spotify-v2: failed to restore session: %v", err)
+		log.Printf("spotify: failed to restore session: %v", err)
 	}
 
-	log.Printf("spotify-v2: no stored credentials (%v), serving disconnected; log in from the app", err)
+	log.Printf("spotify: no stored credentials (%v), serving disconnected; log in from the app", err)
 	return ErrNotConnected
 }
 
@@ -96,7 +102,7 @@ func (s *SpotifyService) newSession(ctx context.Context, creds any) (*session.Se
 			return sess, nil
 		}
 		lastErr = err
-		log.Printf("spotify-v2: session creation failed (attempt %d/8): %v", attempt, err)
+		log.Printf("spotify: session creation failed (attempt %d/8): %v", attempt, err)
 		time.Sleep(3 * time.Second)
 	}
 	return nil, lastErr
@@ -149,11 +155,10 @@ func (s *SpotifyService) StartupLogin() (string, error) {
 
 	cbServer, err := newCallbackServer()
 	if err != nil {
-		log.Printf("spotify-v2: StartupLogin failed: %v", err)
+		log.Printf("spotify: StartupLogin failed: %v", err)
 		return "", fmt.Errorf("failed to start callback server: %w", err)
 	}
-	s.callbackServer = cbServer
-	log.Printf("spotify-v2: callback server started on port %d", cbServer.port)
+	log.Printf("spotify: callback server started on port %d", cbServer.port)
 	redirectURL := fmt.Sprintf("http://127.0.0.1:%d/login", cbServer.port)
 
 	oauthConf := &oauth2.Config{
@@ -170,20 +175,21 @@ func (s *SpotifyService) StartupLogin() (string, error) {
 		verifier:    verifier,
 		redirectURL: redirectURL,
 		createdAt:   time.Now(),
+		server:      cbServer,
 	}
 	s.pendingMu.Lock()
 	s.pending = p
 	s.pendingMu.Unlock()
 
-	log.Printf("spotify-v2: auth URL: %s", authURL)
+	log.Printf("spotify: auth URL: %s", authURL)
 
 	go func() {
 		time.Sleep(loginTimeout)
 		s.pendingMu.Lock()
 		if s.pending == p {
 			s.pending = nil
-			s.callbackServer.stop()
-			log.Printf("spotify-v2: login timeout")
+			p.server.stop()
+			log.Printf("spotify: login timeout")
 		}
 		s.pendingMu.Unlock()
 	}()
@@ -199,32 +205,31 @@ func (s *SpotifyService) CompleteLogin() error {
 	s.pending = nil
 	s.pendingMu.Unlock()
 	if p == nil {
-		log.Printf("spotify-v2: CompleteLogin: no pending login")
+		log.Printf("spotify: CompleteLogin: no pending login")
 		return ErrNoLoginInProgress
 	}
-	if s.callbackServer == nil {
-		log.Printf("spotify-v2: CompleteLogin: no callback server")
+	if p.server == nil {
+		log.Printf("spotify: CompleteLogin: no callback server")
 		return errors.New("no callback server running")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), loginTimeout)
 	defer cancel()
 
-	log.Printf("spotify-v2: waiting for callback...")
-	code, err := s.callbackServer.wait(ctx)
-	s.callbackServer.stop()
-	s.callbackServer = nil
+	log.Printf("spotify: waiting for callback...")
+	code, err := p.server.wait(ctx)
+	p.server.stop()
 	if err != nil {
-		log.Printf("spotify-v2: callback error: %v", err)
+		log.Printf("spotify: callback error: %v", err)
 		return fmt.Errorf("callback wait: %w", err)
 	}
 	if code == "" {
-		log.Printf("spotify-v2: no code received")
+		log.Printf("spotify: no code received")
 		return errors.New("no code received from Spotify")
 	}
-	log.Printf("spotify-v2: got code")
+	log.Printf("spotify: got code")
 
-	log.Printf("spotify-v2: completing interactive login")
+	log.Printf("spotify: completing interactive login")
 	exchangeCtx, exchangeCancel := context.WithTimeout(context.Background(), time.Minute)
 	defer exchangeCancel()
 
@@ -241,17 +246,17 @@ func (s *SpotifyService) CompleteLogin() error {
 		if err == nil {
 			break
 		}
-		log.Printf("spotify-v2: token exchange failed (attempt %d/3): %v", attempt, err)
+		log.Printf("spotify: token exchange failed (attempt %d/3): %v", attempt, err)
 		time.Sleep(2 * time.Second)
 	}
 	if err != nil {
 		return fmt.Errorf("failed exchanging oauth2 code: %w", err)
 	}
-	log.Printf("spotify-v2: token exchanged")
+	log.Printf("spotify: token exchanged")
 
 	username, _ := token.Extra("username").(string)
 	if username == "" {
-		log.Printf("spotify-v2: missing username in token")
+		log.Printf("spotify: missing username in token")
 		return errors.New("missing username in token response")
 	}
 
@@ -260,7 +265,7 @@ func (s *SpotifyService) CompleteLogin() error {
 		Token:    token.AccessToken,
 	})
 	if err != nil {
-		log.Printf("spotify-v2: session creation failed: %v", err)
+		log.Printf("spotify: session creation failed: %v", err)
 		return fmt.Errorf("failed connecting session: %w", err)
 	}
 
@@ -269,9 +274,9 @@ func (s *SpotifyService) CompleteLogin() error {
 	s.mu.Unlock()
 
 	if err := saveCreds(sess.Username(), sess.StoredCredentials()); err != nil {
-		log.Printf("spotify-v2: failed to save credentials: %v", err)
+		log.Printf("spotify: failed to save credentials: %v", err)
 	}
-	log.Printf("spotify-v2: connected as %s", sess.Username())
+	log.Printf("spotify: connected as %s", sess.Username())
 
 	return nil
 }
@@ -293,14 +298,6 @@ func saveCreds(username string, data []byte) error {
 		Username: username,
 		Data:     hex.EncodeToString(data),
 	})
-}
-
-func mustHexDecode(s string) []byte {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		log.Fatalf("spotify-v2: invalid stored credentials (not hex): %v", err)
-	}
-	return b
 }
 
 type browserLogger struct{}
