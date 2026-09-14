@@ -3,7 +3,9 @@ import type { Song } from "@/lib/music/model";
 import {
 	audioDuration,
 	currentSong,
+	dragSeeking,
 	play,
+	progress,
 	seek,
 	setOnTrackEnded,
 	stopPlayer,
@@ -41,6 +43,16 @@ export function seekFromLocalControl(seconds: number) {
 	const clamped = clampPlaybackSeconds(seconds);
 	forward({ action: "seek", positionMs: clamped * 1000 });
 	seek(clamped);
+}
+
+export function previewSeek(seconds: number) {
+	dragSeeking.value = true;
+	progress.value = clampPlaybackSeconds(seconds);
+}
+
+export function commitSeek(seconds: number) {
+	dragSeeking.value = false;
+	seekFromLocalControl(seconds);
 }
 
 function setQueueState(nextQueue: Song[], nextIndex: number) {

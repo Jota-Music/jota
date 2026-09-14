@@ -6,6 +6,7 @@ type ProgressProps = {
 	min?: number;
 	max?: number;
 	onChange?: (value: number) => void;
+	onCommit?: (value: number) => void;
 	class?: string;
 };
 
@@ -14,10 +15,12 @@ function Progress({
 	min = 0,
 	max = 1,
 	onChange,
+	onCommit,
 	class: className,
 }: ProgressProps) {
 	const trackRef = useRef<HTMLDivElement>(null);
 	const [dragging, setDragging] = useState(false);
+	const lastValue = useRef(0);
 
 	function getClientX(e: MouseEvent | TouchEvent): number {
 		return "touches" in e ? e.touches[0].clientX : e.clientX;
@@ -32,6 +35,7 @@ function Progress({
 		const ratio = Math.max(0, Math.min(1, x / rect.width));
 		const scaledValue = min + ratio * (max - min);
 
+		lastValue.current = scaledValue;
 		onChange?.(scaledValue);
 	}
 
@@ -47,6 +51,7 @@ function Progress({
 	}
 
 	function onPointerUp() {
+		if (dragging) onCommit?.(lastValue.current);
 		setDragging(false);
 	}
 
@@ -54,7 +59,13 @@ function Progress({
 		e.preventDefault();
 		const step = (max - min) * 0.05;
 		const next = value + (e.deltaY < 0 ? step : -step);
-		onChange?.(Math.max(min, Math.min(max, next)));
+		const clamped = Math.max(min, Math.min(max, next));
+		lastValue.current = clamped;
+		if (onCommit) {
+			onCommit(clamped);
+		} else {
+			onChange?.(clamped);
+		}
 	}
 
 	useEffect(() => {

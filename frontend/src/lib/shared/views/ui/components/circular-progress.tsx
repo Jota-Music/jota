@@ -9,6 +9,7 @@ type CircularProgressProps = {
 	max?: number;
 	strokeWidth?: number;
 	onChange?: (value: number) => void;
+	onCommit?: (value: number) => void;
 	class?: string;
 	style?: CSSProperties;
 } & PropsWithChildren;
@@ -19,6 +20,7 @@ function CircularProgress({
 	max = 1,
 	strokeWidth = 8,
 	onChange,
+	onCommit,
 	class: className,
 	children,
 	style,
@@ -29,6 +31,7 @@ function CircularProgress({
 	const [size, setSize] = useState(0);
 	const [dragging, setDragging] = useState(false);
 	const [onRing, setOnRing] = useState(false);
+	const lastValue = useRef(0);
 
 	useEffect(() => {
 		if (!containerRef.current) return;
@@ -81,8 +84,10 @@ function CircularProgress({
 
 		const ratio = angle / (Math.PI * 2);
 		const next = min + ratio * (max - min);
+		const clamped = clamp(next);
 
-		onChange?.(clamp(next));
+		lastValue.current = clamped;
+		onChange?.(clamped);
 	}
 
 	function isOnRing(clientX: number, clientY: number) {
@@ -122,7 +127,10 @@ function CircularProgress({
 			updateFromPointer(e.clientX, e.clientY);
 		};
 
-		const up = () => setDragging(false);
+		const up = () => {
+			if (dragging) onCommit?.(lastValue.current);
+			setDragging(false);
+		};
 
 		window.addEventListener("pointermove", move);
 		window.addEventListener("pointerup", up);

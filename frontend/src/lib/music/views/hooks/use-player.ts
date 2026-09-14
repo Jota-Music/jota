@@ -9,9 +9,10 @@ import {
 } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import {
+	commitSeek,
 	nextSong,
+	previewSeek,
 	prevSong,
-	seekFromLocalControl,
 	toggleSong,
 } from "@/lib/music/views/stores/player";
 import { currentIndex, queue } from "@/lib/music/views/stores/queue";
@@ -93,7 +94,8 @@ export function usePlayer() {
 		duration: audioDuration.value,
 
 		// controls
-		seek: seekFromLocalControl,
+		seek: previewSeek,
+		seekCommit: commitSeek,
 		toggleSong,
 		nextSong,
 		prevSong,

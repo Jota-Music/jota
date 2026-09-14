@@ -41,6 +41,7 @@ export function setOnTrackEnded(fn: () => void) {
 export const isLoading = signal(false);
 export const isPlaying = signal(false);
 export const progress = signal(0);
+export const dragSeeking = signal(false);
 export const seekCount = signal(0);
 export const audioDuration = signal(0);
 export const volume = signal(getInitialVolume());
@@ -363,7 +364,7 @@ function bindEvents(a: HTMLAudioElement) {
 	};
 
 	a.ontimeupdate = () => {
-		progress.value = a.currentTime;
+		if (!dragSeeking.value) progress.value = a.currentTime;
 		media.position(a);
 	};
 

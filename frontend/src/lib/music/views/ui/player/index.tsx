@@ -41,6 +41,7 @@ interface FullPlayerProps {
 	progress: number;
 	duration: number;
 	seek: (seconds: number) => void;
+	seekCommit: (seconds: number) => void;
 	toggleSong: () => Promise<void>;
 	nextSong: () => Promise<void>;
 	prevSong: () => Promise<void>;
@@ -56,6 +57,7 @@ function FullPlayerContent({
 	progress,
 	duration,
 	seek,
+	seekCommit,
 	toggleSong,
 	nextSong,
 	prevSong,
@@ -70,6 +72,7 @@ function FullPlayerContent({
 					max={duration}
 					min={0}
 					onChange={seek}
+					onCommit={seekCommit}
 					class="text-current mx-auto w-48 drop-shadow-lg drop-shadow-black"
 				>
 					<div class="relative aspect-square w-full">
@@ -134,6 +137,7 @@ function FullPlayerContent({
 						max={duration}
 						min={0}
 						onChange={seek}
+						onCommit={seekCommit}
 						class="h-1.5 min-w-0 flex-1 opacity-80"
 					/>
 
@@ -231,6 +235,7 @@ export function Player() {
 		progress,
 		duration,
 		seek,
+		seekCommit,
 		prevSong,
 		nextSong,
 		canPrev,
@@ -279,6 +284,7 @@ export function Player() {
 						max={duration}
 						min={0}
 						onChange={seek}
+						onCommit={seekCommit}
 						class="h-0.75 w-full rounded-none border-0 bg-neutral-800"
 					/>
 				</div>
