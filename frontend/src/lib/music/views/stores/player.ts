@@ -77,7 +77,17 @@ async function playAtIndex(i: number): Promise<void> {
 
 	const ok = await play(song);
 	if (!ok) {
-		stopPlayer();
+		const next = pickNext(
+			queue.value,
+			currentIndex.value,
+			repeat.value,
+			shuffle.value,
+		);
+		if (next != null && next !== currentIndex.value) {
+			void playAtIndex(next);
+		} else {
+			stopPlayer();
+		}
 		return;
 	}
 
