@@ -2,6 +2,7 @@ import { signal } from "@preact/signals";
 import {
 	ChevronUp,
 	ListMusic,
+	Minimize2,
 	Repeat,
 	Repeat1,
 	Shuffle,
@@ -32,6 +33,20 @@ import Progress from "@/lib/shared/views/ui/components/progress";
 import { Sheet } from "@/lib/shared/views/ui/components/sheet";
 
 const playerModalOpen = signal(false);
+
+const PLAYER_COMPACT_KEY = "music-player-compact";
+
+export const compactPlayer = signal(
+	typeof window !== "undefined" &&
+		localStorage.getItem(PLAYER_COMPACT_KEY) === "1",
+);
+
+export function setCompactPlayer(value: boolean) {
+	compactPlayer.value = value;
+	if (typeof window !== "undefined") {
+		localStorage.setItem(PLAYER_COMPACT_KEY, value ? "1" : "0");
+	}
+}
 
 interface FullPlayerProps {
 	song: Song;
@@ -211,6 +226,15 @@ function FullPlayerContent({
 					>
 						<ListMusic class="size-6 fill-current" />
 					</button>
+
+					<button
+						type="button"
+						title="Compact player"
+						onClick={() => setCompactPlayer(true)}
+						class="hidden md:block rounded-md p-1 transition hover:bg-white/10 cursor-pointer"
+					>
+						<Minimize2 class="size-5" />
+					</button>
 				</div>
 			</div>
 		</section>
@@ -263,14 +287,29 @@ export function Player() {
 		dragTracking.current.active = false;
 	};
 
+	const desktopViewport = () =>
+		typeof window !== "undefined" &&
+		window.matchMedia("(min-width: 768px)").matches;
+
+	const onExpand = () => {
+		if (compactPlayer.value && desktopViewport()) {
+			setCompactPlayer(false);
+		} else {
+			playerModalOpen.value = true;
+		}
+	};
+
 	return (
 		<>
-			<div class="hidden md:block">
+			<div class={compactPlayer.value ? "hidden" : "hidden md:block"}>
 				<FullPlayerContent {...player} />
 			</div>
 
 			<div
-				class="block md:hidden fixed bottom-0 left-0 right-0 z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out"
+				class={cn(
+					"block fixed bottom-0 left-0 right-0 z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out",
+					compactPlayer.value ? "md:block" : "md:hidden",
+				)}
 				style={`transform: translateY(${playerModalOpen.value ? "100%" : "0"})`}
 				onPointerDown={onBarPointerDown}
 				onPointerMove={onBarPointerMove}
@@ -291,12 +330,10 @@ export function Player() {
 					<div
 						role="toolbar"
 						tabIndex={-1}
-						onClick={() => {
-							playerModalOpen.value = true;
-						}}
+						onClick={onExpand}
 						onKeyDown={(e) => {
 							if (e.key === "Enter" || e.key === " ") {
-								playerModalOpen.value = true;
+								onExpand();
 							}
 						}}
 						class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
@@ -320,45 +357,104 @@ export function Player() {
 						</div>
 					</div>
 
-					<div class="flex items-center gap-1 shrink-0">
-						<VolumeControl class="mr-2 max-[500px]:hidden" />
+					<div class="flex items-center gap-2 md:gap-3 shrink-0">
+						<div class="flex items-center gap-0.5 max-md:hidden">
+							<button
+								type="button"
+								title={shuffle.value ? "Disable shuffle" : "Enable shuffle"}
+								onClick={toggleShuffle}
+								aria-pressed={shuffle.value}
+								class={cn(
+									"rounded-md p-1.5 transition cursor-pointer",
+									shuffle.value
+										? "text-(--dominant-color)"
+										: "text-white/60 hover:text-white",
+								)}
+							>
+								<Shuffle class="size-5 stroke-current" />
+							</button>
 
-						<button
-							type="button"
-							disabled={!canPrev}
-							onClick={() => void prevSong()}
-							class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
-						>
-							<SkipBack class="size-6 fill-current" />
-						</button>
+							<button
+								type="button"
+								title={
+									repeat.value === "off"
+										? "Repeat all"
+										: repeat.value === "all"
+											? "Repeat one"
+											: "No repeat"
+								}
+								onClick={cycleRepeat}
+								aria-label="Repeat mode"
+								aria-pressed={repeat.value !== "off"}
+								class={cn(
+									"rounded-md p-1.5 transition cursor-pointer",
+									repeat.value !== "off"
+										? "text-(--dominant-color)"
+										: "text-white/60 hover:text-white",
+								)}
+							>
+								{repeat.value === "one" ? (
+									<Repeat1 class="size-5 stroke-current" />
+								) : (
+									<Repeat class="size-5 stroke-current" />
+								)}
+							</button>
+						</div>
 
-						<Toggle
-							loading={isLoading}
-							playing={isPlaying}
-							onClick={() => void toggleSong()}
-							class="bg-(--dominant-color)"
-						/>
+						<div class="flex items-center gap-1">
+							<VolumeControl class="mr-2 max-[500px]:hidden" />
 
-						<button
-							type="button"
-							disabled={!canNext}
-							onClick={() => void nextSong()}
-							class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
-						>
-							<SkipForward class="size-6 fill-current" />
-						</button>
+							<button
+								type="button"
+								disabled={!canPrev}
+								onClick={() => void prevSong()}
+								class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
+							>
+								<SkipBack class="size-6 fill-current" />
+							</button>
 
-						<button
-							type="button"
-							aria-label="Expand player"
-							onClick={(e) => {
-								e.stopPropagation();
-								playerModalOpen.value = true;
-							}}
-							class="shrink-0 p-1.5 rounded-full text-white/60 hover:text-white cursor-pointer transition-colors"
-						>
-							<ChevronUp class="size-5" />
-						</button>
+							<Toggle
+								loading={isLoading}
+								playing={isPlaying}
+								onClick={() => void toggleSong()}
+								class="bg-(--dominant-color)"
+							/>
+
+							<button
+								type="button"
+								disabled={!canNext}
+								onClick={() => void nextSong()}
+								class="p-1.5 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white/80"
+							>
+								<SkipForward class="size-6 fill-current" />
+							</button>
+						</div>
+
+						<div class="flex items-center gap-0.5">
+							<button
+								type="button"
+								title="Playback queue"
+								aria-expanded={showQueue.value}
+								onClick={() => {
+									showQueue.value = !showQueue.value;
+								}}
+								class="max-md:hidden rounded-md p-1.5 transition text-white/60 hover:text-white cursor-pointer"
+							>
+								<ListMusic class="size-5 fill-current" />
+							</button>
+
+							<button
+								type="button"
+								aria-label="Expand player"
+								onClick={(e) => {
+									e.stopPropagation();
+									onExpand();
+								}}
+								class="shrink-0 p-1.5 rounded-full text-white/60 hover:text-white cursor-pointer transition-colors"
+							>
+								<ChevronUp class="size-5" />
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
