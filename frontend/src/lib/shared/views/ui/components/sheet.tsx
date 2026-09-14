@@ -18,6 +18,7 @@ interface SheetProps {
 
 const EXIT_MS = 300;
 const CLOSE_PX = 120;
+const TAP_PX = 8;
 const FLING_PX_PER_MS = 0.5;
 
 export function Sheet({
@@ -87,6 +88,9 @@ export function Sheet({
 				el.style.transition = "translate 0.25s ease-out";
 				el.style.translate = "0 100%";
 			}
+			close();
+		} else if (drag.current.offset < TAP_PX) {
+			clearInline();
 			close();
 		} else if (el) {
 			el.style.transition = "translate 0.3s cubic-bezier(0.32, 0.72, 0, 1)";
