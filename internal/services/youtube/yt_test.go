@@ -27,11 +27,14 @@ func TestSetYoutubeIdInvalidatesAudioCache(t *testing.T) {
 }
 
 func TestGetAudioURL(t *testing.T) {
-	url, err := audioURL("E9s9BNZFQLA")
+	url, client, err := audioURL("E9s9BNZFQLA")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 	if url == "" || len(url) < 50 {
 		t.Fatalf("invalid URL: %s", url)
+	}
+	if client.Name == "" {
+		t.Fatalf("expected client name, got empty")
 	}
 }
