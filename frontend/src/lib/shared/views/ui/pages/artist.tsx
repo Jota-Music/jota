@@ -37,7 +37,7 @@ function groupKeysOf(albums: AlbumSummary[] | undefined): string[] {
 		}
 	}
 	for (const a of albums) {
-		const key = a.group?.trim() || "álbum";
+		const key = a.group?.trim() || "album";
 		if (!keys.includes(key)) {
 			keys.push(key);
 		}
