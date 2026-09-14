@@ -467,7 +467,7 @@ export function Player() {
 				mobileOnly
 				closeLabel="Close player"
 			>
-				<div class="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-8">
+				<div class="min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-4">
 					<FullPlayerContent {...player} />
 				</div>
 			</Sheet>
