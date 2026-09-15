@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * WailsPathHandler implements WebViewAssetLoader.PathHandler to serve assets
  * from the Go asset server. This allows the WebView to load assets without
- * using a network server, similar to iOS's WKURLSchemeHandler.
+ * using a network server.
  */
 public class WailsPathHandler implements WebViewAssetLoader.PathHandler {
     private static final String TAG = "WailsPathHandler";

@@ -12,7 +12,7 @@ import com.wails.app.BuildConfig;
  * to communicate with the Go backend. This is exposed to JavaScript as the
  * `window.wails` object.
  *
- * Similar to iOS's WKScriptMessageHandler but using Android's addJavascriptInterface.
+ * Exposed to the WebView through Android's addJavascriptInterface.
  */
 public class WailsJSBridge {
     private static final String TAG = "WailsJSBridge";

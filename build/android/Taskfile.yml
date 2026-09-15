@@ -25,7 +25,7 @@ vars:
   EMULATOR:
     sh: 'command -v emulator || echo "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$([ -d "$HOME/Library/Android/sdk" ] && echo "$HOME/Library/Android/sdk" || echo "$HOME/Android/Sdk")}}/emulator/emulator"'
   # avdmanager lives under cmdline-tools/<version>/bin; used to auto-create an
-  # AVD when none exists (mirrors the iOS `ensure-simulator` auto-create flow).
+  # AVD when none exists.
   AVDMANAGER:
     sh: 'command -v avdmanager || ls "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$([ -d "$HOME/Library/Android/sdk" ] && echo "$HOME/Library/Android/sdk" || echo "$HOME/Android/Sdk")}}"/cmdline-tools/*/bin/avdmanager 2>/dev/null | sort -V | tail -1 || true'
 
@@ -262,10 +262,10 @@ tasks:
         # Get first available AVD
         AVD_NAME=$("{{.EMULATOR}}" -list-avds | tail -1)
         if [ -z "$AVD_NAME" ]; then
-          # No AVD yet. Mirror the iOS `ensure-simulator` flow and create one
-          # automatically — but ONLY from a system image that is already
-          # installed. We never trigger an sdkmanager download from a `run`
-          # task (that would be a surprise multi-GB download + license prompt).
+          # No AVD yet. Create one automatically — but ONLY from a system
+          # image that is already installed. We never trigger an sdkmanager
+          # download from a `run` task (that would be a surprise multi-GB
+          # download + license prompt).
           # Pick the highest-API installed image matching the host ABI.
           SDK_ROOT="{{.SDK_ROOT}}"
           ABI="{{.ANDROID_ABI}}"
