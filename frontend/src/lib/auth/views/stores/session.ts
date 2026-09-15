@@ -10,6 +10,7 @@ import { Browser } from "@wailsio/runtime";
 
 export const spotifyConnected = signal(false);
 export const spotifyUser = signal<string | null>(null);
+export const spotifyReady = signal(false);
 
 export async function syncSpotifyStatus(): Promise<void> {
 	try {
@@ -19,6 +20,8 @@ export async function syncSpotifyStatus(): Promise<void> {
 	} catch {
 		spotifyConnected.value = false;
 		spotifyUser.value = null;
+	} finally {
+		spotifyReady.value = true;
 	}
 }
 

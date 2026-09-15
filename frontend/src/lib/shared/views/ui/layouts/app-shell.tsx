@@ -1,5 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { useRef } from "preact/hooks";
+import { Welcome } from "@/lib/auth/views/ui/welcome";
 import Queue from "@/lib/music/views/ui/queue";
 import { cn } from "@/lib/shared/utils/tw";
 import { Header } from "@/lib/shared/views/ui/components/header";
@@ -44,6 +45,7 @@ export function AppShell({
 
 					<Queue />
 					<SyncPanel />
+					<Welcome />
 				</div>
 
 				<ErrorBar />
