@@ -28,8 +28,8 @@ function SettingsPage() {
 					</p>
 				</header>
 
-				<RelaySettings />
 				<AccountSettings />
+				<RelaySettings />
 
 				<footer class="mt-auto pt-6 text-center text-xs text-zinc-600">
 					Developed by{" "}
