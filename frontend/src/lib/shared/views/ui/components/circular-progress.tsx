@@ -145,18 +145,10 @@ function CircularProgress({
 		(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
 	}
 
-	useEffect(() => {
-		const move = (e: PointerEvent) => {
-			if (dragging) return;
-			setOnRing(isOnRing(e.clientX, e.clientY));
-		};
-
-		window.addEventListener("pointermove", move, { passive: true });
-
-		return () => {
-			window.removeEventListener("pointermove", move);
-		};
-	}, [dragging, safeSize, radius, strokeWidth]);
+	function onHoverMove(e: PointerEvent) {
+		if (draggingRef.current) return;
+		setOnRing(isOnRing(e.clientX, e.clientY));
+	}
 
 	useEffect(() => {
 		if (dragging) {
@@ -186,6 +178,8 @@ function CircularProgress({
 			aria-valuemin={min}
 			aria-valuemax={max}
 			onPointerDown={onPointerDown}
+			onPointerMove={onHoverMove}
+			onPointerLeave={() => setOnRing(false)}
 		>
 			{/* CENTER */}
 			<div class="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full z-0 pointer-events-auto">
