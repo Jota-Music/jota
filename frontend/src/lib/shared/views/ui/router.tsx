@@ -1,17 +1,47 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/preact-query";
+import { lazy, Suspense } from "preact/compat";
 import { useEffect } from "preact/hooks";
 import { Route, Switch } from "wouter-preact";
 import { syncSpotifyStatus } from "@/lib/auth/views/stores/session";
 import { RequireSpotify } from "@/lib/auth/views/ui/spotify-connect";
-import { AlbumPage } from "@/lib/shared/views/ui/pages/album";
-import { ArtistPage } from "@/lib/shared/views/ui/pages/artist";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
-import { NotFoundPage } from "@/lib/shared/views/ui/pages/not-found";
-import { PlaylistPage } from "@/lib/shared/views/ui/pages/playlist";
-import { SearchPage } from "@/lib/shared/views/ui/pages/search";
-import SettingsPage from "@/lib/shared/views/ui/pages/settings";
-import { UserPage } from "@/lib/shared/views/ui/pages/user";
-import { YouTubeSearchPage } from "@/lib/shared/views/ui/pages/youtube-search";
+
+const PlaylistPage = lazy(() =>
+	import("@/lib/shared/views/ui/pages/playlist").then((m) => ({
+		default: m.PlaylistPage,
+	})),
+);
+const ArtistPage = lazy(() =>
+	import("@/lib/shared/views/ui/pages/artist").then((m) => ({
+		default: m.ArtistPage,
+	})),
+);
+const AlbumPage = lazy(() =>
+	import("@/lib/shared/views/ui/pages/album").then((m) => ({
+		default: m.AlbumPage,
+	})),
+);
+const YouTubeSearchPage = lazy(() =>
+	import("@/lib/shared/views/ui/pages/youtube-search").then((m) => ({
+		default: m.YouTubeSearchPage,
+	})),
+);
+const SearchPage = lazy(() =>
+	import("@/lib/shared/views/ui/pages/search").then((m) => ({
+		default: m.SearchPage,
+	})),
+);
+const SettingsPage = lazy(() => import("@/lib/shared/views/ui/pages/settings"));
+const UserPage = lazy(() =>
+	import("@/lib/shared/views/ui/pages/user").then((m) => ({
+		default: m.UserPage,
+	})),
+);
+const NotFoundPage = lazy(() =>
+	import("@/lib/shared/views/ui/pages/not-found").then((m) => ({
+		default: m.NotFoundPage,
+	})),
+);
 
 const queryClient = new QueryClient();
 
@@ -22,33 +52,35 @@ function Router() {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<Switch>
-				<Route path="/playlist/:id" component={PlaylistPage} />
-				<Route path="/artist/:id">
-					<RequireSpotify>
-						<ArtistPage />
-					</RequireSpotify>
-				</Route>
-				<Route path="/album/:id">
-					<RequireSpotify>
-						<AlbumPage />
-					</RequireSpotify>
-				</Route>
-				<Route path="/search/youtube/:query" component={YouTubeSearchPage} />
-				<Route path="/search/:type/:query">
-					<RequireSpotify>
-						<SearchPage />
-					</RequireSpotify>
-				</Route>
-				<Route path="/settings" component={SettingsPage} />
-				<Route path="/:user">
-					<RequireSpotify>
-						<UserPage />
-					</RequireSpotify>
-				</Route>
-				<Route path="/" component={MainPage} />
-				<Route component={NotFoundPage} />
-			</Switch>
+			<Suspense fallback={null}>
+				<Switch>
+					<Route path="/playlist/:id" component={PlaylistPage} />
+					<Route path="/artist/:id">
+						<RequireSpotify>
+							<ArtistPage />
+						</RequireSpotify>
+					</Route>
+					<Route path="/album/:id">
+						<RequireSpotify>
+							<AlbumPage />
+						</RequireSpotify>
+					</Route>
+					<Route path="/search/youtube/:query" component={YouTubeSearchPage} />
+					<Route path="/search/:type/:query">
+						<RequireSpotify>
+							<SearchPage />
+						</RequireSpotify>
+					</Route>
+					<Route path="/settings" component={SettingsPage} />
+					<Route path="/:user">
+						<RequireSpotify>
+							<UserPage />
+						</RequireSpotify>
+					</Route>
+					<Route path="/" component={MainPage} />
+					<Route component={NotFoundPage} />
+				</Switch>
+			</Suspense>
 		</QueryClientProvider>
 	);
 }
