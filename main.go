@@ -4,6 +4,7 @@ import (
 	"embed"
 	"log"
 	"os"
+	"runtime"
 	"sync/atomic"
 
 	"github.com/Jota-Music/jota/internal/app"
@@ -58,6 +59,23 @@ func main() {
 
 	var window *application.WebviewWindow
 
+	// Wails single-instance on Linux is built on the session D-Bus and aborts
+	// the app when there is no bus, so only enable it where one exists.
+	var singleInstance *application.SingleInstanceOptions
+	if runtime.GOOS != "linux" || os.Getenv("DBUS_SESSION_BUS_ADDRESS") != "" {
+		singleInstance = &application.SingleInstanceOptions{
+			UniqueID: "com.jotamusic.jota",
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				if window == nil {
+					return
+				}
+				window.Restore()
+				window.Show()
+				window.Focus()
+			},
+		}
+	}
+
 	wailsApp := application.New(application.Options{
 		Name:        "Jota",
 		Description: "A self-hosted music streaming app",
@@ -71,17 +89,7 @@ func main() {
 		Linux: application.LinuxOptions{
 			ProgramName: "jota", // Linux program name (used in .desktop GTK app id)
 		},
-		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID: "com.jotamusic.jota",
-			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
-				if window == nil {
-					return
-				}
-				window.Restore()
-				window.Show()
-				window.Focus()
-			},
-		},
+		SingleInstance: singleInstance,
 	})
 
 	state := loadWindowState()
