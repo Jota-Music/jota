@@ -18,6 +18,7 @@ import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
+import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 type Props = {
 	songs: Song[];
@@ -124,39 +125,43 @@ export function Virtualization({ songs }: Props) {
 	});
 
 	return (
-		<div
-			ref={parentRef}
-			className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950"
-		>
-			{songs.length === 0 ? (
-				<div className="flex min-h-32 flex-1 items-center justify-center px-4 py-8 text-sm text-zinc-500">
-					No songs
-				</div>
-			) : (
-				<div
-					className="relative w-full pb-3"
-					style={{
-						height: `${rowVirtualizer.getTotalSize()}px`,
-					}}
-				>
-					{rowVirtualizer.getVirtualItems().map((virtualRow) => {
-						const song = songs[virtualRow.index];
+		<div className="relative min-h-0 flex-1">
+			<div
+				ref={parentRef}
+				className="h-full overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950"
+			>
+				{songs.length === 0 ? (
+					<div className="flex min-h-32 flex-1 items-center justify-center px-4 py-8 text-sm text-zinc-500">
+						No songs
+					</div>
+				) : (
+					<div
+						className="relative w-full pb-3"
+						style={{
+							height: `${rowVirtualizer.getTotalSize()}px`,
+						}}
+					>
+						{rowVirtualizer.getVirtualItems().map((virtualRow) => {
+							const song = songs[virtualRow.index];
 
-						return (
-							<div
-								key={`${song.id}-${virtualRow.index}`}
-								class="absolute left-0 w-full"
-								style={{
-									height: `${virtualRow.size}px`,
-									transform: `translateY(${virtualRow.start}px)`,
-								}}
-							>
-								<PlaylistRowMemo song={song} songs={songs} />
-							</div>
-						);
-					})}
-				</div>
-			)}
+							return (
+								<div
+									key={`${song.id}-${virtualRow.index}`}
+									class="absolute left-0 w-full"
+									style={{
+										height: `${virtualRow.size}px`,
+										transform: `translateY(${virtualRow.start}px)`,
+									}}
+								>
+									<PlaylistRowMemo song={song} songs={songs} />
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</div>
+
+			<Scrollbar target={parentRef} />
 		</div>
 	);
 }

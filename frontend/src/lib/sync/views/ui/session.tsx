@@ -9,11 +9,12 @@ import {
 	Users,
 	X,
 } from "lucide-preact";
-import { useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { cn } from "@/lib/shared/utils/tw";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
+import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import * as transport from "@/lib/sync/app/transport";
 import * as store from "@/lib/sync/views/stores";
 import { showSync } from "@/lib/sync/views/stores";
@@ -24,6 +25,7 @@ export function SyncPanel() {
 	const status = store.status.value;
 	const active = r !== "off";
 	const connected = status === "open";
+	const listRef = useRef<HTMLDivElement>(null);
 
 	return (
 		<Modal
@@ -67,8 +69,11 @@ export function SyncPanel() {
 				</div>
 			</header>
 
-			<div class="h-[min(70dvh,26rem)] overflow-y-auto px-4 py-4">
-				<SessionForm />
+			<div class="relative h-[min(70dvh,26rem)]">
+				<div ref={listRef} class="h-full overflow-y-auto px-4 py-4">
+					<SessionForm />
+				</div>
+				<Scrollbar target={listRef} />
 			</div>
 		</Modal>
 	);

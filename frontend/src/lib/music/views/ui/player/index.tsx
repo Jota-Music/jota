@@ -31,6 +31,7 @@ import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import Progress from "@/lib/shared/views/ui/components/progress";
+import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 const playerModalOpen = signal(false);
 
@@ -265,6 +266,7 @@ export function Player() {
 	} = player;
 
 	const dragTracking = useRef({ startY: 0, active: false });
+	const modalListRef = useRef<HTMLDivElement>(null);
 
 	const onBarPointerDown = (e: PointerEvent) => {
 		const target = e.target as HTMLElement;
@@ -467,8 +469,11 @@ export function Player() {
 				mobileOnly
 				closeLabel="Close player"
 			>
-				<div class="min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-4">
-					<FullPlayerContent {...player} />
+				<div class="relative min-h-0 flex-1">
+					<div ref={modalListRef} class="h-full overflow-y-auto px-6 pt-6 pb-4">
+						<FullPlayerContent {...player} />
+					</div>
+					<Scrollbar target={modalListRef} />
 				</div>
 			</Modal>
 		</>

@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/preact-query";
 import { Loader } from "lucide-preact";
-import { useLayoutEffect } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { type SearchResult, searchSpotify } from "@/lib/music/app/search";
 import type { Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
+import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type SearchType = "user" | "track" | "album" | "playlist" | "artist";
@@ -135,6 +136,7 @@ export function SearchPage() {
 
 	const detailRoute = type ? detailRoutes[type] : undefined;
 	const redirectId = detailRoute && type ? stripUriPrefix(query, type) : "";
+	const listRef = useRef<HTMLElement>(null);
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["spotify-search", type, query],
@@ -198,18 +200,24 @@ export function SearchPage() {
 					</header>
 				)}
 
-				<section class="flex flex-col gap-3 min-h-0 flex-1 overflow-y-auto pb-8">
-					{isLoading ? (
-						<div class="flex items-center gap-2 text-sm text-zinc-500">
-							<Loader size={14} class="animate-spin" />
-							Loading...
-						</div>
-					) : results.length === 0 ? (
-						<p class="text-sm text-zinc-500">No playlists found.</p>
-					) : (
-						<PlaylistGrid results={results} />
-					)}
-				</section>
+				<div class="relative min-h-0 flex-1">
+					<section
+						ref={listRef}
+						class="h-full flex flex-col gap-3 overflow-y-auto pb-8"
+					>
+						{isLoading ? (
+							<div class="flex items-center gap-2 text-sm text-zinc-500">
+								<Loader size={14} class="animate-spin" />
+								Loading...
+							</div>
+						) : results.length === 0 ? (
+							<p class="text-sm text-zinc-500">No playlists found.</p>
+						) : (
+							<PlaylistGrid results={results} />
+						)}
+					</section>
+					<Scrollbar target={listRef} />
+				</div>
 			</div>
 		</DefaultLayout>
 	);

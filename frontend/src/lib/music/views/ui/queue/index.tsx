@@ -20,6 +20,7 @@ import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 const ROW_PX = 64;
 const QUEUE_VIEW_LOOKBACK = 1;
@@ -183,175 +184,178 @@ function Queue() {
 				</div>
 			</header>
 
-			<ul
-				ref={parentRef}
-				class={cn(
-					"min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1",
-					dragFrom.value != null && "[&_button]:pointer-events-none",
-				)}
-				aria-label="Queue"
-				onDragOverCapture={handleDragOverCapture}
-				onDrop={handleDrop}
-				onDragEnd={handleDragEnd}
-			>
-				{songs.length === 0 ? (
-					<li class="flex min-h-40 list-none flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-zinc-500">
-						<p>Empty queue.</p>
-						<p class="text-xs text-zinc-600">
-							Pick a playlist and click a track to start.
-						</p>
-					</li>
-				) : (
-					<div
-						class="relative w-full"
-						style={{
-							height: `${rowVirtualizer.getTotalSize()}px`,
-						}}
-					>
-						{rowVirtualizer.getVirtualItems().map((virtualRow) => {
-							const localIndex = virtualRow.index;
-							const globalIndex = viewStart + localIndex;
-							const song = songs[globalIndex];
-							const isCurrent = globalIndex === idx;
-							const canSnapBelow =
-								idx >= 0 &&
-								idx < songs.length &&
-								!isCurrent &&
-								globalIndex !== idx + 1;
-							const canMoveDown = globalIndex < songs.length - 1;
-							const isDragSource = dragFrom.value === globalIndex;
-							const isDropTarget =
-								dragFrom.value != null &&
-								dragOver.value === globalIndex &&
-								dragFrom.value !== globalIndex;
+			<div class="relative min-h-0 flex-1">
+				<ul
+					ref={parentRef}
+					class={cn(
+						"h-full overflow-y-auto px-2 pb-3 pt-1",
+						dragFrom.value != null && "[&_button]:pointer-events-none",
+					)}
+					aria-label="Queue"
+					onDragOverCapture={handleDragOverCapture}
+					onDrop={handleDrop}
+					onDragEnd={handleDragEnd}
+				>
+					{songs.length === 0 ? (
+						<li class="flex min-h-40 list-none flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-zinc-500">
+							<p>Empty queue.</p>
+							<p class="text-xs text-zinc-600">
+								Pick a playlist and click a track to start.
+							</p>
+						</li>
+					) : (
+						<div
+							class="relative w-full"
+							style={{
+								height: `${rowVirtualizer.getTotalSize()}px`,
+							}}
+						>
+							{rowVirtualizer.getVirtualItems().map((virtualRow) => {
+								const localIndex = virtualRow.index;
+								const globalIndex = viewStart + localIndex;
+								const song = songs[globalIndex];
+								const isCurrent = globalIndex === idx;
+								const canSnapBelow =
+									idx >= 0 &&
+									idx < songs.length &&
+									!isCurrent &&
+									globalIndex !== idx + 1;
+								const canMoveDown = globalIndex < songs.length - 1;
+								const isDragSource = dragFrom.value === globalIndex;
+								const isDropTarget =
+									dragFrom.value != null &&
+									dragOver.value === globalIndex &&
+									dragFrom.value !== globalIndex;
 
-							return (
-								<div
-									key={virtualRow.key}
-									draggable={songs.length > 1}
-									title={songs.length > 1 ? "Drag row to reorder" : undefined}
-									role="none"
-									class={cn(
-										"absolute left-0 flex w-full select-none items-center gap-1 border-b border-zinc-900/80 px-1 sm:gap-2 sm:px-2",
-										isCurrent ? "bg-zinc-900/50" : "hover:bg-zinc-900/30",
-										isDragSource && "opacity-40",
-										isDropTarget &&
-											"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/40 ring-inset",
-										songs.length > 1 && "cursor-grab active:cursor-grabbing",
-										songs.length <= 1 && "cursor-default",
-									)}
-									style={{
-										height: `${virtualRow.size}px`,
-										transform: `translateY(${virtualRow.start}px)`,
-									}}
-									onDragStart={(e) => handleDragStart(e, globalIndex)}
-									onDragEnd={handleDragEnd}
-								>
+								return (
 									<div
+										key={virtualRow.key}
+										draggable={songs.length > 1}
+										title={songs.length > 1 ? "Drag row to reorder" : undefined}
+										role="none"
 										class={cn(
-											"hidden shrink-0 touch-none rounded p-0.5 text-zinc-600 sm:flex",
-											songs.length <= 1 && "opacity-30",
+											"absolute left-0 flex w-full select-none items-center gap-1 border-b border-zinc-900/80 px-1 sm:gap-2 sm:px-2",
+											isCurrent ? "bg-zinc-900/50" : "hover:bg-zinc-900/30",
+											isDragSource && "opacity-40",
+											isDropTarget &&
+												"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/40 ring-inset",
+											songs.length > 1 && "cursor-grab active:cursor-grabbing",
+											songs.length <= 1 && "cursor-default",
 										)}
-										aria-hidden
+										style={{
+											height: `${virtualRow.size}px`,
+											transform: `translateY(${virtualRow.start}px)`,
+										}}
+										onDragStart={(e) => handleDragStart(e, globalIndex)}
+										onDragEnd={handleDragEnd}
 									>
-										<GripVertical size={16} />
-									</div>
-									<span class="w-5 shrink-0 text-center text-[11px] tabular-nums text-zinc-600 sm:w-6 sm:text-xs mr-3">
-										{globalIndex + 1}
-									</span>
-									<div class="relative">
-										<img
-											loading="lazy"
-											decoding="async"
-											src={song.album?.covers?.[0]}
-											alt=""
+										<div
 											class={cn(
-												"h-9 w-9 shrink-0 rounded-md sm:h-10 sm:w-10",
-												isCurrent && "ring-2 ring-(--dominant-color)/80",
-												isCurrent && "brightness-40",
+												"hidden shrink-0 touch-none rounded p-0.5 text-zinc-600 sm:flex",
+												songs.length <= 1 && "opacity-30",
 											)}
-										/>
+											aria-hidden
+										>
+											<GripVertical size={16} />
+										</div>
+										<span class="w-5 shrink-0 text-center text-[11px] tabular-nums text-zinc-600 sm:w-6 sm:text-xs mr-3">
+											{globalIndex + 1}
+										</span>
+										<div class="relative">
+											<img
+												loading="lazy"
+												decoding="async"
+												src={song.album?.covers?.[0]}
+												alt=""
+												class={cn(
+													"h-9 w-9 shrink-0 rounded-md sm:h-10 sm:w-10",
+													isCurrent && "ring-2 ring-(--dominant-color)/80",
+													isCurrent && "brightness-40",
+												)}
+											/>
 
-										{isCurrent &&
-											(isLoading.value ? (
-												<Loader
-													size={23}
-													class="absolute inset-0 z-10 m-auto animate-spin text-zinc-400 drop-shadow-md drop-shadow-black"
-												/>
-											) : isPlaying.value ? (
-												<Music
-													size={25}
-													class="absolute inset-0 z-10 m-auto text-(--dominant-color) drop-shadow-md drop-shadow-black"
-												/>
-											) : (
-												<Pause
-													size={25}
-													class="absolute inset-0 z-10 m-auto fill-(--dominant-color) drop-shadow-md drop-shadow-black"
-												/>
-											))}
-									</div>
-									<div class="min-w-0 flex-1 pr-1">
-										<p class="truncate text-[13px] leading-tight sm:text-sm text-zinc-100">
-											{song.name}
-										</p>
-										<p class="truncate text-[11px] text-zinc-500 sm:text-xs">
-											<ArtistLinks artists={song.artists} />
-											{song.album.title && (
-												<>
-													{" • "}
-													<AlbumLink album={song.album} />
-												</>
-											)}
-										</p>
-									</div>
+											{isCurrent &&
+												(isLoading.value ? (
+													<Loader
+														size={23}
+														class="absolute inset-0 z-10 m-auto animate-spin text-zinc-400 drop-shadow-md drop-shadow-black"
+													/>
+												) : isPlaying.value ? (
+													<Music
+														size={25}
+														class="absolute inset-0 z-10 m-auto text-(--dominant-color) drop-shadow-md drop-shadow-black"
+													/>
+												) : (
+													<Pause
+														size={25}
+														class="absolute inset-0 z-10 m-auto fill-(--dominant-color) drop-shadow-md drop-shadow-black"
+													/>
+												))}
+										</div>
+										<div class="min-w-0 flex-1 pr-1">
+											<p class="truncate text-[13px] leading-tight sm:text-sm text-zinc-100">
+												{song.name}
+											</p>
+											<p class="truncate text-[11px] text-zinc-500 sm:text-xs">
+												<ArtistLinks artists={song.artists} />
+												{song.album.title && (
+													<>
+														{" • "}
+														<AlbumLink album={song.album} />
+													</>
+												)}
+											</p>
+										</div>
 
-									<div class="flex shrink-0 items-center gap-0 sm:gap-0.5">
-										<button
-											type="button"
-											draggable={false}
-											title="Play now"
-											disabled={isCurrent}
-											class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-(--dominant-color) disabled:cursor-not-allowed disabled:opacity-30"
-											onClick={() => handlePlayClick(globalIndex)}
-										>
-											<Play size={17} />
-										</button>
-										<button
-											type="button"
-											draggable={false}
-											title="Move down one position"
-											disabled={!canMoveDown}
-											class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-											onClick={() => handleMoveDownClick(globalIndex)}
-										>
-											<ChevronDown size={17} />
-										</button>
-										<button
-											type="button"
-											draggable={false}
-											title="Place just below the playing track"
-											disabled={!canSnapBelow}
-											class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-											onClick={() => handleMoveBelowClick(globalIndex)}
-										>
-											<ArrowUpFromLine size={17} />
-										</button>
-										<button
-											type="button"
-											draggable={false}
-											title="Remove from queue"
-											class="cursor-pointer rounded-md p-1.5 text-zinc-500 transition hover:bg-red-950/50 hover:text-red-300"
-											onClick={() => handleRemoveFromQueueClick(globalIndex)}
-										>
-											<Trash2 size={17} />
-										</button>
+										<div class="flex shrink-0 items-center gap-0 sm:gap-0.5">
+											<button
+												type="button"
+												draggable={false}
+												title="Play now"
+												disabled={isCurrent}
+												class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-(--dominant-color) disabled:cursor-not-allowed disabled:opacity-30"
+												onClick={() => handlePlayClick(globalIndex)}
+											>
+												<Play size={17} />
+											</button>
+											<button
+												type="button"
+												draggable={false}
+												title="Move down one position"
+												disabled={!canMoveDown}
+												class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+												onClick={() => handleMoveDownClick(globalIndex)}
+											>
+												<ChevronDown size={17} />
+											</button>
+											<button
+												type="button"
+												draggable={false}
+												title="Place just below the playing track"
+												disabled={!canSnapBelow}
+												class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+												onClick={() => handleMoveBelowClick(globalIndex)}
+											>
+												<ArrowUpFromLine size={17} />
+											</button>
+											<button
+												type="button"
+												draggable={false}
+												title="Remove from queue"
+												class="cursor-pointer rounded-md p-1.5 text-zinc-500 transition hover:bg-red-950/50 hover:text-red-300"
+												onClick={() => handleRemoveFromQueueClick(globalIndex)}
+											>
+												<Trash2 size={17} />
+											</button>
+										</div>
 									</div>
-								</div>
-							);
-						})}
-					</div>
-				)}
-			</ul>
+								);
+							})}
+						</div>
+					)}
+				</ul>
+				<Scrollbar target={parentRef} />
+			</div>
 		</Modal>
 	);
 }

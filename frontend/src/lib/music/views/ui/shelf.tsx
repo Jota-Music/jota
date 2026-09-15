@@ -1,10 +1,11 @@
 import { Disc3, LayoutGrid, List, X } from "lucide-preact";
 import type { ComponentChildren, ComponentType } from "preact";
-import { useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 import { Link } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
 import { cn } from "@/lib/shared/utils/tw";
+import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
@@ -122,6 +123,7 @@ export function Shelf({
 }: Props) {
 	const [variant, setVariant] = useState<Variant>(loadVariant);
 	const [sourceFilter, setSourceFilter] = useState<SourceFilter>(loadFilter);
+	const listRef = useRef<HTMLDivElement>(null);
 
 	const toggle = (next: Variant) => {
 		setVariant(next);
@@ -227,75 +229,24 @@ export function Shelf({
 						</div>
 					</div>
 
-					<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-						{filteredItems.length === 0 ? (
-							<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
-								{sourceFilter === "spotify" && !spotifyConnected.value ? (
-									<SpotifyConnect />
-								) : sourceFilter === "spotify" ? (
-									"No Spotify playlists."
-								) : (
-									<YouTubeHint />
-								)}
-							</div>
-						) : variant === "grid" ? (
-							<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-								{filteredItems.map((item) => (
-									<Link key={item.id} href={to(item.id)}>
-										<div class="group flex cursor-pointer flex-col gap-2 overflow-hidden rounded-md">
-											<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
-												{item.cover ? (
-													<img
-														src={item.cover}
-														alt={item.name}
-														loading="lazy"
-														decoding="async"
-														class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
-													/>
-												) : (
-													<div class="flex h-full w-full items-center justify-center text-zinc-600">
-														<Placeholder icon={item.icon} size={28} />
-													</div>
-												)}
-												{onRemove && item.removable && (
-													<button
-														type="button"
-														title="Quitar"
-														onClick={(e) => {
-															e.preventDefault();
-															e.stopPropagation();
-															onRemove(item.id);
-														}}
-														class="absolute right-1 top-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-black/70 text-zinc-300 opacity-0 transition group-hover:opacity-100 hover:text-white"
-													>
-														<X size={14} />
-													</button>
-												)}
-												{item.source && (
-													<div class="absolute bottom-1 left-1 rounded-md bg-black/70 p-0.5">
-														<SourceBadge source={item.source} />
-													</div>
-												)}
-											</div>
-											<div class="flex flex-col">
-												<h3 class="truncate text-sm font-medium text-zinc-300 transition-colors group-hover:text-white">
-													{item.name}
-												</h3>
-												{item.subtitle && (
-													<p class="text-xs text-zinc-500">{item.subtitle}</p>
-												)}
-											</div>
-										</div>
-									</Link>
-								))}
-							</div>
-						) : (
-							<ul class="flex flex-col">
-								{filteredItems.map((item) => (
-									<li key={item.id}>
-										<Link href={to(item.id)}>
-											<div class="group relative flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-zinc-900">
-												<div class="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-900">
+					<div class="relative min-h-0 flex-1">
+						<div ref={listRef} class="h-full overflow-y-auto px-3 pb-3">
+							{filteredItems.length === 0 ? (
+								<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
+									{sourceFilter === "spotify" && !spotifyConnected.value ? (
+										<SpotifyConnect />
+									) : sourceFilter === "spotify" ? (
+										"No Spotify playlists."
+									) : (
+										<YouTubeHint />
+									)}
+								</div>
+							) : variant === "grid" ? (
+								<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+									{filteredItems.map((item) => (
+										<Link key={item.id} href={to(item.id)}>
+											<div class="group flex cursor-pointer flex-col gap-2 overflow-hidden rounded-md">
+												<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
 													{item.cover ? (
 														<img
 															src={item.cover}
@@ -306,51 +257,105 @@ export function Shelf({
 														/>
 													) : (
 														<div class="flex h-full w-full items-center justify-center text-zinc-600">
-															<Placeholder icon={item.icon} size={14} />
+															<Placeholder icon={item.icon} size={28} />
+														</div>
+													)}
+													{onRemove && item.removable && (
+														<button
+															type="button"
+															title="Quitar"
+															onClick={(e) => {
+																e.preventDefault();
+																e.stopPropagation();
+																onRemove(item.id);
+															}}
+															class="absolute right-1 top-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-black/70 text-zinc-300 opacity-0 transition group-hover:opacity-100 hover:text-white"
+														>
+															<X size={14} />
+														</button>
+													)}
+													{item.source && (
+														<div class="absolute bottom-1 left-1 rounded-md bg-black/70 p-0.5">
+															<SourceBadge source={item.source} />
 														</div>
 													)}
 												</div>
-												<div class="flex min-w-0 flex-1 flex-col">
-													<h3 class="truncate text-sm text-zinc-300 group-hover:text-white">
+												<div class="flex flex-col">
+													<h3 class="truncate text-sm font-medium text-zinc-300 transition-colors group-hover:text-white">
 														{item.name}
 													</h3>
 													{item.subtitle && (
-														<p class="truncate text-xs text-zinc-500">
-															{item.subtitle}
-														</p>
+														<p class="text-xs text-zinc-500">{item.subtitle}</p>
 													)}
 												</div>
-												{item.source && (
-													<span
-														class={
-															onRemove && item.removable
-																? "shrink-0 transition-opacity group-hover:opacity-0"
-																: "shrink-0"
-														}
-													>
-														<SourceBadge source={item.source} />
-													</span>
-												)}
-												{onRemove && item.removable && (
-													<button
-														type="button"
-														title="Quitar"
-														onClick={(e) => {
-															e.preventDefault();
-															e.stopPropagation();
-															onRemove(item.id);
-														}}
-														class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-zinc-500 opacity-0 transition group-hover:opacity-100 hover:bg-zinc-800 hover:text-white"
-													>
-														<X size={14} />
-													</button>
-												)}
 											</div>
 										</Link>
-									</li>
-								))}
-							</ul>
-						)}
+									))}
+								</div>
+							) : (
+								<ul class="flex flex-col">
+									{filteredItems.map((item) => (
+										<li key={item.id}>
+											<Link href={to(item.id)}>
+												<div class="group relative flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-zinc-900">
+													<div class="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-900">
+														{item.cover ? (
+															<img
+																src={item.cover}
+																alt={item.name}
+																loading="lazy"
+																decoding="async"
+																class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
+															/>
+														) : (
+															<div class="flex h-full w-full items-center justify-center text-zinc-600">
+																<Placeholder icon={item.icon} size={14} />
+															</div>
+														)}
+													</div>
+													<div class="flex min-w-0 flex-1 flex-col">
+														<h3 class="truncate text-sm text-zinc-300 group-hover:text-white">
+															{item.name}
+														</h3>
+														{item.subtitle && (
+															<p class="truncate text-xs text-zinc-500">
+																{item.subtitle}
+															</p>
+														)}
+													</div>
+													{item.source && (
+														<span
+															class={
+																onRemove && item.removable
+																	? "shrink-0 transition-opacity group-hover:opacity-0"
+																	: "shrink-0"
+															}
+														>
+															<SourceBadge source={item.source} />
+														</span>
+													)}
+													{onRemove && item.removable && (
+														<button
+															type="button"
+															title="Quitar"
+															onClick={(e) => {
+																e.preventDefault();
+																e.stopPropagation();
+																onRemove(item.id);
+															}}
+															class="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-zinc-500 opacity-0 transition group-hover:opacity-100 hover:bg-zinc-800 hover:text-white"
+														>
+															<X size={14} />
+														</button>
+													)}
+												</div>
+											</Link>
+										</li>
+									))}
+								</ul>
+							)}
+						</div>
+						<Scrollbar target={listRef} />
 					</div>
 				</>
 			)}

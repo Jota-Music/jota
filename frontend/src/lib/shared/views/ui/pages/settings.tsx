@@ -1,7 +1,7 @@
 import { OpenURL } from "@bindings/app";
 import { Browser } from "@wailsio/runtime";
 import { RadioTower, TriangleAlert, UserRound } from "lucide-preact";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import {
 	disconnectSpotify,
 	spotifyConnected,
@@ -10,6 +10,7 @@ import {
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
 import { cn } from "@/lib/shared/utils/tw";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
+import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import ClearLayout from "@/lib/shared/views/ui/layouts/clear";
 import * as transport from "@/lib/sync/app/transport";
 import * as store from "@/lib/sync/views/stores";
@@ -18,29 +19,37 @@ const inputClass =
 	"w-full rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all";
 
 function SettingsPage() {
+	const listRef = useRef<HTMLDivElement>(null);
+
 	return (
 		<ClearLayout>
-			<div class="flex flex-1 flex-col gap-6 overflow-y-auto py-6">
-				<header class="space-y-1">
-					<h1 class="text-xl font-bold text-zinc-100">Settings</h1>
-					<p class="text-sm text-zinc-500">
-						Manage your account and how Jota syncs playback.
-					</p>
-				</header>
+			<div class="relative min-h-0 flex-1">
+				<div
+					ref={listRef}
+					class="h-full flex flex-col gap-6 overflow-y-auto py-6"
+				>
+					<header class="space-y-1">
+						<h1 class="text-xl font-bold text-zinc-100">Settings</h1>
+						<p class="text-sm text-zinc-500">
+							Manage your account and how Jota syncs playback.
+						</p>
+					</header>
 
-				<AccountSettings />
-				<RelaySettings />
+					<AccountSettings />
+					<RelaySettings />
 
-				<footer class="mt-auto pt-6 text-center text-xs text-zinc-600">
-					Developed by{" "}
-					<button
-						type="button"
-						onClick={openDeveloper}
-						class="cursor-pointer text-zinc-400 underline underline-offset-2 transition-colors hover:text-zinc-200"
-					>
-						@salvadorsru
-					</button>
-				</footer>
+					<footer class="mt-auto pt-6 text-center text-xs text-zinc-600">
+						Developed by{" "}
+						<button
+							type="button"
+							onClick={openDeveloper}
+							class="cursor-pointer text-zinc-400 underline underline-offset-2 transition-colors hover:text-zinc-200"
+						>
+							@salvadorsru
+						</button>
+					</footer>
+				</div>
+				<Scrollbar target={listRef} />
 			</div>
 		</ClearLayout>
 	);

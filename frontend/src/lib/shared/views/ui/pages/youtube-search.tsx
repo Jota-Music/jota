@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { CirclePlay, Heart, ListPlus, ListVideo, Loader } from "lucide-preact";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
 	searchYouTube,
@@ -19,6 +19,7 @@ import {
 } from "@/lib/music/views/stores/player";
 import { cn } from "@/lib/shared/utils/tw";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
+import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type Tab = "videos" | "playlists";
@@ -80,6 +81,7 @@ export function YouTubeSearchPage() {
 	const direct = isDirectQuery(query);
 	const [tab, setTab] = useState<Tab>(target);
 	const queryClient = useQueryClient();
+	const listRef = useRef<HTMLElement>(null);
 
 	useEffect(() => {
 		setTab(target);
@@ -199,34 +201,37 @@ export function YouTubeSearchPage() {
 				{!hasResults && !loading ? (
 					<p class="text-sm text-zinc-500">No results found.</p>
 				) : activeTab === "playlists" ? (
-					<section class="flex min-h-0 flex-1 flex-col overflow-y-auto">
-						{playlistsQuery.isLoading ? (
-							<div class="flex items-center gap-2 text-sm text-zinc-500">
-								<Loader size={14} class="animate-spin" />
-								Loading...
-							</div>
-						) : playlistsQuery.isError ? (
-							<p class="text-red-400">Failed to search YouTube</p>
-						) : playlists.length === 0 ? (
-							<p class="text-sm text-zinc-500">No playlists found.</p>
-						) : (
-							<div class="grid grid-cols-2 gap-3 pt-1 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
-								{playlists.map((playlist) => (
-									<PlaylistCard
-										key={playlist.id}
-										playlist={playlist}
-										saved={isSaved(playlist.id)}
-										onToggle={() =>
-											toggle.mutate({
-												id: playlist.id,
-												next: !isSaved(playlist.id),
-											})
-										}
-									/>
-								))}
-							</div>
-						)}
-					</section>
+					<div class="relative min-h-0 flex-1">
+						<section ref={listRef} class="h-full flex flex-col overflow-y-auto">
+							{playlistsQuery.isLoading ? (
+								<div class="flex items-center gap-2 text-sm text-zinc-500">
+									<Loader size={14} class="animate-spin" />
+									Loading...
+								</div>
+							) : playlistsQuery.isError ? (
+								<p class="text-red-400">Failed to search YouTube</p>
+							) : playlists.length === 0 ? (
+								<p class="text-sm text-zinc-500">No playlists found.</p>
+							) : (
+								<div class="grid grid-cols-2 gap-3 pt-1 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
+									{playlists.map((playlist) => (
+										<PlaylistCard
+											key={playlist.id}
+											playlist={playlist}
+											saved={isSaved(playlist.id)}
+											onToggle={() =>
+												toggle.mutate({
+													id: playlist.id,
+													next: !isSaved(playlist.id),
+												})
+											}
+										/>
+									))}
+								</div>
+							)}
+						</section>
+						<Scrollbar target={listRef} />
+					</div>
 				) : videosQuery.isLoading ? (
 					<div class="flex items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
 						<Loader size={24} class="animate-spin" />
@@ -236,15 +241,21 @@ export function YouTubeSearchPage() {
 				) : songs.length === 0 ? (
 					<p class="text-sm text-zinc-500">No results found.</p>
 				) : (
-					<section class="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950">
-						{songs.map((song) => (
-							<YouTubeVideoItem
-								key={song.id}
-								song={song}
-								onClick={() => handleClick(song)}
-							/>
-						))}
-					</section>
+					<div class="relative min-h-0 flex-1">
+						<section
+							ref={listRef}
+							class="h-full flex flex-col overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950"
+						>
+							{songs.map((song) => (
+								<YouTubeVideoItem
+									key={song.id}
+									song={song}
+									onClick={() => handleClick(song)}
+								/>
+							))}
+						</section>
+						<Scrollbar target={listRef} />
+					</div>
 				)}
 			</div>
 		</DefaultLayout>
