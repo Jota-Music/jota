@@ -72,7 +72,7 @@ if command -v ldd >/dev/null 2>&1; then
   missing="\$(ldd "\$APP" 2>/dev/null | grep 'not found' | sed 's/^[[:space:]]*//; s/[[:space:]].*//' | sort -u)"
   if [ -n "\$missing" ]; then
     printf '%s\n' "${APP_NAME}: missing system libraries:" \$missing >&2
-    printf '%s\n' "${APP_NAME}: this AppImage needs WebKitGTK 4.1, GTK3 and ALSA on the host. Install with:" >&2
+    printf '%s\n' "${APP_NAME}: this AppImage needs WebKitGTK 4.1 and GTK3 on the host. Install with:" >&2
     printf '%s\n' "  Debian/Ubuntu:  sudo apt install libwebkit2gtk-4.1-0" >&2
     printf '%s\n' "  Fedora:         sudo dnf install webkit2gtk4.1" >&2
     printf '%s\n' "  Arch:           sudo pacman -S webkit2gtk-4.1" >&2
