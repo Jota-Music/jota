@@ -93,7 +93,7 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 		<div
 			ref={bar}
 			aria-hidden
-			class="absolute right-0 w-6 touch-none"
+			class="absolute right-0 w-6 touch-none cursor-grab active:cursor-grabbing"
 			onPointerDown={onDown}
 			onPointerMove={onMove}
 			onPointerUp={onUp}
