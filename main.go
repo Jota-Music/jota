@@ -56,6 +56,8 @@ func main() {
 		_ = os.Setenv("GDK_BACKEND", "x11")
 	}
 
+	var window *application.WebviewWindow
+
 	wailsApp := application.New(application.Options{
 		Name:        "Jota",
 		Description: "A self-hosted music streaming app",
@@ -68,6 +70,17 @@ func main() {
 		},
 		Linux: application.LinuxOptions{
 			ProgramName: "jota", // Linux program name (used in .desktop GTK app id)
+		},
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "com.jotamusic.jota",
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				if window == nil {
+					return
+				}
+				window.Restore()
+				window.Show()
+				window.Focus()
+			},
 		},
 	})
 
@@ -96,7 +109,7 @@ func main() {
 		}
 	}
 
-	window := wailsApp.Window.NewWithOptions(opts)
+	window = wailsApp.Window.NewWithOptions(opts)
 
 	var restored atomic.Bool
 	var quitting atomic.Bool
