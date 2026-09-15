@@ -20,28 +20,30 @@ contents:
   - src: "./bin/jota"
     dst: "/usr/local/bin/jota"
   - src: "./build/linux/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/jota.png"
+    dst: "/usr/share/icons/hicolor/512x512/apps/jota.png"
   - src: "./build/linux/jota.desktop"
     dst: "/usr/share/applications/jota.desktop"
+  - src: "./build/linux/io.github.jota_music.jota.appdata.xml"
+    dst: "/usr/share/metainfo/io.github.jota_music.jota.appdata.xml"
 
-# Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
+# The Linux build uses the GTK3 / WebKit2GTK 4.1 stack (-tags gtk3).
 depends:
-  - libgtk-4-1
-  - libwebkitgtk-6.0-4
+  - libgtk-3-0
+  - libwebkit2gtk-4.1-0
 
 # Distribution-specific overrides for different package formats
 overrides:
   # RPM packages for Fedora / RHEL / AlmaLinux / Rocky Linux
   rpm:
     depends:
-      - gtk4
-      - webkitgtk6.0
+      - gtk3
+      - webkit2gtk4.1
 
   # Arch Linux packages
   archlinux:
     depends:
-      - gtk4
-      - webkitgtk-6.0
+      - gtk3
+      - webkit2gtk-4.1
 
 # scripts section to ensure desktop database is updated after install
 scripts:
@@ -50,21 +52,21 @@ scripts:
   # preremove: "./build/linux/nfpm/scripts/preremove.sh"
   # postremove: "./build/linux/nfpm/scripts/postremove.sh"
 
-# If you build your app with -tags gtk3 (legacy WebKit2GTK 4.1 stack — supported through v3.0.x, removed in v3.1),
-# replace the depends/overrides above with these:
+# When the app moves to GTK4 / WebKitGTK 6.0 (Wails v3 default, -tags gtk4),
+# replace the depends/overrides above with:
 #
 # depends:
-#   - libgtk-3-0
-#   - libwebkit2gtk-4.1-0
+#   - libgtk-4-1
+#   - libwebkitgtk-6.0-4
 # overrides:
 #   rpm:
 #     depends:
-#       - gtk3
-#       - webkit2gtk4.1
+#       - gtk4
+#       - webkitgtk6.0
 #   archlinux:
 #     depends:
-#       - gtk3
-#       - webkit2gtk-4.1
+#       - gtk4
+#       - webkitgtk-6.0
 #
 # replaces:
 #   - foobar
