@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 # Builds a distro-agnostic AppImage.
 #
-# The binary is linked against the build machine's audio decoder sonames
-# (libFLAC, libmpg123, libogg, libvorbis), so those are bundled. GTK and
-# WebKit are intentionally NOT bundled: WebKitGTK resolves its helper
-# processes (WebKitNetworkProcess, ...) via absolute paths baked in at build
-# time, and mixing a bundled GTK/gdk-pixbuf with the system's WebKit breaks
-# codecs. Letting the system provide GTK + WebKit keeps the AppImage portable
-# across distributions (the host needs gtk3 and webkit2gtk-4.1 installed).
+# WebKitGTK is intentionally NOT bundled. Release builds of webkit2gtk-4.1
+# locate their helper processes (WebKitWebProcess, WebKitNetworkProcess,
+# WebKitGPUProcess) through the absolute compile-time PKGLIBEXECDIR (for
+# example /usr/lib/x86_64-linux-gnu/webkit2gtk-4.1). The runtime override
+# (WEBKIT_EXEC_PATH) and the "look next to the executable" fallback are compiled
+# out unless WebKit is built with ENABLE_DEVELOPER_MODE, which no distribution
+# package is. So a bundled WebKit can never find its own helpers inside a
+# portable AppImage, and the host must provide webkit2gtk-4.1 (which pulls in
+# GTK3). AppRun below checks for it and prints install hints when it is missing.
+#
+# Only the audio decoder libraries are bundled: their sonames differ across
+# distributions and they are not part of the desktop platform.
+#
+# The AppImage uses a statically linked runtime, so it does not require libfuse2
+# on the target system.
 set -euo pipefail
 
 APP_NAME="${APP_NAME:?APP_NAME is required}"
@@ -15,7 +23,14 @@ APP_BINARY="${APP_BINARY:?APP_BINARY is required}"
 ICON="${ICON:?ICON is required}"
 DESKTOP_FILE="${DESKTOP_FILE:?DESKTOP_FILE is required}"
 OUTPUT_DIR="${OUTPUT_DIR:-.}"
-BUNDLED_PREFIX="${BUNDLED_PREFIX:-libFLAC so:libmpg123 libogg libvorbis}"
+APPSTREAM="${APPSTREAM:-}"
+
+# Pinned AppImage runtime (immutable dated release). Update deliberately.
+RUNTIME_TAG="20251108"
+RUNTIME_URL="https://github.com/AppImage/type2-runtime/releases/download/${RUNTIME_TAG}/runtime"
+# Static appimagetool; runs without FUSE and embeds the runtime passed via
+# --runtime-file. Build-time tool only, not shipped in the AppImage.
+APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool"
 
 case "$(uname -m)" in
   x86_64 | amd64) ARCH=x86_64 ;;
@@ -30,30 +45,64 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 appdir="$work/${APP_NAME}.AppDir"
-mkdir -p "$appdir/usr/bin" "$appdir/usr/lib"
+mkdir -p \
+  "$appdir/usr/bin" \
+  "$appdir/usr/lib" \
+  "$appdir/usr/share/applications" \
+  "$appdir/usr/share/icons/hicolor/512x512/apps"
 
 cp "$APP_BINARY" "$appdir/usr/bin/${APP_NAME}"
 chmod +x "$appdir/usr/bin/${APP_NAME}"
-cp "$ICON" "$appdir/${APP_NAME}.png"
+cp "$ICON" "$appdir/usr/share/icons/hicolor/512x512/apps/${APP_NAME}.png"
+ln -sf "usr/share/icons/hicolor/512x512/apps/${APP_NAME}.png" "$appdir/${APP_NAME}.png"
 ln -sf "${APP_NAME}.png" "$appdir/.DirIcon"
-cp "$DESKTOP_FILE" "$appdir/"
+cp "$DESKTOP_FILE" "$appdir/usr/share/applications/${APP_NAME}.desktop"
+ln -sf "usr/share/applications/${APP_NAME}.desktop" "$appdir/${APP_NAME}.desktop"
 
-curl -fsSL -o "$appdir/AppRun" \
-  "https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-${ARCH}"
-chmod +x "$appdir/AppRun"
+if [ -n "$APPSTREAM" ] && [ -f "$APPSTREAM" ]; then
+  mkdir -p "$appdir/usr/share/metainfo"
+  cp "$APPSTREAM" "$appdir/usr/share/metainfo/"
+fi
 
-# Bundle the audio decoder libraries the binary links; they are not part of
-# the desktop platform and their sonames differ across distributions.
+# Bundle the audio decoder libraries the binary links; their sonames differ
+# across distributions.
 pattern='(libFLAC|libmpg123|libogg|libvorbis|libvorbisenc|libopus)[^ /]*\.so[^ /]*$'
 while read -r lib; do
   [ -e "$lib" ] || continue
   cp -L "$lib" "$appdir/usr/lib/"
 done < <(ldd "$APP_BINARY" | grep -oE "/[^ ]+\.so[^ ]*" | grep -E "$pattern" | sort -u)
 
-curl -fsSL -o "$work/appimagetool" \
-  "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${ARCH}.AppImage"
-chmod +x "$work/appimagetool"
+# AppRun: put the bundled libraries on the loader path, then fail early with a
+# readable message when the host is missing the platform libraries instead of
+# letting the dynamic loader print a bare "cannot open shared object file".
+cat > "$appdir/AppRun" <<APPRUN
+#!/bin/sh
+HERE="\$(dirname "\$(readlink -f "\$0")")"
+export LD_LIBRARY_PATH="\$HERE/usr/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
+APP="\$HERE/usr/bin/${APP_NAME}"
+
+if command -v ldd >/dev/null 2>&1; then
+  missing="\$(ldd "\$APP" 2>/dev/null | grep 'not found' | sed 's/^[[:space:]]*//; s/[[:space:]].*//' | sort -u)"
+  if [ -n "\$missing" ]; then
+    printf '%s\n' "${APP_NAME}: missing system libraries:" \$missing >&2
+    printf '%s\n' "${APP_NAME}: this AppImage needs WebKitGTK 4.1, GTK3 and ALSA on the host. Install with:" >&2
+    printf '%s\n' "  Debian/Ubuntu:  sudo apt install libwebkit2gtk-4.1-0" >&2
+    printf '%s\n' "  Fedora:         sudo dnf install webkit2gtk4.1" >&2
+    printf '%s\n' "  Arch:           sudo pacman -S webkit2gtk-4.1" >&2
+    printf '%s\n' "  openSUSE:       sudo zypper install libwebkit2gtk-4_1-0" >&2
+    exit 1
+  fi
+fi
+
+exec "\$APP" "\$@"
+APPRUN
+chmod +x "$appdir/AppRun"
+
+curl -fsSL -o "$work/runtime" "${RUNTIME_URL}-${ARCH}"
+curl -fsSL -o "$work/appimagetool" "${APPIMAGETOOL_URL}-${ARCH}.AppImage"
+chmod +x "$work/runtime" "$work/appimagetool"
 
 out="${OUTPUT_DIR%/}/${APP_NAME}-${ARCH}.AppImage"
-ARCH="$ARCH" "$work/appimagetool" --appimage-extract-and-run "$appdir" "$out"
+mkdir -p "${OUTPUT_DIR}"
+ARCH="$ARCH" "$work/appimagetool" --runtime-file "$work/runtime" "$appdir" "$out"
 echo "AppImage created: $out"

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.jota_music.jota</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Jota</name>
+  <summary>Self-hosted music streaming app</summary>
+  <description>
+    <p>
+      Jota unifies Spotify and YouTube into a single, self-hosted music
+      streaming experience.
+    </p>
+    <p>
+      It plays from your Spotify account and from YouTube, keeps a shared
+      queue, and can synchronise playback across devices through an optional
+      self-hosted relay.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.jota_music.jota.desktop</launchable>
+  <url type="homepage">https://github.com/Jota-Music/jota</url>
+  <developer id="io.github.jota_music">
+    <name>Jota</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.0.0" date="2026-09-15"/>
+  </releases>
+</component>

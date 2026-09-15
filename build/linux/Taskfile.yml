@@ -77,6 +77,7 @@ tasks:
         APP_BINARY="{{.ROOT_DIR}}/bin/{{.APP_NAME}}" \
         ICON="{{.ROOT_DIR}}/build/linux/appicon.png" \
         DESKTOP_FILE="{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop" \
+        APPSTREAM="{{.ROOT_DIR}}/build/linux/io.github.jota_music.jota.appdata.xml" \
         OUTPUT_DIR="{{.ROOT_DIR}}/bin" \
         ./build.sh
 
@@ -135,7 +136,7 @@ tasks:
       APP_NAME: '{{.APP_NAME}}'
       EXEC: '{{.APP_NAME}}'
       ICON: '{{.APP_NAME}}'
-      CATEGORIES: 'Development;'
+      CATEGORIES: 'AudioVideo;Audio;Player;'
       OUTPUTFILE: '{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop'
 
   run:
