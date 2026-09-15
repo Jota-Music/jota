@@ -30,7 +30,7 @@ listening — all on devices you control.
   relay: queue, play/pause, position, shuffle and repeat. One person hosts the
   room and shares the code, the rest tune in.
 - **Cross-platform.** Built with Wails 3 — native desktop on Linux, Windows and
-  macOS, plus Android (and iOS) from the same codebase. The window is frameless
+  macOS, plus Android from the same codebase. The window is frameless
   with custom controls, remembers its size and position, and can stay on top.
 - **Self-hosted by design.** The relay is a small Go binary you can run
   anywhere — Docker, a VPS, your home server.
