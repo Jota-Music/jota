@@ -228,10 +228,6 @@ jobs:
     if: ${{ !github.event.inputs.jobs || github.event.inputs.jobs == 'all' || contains(github.event.inputs.jobs, 'macos') }}
     runs-on: macos-latest
     timeout-minutes: 45
-    # Safety net: a macOS-runner hiccup must not block the Linux/Windows/Android
-    # release. Once this job is proven green, drop continue-on-error to make the
-    # .dmg mandatory.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
