@@ -22,7 +22,9 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libvorbis-dev libflac-dev libmpg123-dev libasound2-dev
           sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2 || true
       - name: Install wails3
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+        run: |
+          version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
       - name: Package (.deb, .rpm, .AppImage, AUR)
         run: wails3 task package VERSION="${GITHUB_REF_NAME#v}"
       - uses: actions/upload-artifact@v4
@@ -52,7 +54,9 @@ jobs:
         with:
           bun-version: latest
       - name: Install wails3
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+        run: |
+          version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
       - name: Package release APK
         run: wails3 task android:package VERSION="${GITHUB_REF_NAME#v}"
       - uses: actions/upload-artifact@v4
@@ -60,8 +64,34 @@ jobs:
           name: android-apk
           path: bin/*.apk
 
+  windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install NSIS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nsis
+      - name: Install wails3
+        run: |
+          version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
+      - name: Build unsigned NSIS installer
+        run: wails3 task windows:create:nsis:installer VERSION="${GITHUB_REF_NAME#v}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: bin/*-installer.exe
+
   publish:
-    needs: [linux, android]
+    needs: [linux, android, windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -69,6 +99,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
+      - name: Checksums
+        working-directory: dist
+        run: find . -type f -exec sha256sum {} + | sort -k2 > "$GITHUB_WORKSPACE/SHA256SUMS"
       - uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -76,3 +109,5 @@ jobs:
             dist/linux-packages/*.rpm
             dist/linux-packages/*.AppImage
             dist/android-apk/*.apk
+            dist/windows-installer/*-installer.exe
+            SHA256SUMS
