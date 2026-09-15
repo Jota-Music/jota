@@ -26,20 +26,26 @@ build uses the `gtk3` tag (webkit2gtk-4.1).
 
 ## Releasing
 
-**If** you change anything under `build/linux/**` or `.github/workflows/release.yml`,
-**do not iterate through GitHub Actions** — a `v*` tag spends release minutes. Run the
-same checks locally first and only tag once they pass:
+**If** you change anything under `build/linux/**` or `.github/workflows/release.yml`:
 
-```bash
-wails3 task test:appimage   # build + smoke on debian:12, ubuntu:24.04, fedora:41
-wails3 task test:flatpak    # build + smoke the flatpak (needs flatpak-builder)
-```
+1. **Build and run the artifacts locally first.** Never push or tag an AppImage/Flatpak
+   change you have not executed yourself:
+
+   ```bash
+   wails3 task test:appimage   # builds the AppImage, then smokes it on debian:12, ubuntu:24.04, fedora:41
+   wails3 task test:flatpak    # builds and smokes the flatpak (needs flatpak-builder)
+   ```
+
+2. Only then commit, push, and tag.
+
+**Do not iterate through GitHub Actions** — a `v*` tag spends release minutes and every
+`main` push costs a `ci` run. Local first, remote once.
 
 `test:appimage` mirrors the workflow smoke tests (static runtime, GTK/WebKit init,
-missing-library message) via podman. Since the AppImage bundles the build host's audio
-codecs, an image built on a newer host can legitimately fail on older distros — CI
-builds on Ubuntu 24.04. `act` is installed but the workflow runs containers inside the
-runner (docker-in-docker), so the direct scripts are the reliable path.
+missing-library message) via podman. Since the AppImage bundles the build host's libFLAC,
+an image built on a newer host can legitimately fail on older distros — CI builds on
+Ubuntu 24.04. `act` is installed but the workflow runs containers inside the runner
+(docker-in-docker), so the direct scripts are the reliable path.
 
 ## Linting
 
