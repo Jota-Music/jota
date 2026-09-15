@@ -16,6 +16,12 @@ bin/
 build/bin/
 frontend/package.json.md5
 
+# Flatpak build inputs and outputs
+build/linux/flatpak/lib/
+flatpak-build/
+flatpak-repo/
+*.flatpak
+
 # Android generated artifacts (scaffolding in build/ is tracked)
 build/android/.gradle/
 build/android/build/
