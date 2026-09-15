@@ -9,9 +9,12 @@ import {
 	SkipBack,
 	SkipForward,
 } from "lucide-preact";
+import { memo } from "preact/compat";
 import { useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { usePlayer } from "@/lib/music/views/hooks/use-player";
+import { audioDuration, progress } from "@/lib/music/views/stores/audio";
+import { commitSeek, previewSeek } from "@/lib/music/views/stores/player";
 import {
 	cycleRepeat,
 	playerSkeletonOn,
@@ -54,10 +57,6 @@ interface FullPlayerProps {
 	cover: string;
 	isLoading: boolean;
 	isPlaying: boolean;
-	progress: number;
-	duration: number;
-	seek: (seconds: number) => void;
-	seekCommit: (seconds: number) => void;
 	toggleSong: () => Promise<void>;
 	nextSong: () => Promise<void>;
 	prevSong: () => Promise<void>;
@@ -65,15 +64,11 @@ interface FullPlayerProps {
 	canNext: boolean;
 }
 
-function FullPlayerContent({
+const DiscCenter = memo(function DiscCenter({
 	song,
 	cover,
 	isLoading,
 	isPlaying,
-	progress,
-	duration,
-	seek,
-	seekCommit,
 	toggleSong,
 	nextSong,
 	prevSong,
@@ -81,53 +76,96 @@ function FullPlayerContent({
 	canNext,
 }: FullPlayerProps) {
 	return (
+		<div class="relative aspect-square w-full">
+			<img
+				src={cover}
+				alt={song.name}
+				draggable={false}
+				class="absolute inset-0 h-full w-full object-cover rounded-2xl shadow-lg opacity-40 animate-[spin_120s_linear_infinite] select-none"
+				style="-webkit-user-drag: none"
+			/>
+
+			<div class="absolute inset-0 w-max h-max flex items-center justify-center gap-6 m-auto">
+				<button
+					type="button"
+					disabled={!canPrev}
+					onClick={() => void prevSong()}
+					class="p-1 rounded-full transition drop-shadow-lg drop-shadow-black disabled:brightness-60 disabled:cursor-not-allowed cursor-pointer"
+				>
+					<SkipBack class="size-6 fill-current shadow-lg" />
+				</button>
+
+				<Toggle
+					loading={isLoading}
+					playing={isPlaying}
+					onClick={() => void toggleSong()}
+					class="bg-(--dominant-color)"
+				/>
+
+				<button
+					type="button"
+					disabled={!canNext}
+					onClick={() => void nextSong()}
+					class="p-1 rounded-full transition drop-shadow-lg drop-shadow-black disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+				>
+					<SkipForward class="size-6 fill-current shadow-lg" />
+				</button>
+			</div>
+		</div>
+	);
+});
+
+function Disc(props: FullPlayerProps) {
+	return (
+		<CircularProgress
+			value={progress.value}
+			max={audioDuration.value}
+			min={0}
+			onChange={previewSeek}
+			onCommit={commitSeek}
+			class="text-current mx-auto w-48"
+		>
+			<DiscCenter {...props} />
+		</CircularProgress>
+	);
+}
+
+function CurrentTime() {
+	return (
+		<span class="text-white text-sm opacity-70 tabular-nums shrink-0">
+			{secondsToTime(progress.value)}
+		</span>
+	);
+}
+
+function TotalTime() {
+	return (
+		<span class="text-white text-sm opacity-70 tabular-nums shrink-0">
+			{secondsToTime(audioDuration.value)}
+		</span>
+	);
+}
+
+function SeekBar({ class: className }: { class?: string }) {
+	return (
+		<Progress
+			value={progress.value}
+			max={audioDuration.value}
+			min={0}
+			onChange={previewSeek}
+			onCommit={commitSeek}
+			class={className}
+		/>
+	);
+}
+
+function FullPlayerContent(props: FullPlayerProps) {
+	const { song, isLoading, isPlaying, toggleSong } = props;
+
+	return (
 		<section class="w-full max-w-2xl mx-auto relative z-10 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-center text-(--dominant-color)">
 			<div class="relative flex max-h-max w-full md:w-max">
-				<CircularProgress
-					value={progress}
-					max={duration}
-					min={0}
-					onChange={seek}
-					onCommit={seekCommit}
-					class="text-current mx-auto w-48 drop-shadow-lg drop-shadow-black"
-				>
-					<div class="relative aspect-square w-full">
-						<img
-							src={cover}
-							alt={song.name}
-							draggable={false}
-							class="absolute inset-0 h-full w-full object-cover rounded-2xl shadow-lg opacity-40 animate-[spin_120s_linear_infinite] select-none"
-							style="-webkit-user-drag: none"
-						/>
-
-						<div class="absolute inset-0 w-max h-max flex items-center justify-center gap-6 m-auto">
-							<button
-								type="button"
-								disabled={!canPrev}
-								onClick={() => void prevSong()}
-								class="p-1 rounded-full transition drop-shadow-lg drop-shadow-black disabled:brightness-60 disabled:cursor-not-allowed cursor-pointer"
-							>
-								<SkipBack class="size-6 fill-current shadow-lg" />
-							</button>
-
-							<Toggle
-								loading={isLoading}
-								playing={isPlaying}
-								onClick={() => void toggleSong()}
-								class="bg-(--dominant-color)"
-							/>
-
-							<button
-								type="button"
-								disabled={!canNext}
-								onClick={() => void nextSong()}
-								class="p-1 rounded-full transition drop-shadow-lg drop-shadow-black disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-							>
-								<SkipForward class="size-6 fill-current shadow-lg" />
-							</button>
-						</div>
-					</div>
-				</CircularProgress>
+				<Disc {...props} />
 			</div>
 
 			<div class="flex-1 min-w-0 w-full">
@@ -144,22 +182,11 @@ function FullPlayerContent({
 				<SaveYoutubeId song={song} />
 
 				<div class="mt-3 flex gap-2 justify-between items-center">
-					<span class="text-white text-sm opacity-70 tabular-nums shrink-0">
-						{secondsToTime(progress)}
-					</span>
+					<CurrentTime />
 
-					<Progress
-						value={progress}
-						max={duration}
-						min={0}
-						onChange={seek}
-						onCommit={seekCommit}
-						class="h-1.5 min-w-0 flex-1 opacity-80"
-					/>
+					<SeekBar class="h-1.5 min-w-0 flex-1 opacity-80" />
 
-					<span class="text-white text-sm opacity-70 tabular-nums shrink-0">
-						{secondsToTime(duration)}
-					</span>
+					<TotalTime />
 				</div>
 
 				<div class="flex items-center justify-between gap-4 mt-4 pb-2">
@@ -255,10 +282,6 @@ export function Player() {
 		isLoading,
 		isPlaying,
 		toggleSong,
-		progress,
-		duration,
-		seek,
-		seekCommit,
 		prevSong,
 		nextSong,
 		canPrev,
@@ -318,14 +341,7 @@ export function Player() {
 				onPointerUp={onBarPointerUp}
 			>
 				<div class="px-0 pt-1 text-(--dominant-color)">
-					<Progress
-						value={progress}
-						max={duration}
-						min={0}
-						onChange={seek}
-						onCommit={seekCommit}
-						class="h-0.75 w-full rounded-none border-0 bg-neutral-800"
-					/>
+					<SeekBar class="h-0.75 w-full rounded-none border-0 bg-neutral-800" />
 				</div>
 
 				<div class="flex items-center gap-2 w-full px-4 py-3">

@@ -1,16 +1,12 @@
 import { useEffect } from "preact/hooks";
 
 import {
-	audioDuration,
 	currentSong,
 	isLoading,
 	isPlaying,
-	progress,
 } from "@/lib/music/views/stores/audio";
 import {
-	commitSeek,
 	nextSong,
-	previewSeek,
 	prevSong,
 	toggleSong,
 } from "@/lib/music/views/stores/player";
@@ -65,12 +61,8 @@ export function usePlayer() {
 		// state
 		isLoading: isLoading.value,
 		isPlaying: isPlaying.value,
-		progress: progress.value,
-		duration: audioDuration.value,
 
 		// controls
-		seek: previewSeek,
-		seekCommit: commitSeek,
 		toggleSong,
 		nextSong,
 		prevSong,
