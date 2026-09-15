@@ -106,6 +106,7 @@ jobs:
         run: find . -type f -exec sha256sum {} + | sort -k2 > "$GITHUB_WORKSPACE/SHA256SUMS"
       - uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ startsWith(github.ref_name, 'v0.0.') }}
           files: |
             dist/linux-packages/*.deb
             dist/linux-packages/*.rpm
