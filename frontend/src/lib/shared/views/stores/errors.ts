@@ -26,7 +26,3 @@ export function addError(message: string): void {
 export function removeError(id: string): void {
 	roomErrors.value = roomErrors.value.filter((e) => e.id !== id);
 }
-
-export function clearErrors(): void {
-	roomErrors.value = [];
-}

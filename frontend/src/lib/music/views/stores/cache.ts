@@ -203,15 +203,6 @@ export class AudioCache {
        CACHE MANAGEMENT
     -------------------------------------------------- */
 
-	static clear(): void {
-		for (const [, item] of AudioCache.cache) {
-			AudioCache.release(item);
-		}
-
-		AudioCache.cache.clear();
-		AudioCache.pending.clear();
-	}
-
 	static remove(id: string): void {
 		const item = AudioCache.cache.get(id);
 		if (item) AudioCache.release(item);
@@ -225,17 +216,5 @@ export class AudioCache {
 	static releaseElement(id: string): void {
 		const item = AudioCache.cache.get(id);
 		if (item) AudioCache.release(item);
-	}
-
-	/* -------------------------------------------------
-       DEBUG
-    -------------------------------------------------- */
-
-	static has(id: string): boolean {
-		return AudioCache.cache.has(id);
-	}
-
-	static size(): number {
-		return AudioCache.cache.size;
 	}
 }

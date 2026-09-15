@@ -19,15 +19,5 @@ export default defineConfig({
 	clearScreen: false,
 	server: {
 		host: "127.0.0.1",
-		proxy: {
-			"/api": {
-				target: `http://localhost:${process.env.PORT || "3001"}`,
-				changeOrigin: true,
-			},
-			"/ws": {
-				target: `ws://localhost:${process.env.PORT || "3001"}`,
-				ws: true,
-			},
-		},
 	},
 });

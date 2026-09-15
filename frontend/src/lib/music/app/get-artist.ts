@@ -1,8 +1,6 @@
 import { GetArtist, GetArtistDiscography } from "@bindings/app";
 import type { ArtistDiscography, ArtistInfo } from "@/lib/music/model";
 
-export type { ArtistDiscography, ArtistInfo };
-
 export async function getArtist(uri: string): Promise<ArtistInfo> {
 	try {
 		return (await GetArtist(uri)) as unknown as ArtistInfo;

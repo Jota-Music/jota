@@ -89,20 +89,11 @@ export const shuffle = signal<boolean>(loadShuffle());
 
 export const repeat = signal<RepeatMode>(loadRepeat());
 
-export const playerSkeletonOn = signal(false);
-
 export const showQueue = signal<boolean>(false);
 
 export function persistQueue() {
 	saveQueue(queue.value);
 	saveIndex(currentIndex.value);
-}
-
-export function clearQueue() {
-	queue.value = [];
-	currentIndex.value = -1;
-	saveQueue([]);
-	saveIndex(-1);
 }
 
 export function toggleShuffle() {

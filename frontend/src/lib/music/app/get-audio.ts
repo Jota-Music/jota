@@ -1,8 +1,6 @@
 import { ResolveAudio, SetYouTubeId } from "@bindings/app";
 import type { Audio, Song } from "@/lib/music/model";
 
-export type { Audio };
-
 function toAudio(data: Audio, fallback: string): Audio & { youtube: string } {
 	return {
 		url: data.url,

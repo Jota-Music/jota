@@ -17,14 +17,12 @@ import { audioDuration, progress } from "@/lib/music/views/stores/audio";
 import { commitSeek, previewSeek } from "@/lib/music/views/stores/player";
 import {
 	cycleRepeat,
-	playerSkeletonOn,
 	repeat,
 	showQueue,
 	shuffle,
 	toggleShuffle,
 } from "@/lib/music/views/stores/queue";
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
-import { PlayerSkeleton } from "@/lib/music/views/ui/player/skeleton";
 import Toggle from "@/lib/music/views/ui/player/toggle";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { secondsToTime } from "@/lib/shared/utils/format";
@@ -273,7 +271,7 @@ export function Player() {
 	const player = usePlayer();
 
 	if (!player) {
-		return playerSkeletonOn.value ? <PlayerSkeleton /> : null;
+		return null;
 	}
 
 	const {

@@ -1,8 +1,6 @@
 import { GetUserPlaylists } from "@bindings/app";
 import type { PlaylistSummary } from "@/lib/music/model";
 
-export type { PlaylistSummary };
-
 export default async function getUserPlaylists(
 	user: string,
 ): Promise<PlaylistSummary[]> {
