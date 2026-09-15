@@ -1,0 +1,39 @@
+# Flatpak manifest for Jota.
+#
+# The GNOME runtime already ships GTK3 + WebKit2GTK 4.1, so the app only bundles
+# its own binary. Use it for a local build with:
+#
+#   flatpak-builder --user --install --force-clean build-dir build/linux/flatpak/io.github.jota_music.jota.yml
+#
+app-id: io.github.jota_music.jota
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+command: jota
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri
+  # Wails single-instance owns a D-Bus name derived from the app UniqueID
+  # (main.go: "com.jotamusic.jota" -> org.wails_app_com_jotamusic_jota.SingleInstance).
+  - --own-name=org.wails_app_com_jotamusic_jota.SingleInstance
+modules:
+  - name: jota
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 jota /app/bin/jota
+      - install -Dm644 io.github.jota_music.jota.desktop /app/share/applications/io.github.jota_music.jota.desktop
+      - install -Dm644 io.github.jota_music.jota.appdata.xml /app/share/metainfo/io.github.jota_music.jota.appdata.xml
+      - install -Dm644 appicon.png /app/share/icons/hicolor/512x512/apps/io.github.jota_music.jota.png
+    sources:
+      - type: file
+        path: ../../../bin/jota
+      - type: file
+        path: io.github.jota_music.jota.desktop
+      - type: file
+        path: ../io.github.jota_music.jota.appdata.xml
+      - type: file
+        path: ../appicon.png

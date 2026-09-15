@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Jota
+Comment=Self-hosted music streaming app
+Exec=jota
+Icon=io.github.jota_music.jota
+Categories=AudioVideo;Audio;Player;
+Terminal=false
+Keywords=music;streaming;spotify;youtube;
