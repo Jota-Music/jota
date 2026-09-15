@@ -53,6 +53,19 @@ wails3 task build                              # binary -> bin/jota
 wails3 task package                            # .deb + .rpm + archlinux -> bin/
 ```
 
+## Packages
+
+Release artifacts are produced on tag (see `.github/workflows/release.yml`):
+
+- **Linux**: `.deb`, `.rpm`, `.AppImage`, AUR PKGBUILD.
+- **Android**: `.apk`.
+- **Windows**: unsigned NSIS installer.
+
+The AppImage is intentionally thin — it bundles only the Go binary and the audio
+decoder libraries, and uses the host's **GTK3 + WebKit2GTK 4.1** (`gtk3`,
+`webkit2gtk-4.1` packages) so it runs across distributions. GStreamer plugins are
+needed for in-app media playback.
+
 ## Listen together
 
 The app can sync playback across multiple devices. It's optional: it needs a
