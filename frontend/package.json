@@ -19,7 +19,6 @@
 		"@tanstack/preact-query": "^5.99.0",
 		"@tanstack/react-virtual": "^3.13.23",
 		"@wailsio/runtime": "latest",
-		"fast-average-color": "^9.5.2",
 		"lucide-preact": "^1.8.0",
 		"preact": "^10.29.1",
 		"tailwindcss": "^4.2.2",
