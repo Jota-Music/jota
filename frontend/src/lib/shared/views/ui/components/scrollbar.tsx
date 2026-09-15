@@ -2,6 +2,7 @@ import type { RefObject } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 
 const MIN_THUMB_PX = 40;
+const GUTTER_PX = 14;
 
 function thumbFor(el: HTMLElement) {
 	const { scrollTop, scrollHeight, clientHeight } = el;
@@ -21,10 +22,15 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 	const drag = useRef<{ y: number; top: number } | null>(null);
 
 	useEffect(() => {
-		if (window.matchMedia("(pointer: fine)").matches) return;
 		const el = target.current;
 		const node = bar.current;
 		if (!el || !node) return;
+
+		const fine = window.matchMedia("(pointer: fine)").matches;
+		if (fine) {
+			const pad = Number.parseFloat(getComputedStyle(el).paddingRight) || 0;
+			el.style.paddingRight = `${Math.max(pad, GUTTER_PX)}px`;
+		}
 
 		const sync = () => {
 			const thumb = thumbFor(el);
@@ -49,6 +55,7 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 			el.removeEventListener("scroll", sync);
 			sizes.disconnect();
 			mutations.disconnect();
+			if (fine) el.style.paddingRight = "";
 		};
 	}, [target]);
 
@@ -86,14 +93,14 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 		<div
 			ref={bar}
 			aria-hidden
-			class="absolute right-0 w-6 touch-none pointer-fine:hidden"
+			class="absolute right-0 w-6 touch-none"
 			onPointerDown={onDown}
 			onPointerMove={onMove}
 			onPointerUp={onUp}
 			onPointerCancel={onUp}
 			onLostPointerCapture={onUp}
 		>
-			<div class="ml-auto mr-1 h-full w-1.5 rounded-full bg-(--scrollbar-thumb)" />
+			<div class="ml-auto mr-1 h-full w-2 rounded-full bg-(--scrollbar-thumb) transition-colors pointer-fine:hover:bg-(--scrollbar-thumb-hover)" />
 		</div>
 	);
 }
