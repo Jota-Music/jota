@@ -5,7 +5,7 @@ import {
 	getYouTubePlaylists,
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
-import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
+import { type Item, Shelf, YouTubeHint } from "@/lib/music/views/ui/shelf";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function MainPage() {
@@ -61,7 +61,7 @@ export function MainPage() {
 					items={items}
 					to={(id) => `/playlist/${id}`}
 					isLoading={spotifyQuery.isLoading || youtubeQuery.isLoading}
-					emptyMessage="No playlists found. Search for YouTube playlists in the search bar."
+					emptyMessage={<YouTubeHint />}
 					onRemove={(id) => remove.mutate(id)}
 				/>
 			</div>
