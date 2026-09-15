@@ -40,25 +40,58 @@ jobs:
         with:
           packages: libgtk-3-dev libwebkit2gtk-4.1-dev libvorbis-dev libflac-dev libmpg123-dev libasound2-dev
           version: 1.0
-      - name: Install FUSE (AppImage)
-        run: sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2 || true
       - name: Install wails3
         run: |
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
           CGO_ENABLED=0 go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
       - name: Package (.deb, .rpm, .AppImage, AUR)
         run: wails3 task package VERSION="${GITHUB_REF_NAME#v}"
-      - name: Smoke-test the AppImage on Debian
+      - name: Smoke-test the AppImage across distributions
         run: |
-          docker run --rm -v "$PWD/bin:/app:ro" debian:12 bash -lc '
-            set -e
-            apt-get update -qq
-            apt-get install -y -qq libgtk-3-0 libwebkit2gtk-4.1-0 libasound2 >/dev/null
-            app=$(ls /app/*.AppImage | head -1)
-            out=$(timeout 20 "$app" --appimage-extract-and-run 2>&1 || true)
-            echo "$out"
-            echo "$out" | grep -q "cannot open display"
-          '
+          set -euo pipefail
+          app=$(ls bin/*.AppImage | head -1)
+          file "$app" | grep -q "static-pie linked"
+
+          for image in debian:12 ubuntu:24.04 fedora:41; do
+            echo "::group::smoke-test $image"
+            docker run --rm -v "$PWD/$app:/app.AppImage:ro" "$image" bash -lc '
+              set -e
+              if command -v apt-get >/dev/null 2>&1; then
+                apt-get update -qq
+                DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libgtk-3-0 libwebkit2gtk-4.1-0 >/dev/null
+              else
+                dnf install -y -q gtk3 webkit2gtk4.1 >/dev/null
+              fi
+              out=$(timeout 20 /app.AppImage --appimage-extract-and-run 2>&1 || true)
+              echo "$out"
+              echo "$out" | grep -q "cannot open display"
+            '
+            echo "::endgroup::"
+          done
+
+          # FUSE-less run: the static runtime must mount without libfuse2 (fuse3
+          # only provides the fusermount helper). Skipped if the runner lacks /dev/fuse.
+          if [ -e /dev/fuse ]; then
+            echo "::group::fuse-less mount (ubuntu:24.04, no libfuse2)"
+            docker run --rm --device /dev/fuse --cap-add SYS_ADMIN \
+              -v "$PWD/$app:/app.AppImage:ro" ubuntu:24.04 bash -lc '
+                set -e
+                apt-get update -qq
+                DEBIAN_FRONTEND=noninteractive apt-get install -y -qq fuse3 libgtk-3-0 libwebkit2gtk-4.1-0 >/dev/null
+                dpkg -l | grep -q "^ii  libfuse2 " && { echo "libfuse2 unexpectedly present"; exit 1; } || true
+                out=$(timeout 20 /app.AppImage 2>&1 || true)
+                echo "$out"
+                echo "$out" | grep -q "cannot open display"
+              '
+            echo "::endgroup::"
+          fi
+
+          # Negative path: on a host without WebKitGTK the wrapper must name the
+          # missing packages instead of failing inside the dynamic loader.
+          out=$(docker run --rm -v "$PWD/$app:/app.AppImage:ro" ubuntu:24.04 bash -lc \
+            'timeout 20 /app.AppImage --appimage-extract-and-run 2>&1 || true')
+          echo "$out"
+          echo "$out" | grep -q "missing system libraries"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: linux-packages
@@ -66,6 +99,45 @@ jobs:
             bin/*.deb
             bin/*.rpm
             bin/*.AppImage
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: linux-binary
+          path: bin/jota
+          retention-days: 1
+
+  flatpak:
+    needs: [linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: linux-binary
+          path: bin
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder dbus-x11
+          flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+      - name: Build the Flatpak bundle
+        run: |
+          flatpak-builder --user --disable-rofiles-fuse --force-clean \
+            --install-deps-from=flathub --repo=flatpak-repo flatpak-build \
+            build/linux/flatpak/io.github.jota_music.jota.yml
+          flatpak build-bundle flatpak-repo jota.flatpak io.github.jota_music.jota
+      - name: Smoke-test the Flatpak
+        run: |
+          flatpak install --user -y ./jota.flatpak
+          out=$(timeout 30 dbus-run-session -- flatpak run io.github.jota_music.jota 2>&1 || true)
+          echo "$out"
+          echo "$out" | grep -q "cannot open display"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flatpak
+          path: jota.flatpak
 
   android:
     runs-on: ubuntu-latest
@@ -150,7 +222,7 @@ jobs:
           path: bin/*-installer.exe
 
   publish:
-    needs: [linux, android, windows]
+    needs: [linux, android, windows, flatpak]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -160,8 +232,10 @@ jobs:
         with:
           path: dist
       - name: Checksums
-        working-directory: dist
-        run: find . -type f -exec sha256sum {} + | sort -k2 > "$GITHUB_WORKSPACE/SHA256SUMS"
+        run: |
+          find dist -type f -print0 | sort -z | xargs -0 sha256sum \
+            | sed 's#  dist/[^/]*/#  #' > SHA256SUMS
+          cat SHA256SUMS
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           prerelease: ${{ startsWith(github.ref_name, 'v0.0.') }}
@@ -169,6 +243,7 @@ jobs:
             dist/linux-packages/*.deb
             dist/linux-packages/*.rpm
             dist/linux-packages/*.AppImage
+            dist/flatpak/*.flatpak
             dist/android-apk/*.apk
             dist/windows-installer/*-installer.exe
             SHA256SUMS
