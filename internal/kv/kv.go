@@ -62,7 +62,7 @@ func EnsureStarted() error {
 
 func Start() {
 	if err := EnsureStarted(); err != nil {
-		log.Fatal(err)
+		log.Printf("kv: unavailable, running without persistence: %v", err)
 	}
 }
 
