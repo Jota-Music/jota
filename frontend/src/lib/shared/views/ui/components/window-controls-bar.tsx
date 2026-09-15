@@ -35,7 +35,7 @@ export function WindowControlsBar() {
 
 	return createPortal(
 		<div
-			class="fixed top-0 right-0 z-200 flex h-10 items-center bg-zinc-950/80 backdrop-blur"
+			class="fixed top-0 right-0 z-200 flex h-10 items-center bg-zinc-950"
 			style="--wails-draggable: no-drag; -webkit-app-region: no-drag;"
 		>
 			<button

@@ -291,7 +291,7 @@ function PlaylistCard({
 						onToggle();
 					}}
 					class={cn(
-						"absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/70 backdrop-blur transition hover:bg-black/90",
+						"absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/70 transition hover:bg-black/90",
 						saved ? "text-red-400" : "text-zinc-300 hover:text-white",
 					)}
 				>

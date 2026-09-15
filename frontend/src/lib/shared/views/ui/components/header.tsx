@@ -123,7 +123,7 @@ export function Header({
 			style="--wails-draggable: drag"
 			onMouseDown={handleDragMouseDown}
 			class={cn(
-				"sticky top-0 z-40 md:z-100 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur",
+				"sticky top-0 z-40 md:z-100 border-b border-zinc-800 bg-zinc-950",
 				_class,
 				className,
 			)}

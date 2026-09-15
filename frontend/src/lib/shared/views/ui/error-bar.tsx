@@ -17,7 +17,7 @@ export function ErrorBar() {
 				{errors.value.map((error) => (
 					<div
 						key={error.id}
-						class="flex items-center gap-3 rounded-lg border border-red-900/50 bg-red-950/80 px-4 py-3 text-sm text-red-200 backdrop-blur"
+						class="flex items-center gap-3 rounded-lg border border-red-900/50 bg-red-950 px-4 py-3 text-sm text-red-200"
 					>
 						<div class="flex-1">{error.message}</div>
 						<button
