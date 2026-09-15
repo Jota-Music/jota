@@ -27,6 +27,17 @@ jobs:
           CGO_ENABLED=0 go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
       - name: Package (.deb, .rpm, .AppImage, AUR)
         run: wails3 task package VERSION="${GITHUB_REF_NAME#v}"
+      - name: Smoke-test the AppImage on Debian
+        run: |
+          docker run --rm -v "$PWD/bin:/app:ro" debian:12 bash -lc '
+            set -e
+            apt-get update -qq
+            apt-get install -y -qq libgtk-3-0 libwebkit2gtk-4.1-0 libasound2 >/dev/null
+            app=$(ls /app/*.AppImage | head -1)
+            out=$(timeout 20 "$app" --appimage-extract-and-run 2>&1 || true)
+            echo "$out"
+            echo "$out" | grep -q "cannot open display"
+          '
       - uses: actions/upload-artifact@v4
         with:
           name: linux-packages
