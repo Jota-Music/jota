@@ -73,6 +73,17 @@ tasks:
         vars:
           ARCH: arm64
 
+  test:appimage:
+    desc: Build the Linux AppImage and run the release smoke tests locally (podman)
+    cmds:
+      - task: linux:create:appimage
+      - ./build/linux/test-appimage.sh
+
+  test:flatpak:
+    desc: Build and smoke-test the Flatpak locally
+    cmds:
+      - ./build/linux/flatpak/build-local.sh
+
 includes:
   common: ./build/Taskfile.yml
   windows: ./build/windows/Taskfile.yml
