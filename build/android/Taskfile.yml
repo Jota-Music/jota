@@ -34,14 +34,6 @@ env:
   PATH: '{{.JAVA_HOME}}/bin:{{env "PATH"}}'
 
 tasks:
-  install:deps:
-    summary: Check and install Android development dependencies
-    cmds:
-      - go run build/android/scripts/deps/install_deps.go
-    env:
-      TASK_FORCE_YES: '{{if .YES}}true{{else}}false{{end}}'
-    prompt: This will check and install Android development dependencies. Continue?
-
   build:
     summary: Creates a debug build of the application for Android
     deps:
@@ -120,16 +112,6 @@ tasks:
           -o build/android/app/src/main/jniLibs/$JNI_DIR/libwails.so
     vars:
       BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s -checklinkname=0 -X main.currentVersion={{.VERSION}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
-
-  compile:go:all-archs:
-    summary: Compile Go code for all Android architectures (fat APK)
-    cmds:
-      - task: compile:go:shared
-        vars:
-          ARCH: arm64
-      - task: compile:go:shared
-        vars:
-          ARCH: amd64
 
   package:
     summary: Packages a production build of the application into a signed release APK
@@ -265,23 +247,6 @@ tasks:
     cmds:
       - wails3 android overlay:gen -out build/android/overlay.json -config build/config.yml
 
-  generate:android:bindings:
-    internal: true
-    summary: Generates bindings for Android
-    sources:
-      - "**/*.go"
-      - go.mod
-      - go.sum
-    generates:
-      - frontend/bindings/**/*
-    cmds:
-      # Bindings are generated from the Go AST; CGO is disabled so the NDK
-      # is not required for this step
-      - wails3 generate bindings -f '-tags android' -clean=true
-    env:
-      GOOS: android
-      CGO_ENABLED: 0
-
   ensure-emulator:
     internal: true
     summary: Ensure Android Emulator is running
@@ -351,18 +316,6 @@ tasks:
       - sh: '[ -x "{{.EMULATOR}}" ] || command -v emulator'
         msg: "emulator not found. Install the Android SDK emulator package (or set ANDROID_HOME)"
 
-  deploy-emulator:
-    summary: Deploy the packaged release APK to the Android Emulator
-    deps:
-      - task: package
-        vars:
-          ARCH: '{{.ARCH | default .HOST_ARCH}}'
-    cmds:
-      - task: ensure-emulator
-      - '"{{.ADB}}" uninstall {{.APP_ID}} 2>/dev/null || true'
-      - '"{{.ADB}}" install "{{.BIN_DIR}}/{{.APP_NAME}}.apk"'
-      - '"{{.ADB}}" shell am start -n {{.APP_ID}}/com.wails.app.MainActivity'
-
   run:
     summary: Build, install and launch a debug build in the Android Emulator
     deps:
@@ -373,42 +326,6 @@ tasks:
       - '"{{.ADB}}" uninstall {{.APP_ID}} 2>/dev/null || true'
       - '"{{.ADB}}" install "{{.BIN_DIR}}/{{.APP_NAME}}.apk"'
       - '"{{.ADB}}" shell am start -n {{.APP_ID}}/com.wails.app.MainActivity'
-
-  device:list:
-    summary: Lists connected Android devices and emulators (serials)
-    cmds:
-      - '"{{.ADB}}" devices -l'
-
-  run:device:
-    summary: Build, install and launch a debug build on a connected physical Android device
-    deps:
-      - task: build
-        vars:
-          ARCH: arm64
-    cmds:
-      - task: assemble:apk
-      - |
-        DEVICE='{{.DEVICE_ID | default ""}}'
-        if [ -z "$DEVICE" ]; then
-          DEVICE="${DEVICE_ID:-}"
-        fi
-        if [ -z "$DEVICE" ]; then
-          DEVICE=$("{{.ADB}}" devices | awk 'NR > 1 && $2 == "device" && $1 !~ /^emulator-/ { print $1; exit }')
-        fi
-        if [ -z "$DEVICE" ]; then
-          echo "Error: no connected physical Android device found."
-          echo "Pass DEVICE_ID=<serial> to target a device explicitly."
-          echo "Find connected device serials with: {{.ADB}} devices"
-          exit 1
-        fi
-
-        echo "Deploying {{.BIN_DIR}}/{{.APP_NAME}}.apk to device $DEVICE..."
-        "{{.ADB}}" -s "$DEVICE" uninstall {{.APP_ID}} 2>/dev/null || true
-        "{{.ADB}}" -s "$DEVICE" install "{{.BIN_DIR}}/{{.APP_NAME}}.apk"
-        "{{.ADB}}" -s "$DEVICE" shell am start -n {{.APP_ID}}/com.wails.app.MainActivity
-    preconditions:
-      - sh: '[ -x "{{.ADB}}" ] || command -v adb'
-        msg: "adb not found. Install the Android SDK platform-tools (or set ANDROID_HOME)"
 
   deploy-device:
     summary: Deploy the packaged release APK to a connected physical Android device
@@ -439,30 +356,6 @@ tasks:
     preconditions:
       - sh: '[ -x "{{.ADB}}" ] || command -v adb'
         msg: "adb not found. Install the Android SDK platform-tools (or set ANDROID_HOME)"
-
-  studio:
-    summary: Open the generated Android project in Android Studio
-    cmds:
-      - |
-        if command -v studio >/dev/null 2>&1; then
-          studio build/android
-        elif [ -d "/Applications/Android Studio.app" ]; then
-          open -a "Android Studio" build/android
-        else
-          echo "Android Studio not found. Install it from https://developer.android.com/studio,"
-          echo "then open the build/android directory."
-          exit 1
-        fi
-
-  logs:
-    summary: Stream Android logcat filtered to this app
-    cmds:
-      - '"{{.ADB}}" logcat -v time | grep -E "(Wails|{{.APP_NAME}})" || true'
-
-  logs:all:
-    summary: Stream all Android logcat (verbose)
-    cmds:
-      - '"{{.ADB}}" logcat -v time'
 
   clean:
     summary: Clean build artifacts
