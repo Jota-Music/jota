@@ -35,7 +35,8 @@ modules:
       - install -Dm644 io.github.jota_music.jota.desktop /app/share/applications/io.github.jota_music.jota.desktop
       - install -Dm644 io.github.jota_music.jota.appdata.xml /app/share/metainfo/io.github.jota_music.jota.appdata.xml
       - install -Dm644 appicon.png /app/share/icons/hicolor/512x512/apps/io.github.jota_music.jota.png
-      - mkdir -p /app/lib && cp -a lib/. /app/lib/
+      - mkdir -p /app/lib
+      - find . -maxdepth 2 -name '*.so*' -exec cp -a {} /app/lib/ \;
     sources:
       - type: file
         path: ../../../bin/jota

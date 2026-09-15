@@ -105,6 +105,7 @@ jobs:
           mkdir -p bin build/linux/flatpak/lib
           cp squashfs-root/usr/bin/jota bin/jota
           cp squashfs-root/usr/lib/*.so* build/linux/flatpak/lib/
+          ls -la build/linux/flatpak/lib/
       - name: Install flatpak-builder
         run: |
           sudo apt-get update
