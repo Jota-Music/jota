@@ -12,7 +12,7 @@ info:
   description: "Self-hosted music streaming app" # The application description
   copyright: "(c) 2025, salvadorsru" # Copyright text
   comments: "Self-hosted music streaming app" # Comments
-  version: "0.1.0" # The application version
+  version: "0.0.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"
