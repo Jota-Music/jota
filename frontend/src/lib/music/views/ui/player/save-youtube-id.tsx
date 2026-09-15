@@ -9,6 +9,7 @@ import {
 	isPlaying,
 	play,
 	prepareSong,
+	setYoutube,
 } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
@@ -48,7 +49,7 @@ export default function SaveYoutubeId({
 		}
 
 		await updateYoutubeId(song.id, youtube);
-		song.youtubeId = youtube;
+		setYoutube(song, youtube);
 		youtubeId.value = youtube;
 		AudioCache.remove(song.id);
 

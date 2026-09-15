@@ -7,7 +7,6 @@ import {
 	isPlaying,
 	progress,
 } from "@/lib/music/views/stores/audio";
-import { AudioCache } from "@/lib/music/views/stores/cache";
 import {
 	commitSeek,
 	nextSong,
@@ -53,30 +52,6 @@ export function usePlayer() {
 			cancelled = true;
 		};
 	}, [cover, songId]);
-
-	useEffect(() => {
-		if (!song) return;
-
-		let cancelled = false;
-
-		(async () => {
-			try {
-				const cached = await AudioCache.get(song);
-				if (!cancelled && cached.youtube) {
-					const current = currentSong.value;
-					if (current && current.id === song.id) {
-						currentSong.value = { ...current, youtubeId: cached.youtube };
-					}
-				}
-			} catch (error) {
-				console.error("Error loading YouTube ID:", error);
-			}
-		})();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [songId]);
 
 	if (!song) return null;
 

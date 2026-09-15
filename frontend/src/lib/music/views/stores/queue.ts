@@ -130,3 +130,13 @@ export function setRepeat(v: RepeatMode) {
 	repeat.value = v;
 	saveRepeat(v);
 }
+
+export function setSongYoutubeId(id: string, youtubeId: string) {
+	const items = queue.value;
+	const idx = items.findIndex((song) => song.id === id);
+	if (idx === -1 || items[idx].youtubeId === youtubeId) return;
+
+	const next = items.slice();
+	next[idx] = { ...next[idx], youtubeId };
+	queue.value = next;
+}

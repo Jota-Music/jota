@@ -2,6 +2,7 @@ import { effect, signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
+import { setSongYoutubeId } from "@/lib/music/views/stores/queue";
 import { addError } from "@/lib/shared/views/stores/errors";
 import { isMainTab } from "@/lib/shared/views/ui/hooks/tabs";
 
@@ -48,6 +49,17 @@ export const volume = signal(getInitialVolume());
 export const muted = signal(getInitialMuted());
 
 export const currentSong = signal<Song | null>(null);
+
+// Apply a resolved YouTube ID to the song on screen and to its queued copy, so
+// queue edits and replays keep it visible.
+export function setYoutube(song: Song, youtube: string) {
+	const current = currentSong.value;
+	if (current && current.id === song.id && current.youtubeId !== youtube) {
+		currentSong.value = { ...current, youtubeId: youtube };
+	}
+
+	setSongYoutubeId(song.id, youtube);
+}
 
 function getInitialVolume() {
 	if (typeof window !== "undefined") {
@@ -147,10 +159,7 @@ async function loadSongIntoPlayer(
 	let data: { url: string; youtube: string };
 	try {
 		data = await AudioCache.get(song);
-		if (data.youtube && currentSong.value?.id === song.id) {
-			const current = currentSong.value;
-			currentSong.value = { ...current, youtubeId: data.youtube };
-		}
+		if (data.youtube) setYoutube(song, data.youtube);
 	} catch (err) {
 		isLoading.value = false;
 		isPlaying.value = false;
