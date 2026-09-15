@@ -2,10 +2,6 @@
 # Mirrors the release workflow's AppImage smoke tests locally through a container
 # runtime, so iterating does not spend GitHub Actions minutes.
 #
-# Note: the AppImage bundles the audio codecs from the build host, so one built on
-# a newer distro can legitimately fail on older ones. CI builds on Ubuntu 24.04
-# (glibc 2.39), which is the baseline these checks assume.
-#
 # Usage: ./test-appimage.sh [path/to/AppImage]
 #        CONTAINER_RUNTIME=docker ./test-appimage.sh
 set -uo pipefail

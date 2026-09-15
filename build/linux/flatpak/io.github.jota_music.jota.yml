@@ -1,16 +1,9 @@
 # Flatpak manifest for Jota.
 #
-# The GNOME runtime already ships GTK3 + WebKit2GTK 4.1 and the common audio
-# decoders, so the app only bundles its own binary plus libFLAC (whose soname
-# differs between the build host and the runtime, e.g. libFLAC.so.12 vs .so.14).
+# The GNOME runtime already ships GTK3, WebKit2GTK 4.1 and everything the app
+# links, so the flatpak only ships the app binary and its desktop assets.
 #
-# `lib/` is not committed; CI fills it from the AppImage. To build locally:
-#
-#   wails3 task package
-#   bin/jota-x86_64.AppImage --appimage-extract
-#   mkdir -p build/linux/flatpak/lib
-#   cp squashfs-root/usr/lib/*.so* build/linux/flatpak/lib/
-#   flatpak-builder --user --install --force-clean build-dir build/linux/flatpak/io.github.jota_music.jota.yml
+# To build locally: `wails3 task test:flatpak`.
 #
 app-id: io.github.jota_music.jota
 runtime: org.gnome.Platform
@@ -35,13 +28,9 @@ modules:
       - install -Dm644 io.github.jota_music.jota.desktop /app/share/applications/io.github.jota_music.jota.desktop
       - install -Dm644 io.github.jota_music.jota.appdata.xml /app/share/metainfo/io.github.jota_music.jota.appdata.xml
       - install -Dm644 appicon.png /app/share/icons/hicolor/512x512/apps/io.github.jota_music.jota.png
-      - mkdir -p /app/lib
-      - find . -maxdepth 2 -name '*.so*' -exec cp -a {} /app/lib/ \;
     sources:
       - type: file
         path: ../../../bin/jota
-      - type: dir
-        path: lib
       - type: file
         path: io.github.jota_music.jota.desktop
       - type: file

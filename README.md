@@ -41,7 +41,7 @@ listening — all on devices you control.
 
 - Go 1.26+
 - Bun 1.x (frontend)
-- Linux dev libraries: `webkit2gtk-4.1`, `gtk+-3.0`, `vorbis`, `flac`, `mpg123`, `alsa`
+- Linux dev libraries: `webkit2gtk-4.1`, `gtk+-3.0`
 - Xcode command line tools for macOS builds
 - `wails3` CLI at `~/go/bin/wails3`
 - JDK ≤ 24 for Android builds (Gradle 9)
@@ -70,13 +70,12 @@ launch: right-click the app and choose **Open**, or run
 The Flatpak targets `org.gnome.Platform`, which already ships GTK3 + WebKit2GTK 4.1,
 so it runs on any distribution with Flatpak and needs nothing from the host.
 
-The AppImage is intentionally thin — it bundles only the Go binary and the FLAC
-decoder library (whose soname drifts across distributions), and uses the host's
-**GTK3 + WebKit2GTK 4.1** (`gtk3`, `webkit2gtk-4.1` packages) so it runs across
-distributions; GStreamer plugins are needed for in-app media playback. It ships a
-statically linked runtime, so it does not require `libfuse2`, and when the host is
-missing GTK3/WebKit2GTK it prints the packages to install instead of failing inside
-the dynamic loader.
+The AppImage is intentionally thin — it bundles only the Go binary and uses the
+host's **GTK3 + WebKit2GTK 4.1** (`gtk3`, `webkit2gtk-4.1` packages) so it runs
+across distributions; GStreamer plugins are needed for in-app media playback. It
+ships a statically linked runtime, so it does not require `libfuse2`, and when the
+host is missing GTK3/WebKit2GTK it prints the packages to install instead of
+failing inside the dynamic loader.
 
 ## Listen together
 

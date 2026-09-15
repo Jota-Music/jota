@@ -17,7 +17,6 @@ build/bin/
 frontend/package.json.md5
 
 # Flatpak build inputs and outputs
-build/linux/flatpak/lib/
 flatpak-build/
 flatpak-repo/
 *.flatpak

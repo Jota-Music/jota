@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Builds and smoke-tests the Flatpak locally without GitHub Actions minutes.
 #
-# It reuses the binary and bundled audio codecs from the local AppImage, exactly
-# like the release workflow does.
+# It reuses the binary from the local AppImage, exactly like the release
+# workflow does.
 #
 # Usage: ./build-local.sh [path/to/AppImage]
 set -euo pipefail
@@ -28,17 +28,15 @@ else
 fi
 app="$(realpath "$app")"
 
-echo "== extracting binary and codecs from $app =="
+echo "== extracting binary from $app =="
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-mkdir -p bin build/linux/flatpak/lib
+mkdir -p bin
 (
   cd "$work"
   "$app" --appimage-extract >/dev/null
   cp squashfs-root/usr/bin/jota "$repo_root/bin/jota"
-  cp squashfs-root/usr/lib/*.so* "$repo_root/build/linux/flatpak/lib/"
 )
-ls -la build/linux/flatpak/lib/
 
 echo "== building the flatpak =="
 flatpak-builder --user --disable-rofiles-fuse --force-clean \

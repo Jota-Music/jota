@@ -11,9 +11,6 @@
 # portable AppImage, and the host must provide webkit2gtk-4.1 (which pulls in
 # GTK3). AppRun below checks for it and prints install hints when it is missing.
 #
-# Only the audio decoder libraries are bundled: their sonames differ across
-# distributions and they are not part of the desktop platform.
-#
 # The AppImage uses a statically linked runtime, so it does not require libfuse2
 # on the target system.
 set -euo pipefail
@@ -47,7 +44,6 @@ trap 'rm -rf "$work"' EXIT
 appdir="$work/${APP_NAME}.AppDir"
 mkdir -p \
   "$appdir/usr/bin" \
-  "$appdir/usr/lib" \
   "$appdir/usr/share/applications" \
   "$appdir/usr/share/icons/hicolor/512x512/apps"
 
@@ -64,24 +60,12 @@ if [ -n "$APPSTREAM" ] && [ -f "$APPSTREAM" ]; then
   cp "$APPSTREAM" "$appdir/usr/share/metainfo/"
 fi
 
-# Bundle only libFLAC: its soname changes across distributions (libFLAC.so.8,
-# .so.10, .so.12, .so.14), so the copy linked at build time may be missing on the
-# host. The other decoders (libmpg123, libogg, libvorbis) keep stable sonames and
-# ship with every desktop platform; bundling them would shadow the host copies and
-# break other consumers such as GStreamer plugins (e.g. libopenmpt).
-pattern='libFLAC[^ /]*\.so[^ /]*$'
-while read -r lib; do
-  [ -e "$lib" ] || continue
-  cp -L "$lib" "$appdir/usr/lib/"
-done < <(ldd "$APP_BINARY" | grep -oE "/[^ ]+\.so[^ ]*" | grep -E "$pattern" | sort -u)
-
-# AppRun: put the bundled libraries on the loader path, then fail early with a
-# readable message when the host is missing the platform libraries instead of
-# letting the dynamic loader print a bare "cannot open shared object file".
+# AppRun: fail early with a readable message when the host is missing the
+# platform libraries instead of letting the dynamic loader print a bare
+# "cannot open shared object file".
 cat > "$appdir/AppRun" <<APPRUN
 #!/bin/sh
 HERE="\$(dirname "\$(readlink -f "\$0")")"
-export LD_LIBRARY_PATH="\$HERE/usr/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
 APP="\$HERE/usr/bin/${APP_NAME}"
 
 if command -v ldd >/dev/null 2>&1; then
