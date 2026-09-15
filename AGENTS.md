@@ -17,12 +17,14 @@ and the audio dev libs (`vorbis`, `flac`, `mpg123`, `alsa`) for go-librespot's C
 WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev   # live reload (vite on :9245)
 wails3 task build                             # binary -> bin/jota
 wails3 task package                           # .deb/.rpm/archlinux -> bin/
+wails3 task darwin:package:dmg                # universal .app + .dmg -> bin/ (macOS only)
 wails3 task android                           # release APK -> bin/jota.apk
 wails3 generate bindings -ts -i -clean=true   # regenerate frontend/bindings/
 ```
 
 Platform tasks live in `build/<os>/Taskfile.yml`. Android needs JDK ≤ 24; the Linux
-build uses the `gtk3` tag (webkit2gtk-4.1).
+build uses the `gtk3` tag (webkit2gtk-4.1). macOS needs Xcode command line tools
+(the go-librespot audio driver links `AudioToolbox`/`CoreAudio`).
 
 ## Releasing
 
@@ -40,6 +42,10 @@ build uses the `gtk3` tag (webkit2gtk-4.1).
 
 **Do not iterate through GitHub Actions** — a `v*` tag spends release minutes and every
 `main` push costs a `ci` run. Local first, remote once.
+
+macOS artifacts cannot be produced on Linux, so `build/darwin/**` and the `macos` job
+are validated only by the release workflow (or on a Mac). The `.dmg` is ad-hoc signed
+but not notarized; notarization needs an Apple Developer account.
 
 `test:appimage` mirrors the workflow smoke tests (static runtime, GTK/WebKit init,
 missing-library message) via podman. Since the AppImage bundles the build host's libFLAC,

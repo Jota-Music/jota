@@ -42,6 +42,7 @@ listening — all on devices you control.
 - Go 1.26+
 - Bun 1.x (frontend)
 - Linux dev libraries: `webkit2gtk-4.1`, `gtk+-3.0`, `vorbis`, `flac`, `mpg123`, `alsa`
+- Xcode command line tools for macOS builds
 - `wails3` CLI at `~/go/bin/wails3`
 - JDK ≤ 24 for Android builds (Gradle 9)
 
@@ -60,6 +61,11 @@ Release artifacts are produced on tag (see `.github/workflows/release.yml`):
 - **Linux**: `.deb`, `.rpm`, `.AppImage`, `.flatpak`, AUR PKGBUILD.
 - **Android**: `.apk`.
 - **Windows**: unsigned NSIS installer.
+- **macOS**: unsigned universal `.dmg` (arm64 + amd64).
+
+The macOS build is neither signed nor notarized, so Gatekeeper blocks the first
+launch: right-click the app and choose **Open**, or run
+`xattr -dr com.apple.quarantine /Applications/Jota.app`.
 
 The Flatpak targets `org.gnome.Platform`, which already ships GTK3 + WebKit2GTK 4.1,
 so it runs on any distribution with Flatpak and needs nothing from the host.
