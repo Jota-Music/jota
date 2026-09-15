@@ -10,6 +10,14 @@ type ProgressProps = {
 	class?: string;
 };
 
+function clientXOf(e: MouseEvent | TouchEvent): number {
+	if ("touches" in e) {
+		const touch = e.touches[0] ?? e.changedTouches[0];
+		return touch ? touch.clientX : 0;
+	}
+	return e.clientX;
+}
+
 function Progress({
 	value,
 	min = 0,
@@ -19,40 +27,58 @@ function Progress({
 	class: className,
 }: ProgressProps) {
 	const trackRef = useRef<HTMLDivElement>(null);
-	const [dragging, setDragging] = useState(false);
+	const draggingRef = useRef(false);
 	const lastValue = useRef(0);
+	const [dragging, setDragging] = useState(false);
+	const propsRef = useRef({ onChange, onCommit, min, max });
+	propsRef.current = { onChange, onCommit, min, max };
 
-	function getClientX(e: MouseEvent | TouchEvent): number {
-		return "touches" in e ? e.touches[0].clientX : e.clientX;
+	function preview(clientX: number) {
+		const track = trackRef.current;
+		if (!track) return;
+		const { min, max, onChange } = propsRef.current;
+		const rect = track.getBoundingClientRect();
+		const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+		const scaled = min + ratio * (max - min);
+		lastValue.current = scaled;
+		onChange?.(scaled);
 	}
 
-	function update(clientX: number) {
-		if (!trackRef.current) return;
+	// Global listeners are attached once. They read the drag state from a ref,
+	// so a fast tap (or an Android touchcancel) can never miss the release and
+	// leave the bar stuck.
+	useEffect(() => {
+		function move(e: MouseEvent | TouchEvent) {
+			if (!draggingRef.current) return;
+			if ("touches" in e) e.preventDefault();
+			preview(clientXOf(e));
+		}
+		function finish() {
+			if (!draggingRef.current) return;
+			draggingRef.current = false;
+			setDragging(false);
+			propsRef.current.onCommit?.(lastValue.current);
+		}
 
-		const rect = trackRef.current.getBoundingClientRect();
-		const x = clientX - rect.left;
+		window.addEventListener("mousemove", move);
+		window.addEventListener("mouseup", finish);
+		window.addEventListener("touchmove", move, { passive: false });
+		window.addEventListener("touchend", finish);
+		window.addEventListener("touchcancel", finish);
 
-		const ratio = Math.max(0, Math.min(1, x / rect.width));
-		const scaledValue = min + ratio * (max - min);
+		return () => {
+			window.removeEventListener("mousemove", move);
+			window.removeEventListener("mouseup", finish);
+			window.removeEventListener("touchmove", move);
+			window.removeEventListener("touchend", finish);
+			window.removeEventListener("touchcancel", finish);
+		};
+	}, []);
 
-		lastValue.current = scaledValue;
-		onChange?.(scaledValue);
-	}
-
-	function onPointerDown(e: MouseEvent | TouchEvent) {
+	function start(e: MouseEvent | TouchEvent) {
+		draggingRef.current = true;
 		setDragging(true);
-		update(getClientX(e));
-	}
-
-	function onPointerMove(e: MouseEvent | TouchEvent) {
-		if (!dragging) return;
-		e.preventDefault();
-		update(getClientX(e));
-	}
-
-	function onPointerUp() {
-		if (dragging) onCommit?.(lastValue.current);
-		setDragging(false);
+		preview(clientXOf(e));
 	}
 
 	function onWheel(e: WheelEvent) {
@@ -68,20 +94,6 @@ function Progress({
 		}
 	}
 
-	useEffect(() => {
-		window.addEventListener("mousemove", onPointerMove);
-		window.addEventListener("mouseup", onPointerUp);
-		window.addEventListener("touchmove", onPointerMove, { passive: false });
-		window.addEventListener("touchend", onPointerUp);
-
-		return () => {
-			window.removeEventListener("mousemove", onPointerMove);
-			window.removeEventListener("mouseup", onPointerUp);
-			window.removeEventListener("touchmove", onPointerMove);
-			window.removeEventListener("touchend", onPointerUp);
-		};
-	}, [dragging]);
-
 	const span = max - min;
 	const percent =
 		span === 0 || !Number.isFinite(span)
@@ -91,8 +103,8 @@ function Progress({
 	return (
 		<div
 			ref={trackRef}
-			onMouseDown={onPointerDown}
-			onTouchStart={onPointerDown}
+			onMouseDown={start}
+			onTouchStart={start}
 			onWheel={onWheel}
 			class={cn(
 				"relative h-2 w-full cursor-pointer select-none rounded-full bg-neutral-300 touch-none",

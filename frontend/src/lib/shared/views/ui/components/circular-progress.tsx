@@ -27,11 +27,17 @@ function CircularProgress({
 }: CircularProgressProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const svgRef = useRef<SVGSVGElement>(null);
+	const draggingRef = useRef(false);
+	const lastValue = useRef(0);
 
 	const [size, setSize] = useState(0);
 	const [dragging, setDragging] = useState(false);
 	const [onRing, setOnRing] = useState(false);
-	const lastValue = useRef(0);
+
+	const sizeRef = useRef(0);
+	sizeRef.current = size;
+	const propsRef = useRef({ min, max, onChange, onCommit });
+	propsRef.current = { min, max, onChange, onCommit };
 
 	useEffect(() => {
 		if (!containerRef.current) return;
@@ -61,46 +67,38 @@ function CircularProgress({
 	const clamped = Math.min(1, Math.max(0, percent));
 	const offset = circumference * (1 - clamped);
 
-	function clamp(v: number) {
-		return Math.min(max, Math.max(min, v));
-	}
-
 	function updateFromPointer(clientX: number, clientY: number) {
-		if (!svgRef.current || safeSize === 0) return;
+		const svg = svgRef.current;
+		if (!svg || sizeRef.current === 0) return;
 
-		const rect = svgRef.current.getBoundingClientRect();
-
+		const rect = svg.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;
 		const cy = rect.top + rect.height / 2;
 
-		const dx = clientX - cx;
-		const dy = clientY - cy;
-
-		let angle = Math.atan2(dy, dx);
+		let angle = Math.atan2(clientY - cy, clientX - cx);
 		if (angle < 0) angle += Math.PI * 2;
 
 		// align -90deg
 		angle = (angle + Math.PI / 2) % (Math.PI * 2);
 
+		const { min, max, onChange } = propsRef.current;
 		const ratio = angle / (Math.PI * 2);
-		const next = min + ratio * (max - min);
-		const clamped = clamp(next);
+		const next = Math.min(max, Math.max(min, min + ratio * (max - min)));
 
-		lastValue.current = clamped;
-		onChange?.(clamped);
+		lastValue.current = next;
+		onChange?.(next);
 	}
 
 	function isOnRing(clientX: number, clientY: number) {
-		if (!svgRef.current || safeSize === 0) return false;
+		const svg = svgRef.current;
+		if (!svg || sizeRef.current === 0) return false;
 
-		const rect = svgRef.current.getBoundingClientRect();
-
+		const rect = svg.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;
 		const cy = rect.top + rect.height / 2;
 
 		const dx = clientX - cx;
 		const dy = clientY - cy;
-
 		const dist = Math.sqrt(dx * dx + dy * dy);
 
 		const inner = radius - strokeWidth / 2;
@@ -109,9 +107,36 @@ function CircularProgress({
 		return dist >= inner && dist <= outer;
 	}
 
+	// Drag listeners are attached once and read state from refs, so a fast tap
+	// or an Android pointercancel can never miss the release and freeze the bar.
+	useEffect(() => {
+		const move = (e: PointerEvent) => {
+			if (!draggingRef.current) return;
+			updateFromPointer(e.clientX, e.clientY);
+		};
+
+		const finish = () => {
+			if (!draggingRef.current) return;
+			draggingRef.current = false;
+			setDragging(false);
+			propsRef.current.onCommit?.(lastValue.current);
+		};
+
+		window.addEventListener("pointermove", move);
+		window.addEventListener("pointerup", finish);
+		window.addEventListener("pointercancel", finish);
+
+		return () => {
+			window.removeEventListener("pointermove", move);
+			window.removeEventListener("pointerup", finish);
+			window.removeEventListener("pointercancel", finish);
+		};
+	}, []);
+
 	function onPointerDown(e: PointerEvent) {
 		if (!isOnRing(e.clientX, e.clientY)) return;
 
+		draggingRef.current = true;
 		setDragging(true);
 		setOnRing(true);
 
@@ -119,27 +144,6 @@ function CircularProgress({
 
 		(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
 	}
-
-	useEffect(() => {
-		if (!dragging) return;
-
-		const move = (e: PointerEvent) => {
-			updateFromPointer(e.clientX, e.clientY);
-		};
-
-		const up = () => {
-			if (dragging) onCommit?.(lastValue.current);
-			setDragging(false);
-		};
-
-		window.addEventListener("pointermove", move);
-		window.addEventListener("pointerup", up);
-
-		return () => {
-			window.removeEventListener("pointermove", move);
-			window.removeEventListener("pointerup", up);
-		};
-	}, [dragging, safeSize, min, max]);
 
 	useEffect(() => {
 		const move = (e: PointerEvent) => {
@@ -152,7 +156,7 @@ function CircularProgress({
 		return () => {
 			window.removeEventListener("pointermove", move);
 		};
-	}, [safeSize, radius, strokeWidth, dragging]);
+	}, [dragging, safeSize, radius, strokeWidth]);
 
 	useEffect(() => {
 		if (dragging) {
@@ -172,7 +176,7 @@ function CircularProgress({
 		<div
 			ref={containerRef}
 			class={cn(
-				"relative inline-flex aspect-square shrink-0 select-none",
+				"relative inline-flex aspect-square shrink-0 select-none touch-none",
 				className,
 			)}
 			style={style}
