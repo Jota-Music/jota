@@ -7,7 +7,7 @@ export const OverlayHost = createContext<RefObject<HTMLDivElement> | null>(
 	null,
 );
 
-interface SheetProps {
+interface ModalProps {
 	open: boolean;
 	close: () => void;
 	labelledBy?: string;
@@ -21,14 +21,14 @@ const CLOSE_PX = 120;
 const TAP_PX = 8;
 const FLING_PX_PER_MS = 0.5;
 
-export function Sheet({
+export function Modal({
 	open,
 	close,
 	labelledBy,
 	closeLabel = "Close",
 	mobileOnly = false,
 	children,
-}: SheetProps) {
+}: ModalProps) {
 	const [mounted, setMounted] = useState(open);
 	const [shown, setShown] = useState(false);
 	const panelRef = useRef<HTMLDivElement>(null);

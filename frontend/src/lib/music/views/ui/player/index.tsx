@@ -29,8 +29,8 @@ import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
+import { Modal } from "@/lib/shared/views/ui/components/modal";
 import Progress from "@/lib/shared/views/ui/components/progress";
-import { Sheet } from "@/lib/shared/views/ui/components/sheet";
 
 const playerModalOpen = signal(false);
 
@@ -459,7 +459,7 @@ export function Player() {
 				</div>
 			</div>
 
-			<Sheet
+			<Modal
 				open={playerModalOpen.value}
 				close={() => {
 					playerModalOpen.value = false;
@@ -470,7 +470,7 @@ export function Player() {
 				<div class="min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-4">
 					<FullPlayerContent {...player} />
 				</div>
-			</Sheet>
+			</Modal>
 		</>
 	);
 }

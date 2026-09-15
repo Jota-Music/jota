@@ -3,7 +3,7 @@ import { useRef } from "preact/hooks";
 import Queue from "@/lib/music/views/ui/queue";
 import { cn } from "@/lib/shared/utils/tw";
 import { Header } from "@/lib/shared/views/ui/components/header";
-import { OverlayHost } from "@/lib/shared/views/ui/components/sheet";
+import { OverlayHost } from "@/lib/shared/views/ui/components/modal";
 import { ErrorBar } from "@/lib/shared/views/ui/error-bar";
 import { SyncPanel } from "@/lib/sync/views/ui/session";
 

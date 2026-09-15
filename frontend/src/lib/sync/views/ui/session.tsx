@@ -12,8 +12,8 @@ import {
 import { useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { cn } from "@/lib/shared/utils/tw";
+import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
-import { Sheet } from "@/lib/shared/views/ui/components/sheet";
 import * as transport from "@/lib/sync/app/transport";
 import * as store from "@/lib/sync/views/stores";
 import { showSync } from "@/lib/sync/views/stores";
@@ -26,7 +26,7 @@ export function SyncPanel() {
 	const connected = status === "open";
 
 	return (
-		<Sheet
+		<Modal
 			open={showSync.value}
 			close={() => (showSync.value = false)}
 			labelledBy="sync-panel-title"
@@ -70,7 +70,7 @@ export function SyncPanel() {
 			<div class="h-[min(70dvh,26rem)] overflow-y-auto px-4 py-4">
 				<SessionForm />
 			</div>
-		</Sheet>
+		</Modal>
 	);
 }
 

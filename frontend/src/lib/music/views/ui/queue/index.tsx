@@ -19,7 +19,7 @@ import { showQueue } from "@/lib/music/views/stores/queue";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
-import { Sheet } from "@/lib/shared/views/ui/components/sheet";
+import { Modal } from "@/lib/shared/views/ui/components/modal";
 
 const ROW_PX = 64;
 const QUEUE_VIEW_LOOKBACK = 1;
@@ -153,7 +153,7 @@ function Queue() {
 	}, [panel.open]);
 
 	return (
-		<Sheet
+		<Modal
 			open={panel.open}
 			close={handleMaskClick}
 			labelledBy="queue-panel-title"
@@ -352,7 +352,7 @@ function Queue() {
 					</div>
 				)}
 			</ul>
-		</Sheet>
+		</Modal>
 	);
 }
 

@@ -11,7 +11,7 @@ import {
 	prepareSong,
 } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
-import { Sheet } from "@/lib/shared/views/ui/components/sheet";
+import { Modal } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 export default function SaveYoutubeId({
@@ -105,7 +105,7 @@ export default function SaveYoutubeId({
 				</button>
 			)}
 
-			<Sheet
+			<Modal
 				open={open}
 				close={() => setOpen(false)}
 				labelledBy="youtube-id-title"
@@ -156,7 +156,7 @@ export default function SaveYoutubeId({
 						</button>
 					</div>
 				</form>
-			</Sheet>
+			</Modal>
 		</>
 	);
 }
