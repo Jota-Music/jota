@@ -1,9 +1,5 @@
-import {
-	useMutation,
-	useQuery,
-	useQueryClient,
-} from "@tanstack/preact-query";
-import { useState } from "preact/hooks";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
+import { useEffect, useState } from "preact/hooks";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
 import {
@@ -17,10 +13,25 @@ import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type Tab = "playlists" | "following";
 
+const tabKey = "main_tab";
+
+function loadTab(): Tab {
+	return localStorage.getItem(tabKey) === "following"
+		? "following"
+		: "playlists";
+}
+
 export function MainPage() {
 	const queryClient = useQueryClient();
 	const spotifyHandle = spotifyUser.value ?? "default";
-	const [tab, setTab] = useState<Tab>("playlists");
+	const [tab, setTab] = useState<Tab>(loadTab);
+
+	useEffect(() => {
+		localStorage.setItem(tabKey, tab);
+	}, [tab]);
+
+	const activeTab: Tab =
+		tab === "following" && !spotifyConnected.value ? "playlists" : tab;
 
 	const spotifyQuery = useQuery({
 		queryKey: ["user-playlists", spotifyHandle],
@@ -78,7 +89,7 @@ export function MainPage() {
 							onClick={() => setTab(id)}
 							class={cn(
 								"h-8 cursor-pointer rounded-md px-4 text-xs font-medium transition-colors",
-								tab === id
+								activeTab === id
 									? "bg-zinc-800 text-white"
 									: "text-zinc-500 hover:text-zinc-300",
 							)}
@@ -88,7 +99,7 @@ export function MainPage() {
 					))}
 				</div>
 
-				{tab === "following" ? (
+				{activeTab === "following" ? (
 					<FollowingShelf account={spotifyHandle} />
 				) : (
 					<Shelf
