@@ -1,8 +1,8 @@
 # Flatpak manifest for Jota.
 #
-# The GNOME runtime already ships GTK3 + WebKit2GTK 4.1, so the app only bundles
-# its own binary plus the audio decoder libraries (whose sonames differ between
-# the build host and the runtime, e.g. libFLAC.so.12 vs .so.14).
+# The GNOME runtime already ships GTK3 + WebKit2GTK 4.1 and the common audio
+# decoders, so the app only bundles its own binary plus libFLAC (whose soname
+# differs between the build host and the runtime, e.g. libFLAC.so.12 vs .so.14).
 #
 # `lib/` is not committed; CI fills it from the AppImage. To build locally:
 #

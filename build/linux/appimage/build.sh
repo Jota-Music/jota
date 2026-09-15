@@ -64,9 +64,12 @@ if [ -n "$APPSTREAM" ] && [ -f "$APPSTREAM" ]; then
   cp "$APPSTREAM" "$appdir/usr/share/metainfo/"
 fi
 
-# Bundle the audio decoder libraries the binary links; their sonames differ
-# across distributions.
-pattern='(libFLAC|libmpg123|libogg|libvorbis|libvorbisenc|libopus)[^ /]*\.so[^ /]*$'
+# Bundle only libFLAC: its soname changes across distributions (libFLAC.so.8,
+# .so.10, .so.12, .so.14), so the copy linked at build time may be missing on the
+# host. The other decoders (libmpg123, libogg, libvorbis) keep stable sonames and
+# ship with every desktop platform; bundling them would shadow the host copies and
+# break other consumers such as GStreamer plugins (e.g. libopenmpt).
+pattern='libFLAC[^ /]*\.so[^ /]*$'
 while read -r lib; do
   [ -e "$lib" ] || continue
   cp -L "$lib" "$appdir/usr/lib/"
