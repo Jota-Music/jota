@@ -11,6 +11,7 @@ import {
 import { useCallback, useEffect, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
+import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
 import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
@@ -73,11 +74,18 @@ export function Header({
 			e.preventDefault();
 			const query = searchDraft.trim();
 			if (!query) return;
-			const encoded = encodeURIComponent(query);
+
+			// A pasted Spotify link/URI decides its own type, so the selected
+			// search type only applies to plain text queries.
+			const ref = liveSource === "spotify" ? parseSpotifyLink(query) : null;
+			const encoded = encodeURIComponent(ref ? ref.id : query);
+
 			setLocation(
 				liveSource === "youtube"
 					? `/search/youtube/${encoded}`
-					: `/search/${searchType}/${encoded}`,
+					: ref
+						? `/search/${ref.type}/${encoded}`
+						: `/search/${searchType}/${encoded}`,
 			);
 		},
 		[searchDraft, searchType, liveSource, setLocation],
@@ -106,8 +114,8 @@ export function Header({
 		liveSource === "youtube"
 			? "Search in YouTube (videos or playlists)"
 			: searchType === "user"
-				? "Spotify username..."
-				: `Spotify ${searchType.charAt(0).toUpperCase() + searchType.slice(1)} ID or URI...`;
+				? "Spotify username or link..."
+				: `Spotify ${searchType.charAt(0).toUpperCase() + searchType.slice(1)} ID, URI or link...`;
 
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: pointer-only window drag surface
