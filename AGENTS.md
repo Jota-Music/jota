@@ -59,6 +59,7 @@ cd frontend && bun run typecheck && bun run lint
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SPOTIFY_CLIENT_ID` | librespot default | Custom Spotify OAuth client ID. |
+| `YOUTUBE_API_KEY` | public InnerTube key | Override the YouTube InnerTube API key. |
 | `WEBKIT_DISABLE_DMABUF_RENDERER` | `1` | Wayland/DMA-BUF workaround (set in `main.go`). |
 
 ## Layout

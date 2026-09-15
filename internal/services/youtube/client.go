@@ -4,12 +4,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"sync"
 	"time"
 )
 
+// defaultAPIKey is Google's public InnerTube key, the same one shipped in the
+// YouTube web client. Set YOUTUBE_API_KEY to override it (both here and the
+// value scraped from YouTube) with your own key.
 const defaultAPIKey = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
+
+var apiKeyEnv = os.Getenv("YOUTUBE_API_KEY")
 
 const visitorTTL = 5 * time.Minute
 
@@ -72,11 +78,18 @@ func allClients() []clientConfig {
 
 var (
 	apiKeyMu      sync.RWMutex
-	apiKey        = defaultAPIKey
+	apiKey        = initialAPIKey()
 	visitorDataMu sync.RWMutex
 	visitorData   string
 	lastFetch     time.Time
 )
+
+func initialAPIKey() string {
+	if apiKeyEnv != "" {
+		return apiKeyEnv
+	}
+	return defaultAPIKey
+}
 
 func currentAPIKey() string {
 	apiKeyMu.RLock()
@@ -147,10 +160,12 @@ func getVisitorData() (string, string, error) {
 		return "", "", err
 	}
 
-	if m := innertubeApiKeyRe.FindSubmatch(body); len(m) > 1 {
-		apiKeyMu.Lock()
-		apiKey = string(m[1])
-		apiKeyMu.Unlock()
+	if apiKeyEnv == "" {
+		if m := innertubeApiKeyRe.FindSubmatch(body); len(m) > 1 {
+			apiKeyMu.Lock()
+			apiKey = string(m[1])
+			apiKeyMu.Unlock()
+		}
 	}
 
 	if m := visitorDataRe.FindSubmatch(body); len(m) > 1 {
