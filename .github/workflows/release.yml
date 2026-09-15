@@ -83,6 +83,7 @@ jobs:
           path: |
             bin/*.deb
             bin/*.rpm
+            bin/*.pkg.tar.*
             bin/*.AppImage
 
   flatpak:
@@ -269,6 +270,7 @@ jobs:
           files: |
             dist/linux-packages/*.deb
             dist/linux-packages/*.rpm
+            dist/linux-packages/*.pkg.tar.*
             dist/linux-packages/*.AppImage
             dist/flatpak/*.flatpak
             dist/android-apk/*.apk
