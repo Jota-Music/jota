@@ -284,12 +284,17 @@ jobs:
       - name: Collect release files
         id: collect
         run: |
-          files=$(find dist \( -name '*.deb' -o -name '*.rpm' -o -name '*.pkg.tar.*' \
-            -o -name '*.AppImage' -o -name '*.flatpak' -o -name '*.apk' \
-            -o -name '*-installer.exe' -o -name '*.dmg' \) -type f | sort)
-          echo "files=$(echo $files | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          {
+            echo "files<<EOF"
+            find dist \( -name '*.deb' -o -name '*.rpm' -o -name '*.pkg.tar.*' \
+              -o -name '*.AppImage' -o -name '*.flatpak' -o -name '*.apk' \
+              -o -name '*-installer.exe' -o -name '*.dmg' \) -type f | sort
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
           prerelease: ${{ startsWith(github.event.inputs.tag_name || github.ref_name, 'v0.0.') }}
-          files: ${{ steps.collect.outputs.files }} SHA256SUMS
+          files: |
+            ${{ steps.collect.outputs.files }}
+            SHA256SUMS
