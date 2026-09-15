@@ -21,30 +21,6 @@ func GetTrack(ctx context.Context, sess *session.Session, uri string) (Track, er
 	return trackFromProto(&track), nil
 }
 
-func GetTracks(ctx context.Context, sess *session.Session, uri string) ([]Track, error) {
-	switch {
-	case strings.HasPrefix(uri, URIPlaylistPrefix):
-		return GetPlaylistTracks(ctx, sess, uri)
-	case strings.HasPrefix(uri, URIAlbumPrefix):
-		return GetAlbumTracks(ctx, sess, uri)
-	case strings.HasPrefix(uri, URIArtistPrefix):
-		return GetArtistTopTracks(ctx, sess, uri)
-	}
-	return nil, &UnsupportedURIError{URI: uri}
-}
-
-type UnsupportedURIError struct {
-	URI string
-}
-
-func (e *UnsupportedURIError) Error() string {
-	return "uri no soportada: " + e.URI + " (soporta: playlist, album, artist)"
-}
-
-func GetPlaylistTracks(ctx context.Context, sess *session.Session, uri string) ([]Track, error) {
-	return GetPlaylistTracksPage(ctx, sess, uri, 0, 0)
-}
-
 func GetPlaylistTracksPage(ctx context.Context, sess *session.Session, uri string, offset, limit int) ([]Track, error) {
 	if _, err := spotifyID(uri, "playlist"); err != nil {
 		return nil, err

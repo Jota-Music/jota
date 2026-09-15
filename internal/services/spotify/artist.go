@@ -43,14 +43,6 @@ func GetArtist(ctx context.Context, sess *session.Session, uri string) (ArtistIn
 	}, nil
 }
 
-func GetArtistTopTracks(ctx context.Context, sess *session.Session, uri string) ([]Track, error) {
-	info, err := GetArtist(ctx, sess, uri)
-	if err != nil {
-		return nil, err
-	}
-	return info.Tracks, nil
-}
-
 type ArtistDiscography struct {
 	Name   string
 	URI    string
@@ -73,11 +65,6 @@ func GetArtistDiscography(ctx context.Context, sess *session.Session, uri string
 		URI:    uri,
 		Albums: albums,
 	}, nil
-}
-
-func GetArtistAlbums(ctx context.Context, sess *session.Session, uri string) ([]AlbumRef, error) {
-	info, err := GetArtistDiscography(ctx, sess, uri)
-	return info.Albums, err
 }
 
 func artistTopTracks(artist *metadatapb.Artist) []Track {
