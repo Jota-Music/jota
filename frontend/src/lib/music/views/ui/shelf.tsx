@@ -98,6 +98,7 @@ interface Props {
 	isLoading?: boolean;
 	emptyMessage?: ComponentChildren;
 	onRemove?: (id: string) => void;
+	filterable?: boolean;
 }
 
 export function Shelf({
@@ -106,6 +107,7 @@ export function Shelf({
 	isLoading = false,
 	emptyMessage = "No items found.",
 	onRemove,
+	filterable = true,
 }: Props) {
 	const [variant, setVariant] = useState<Variant>(loadVariant);
 	const [sourceFilter, setSourceFilter] = useState<SourceFilter>(loadFilter);
@@ -137,49 +139,51 @@ export function Shelf({
 				</div>
 			) : (
 				<>
-					<div class="flex shrink-0 items-center justify-between px-3 py-2 gap-2">
-						<div class="flex overflow-hidden rounded-md border border-zinc-800">
-							<button
-								type="button"
-								onClick={() => setFilter("all")}
-								aria-label="All"
-								class={cn(
-									"h-10 md:h-8 px-3 cursor-pointer flex items-center justify-center transition-colors text-xs font-medium",
-									sourceFilter === "all"
-										? "bg-zinc-800 text-white"
-										: "text-zinc-500 hover:text-white",
-								)}
-							>
-								All
-							</button>
-							<button
-								type="button"
-								onClick={() => setFilter("youtube")}
-								aria-label="YouTube"
-								class={cn(
-									"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
-									sourceFilter === "youtube"
-										? "bg-zinc-800 text-white"
-										: "text-zinc-500 hover:text-white",
-								)}
-							>
-								<YoutubeIcon class="size-5 md:size-4" />
-							</button>
-							<button
-								type="button"
-								onClick={() => setFilter("spotify")}
-								aria-label="Spotify"
-								class={cn(
-									"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
-									sourceFilter === "spotify"
-										? "bg-zinc-800 text-white"
-										: "text-zinc-500 hover:text-white",
-								)}
-							>
-								<SpotifyIcon size={18} class="md:hidden" />
-								<SpotifyIcon size={14} class="hidden md:block" />
-							</button>
-						</div>
+					<div class="flex shrink-0 items-center justify-end px-3 py-2 gap-2">
+						{filterable && (
+							<div class="mr-auto flex overflow-hidden rounded-md border border-zinc-800">
+								<button
+									type="button"
+									onClick={() => setFilter("all")}
+									aria-label="All"
+									class={cn(
+										"h-10 md:h-8 px-3 cursor-pointer flex items-center justify-center transition-colors text-xs font-medium",
+										sourceFilter === "all"
+											? "bg-zinc-800 text-white"
+											: "text-zinc-500 hover:text-white",
+									)}
+								>
+									All
+								</button>
+								<button
+									type="button"
+									onClick={() => setFilter("youtube")}
+									aria-label="YouTube"
+									class={cn(
+										"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
+										sourceFilter === "youtube"
+											? "bg-zinc-800 text-white"
+											: "text-zinc-500 hover:text-white",
+									)}
+								>
+									<YoutubeIcon class="size-5 md:size-4" />
+								</button>
+								<button
+									type="button"
+									onClick={() => setFilter("spotify")}
+									aria-label="Spotify"
+									class={cn(
+										"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
+										sourceFilter === "spotify"
+											? "bg-zinc-800 text-white"
+											: "text-zinc-500 hover:text-white",
+									)}
+								>
+									<SpotifyIcon size={18} class="md:hidden" />
+									<SpotifyIcon size={14} class="hidden md:block" />
+								</button>
+							</div>
+						)}
 						<div class="flex overflow-hidden rounded-md border border-zinc-800">
 							<button
 								type="button"

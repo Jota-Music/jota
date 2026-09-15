@@ -1,16 +1,28 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
+import {
+	useMutation,
+	useQueries,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/preact-query";
+import { useState } from "preact/hooks";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
+import getUserProfile from "@/lib/music/app/get-user-profile";
 import {
 	getYouTubePlaylists,
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
 import { type Item, Shelf, YouTubeHint } from "@/lib/music/views/ui/shelf";
+import { useFollows } from "@/lib/music/views/ui/user/follow";
+import { cn } from "@/lib/shared/utils/tw";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
+
+type Tab = "playlists" | "following";
 
 export function MainPage() {
 	const queryClient = useQueryClient();
 	const spotifyHandle = spotifyUser.value ?? "default";
+	const [tab, setTab] = useState<Tab>("playlists");
 
 	const spotifyQuery = useQuery({
 		queryKey: ["user-playlists", spotifyHandle],
@@ -21,6 +33,19 @@ export function MainPage() {
 	const youtubeQuery = useQuery({
 		queryKey: ["youtube-playlists"],
 		queryFn: getYouTubePlaylists,
+	});
+
+	const {
+		users: followed,
+		isLoading: followedLoading,
+		unfollow,
+	} = useFollows(spotifyHandle);
+
+	const profiles = useQueries({
+		queries: followed.map((user) => ({
+			queryKey: ["user-profile", user],
+			queryFn: () => getUserProfile(user),
+		})),
 	});
 
 	const remove = useMutation({
@@ -50,20 +75,61 @@ export function MainPage() {
 		),
 	];
 
+	const following: Item[] = followed.map(
+		(user, index): Item => ({
+			id: user,
+			name: profiles[index]?.data?.displayName || user,
+			cover: profiles[index]?.data?.imageUrl,
+			removable: true,
+		}),
+	);
+
+	const tabs: { id: Tab; label: string }[] = [
+		{ id: "playlists", label: "Playlists" },
+		...(spotifyConnected.value
+			? [{ id: "following" as Tab, label: "Following" }]
+			: []),
+	];
+
 	return (
 		<DefaultLayout class="gap-6">
-			<div class="flex flex-col gap-6 min-h-0 flex-1 pb-6">
-				<h3 class="text-base font-semibold text-zinc-200 shrink-0">
-					Playlists
-				</h3>
+			<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
+				<div class="flex shrink-0 items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+					{tabs.map(({ id, label }) => (
+						<button
+							key={id}
+							type="button"
+							onClick={() => setTab(id)}
+							class={cn(
+								"h-8 cursor-pointer rounded-md px-4 text-xs font-medium transition-colors",
+								tab === id
+									? "bg-zinc-800 text-white"
+									: "text-zinc-500 hover:text-zinc-300",
+							)}
+						>
+							{label}
+						</button>
+					))}
+				</div>
 
-				<Shelf
-					items={items}
-					to={(id) => `/playlist/${id}`}
-					isLoading={spotifyQuery.isLoading || youtubeQuery.isLoading}
-					emptyMessage={<YouTubeHint />}
-					onRemove={(id) => remove.mutate(id)}
-				/>
+				{tab === "following" ? (
+					<Shelf
+						items={following}
+						to={(id) => `/${id}`}
+						isLoading={followedLoading}
+						emptyMessage="No followed users. Open a user profile and tap the heart to follow it."
+						onRemove={(id) => unfollow.mutate(id)}
+						filterable={false}
+					/>
+				) : (
+					<Shelf
+						items={items}
+						to={(id) => `/playlist/${id}`}
+						isLoading={spotifyQuery.isLoading || youtubeQuery.isLoading}
+						emptyMessage={<YouTubeHint />}
+						onRemove={(id) => remove.mutate(id)}
+					/>
+				)}
 			</div>
 		</DefaultLayout>
 	);

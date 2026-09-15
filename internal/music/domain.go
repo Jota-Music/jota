@@ -70,6 +70,12 @@ type SearchResult struct {
 	TrackCount int32    `json:"trackCount,omitempty"`
 }
 
+type UserProfile struct {
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	ImageURL    string `json:"imageUrl,omitempty"`
+}
+
 type ArtistInfo struct {
 	Name     string `json:"name"`
 	URI      string `json:"uri"`

@@ -89,3 +89,9 @@ export interface Song {
     "artists": Artist[] | null;
     "youtubeId"?: string;
 }
+
+export interface UserProfile {
+    "username": string;
+    "displayName": string;
+    "imageUrl"?: string;
+}

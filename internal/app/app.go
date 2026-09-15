@@ -7,6 +7,7 @@ import (
 	"github.com/Jota-Music/jota/internal/env"
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/services/follows"
 	"github.com/Jota-Music/jota/internal/services/spotify"
 	"github.com/Jota-Music/jota/internal/services/sync"
 	"github.com/Jota-Music/jota/internal/services/youtube"
@@ -20,6 +21,7 @@ type App struct {
 	Catalog *music.Catalog
 	YouTube *youtube.Service
 	Sync    *sync.Service
+	Follows *follows.Service
 }
 
 func New() *App {
@@ -31,6 +33,7 @@ func New() *App {
 		Catalog: music.NewCatalog(spotifySvc, youTubeSvc),
 		YouTube: youTubeSvc,
 		Sync:    sync.New(),
+		Follows: follows.New(),
 	}
 }
 
@@ -117,6 +120,24 @@ func (a *App) GetUserPlaylistsNoCache(user string) ([]music.PlaylistSummary, err
 
 func (a *App) RevalidateUserPlaylists(user string) error {
 	return a.Spotify.RevalidateUserPlaylists(user)
+}
+
+func (a *App) GetUserProfile(username string) (music.UserProfile, error) {
+	return a.Spotify.GetUserProfile(username)
+}
+
+// ----- Follows bindings -----
+
+func (a *App) GetFollowedUsers(account string) ([]string, error) {
+	return a.Follows.List(account)
+}
+
+func (a *App) FollowUser(account string, user string) error {
+	return a.Follows.Follow(account, user)
+}
+
+func (a *App) UnfollowUser(account string, user string) error {
+	return a.Follows.Unfollow(account, user)
 }
 
 func (a *App) GetSong(id string) (music.Song, error) {

@@ -13,5 +13,6 @@ export type {
     PlaylistSummary,
     SearchResult,
     Share,
-    Song
+    Song,
+    UserProfile
 } from "./models.js";

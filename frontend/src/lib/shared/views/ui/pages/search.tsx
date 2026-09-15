@@ -5,6 +5,7 @@ import { Link, useLocation } from "wouter-preact";
 import { type SearchResult, searchSpotify } from "@/lib/music/app/search";
 import type { Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import { UserHeader } from "@/lib/music/views/ui/user/header";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type SearchType = "user" | "track" | "album" | "playlist" | "artist";
@@ -18,7 +19,6 @@ const detailRoutes: Partial<Record<SearchType, (id: string) => string>> = {
 	artist: (id) => `/artist/${id}`,
 	album: (id) => `/album/${id}`,
 	playlist: (id) => `/playlist/${id}`,
-	user: (id) => `/${id}`,
 };
 
 function SearchResultItem({ item }: { item: SearchResult }) {
@@ -119,6 +119,16 @@ function getSearchParams(): {
 	};
 }
 
+function PlaylistGrid({ results }: { results: SearchResult[] }) {
+	return (
+		<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+			{results.map((item) => (
+				<SearchResultItem key={item.uri} item={item} />
+			))}
+		</div>
+	);
+}
+
 export function SearchPage() {
 	const { type, query } = getSearchParams();
 	const [, setLocation] = useLocation();
@@ -178,11 +188,15 @@ export function SearchPage() {
 	return (
 		<DefaultLayout class="gap-4">
 			<div class="flex flex-col gap-4 min-h-0 flex-1">
-				<header class="shrink-0">
-					<h2 class="text-xl font-semibold leading-tight">
-						Playlists by {query}
-					</h2>
-				</header>
+				{type === "user" ? (
+					<UserHeader username={query} />
+				) : (
+					<header class="shrink-0">
+						<h2 class="text-xl font-semibold leading-tight">
+							Playlists by {query}
+						</h2>
+					</header>
+				)}
 
 				<section class="flex flex-col gap-3 min-h-0 flex-1 overflow-y-auto pb-8">
 					{isLoading ? (
@@ -193,11 +207,7 @@ export function SearchPage() {
 					) : results.length === 0 ? (
 						<p class="text-sm text-zinc-500">No playlists found.</p>
 					) : (
-						<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-							{results.map((item) => (
-								<SearchResultItem key={item.uri} item={item} />
-							))}
-						</div>
+						<PlaylistGrid results={results} />
 					)}
 				</section>
 			</div>

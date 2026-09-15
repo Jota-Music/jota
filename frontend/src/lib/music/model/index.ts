@@ -65,6 +65,12 @@ export interface AlbumSummary {
 	group: string;
 }
 
+export interface UserProfile {
+	username: string;
+	displayName: string;
+	imageUrl?: string;
+}
+
 export interface ArtistInfo {
 	name: string;
 	uri: string;

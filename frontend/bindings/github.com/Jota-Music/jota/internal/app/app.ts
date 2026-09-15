@@ -20,6 +20,10 @@ export function AddYouTubePlaylist(id: string): $CancellablePromise<music$0.Play
     return $Call.ByID(2929125534, id);
 }
 
+export function FollowUser(account: string, user: string): $CancellablePromise<void> {
+    return $Call.ByID(2248055530, account, user);
+}
+
 export function GetAlbumTracks(uri: string): $CancellablePromise<music$0.Song[] | null> {
     return $Call.ByID(2388259083, uri);
 }
@@ -30,6 +34,10 @@ export function GetArtist(uri: string): $CancellablePromise<music$0.ArtistInfo> 
 
 export function GetArtistDiscography(uri: string): $CancellablePromise<music$0.ArtistDiscography> {
     return $Call.ByID(764690128, uri);
+}
+
+export function GetFollowedUsers(account: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2564120032, account);
 }
 
 export function GetFullPlaylist(id: string): $CancellablePromise<music$0.Playlist> {
@@ -50,6 +58,10 @@ export function GetUserPlaylists(user: string): $CancellablePromise<music$0.Play
 
 export function GetUserPlaylistsNoCache(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
     return $Call.ByID(882132541, user);
+}
+
+export function GetUserProfile(username: string): $CancellablePromise<music$0.UserProfile> {
+    return $Call.ByID(3889322832, username);
 }
 
 export function GetYouTubePlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
@@ -143,4 +155,8 @@ export function SyncSend(payload: string): $CancellablePromise<void> {
 
 export function SyncStop(): $CancellablePromise<void> {
     return $Call.ByID(3298596019);
+}
+
+export function UnfollowUser(account: string, user: string): $CancellablePromise<void> {
+    return $Call.ByID(2753135609, account, user);
 }

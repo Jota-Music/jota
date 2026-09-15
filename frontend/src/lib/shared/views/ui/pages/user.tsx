@@ -1,10 +1,10 @@
 import { signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { Heart, RefreshCw } from "lucide-preact";
+import { RefreshCw } from "lucide-preact";
 import { useParams } from "wouter-preact";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
-import { followedUsers, toggleFollow } from "@/lib/shared/views/stores/follows";
+import { UserHeader } from "@/lib/music/views/ui/user/header";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function UserPage() {
@@ -52,43 +52,23 @@ export function UserPage() {
 	return (
 		<DefaultLayout class="gap-6">
 			<div class="flex flex-col gap-6 min-h-0 flex-1">
-				<header class="flex items-center gap-3 shrink-0">
-					<h2 class="text-xl font-semibold leading-tight">
-						Playlists de {user}
-					</h2>
-					<button
-						type="button"
-						onClick={() => toggleFollow(user ?? "")}
-						class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white ${
-							followedUsers.value.includes(user ?? "")
-								? "text-red-400"
-								: "text-zinc-400"
-						}`}
-						aria-label={
-							followedUsers.value.includes(user ?? "")
-								? "Unfollow user"
-								: "Follow user"
-						}
-					>
-						<Heart
-							size={14}
-							class={
-								followedUsers.value.includes(user ?? "") ? "fill-current" : ""
-							}
-						/>
-					</button>
-					<button
-						type="button"
-						onClick={handleRefresh}
-						disabled={refreshing.value}
-						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
-					>
-						<RefreshCw
-							size={14}
-							class={refreshing.value ? "animate-spin" : ""}
-						/>
-					</button>
-				</header>
+				<UserHeader
+					username={user ?? ""}
+					actions={
+						<button
+							type="button"
+							onClick={handleRefresh}
+							disabled={refreshing.value}
+							aria-label="Refresh playlists"
+							class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
+						>
+							<RefreshCw
+								size={14}
+								class={refreshing.value ? "animate-spin" : ""}
+							/>
+						</button>
+					}
+				/>
 
 				<Shelf
 					items={playlists.map(
@@ -100,7 +80,7 @@ export function UserPage() {
 					)}
 					to={(id) => `/playlist/${id}`}
 					isLoading={isLoading}
-					emptyMessage="No se encontraron playlists."
+					emptyMessage="No playlists found."
 				/>
 			</div>
 		</DefaultLayout>

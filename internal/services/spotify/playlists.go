@@ -3,7 +3,6 @@ package spotify
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -237,20 +236,6 @@ func getRootlist(ctx context.Context, sess *session.Session, username string) []
 func getPublicPlaylists(ctx context.Context, sess *session.Session, username string) ([]Playlist, error) {
 	path := fmt.Sprintf("/user-profile-view/v3/profile/%s/playlists", url.PathEscape(username))
 
-	resp, err := sess.Spclient().Request(ctx, "GET", path, nil, nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("public profile request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("public profile returned %d", resp.StatusCode)
-	}
-
 	var result struct {
 		PublicPlaylists []struct {
 			URI       string `json:"uri"`
@@ -259,7 +244,7 @@ func getPublicPlaylists(ctx context.Context, sess *session.Session, username str
 			OwnerName string `json:"owner_name"`
 		} `json:"public_playlists"`
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
+	if err := getJSON(ctx, sess, path, &result); err != nil {
 		return nil, err
 	}
 

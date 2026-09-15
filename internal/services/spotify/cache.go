@@ -1,9 +1,11 @@
 package spotify
 
 import (
+	"strings"
+	"time"
+
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
-	"time"
 )
 
 var musicBucket = kv.UseBucket("spotify-music")
@@ -24,4 +26,8 @@ func cachedUserPlaylists(user string, fetch func() ([]music.PlaylistSummary, err
 
 func revalidateUserPlaylists(user string) error {
 	return musicBucket.Delete("playlists:" + user)
+}
+
+func cachedUserProfile(username string, fetch func() (music.UserProfile, error)) (music.UserProfile, error) {
+	return kv.Cached(musicBucket, "user:"+strings.ToLower(username), musicCacheTTL, fetch)
 }
