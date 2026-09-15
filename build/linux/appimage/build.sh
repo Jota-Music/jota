@@ -1,35 +1,59 @@
 #!/usr/bin/env bash
-# Copyright (c) 2018-Present Lea Anthony
-# SPDX-License-Identifier: MIT
+# Builds a distro-agnostic AppImage.
+#
+# The binary is linked against the build machine's audio decoder sonames
+# (libFLAC, libmpg123, libogg, libvorbis), so those are bundled. GTK and
+# WebKit are intentionally NOT bundled: WebKitGTK resolves its helper
+# processes (WebKitNetworkProcess, ...) via absolute paths baked in at build
+# time, and mixing a bundled GTK/gdk-pixbuf with the system's WebKit breaks
+# codecs. Letting the system provide GTK + WebKit keeps the AppImage portable
+# across distributions (the host needs gtk3 and webkit2gtk-4.1 installed).
+set -euo pipefail
 
-# Fail script on any error
-set -euxo pipefail
+APP_NAME="${APP_NAME:?APP_NAME is required}"
+APP_BINARY="${APP_BINARY:?APP_BINARY is required}"
+ICON="${ICON:?ICON is required}"
+DESKTOP_FILE="${DESKTOP_FILE:?DESKTOP_FILE is required}"
+OUTPUT_DIR="${OUTPUT_DIR:-.}"
+BUNDLED_PREFIX="${BUNDLED_PREFIX:-libFLAC so:libmpg123 libogg libvorbis}"
 
-# Define variables
-APP_DIR="${APP_NAME}.AppDir"
+case "$(uname -m)" in
+  x86_64 | amd64) ARCH=x86_64 ;;
+  aarch64 | arm64) ARCH=aarch64 ;;
+  *)
+    echo "unsupported architecture: $(uname -m)" >&2
+    exit 1
+    ;;
+esac
 
-# Create AppDir structure
-mkdir -p "${APP_DIR}/usr/bin"
-cp -r "${APP_BINARY}" "${APP_DIR}/usr/bin/"
-cp "${ICON_PATH}" "${APP_DIR}/"
-cp "${DESKTOP_FILE}" "${APP_DIR}/"
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
 
-if [[ $(uname -m) == *x86_64* ]]; then
-    # Download linuxdeploy and make it executable
-    wget -q -4 -N https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-    chmod +x linuxdeploy-x86_64.AppImage
+appdir="$work/${APP_NAME}.AppDir"
+mkdir -p "$appdir/usr/bin" "$appdir/usr/lib"
 
-    # Run linuxdeploy to bundle the application
-    ./linuxdeploy-x86_64.AppImage --appdir "${APP_DIR}" --output appimage
-else
-    # Download linuxdeploy and make it executable (arm64)
-    wget -q -4 -N https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-aarch64.AppImage
-    chmod +x linuxdeploy-aarch64.AppImage
+cp "$APP_BINARY" "$appdir/usr/bin/${APP_NAME}"
+chmod +x "$appdir/usr/bin/${APP_NAME}"
+cp "$ICON" "$appdir/${APP_NAME}.png"
+ln -sf "${APP_NAME}.png" "$appdir/.DirIcon"
+cp "$DESKTOP_FILE" "$appdir/"
 
-    # Run linuxdeploy to bundle the application (arm64)
-    ./linuxdeploy-aarch64.AppImage --appdir "${APP_DIR}" --output appimage
-fi
+curl -fsSL -o "$appdir/AppRun" \
+  "https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-${ARCH}"
+chmod +x "$appdir/AppRun"
 
-# Rename the generated AppImage
-mv "${APP_NAME}*.AppImage" "${APP_NAME}.AppImage"
+# Bundle the audio decoder libraries the binary links; they are not part of
+# the desktop platform and their sonames differ across distributions.
+pattern='(libFLAC|libmpg123|libogg|libvorbis|libvorbisenc|libopus)[^ /]*\.so[^ /]*$'
+while read -r lib; do
+  [ -e "$lib" ] || continue
+  cp -L "$lib" "$appdir/usr/lib/"
+done < <(ldd "$APP_BINARY" | grep -oE "/[^ ]+\.so[^ ]*" | grep -E "$pattern" | sort -u)
 
+curl -fsSL -o "$work/appimagetool" \
+  "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${ARCH}.AppImage"
+chmod +x "$work/appimagetool"
+
+out="${OUTPUT_DIR%/}/${APP_NAME}-${ARCH}.AppImage"
+ARCH="$ARCH" "$work/appimagetool" --appimage-extract-and-run "$appdir" "$out"
+echo "AppImage created: $out"
