@@ -40,6 +40,14 @@ export function GetFollowedUsers(account: string): $CancellablePromise<string[] 
     return $Call.ByID(2564120032, account);
 }
 
+export function GetFollowing(): $CancellablePromise<music$0.Follow[] | null> {
+    return $Call.ByID(2219887719);
+}
+
+export function GetFriends(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2628846885);
+}
+
 export function GetFullPlaylist(id: string): $CancellablePromise<music$0.Playlist> {
     return $Call.ByID(3017102079, id);
 }

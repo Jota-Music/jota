@@ -1,19 +1,17 @@
 import {
 	useMutation,
-	useQueries,
 	useQuery,
 	useQueryClient,
 } from "@tanstack/preact-query";
 import { useState } from "preact/hooks";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
-import getUserProfile from "@/lib/music/app/get-user-profile";
 import {
 	getYouTubePlaylists,
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
 import { type Item, Shelf, YouTubeHint } from "@/lib/music/views/ui/shelf";
-import { useFollows } from "@/lib/music/views/ui/user/follow";
+import { FollowingShelf } from "@/lib/music/views/ui/user/following";
 import { cn } from "@/lib/shared/utils/tw";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
@@ -33,19 +31,6 @@ export function MainPage() {
 	const youtubeQuery = useQuery({
 		queryKey: ["youtube-playlists"],
 		queryFn: getYouTubePlaylists,
-	});
-
-	const {
-		users: followed,
-		isLoading: followedLoading,
-		unfollow,
-	} = useFollows(spotifyHandle);
-
-	const profiles = useQueries({
-		queries: followed.map((user) => ({
-			queryKey: ["user-profile", user],
-			queryFn: () => getUserProfile(user),
-		})),
 	});
 
 	const remove = useMutation({
@@ -74,15 +59,6 @@ export function MainPage() {
 			}),
 		),
 	];
-
-	const following: Item[] = followed.map(
-		(user, index): Item => ({
-			id: user,
-			name: profiles[index]?.data?.displayName || user,
-			cover: profiles[index]?.data?.imageUrl,
-			removable: true,
-		}),
-	);
 
 	const tabs: { id: Tab; label: string }[] = [
 		{ id: "playlists", label: "Playlists" },
@@ -113,14 +89,7 @@ export function MainPage() {
 				</div>
 
 				{tab === "following" ? (
-					<Shelf
-						items={following}
-						to={(id) => `/${id}`}
-						isLoading={followedLoading}
-						emptyMessage="No followed users. Open a user profile and tap the heart to follow it."
-						onRemove={(id) => unfollow.mutate(id)}
-						filterable={false}
-					/>
+					<FollowingShelf account={spotifyHandle} />
 				) : (
 					<Shelf
 						items={items}

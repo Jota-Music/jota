@@ -76,6 +76,13 @@ type UserProfile struct {
 	ImageURL    string `json:"imageUrl,omitempty"`
 }
 
+type Follow struct {
+	Id       string `json:"id"`
+	Name     string `json:"name"`
+	ImageURL string `json:"imageUrl,omitempty"`
+	Kind     string `json:"kind"`
+}
+
 type ArtistInfo struct {
 	Name     string `json:"name"`
 	URI      string `json:"uri"`

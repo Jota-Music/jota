@@ -42,6 +42,13 @@ export interface Audio {
     "clientName"?: string;
 }
 
+export interface Follow {
+    "id": string;
+    "name": string;
+    "imageUrl"?: string;
+    "kind": string;
+}
+
 export interface Page {
     "size": number;
     "offset": number;

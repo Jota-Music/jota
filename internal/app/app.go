@@ -126,6 +126,14 @@ func (a *App) GetUserProfile(username string) (music.UserProfile, error) {
 	return a.Spotify.GetUserProfile(username)
 }
 
+func (a *App) GetFriends() ([]string, error) {
+	return a.Spotify.GetFriends()
+}
+
+func (a *App) GetFollowing() ([]music.Follow, error) {
+	return a.Spotify.GetFollowing()
+}
+
 // ----- Follows bindings -----
 
 func (a *App) GetFollowedUsers(account string) ([]string, error) {

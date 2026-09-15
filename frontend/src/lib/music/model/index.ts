@@ -71,6 +71,13 @@ export interface UserProfile {
 	imageUrl?: string;
 }
 
+export interface Follow {
+	id: string;
+	name: string;
+	imageUrl?: string;
+	kind: "artist" | "user";
+}
+
 export interface ArtistInfo {
 	name: string;
 	uri: string;

@@ -1,5 +1,5 @@
 import { Disc3, LayoutGrid, List, X } from "lucide-preact";
-import type { ComponentChildren } from "preact";
+import type { ComponentChildren, ComponentType } from "preact";
 import { useState } from "preact/hooks";
 import { Link } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
@@ -22,6 +22,18 @@ function loadVariant(): Variant {
 
 function loadFilter(): SourceFilter {
 	return (localStorage.getItem(filterKey) as SourceFilter) ?? "all";
+}
+
+export type IconType = ComponentType<{ size?: number | string }>;
+
+function Placeholder({
+	icon: Icon = Disc3,
+	size,
+}: {
+	icon?: IconType;
+	size: number;
+}) {
+	return <Icon size={size} />;
 }
 
 function SourceBadge({ source }: { source?: Source }) {
@@ -90,6 +102,7 @@ export interface Item {
 	subtitle?: string;
 	source?: Source;
 	removable?: boolean;
+	icon?: IconType;
 }
 
 interface Props {
@@ -98,7 +111,6 @@ interface Props {
 	isLoading?: boolean;
 	emptyMessage?: ComponentChildren;
 	onRemove?: (id: string) => void;
-	filterable?: boolean;
 }
 
 export function Shelf({
@@ -107,7 +119,6 @@ export function Shelf({
 	isLoading = false,
 	emptyMessage = "No items found.",
 	onRemove,
-	filterable = true,
 }: Props) {
 	const [variant, setVariant] = useState<Variant>(loadVariant);
 	const [sourceFilter, setSourceFilter] = useState<SourceFilter>(loadFilter);
@@ -140,7 +151,7 @@ export function Shelf({
 			) : (
 				<>
 					<div class="flex shrink-0 items-center justify-end px-3 py-2 gap-2">
-						{filterable && (
+						{items.some((item) => item.source) && (
 							<div class="mr-auto flex overflow-hidden rounded-md border border-zinc-800">
 								<button
 									type="button"
@@ -243,7 +254,7 @@ export function Shelf({
 													/>
 												) : (
 													<div class="flex h-full w-full items-center justify-center text-zinc-600">
-														<Disc3 size={28} />
+														<Placeholder icon={item.icon} size={28} />
 													</div>
 												)}
 												{onRemove && item.removable && (
@@ -295,7 +306,7 @@ export function Shelf({
 														/>
 													) : (
 														<div class="flex h-full w-full items-center justify-center text-zinc-600">
-															<Disc3 size={14} />
+															<Placeholder icon={item.icon} size={14} />
 														</div>
 													)}
 												</div>
