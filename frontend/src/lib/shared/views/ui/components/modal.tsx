@@ -124,7 +124,7 @@ export function Modal({
 					if (e.propertyName === "translate") clearInline();
 				}}
 				class={cn(
-					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)] shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out sm:rounded-2xl",
+					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-b-0 border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)] shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out sm:rounded-2xl sm:border-b",
 					host ? "max-h-full" : "max-h-[85dvh]",
 					shown
 						? "translate-y-0 opacity-100 sm:scale-100"
