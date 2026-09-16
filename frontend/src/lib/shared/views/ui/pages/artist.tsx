@@ -10,6 +10,7 @@ import type { AlbumSummary, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { cn } from "@/lib/shared/utils/tw";
+import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 const view = signal<string>("tracks");
@@ -99,24 +100,7 @@ export function ArtistPage() {
 	return (
 		<DefaultLayout class="gap-4">
 			<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6">
-				<header class="flex items-center gap-4 shrink-0">
-					{data?.imageUrl ? (
-						<img
-							src={data.imageUrl}
-							alt=""
-							class="h-16 w-16 shrink-0 rounded-md object-cover"
-						/>
-					) : (
-						<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-zinc-500">
-							<Disc3 size={28} />
-						</div>
-					)}
-					<div class="min-w-0">
-						<h2 class="truncate text-xl font-semibold leading-tight">
-							{data?.name ?? "Artist"}
-						</h2>
-					</div>
-				</header>
+				<PageHeader cover={data?.imageUrl} title={data?.name ?? "Artist"} />
 
 				<div class="flex flex-wrap items-center gap-2 shrink-0">
 					{tabs.map((tab) =>

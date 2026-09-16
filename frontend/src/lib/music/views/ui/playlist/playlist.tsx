@@ -1,16 +1,10 @@
 import { computed, effect, signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import {
-	ArrowUpDown,
-	Disc3,
-	Loader,
-	RefreshCw,
-	Search,
-	X,
-} from "lucide-preact";
+import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
 import { getFullPlaylist } from "@/lib/music/app/get-playlist";
 import type { Playlist, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
 const storageKey = "playlist_filters";
 
@@ -160,27 +154,11 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-4 pb-6">
-			<header className="flex shrink-0 items-center gap-4">
-				{cover ? (
-					<img
-						src={cover}
-						alt=""
-						className="h-16 w-16 shrink-0 rounded-md object-cover"
-					/>
-				) : (
-					<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-zinc-500">
-						<Disc3 size={28} />
-					</div>
-				)}
-				<div className="min-w-0">
-					<h2 className="truncate text-xl font-semibold leading-tight">
-						{name}
-					</h2>
-					<p className="text-sm opacity-70 mt-1">
-						{songs.length} track{songs.length === 1 ? "" : "s"}
-					</p>
-				</div>
-			</header>
+			<PageHeader
+				cover={cover}
+				title={name}
+				subtitle={`${songs.length} track${songs.length === 1 ? "" : "s"}`}
+			/>
 
 			<div className="grid grid-cols-[1fr_auto_auto] gap-2">
 				{/* search */}
