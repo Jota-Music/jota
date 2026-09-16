@@ -2,12 +2,17 @@ import {
 	ClearYouTubeCookies,
 	SetYouTubeCookies,
 	YouTubeBrowserLogin,
+	YouTubeBrowserLoginSupported,
 	YouTubeSignedIn,
 } from "@bindings/app";
 import { signal } from "@preact/signals";
 import { Events } from "@wailsio/runtime";
 
 export const youtubeSignedIn = signal(false);
+
+// The in-app browser window is desktop-only; Android is a single fullscreen
+// WebView that cannot load an external URL, so only paste/import apply there.
+export const youtubeBrowserLoginSupported = signal(false);
 
 // Set when a track fails because it needs a signed-in YouTube session.
 export const youtubeSignInSuggested = signal(false);
@@ -25,6 +30,11 @@ export async function syncYouTubeStatus(): Promise<void> {
 		youtubeSignedIn.value = await YouTubeSignedIn();
 	} catch {
 		youtubeSignedIn.value = false;
+	}
+	try {
+		youtubeBrowserLoginSupported.value = await YouTubeBrowserLoginSupported();
+	} catch {
+		youtubeBrowserLoginSupported.value = false;
 	}
 	if (youtubeSignedIn.value) youtubeSignInSuggested.value = false;
 }
