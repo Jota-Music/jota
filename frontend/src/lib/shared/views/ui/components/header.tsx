@@ -151,7 +151,7 @@ export function Header({
 						class={cn(
 							"flex aspect-square h-full items-center justify-center transition-colors",
 							location === "/"
-								? "bg-(--dominant-color) text-(--binary-color)"
+								? "text-(--dominant-color)"
 								: "text-zinc-400 hover:text-zinc-100",
 						)}
 					>
@@ -164,7 +164,7 @@ export function Header({
 						class={cn(
 							"flex aspect-square h-full items-center justify-center transition-colors",
 							location.startsWith("/settings")
-								? "bg-(--dominant-color) text-(--binary-color)"
+								? "text-(--dominant-color)"
 								: "text-zinc-400 hover:text-zinc-100",
 						)}
 					>
