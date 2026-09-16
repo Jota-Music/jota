@@ -88,37 +88,32 @@ func enrichTracks(ctx context.Context, sess *session.Session, tracks []Track) {
 		maxConc   = 4
 	)
 
-	var pending []int
-	for i := range tracks {
-		if tracks[i].Name == "" || tracks[i].CoverURL == "" || len(tracks[i].Artists) == 0 {
-			pending = append(pending, i)
-		}
-	}
-	if len(pending) == 0 {
+	uris, byURI := groupByURI(tracks)
+	if len(uris) == 0 {
 		return
 	}
 
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, maxConc)
-	for start := 0; start < len(pending); start += batchSize {
+	for start := 0; start < len(uris); start += batchSize {
 		end := start + batchSize
-		if end > len(pending) {
-			end = len(pending)
+		if end > len(uris) {
+			end = len(uris)
 		}
-		batch := pending[start:end]
+		batch := uris[start:end]
 		wg.Add(1)
 		sem <- struct{}{}
-		go func(idxs []int) {
+		go func(us []string) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			enrichBatch(ctx, sess, tracks, idxs)
+			enrichBatch(ctx, sess, tracks, byURI, us)
 		}(batch)
 	}
 	wg.Wait()
 
 	var missing []int
 	for i := range tracks {
-		if tracks[i].Name == "" || tracks[i].CoverURL == "" || len(tracks[i].Artists) == 0 {
+		if needsEnrich(tracks[i]) {
 			missing = append(missing, i)
 		}
 	}
@@ -139,24 +134,46 @@ func enrichTracks(ctx context.Context, sess *session.Session, tracks []Track) {
 	wg.Wait()
 }
 
-func enrichBatch(ctx context.Context, sess *session.Session, tracks []Track, idxs []int) {
-	req := &extmetadatapb.BatchedEntityRequest{}
-	index := make(map[string]int, len(idxs))
-	for _, i := range idxs {
+func needsEnrich(t Track) bool {
+	return t.Name == "" || t.CoverURL == "" || len(t.Artists) == 0
+}
+
+// groupByURI maps every index that still needs metadata to its track URI and
+// returns each unique URI once, so repeated URIs (common in large playlists)
+// share a single lookup instead of leaving duplicates unenriched for the
+// one-by-one fallback.
+func groupByURI(tracks []Track) ([]string, map[string][]int) {
+	uris := make([]string, 0, len(tracks))
+	index := make(map[string][]int, len(tracks))
+	for i := range tracks {
+		if !needsEnrich(tracks[i]) {
+			continue
+		}
 		uri := tracks[i].URI
 		if _, err := librespot.SpotifyIdFromUri(uri); err != nil {
 			continue
 		}
+		if _, seen := index[uri]; !seen {
+			uris = append(uris, uri)
+		}
+		index[uri] = append(index[uri], i)
+	}
+	return uris, index
+}
+
+func enrichBatch(ctx context.Context, sess *session.Session, tracks []Track, byURI map[string][]int, uris []string) {
+	if len(uris) == 0 {
+		return
+	}
+
+	req := &extmetadatapb.BatchedEntityRequest{}
+	for _, uri := range uris {
 		req.EntityRequest = append(req.EntityRequest, &extmetadatapb.EntityRequest{
 			EntityUri: uri,
 			Query: []*extmetadatapb.ExtensionQuery{{
 				ExtensionKind: extmetadatapb.ExtensionKind_TRACK_V4,
 			}},
 		})
-		index[uri] = i
-	}
-	if len(req.EntityRequest) == 0 {
-		return
 	}
 
 	resp, err := sess.Spclient().ExtendedMetadata(ctx, req)
@@ -168,7 +185,7 @@ func enrichBatch(ctx context.Context, sess *session.Session, tracks []Track, idx
 			continue
 		}
 		for _, data := range arr.ExtensionData {
-			i, ok := index[data.EntityUri]
+			matches, ok := byURI[data.EntityUri]
 			if !ok || data.GetHeader().GetStatusCode() != 200 || data.ExtensionData == nil {
 				continue
 			}
@@ -176,7 +193,9 @@ func enrichBatch(ctx context.Context, sess *session.Session, tracks []Track, idx
 			if err := data.ExtensionData.UnmarshalTo(&track); err != nil {
 				continue
 			}
-			mergeTrackFromProto(&tracks[i], &track)
+			for _, i := range matches {
+				mergeTrackFromProto(&tracks[i], &track)
+			}
 		}
 	}
 }
