@@ -66,7 +66,25 @@ function setQueueState(nextQueue: Song[], nextIndex: number) {
 	preloadUpcomingSongs(nextQueue, nextIndex);
 }
 
-async function playAtIndex(i: number): Promise<void> {
+// Pick the next queued song that has not failed yet in this sweep, winding
+// around from `from`. Returns null once every song has been tried, so a totally
+// unavailable queue stops instead of looping forever.
+function nextUntried(
+	length: number,
+	from: number,
+	tried: Set<number>,
+): number | null {
+	for (let step = 1; step < length; step++) {
+		const idx = (from + step) % length;
+		if (!tried.has(idx)) return idx;
+	}
+	return null;
+}
+
+async function playAtIndex(
+	i: number,
+	tried = new Set<number>(),
+): Promise<void> {
 	const q = queue.value;
 	if (i < 0 || i >= q.length) return;
 	const song = q[i];
@@ -82,14 +100,10 @@ async function playAtIndex(i: number): Promise<void> {
 	const ok = await play(song);
 	if (queue.value[currentIndex.value]?.id !== song.id) return;
 	if (!ok) {
-		const next = pickNext(
-			queue.value,
-			currentIndex.value,
-			repeat.value,
-			shuffle.value,
-		);
-		if (next != null && next !== currentIndex.value) {
-			void playAtIndex(next);
+		tried.add(i);
+		const next = nextUntried(queue.value.length, i, tried);
+		if (next != null) {
+			void playAtIndex(next, tried);
 		} else {
 			stopPlayer();
 		}
