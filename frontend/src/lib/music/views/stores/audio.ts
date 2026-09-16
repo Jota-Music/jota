@@ -4,7 +4,6 @@ import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
 import { setSongYoutubeId } from "@/lib/music/views/stores/queue";
 import { addError } from "@/lib/shared/views/stores/errors";
-import { isMainTab } from "@/lib/shared/views/ui/hooks/tabs";
 
 const VOLUME_STORAGE_KEY = "audio-volume";
 const MUTED_STORAGE_KEY = "audio-muted";
@@ -22,12 +21,6 @@ function parseStoredMuted(raw: string | null): boolean {
 	if (raw === null) return false;
 	if (raw === "1" || raw === "true") return true;
 	return false;
-}
-
-export const ignoreTabMute = signal(false);
-
-function checkTabMute(): boolean {
-	return muted.value || (!ignoreTabMute.value && !isMainTab.value);
 }
 
 let audio: HTMLAudioElement | null = null;
@@ -183,7 +176,7 @@ async function loadSongIntoPlayer(
 	AudioCache.pin(song.id);
 
 	instance.volume = volume.value;
-	instance.muted = checkTabMute();
+	instance.muted = muted.value;
 	instance.currentTime = 0;
 
 	bindEvents(instance);
@@ -346,7 +339,7 @@ export function setVolume(value: number) {
 
 export function setMuted(value: boolean) {
 	muted.value = value;
-	if (audio) audio.muted = checkTabMute();
+	if (audio) audio.muted = muted.value;
 	if (typeof window !== "undefined") {
 		try {
 			localStorage.setItem(MUTED_STORAGE_KEY, value ? "1" : "0");
@@ -431,8 +424,7 @@ export function toggleMute() {
 
 effect(() => {
 	muted.value;
-	isMainTab.value;
-	if (audio) audio.muted = checkTabMute();
+	if (audio) audio.muted = muted.value;
 });
 
 if (typeof window !== "undefined") {
@@ -444,7 +436,7 @@ if (typeof window !== "undefined") {
 			if (audio) audio.volume = v;
 		} else if (e.key === MUTED_STORAGE_KEY) {
 			muted.value = parseStoredMuted(e.newValue);
-			if (audio) audio.muted = checkTabMute();
+			if (audio) audio.muted = muted.value;
 		}
 	});
 }

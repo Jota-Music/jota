@@ -4,7 +4,6 @@ import type { Song } from "@/lib/music/model";
 import {
 	currentSong,
 	getPlaybackSeconds,
-	ignoreTabMute,
 	isLoading,
 	isPlaying,
 	play,
@@ -176,13 +175,11 @@ effect(() => {
 });
 
 effect(() => {
-	const active = store.role.value !== "off";
 	if (store.role.value === "guest") {
 		autoAdvance.value = false;
 	} else if (!autoAdvance.value) {
 		autoAdvance.value = true;
 	}
-	ignoreTabMute.value = active;
 });
 
 effect(() => {

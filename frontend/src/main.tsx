@@ -1,4 +1,3 @@
-import "@/lib/shared/views/ui/hooks/tabs";
 import { render } from "preact";
 import Router from "@/lib/shared/views/ui/router";
 import "@wailsio/runtime";
