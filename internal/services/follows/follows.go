@@ -24,7 +24,7 @@ func normalizeAccount(account string) string {
 	return strings.ToLower(strings.TrimSpace(account))
 }
 
-func (s *Service) list(account string) ([]string, error) {
+func (s *Service) List(account string) ([]string, error) {
 	account = normalizeAccount(account)
 	if account == "" {
 		return nil, nil
@@ -40,10 +40,6 @@ func (s *Service) list(account string) ([]string, error) {
 	return users, nil
 }
 
-func (s *Service) List(account string) ([]string, error) {
-	return s.list(account)
-}
-
 func (s *Service) Follow(account string, user string) error {
 	account = normalizeAccount(account)
 	user = strings.TrimSpace(user)
@@ -54,7 +50,7 @@ func (s *Service) Follow(account string, user string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	users, err := s.list(account)
+	users, err := s.List(account)
 	if err != nil {
 		return err
 	}
@@ -76,7 +72,7 @@ func (s *Service) Unfollow(account string, user string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	users, err := s.list(account)
+	users, err := s.List(account)
 	if err != nil {
 		return err
 	}
