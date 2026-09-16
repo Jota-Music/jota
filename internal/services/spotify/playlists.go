@@ -140,6 +140,7 @@ func enrichPlaylistsWithTracks(ctx context.Context, sess *session.Session, pls [
 type playlistMeta struct {
 	name       string
 	cover      string
+	owner      string
 	updatedAt  int64
 	createdAt  int64
 	trackCount int32
@@ -174,6 +175,7 @@ func getPlaylistMetadata(ctx context.Context, sess *session.Session, uri string)
 			m.cover = "https://i.scdn.co/image/" + hex.EncodeToString(pl.Attributes.GetPicture())
 		}
 	}
+	m.owner = pl.GetOwnerUsername()
 	m.updatedAt = pl.GetTimestamp()
 	m.createdAt = pl.GetCreatedAt()
 	m.trackCount = pl.GetLength()

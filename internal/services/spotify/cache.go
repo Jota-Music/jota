@@ -13,19 +13,19 @@ var musicBucket = kv.UseBucket("spotify-music")
 const musicCacheTTL = 12 * time.Hour
 
 func cachedFullPlaylist(playlistID string, fetch func() (music.Playlist, error)) (music.Playlist, error) {
-	return kv.Cached(musicBucket, "playlist:"+playlistID, musicCacheTTL, fetch)
+	return kv.Cached(musicBucket, "playlist:v2:"+playlistID, musicCacheTTL, fetch)
 }
 
 func revalidateFullPlaylist(playlistID string) error {
-	return musicBucket.Delete("playlist:" + playlistID)
+	return musicBucket.Delete("playlist:v2:" + playlistID)
 }
 
 func cachedUserPlaylists(user string, fetch func() ([]music.PlaylistSummary, error)) ([]music.PlaylistSummary, error) {
-	return kv.Cached(musicBucket, "playlists:"+user, musicCacheTTL, fetch)
+	return kv.Cached(musicBucket, "playlists:v2:"+user, musicCacheTTL, fetch)
 }
 
 func revalidateUserPlaylists(user string) error {
-	return musicBucket.Delete("playlists:" + user)
+	return musicBucket.Delete("playlists:v2:" + user)
 }
 
 func cachedUserProfile(username string, fetch func() (music.UserProfile, error)) (music.UserProfile, error) {

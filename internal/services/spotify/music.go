@@ -71,6 +71,7 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 	return music.Playlist{
 		Name:  meta.name,
 		Cover: meta.cover,
+		Owner: meta.owner,
 		Songs: allSongs,
 		Page: music.Page{
 			Size:    len(allSongs),
@@ -118,6 +119,7 @@ func (s *SpotifyService) userPlaylists(user string) ([]music.PlaylistSummary, er
 			Name:   p.Name,
 			Mosaic: "",
 			Cover:  p.CoverURL,
+			Owner:  p.Owner,
 		})
 	}
 	return out, nil

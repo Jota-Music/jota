@@ -40,6 +40,7 @@ type Page struct {
 type Playlist struct {
 	Name  string `json:"name,omitempty"`
 	Cover string `json:"cover,omitempty"`
+	Owner string `json:"owner,omitempty"`
 	Songs []Song `json:"songs"`
 	Page  Page   `json:"page"`
 }
@@ -58,6 +59,7 @@ type PlaylistSummary struct {
 	Mosaic   string `json:"mosaic,omitempty"`
 	Cover    string `json:"cover,omitempty"`
 	Subtitle string `json:"subtitle,omitempty"`
+	Owner    string `json:"owner,omitempty"`
 }
 
 type SearchResult struct {
