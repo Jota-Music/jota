@@ -25,19 +25,12 @@ const getVolumeStatus = (value: number, muted: boolean) => {
 	return VOLUME_STATUS.HIGH;
 };
 
-function VolumeControl({
-	class: _class,
-	className,
-}: {
-	class?: string;
-	className?: string;
-}) {
+function VolumeControl({ class: className }: { class?: string }) {
 	const Icon = getVolumeStatus(volume.value, muted.value);
 	return (
 		<div
 			class={cn(
 				"w-26 md:w-36 flex items-center gap-2 text-(--dominant-color)",
-				_class,
 				className,
 			)}
 		>

@@ -26,19 +26,11 @@ export interface Song {
 	youtubeId?: string;
 }
 
-export interface Page {
-	size: number;
-	offset: number;
-	total: number;
-	hasNext: boolean;
-}
-
 export interface Playlist {
 	name?: string;
 	cover?: string;
 	owner?: string;
 	songs: Song[];
-	page: Page;
 }
 
 export interface PlaylistSummary {
@@ -55,7 +47,6 @@ export interface Audio {
 	duration: number;
 	expireAt: number;
 	videoId?: string;
-	clientName?: string;
 }
 
 export interface AlbumSummary {
@@ -67,7 +58,6 @@ export interface AlbumSummary {
 }
 
 export interface UserProfile {
-	username: string;
 	displayName: string;
 	imageUrl?: string;
 }
@@ -81,13 +71,11 @@ export interface Follow {
 
 export interface ArtistInfo {
 	name: string;
-	uri: string;
 	imageUrl?: string;
 	tracks: Song[];
 }
 
 export interface ArtistDiscography {
 	name: string;
-	uri: string;
 	albums: AlbumSummary[];
 }

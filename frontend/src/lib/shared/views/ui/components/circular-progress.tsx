@@ -1,29 +1,26 @@
-import type { CSSProperties } from "preact";
 import type { PropsWithChildren } from "preact/compat";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cn } from "@/lib/shared/utils/tw";
+
+const STROKE_WIDTH = 8;
 
 type CircularProgressProps = {
 	value: number;
 	min?: number;
 	max?: number;
-	strokeWidth?: number;
 	onChange?: (value: number) => void;
 	onCommit?: (value: number) => void;
 	class?: string;
-	style?: CSSProperties;
 } & PropsWithChildren;
 
 function CircularProgress({
 	value,
 	min = 0,
 	max = 1,
-	strokeWidth = 8,
 	onChange,
 	onCommit,
 	class: className,
 	children,
-	style,
 }: CircularProgressProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const svgRef = useRef<SVGSVGElement>(null);
@@ -60,7 +57,7 @@ function CircularProgress({
 	const safeSize = Math.max(0, size);
 	const center = safeSize / 2;
 
-	const radius = Math.max(0, (safeSize - strokeWidth) / 2);
+	const radius = Math.max(0, (safeSize - STROKE_WIDTH) / 2);
 	const circumference = 2 * Math.PI * radius;
 
 	const percent = max !== min ? (value - min) / (max - min) : 0;
@@ -101,8 +98,8 @@ function CircularProgress({
 		const dy = clientY - cy;
 		const dist = Math.sqrt(dx * dx + dy * dy);
 
-		const inner = radius - strokeWidth / 2;
-		const outer = radius + strokeWidth / 2;
+		const inner = radius - STROKE_WIDTH / 2;
+		const outer = radius + STROKE_WIDTH / 2;
 
 		return dist >= inner && dist <= outer;
 	}
@@ -171,7 +168,6 @@ function CircularProgress({
 				"relative inline-flex aspect-square shrink-0 select-none touch-none",
 				className,
 			)}
-			style={style}
 			role="slider"
 			tabIndex={0}
 			aria-valuenow={value}
@@ -203,7 +199,7 @@ function CircularProgress({
 					r={radius}
 					stroke="currentColor"
 					stroke-opacity="0.2"
-					stroke-width={strokeWidth}
+					stroke-width={STROKE_WIDTH}
 					fill="none"
 					class="drop-shadow-lg drop-shadow-black"
 				/>
@@ -214,7 +210,7 @@ function CircularProgress({
 					cy={center}
 					r={radius}
 					stroke="currentColor"
-					stroke-width={strokeWidth}
+					stroke-width={STROKE_WIDTH}
 					fill="none"
 					stroke-linecap="round"
 					stroke-dasharray={circumference}

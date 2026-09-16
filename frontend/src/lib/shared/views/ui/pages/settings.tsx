@@ -2,7 +2,7 @@ import { useRef } from "preact/hooks";
 import { AccountSettings } from "@/lib/auth/views/ui/account-settings";
 import { open } from "@/lib/shared/utils/open";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
-import ClearLayout from "@/lib/shared/views/ui/layouts/clear";
+import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { RelaySettings } from "@/lib/sync/views/ui/relay-settings";
 import { AboutSettings } from "@/lib/update/views/about-settings";
 
@@ -16,7 +16,7 @@ function SettingsPage() {
 	const listRef = useRef<HTMLDivElement>(null);
 
 	return (
-		<ClearLayout>
+		<AppShell rootClass="pb-6">
 			<div class="relative min-h-0 flex-1">
 				<div
 					ref={listRef}
@@ -46,7 +46,7 @@ function SettingsPage() {
 				</div>
 				<Scrollbar target={listRef} />
 			</div>
-		</ClearLayout>
+		</AppShell>
 	);
 }
 

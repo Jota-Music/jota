@@ -224,7 +224,7 @@ async function gate(song: Song): Promise<void> {
 	gateState = state;
 
 	transport.send({ t: "prepare", songId: song.id, youtubeId: song.youtubeId });
-	await Promise.all([waiting, warm(song, 4000)]);
+	await Promise.all([waiting, warm(song)]);
 }
 
 function markReady(songId: string): void {
