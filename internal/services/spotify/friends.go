@@ -30,9 +30,10 @@ func (s *SpotifyService) GetFriends() ([]string, error) {
 	seen := make(map[string]struct{}, len(result.Friends))
 	friends := make([]string, 0, len(result.Friends))
 	for _, f := range result.Friends {
-		name := strings.TrimSpace(f.User.Name)
-		if name == "" {
-			name = strings.TrimPrefix(f.User.URI, "spotify:user:")
+		uri := strings.TrimSpace(f.User.URI)
+		name := strings.TrimSpace(strings.TrimPrefix(uri, "spotify:user:"))
+		if name == "" || name == uri {
+			name = strings.TrimSpace(f.User.Name)
 		}
 		if name == "" {
 			continue
