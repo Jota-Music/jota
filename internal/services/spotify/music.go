@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/Jota-Music/jota/internal/music"
 )
@@ -48,62 +47,35 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 		return music.Playlist{}, ErrNotConnected
 	}
 
+	metaCh := make(chan playlistMeta, 1)
+	go func() {
+		meta, _ := getPlaylistMetadata(ctx, sess, uri)
+		metaCh <- meta
+	}()
+
 	ctxTracks, err := resolveContextTracks(ctx, sess, uri)
 	if err != nil {
 		return music.Playlist{}, fmt.Errorf("resolve playlist: %w", err)
 	}
-	total := len(ctxTracks)
 
-	const batchSize = 50
-	const maxConcurrency = 3
+	tracks := tracksFromContext(ctxTracks)
+	enrichTracks(ctx, sess, tracks)
 
-	batchCount := (total + batchSize - 1) / batchSize
-	results := make([][]music.Song, batchCount)
-
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, maxConcurrency)
-
-	for i := 0; i < batchCount; i++ {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
-			offset := idx * batchSize
-			end := offset + batchSize
-			if end > total {
-				end = total
-			}
-
-			tracks := tracksFromContext(ctxTracks[offset:end])
-			enrichTracks(ctx, sess, tracks)
-
-			songs := make([]music.Song, 0, len(tracks))
-			for _, t := range tracks {
-				songs = append(songs, trackToSong(t))
-			}
-			results[idx] = songs
-		}(i)
+	allSongs := make([]music.Song, 0, len(tracks))
+	for _, t := range tracks {
+		allSongs = append(allSongs, trackToSong(t))
 	}
 
-	wg.Wait()
-
-	allSongs := make([]music.Song, 0, total)
-	for _, songs := range results {
-		allSongs = append(allSongs, songs...)
-	}
-
-	meta, _ := getPlaylistMetadata(ctx, sess, uri)
+	meta := <-metaCh
 
 	return music.Playlist{
 		Name:  meta.name,
 		Cover: meta.cover,
 		Songs: allSongs,
 		Page: music.Page{
-			Size:    total,
+			Size:    len(allSongs),
 			Offset:  0,
-			Total:   total,
+			Total:   len(allSongs),
 			HasNext: false,
 		},
 	}, nil
