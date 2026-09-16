@@ -2,9 +2,12 @@ package main
 
 import (
 	"embed"
+	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 
 	"github.com/Jota-Music/jota/internal/app"
@@ -27,6 +30,69 @@ type windowState struct {
 
 var windowBucket = kv.UseBucket("window")
 
+const logMaxBytes = 2 << 20
+
+// rotatingWriter appends to a file and, once it grows past max, moves it aside
+// to "<path>.1" (overwriting the previous backup) and starts fresh, so the log
+// never grows without bound. One backup file is a deliberate ceiling: bump the
+// suffix count if longer history is ever needed.
+type rotatingWriter struct {
+	path string
+	max  int64
+	f    *os.File
+	size int64
+}
+
+func (w *rotatingWriter) Write(p []byte) (int, error) {
+	if w.size > 0 && w.size+int64(len(p)) > w.max {
+		w.rotate()
+	}
+	n, err := w.f.Write(p)
+	w.size += int64(n)
+	return n, err
+}
+
+func (w *rotatingWriter) rotate() {
+	_ = w.f.Close()
+	_ = os.Rename(w.path, w.path+".1")
+	f, err := os.OpenFile(w.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	w.f = f
+	w.size = 0
+	_ = debug.SetCrashOutput(f, debug.CrashOptions{})
+}
+
+// setupLogging mirrors Go logs and fatal crash output to a file next to the
+// app's storage, because stderr is lost when the app is launched from a
+// desktop entry or an AppImage. Best-effort: no writable dir means stderr only.
+func setupLogging() func() {
+	dir, err := os.UserConfigDir()
+	if err != nil || dir == "" {
+		dir = os.TempDir()
+	}
+	dir = filepath.Join(dir, "jota")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return func() {}
+	}
+
+	path := filepath.Join(dir, "jota.log")
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return func() {}
+	}
+
+	w := &rotatingWriter{path: path, max: logMaxBytes, f: f}
+	if fi, err := f.Stat(); err == nil {
+		w.size = fi.Size()
+	}
+
+	log.SetOutput(io.MultiWriter(os.Stderr, w))
+	_ = debug.SetCrashOutput(f, debug.CrashOptions{})
+	return func() { _ = f.Close() }
+}
+
 func loadWindowState() windowState {
 	var st windowState
 	_ = kv.EnsureStarted()
@@ -48,6 +114,10 @@ func saveWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
 }
 
 func main() {
+	defer setupLogging()()
+
+	log.Printf("jota %s starting", currentVersion)
+
 	a := app.New(currentVersion)
 
 	if os.Getenv("WEBKIT_DISABLE_DMABUF_RENDERER") == "" {

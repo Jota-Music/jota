@@ -73,6 +73,12 @@ func (a *App) Version() string {
 	return a.version
 }
 
+// LogError persists a frontend-reported error to the app log so failures that
+// only surface in the UI stay diagnosable after the fact.
+func (a *App) LogError(message string) {
+	log.Printf("[ui] %s", message)
+}
+
 func (a *App) CheckUpdate() (update.Info, error) {
 	return update.Check(a.version)
 }

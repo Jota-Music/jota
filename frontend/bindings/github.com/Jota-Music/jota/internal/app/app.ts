@@ -84,6 +84,14 @@ export function InstallUpdate(): $CancellablePromise<void> {
 }
 
 /**
+ * LogError persists a frontend-reported error to the app log so failures that
+ * only surface in the UI stay diagnosable after the fact.
+ */
+export function LogError(message: string): $CancellablePromise<void> {
+    return $Call.ByID(1136571652, message);
+}
+
+/**
  * OpenURL opens the URL in the system browser. On Android it uses the app's
  * native Intent.ACTION_VIEW so OAuth runs outside the WebView; on other
  * platforms the frontend opens the URL itself.
