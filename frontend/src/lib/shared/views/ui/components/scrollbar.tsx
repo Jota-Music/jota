@@ -3,18 +3,19 @@ import { useEffect, useRef } from "preact/hooks";
 
 const MIN_THUMB_PX = 40;
 const GUTTER_PX = 15;
+const INSET_PX = 3;
 
 function thumbFor(el: HTMLElement) {
 	const { scrollTop, scrollHeight, clientHeight } = el;
-	if (clientHeight === 0 || scrollHeight <= clientHeight) return null;
+	const track = el.offsetHeight - INSET_PX * 2;
+	if (clientHeight === 0 || scrollHeight <= clientHeight || track <= 0) {
+		return null;
+	}
 	const ratio = clientHeight / scrollHeight;
-	const height = Math.min(
-		clientHeight,
-		Math.max(MIN_THUMB_PX, ratio * clientHeight),
-	);
-	const top =
-		(scrollTop / (scrollHeight - clientHeight)) * (clientHeight - height);
-	return { top, height };
+	const height = Math.min(track, Math.max(MIN_THUMB_PX, ratio * track));
+	const travel = track - height;
+	const top = INSET_PX + (scrollTop / (scrollHeight - clientHeight)) * travel;
+	return { top, height, travel };
 }
 
 export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
@@ -75,11 +76,9 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 		const start = drag.current;
 		if (!el || !start) return;
 		const thumb = thumbFor(el);
-		if (!thumb) return;
-		const travel = el.clientHeight - thumb.height;
-		if (travel <= 0) return;
+		if (!thumb || thumb.travel <= 0) return;
 		const max = el.scrollHeight - el.clientHeight;
-		const next = start.top + ((e.clientY - start.y) / travel) * max;
+		const next = start.top + ((e.clientY - start.y) / thumb.travel) * max;
 		el.scrollTop = Math.max(0, Math.min(max, next));
 	};
 
