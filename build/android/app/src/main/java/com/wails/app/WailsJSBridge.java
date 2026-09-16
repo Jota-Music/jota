@@ -113,15 +113,6 @@ public class WailsJSBridge {
     }
 
     /**
-     * Open the YouTube sign-in WebView. Called from JavaScript:
-     * wails.youtubeLogin(); the result arrives at window.__jotaYouTubeCookies.
-     */
-    @JavascriptInterface
-    public void youtubeLogin() {
-        bridge.startYouTubeLogin();
-    }
-
-    /**
      * Get the platform name
      * Called from JavaScript: wails.platform()
      *

@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import {
 	loginYouTubeWithBrowser,
 	saveYouTubeCookies,
+	youtubeBrowserLoginSupported,
 } from "@/lib/auth/views/stores/youtube";
 
 function message(err: unknown): string {
@@ -55,20 +56,33 @@ export function YouTubeSignIn() {
 				one.
 			</div>
 
-			<button
-				type="button"
-				onClick={() => void signInWithBrowser()}
-				disabled={browserBusy}
-				class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-100 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-			>
-				{browserBusy ? "Waiting for sign-in…" : "Sign in with browser"}
-			</button>
+			{youtubeBrowserLoginSupported.value ? (
+				<>
+					<button
+						type="button"
+						onClick={() => void signInWithBrowser()}
+						disabled={browserBusy}
+						class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-100 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+					>
+						{browserBusy ? "Waiting for sign-in…" : "Sign in with browser"}
+					</button>
 
-			<div class="flex items-center gap-2 text-[11px] text-zinc-600">
-				<span class="h-px flex-1 bg-zinc-800" />
-				or paste cookies
-				<span class="h-px flex-1 bg-zinc-800" />
-			</div>
+					<div class="flex items-center gap-2 text-[11px] text-zinc-600">
+						<span class="h-px flex-1 bg-zinc-800" />
+						or paste cookies
+						<span class="h-px flex-1 bg-zinc-800" />
+					</div>
+				</>
+			) : (
+				<p class="text-xs leading-relaxed text-zinc-500">
+					In-app sign-in is not available on this platform. Paste your cookies
+					or import a{" "}
+					<code class="rounded bg-zinc-800 px-1 py-0.5 text-zinc-300">
+						cookies.txt
+					</code>{" "}
+					export below.
+				</p>
+			)}
 
 			<form
 				onSubmit={(e) => {
