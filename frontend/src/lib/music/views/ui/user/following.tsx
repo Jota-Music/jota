@@ -47,9 +47,9 @@ export function FollowingShelf({ account }: { account: string }) {
 	const seen = new Set<string>();
 
 	function addUser(user: string, removable: boolean) {
-		const key = `user:${user.toLowerCase()}`;
-		if (seen.has(key)) return;
-		seen.add(key);
+		const key = `user:${user}`;
+		if (seen.has(key.toLowerCase())) return;
+		seen.add(key.toLowerCase());
 		entries.push({
 			id: key,
 			name: user,
@@ -62,9 +62,9 @@ export function FollowingShelf({ account }: { account: string }) {
 	for (const user of followed) addUser(user, true);
 
 	for (const follow of following.data ?? []) {
-		const key = `${follow.kind}:${follow.id.toLowerCase()}`;
-		if (seen.has(key)) continue;
-		seen.add(key);
+		const key = `${follow.kind}:${follow.id}`;
+		if (seen.has(key.toLowerCase())) continue;
+		seen.add(key.toLowerCase());
 		entries.push({
 			id: key,
 			name: follow.name || follow.id,
