@@ -49,7 +49,7 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 					{artists && <p class="truncate text-xs text-zinc-500">{artists}</p>}
 
 					{item.ownerName && (
-						<p class="truncate text-xs text-zinc-500">By {item.ownerName}</p>
+						<p class="truncate text-xs text-zinc-500">{item.ownerName}</p>
 					)}
 
 					{item.trackCount != null && (

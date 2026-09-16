@@ -21,6 +21,11 @@ export function AlbumPage() {
 	const tracks = (data as Song[]) ?? [];
 	const cover = tracks[0]?.album?.covers?.[0];
 	const albumName = tracks[0]?.album?.title ?? "Album";
+	const artists = tracks[0]?.artists ?? [];
+	const artist = artists.find((a) => a.id);
+	const link = artist
+		? { to: `/artist/${artist.id}`, label: artist.name }
+		: undefined;
 
 	return (
 		<DefaultLayout class="gap-4">
@@ -29,6 +34,7 @@ export function AlbumPage() {
 					cover={cover}
 					title={albumName}
 					subtitle={`${tracks.length} track${tracks.length === 1 ? "" : "s"}`}
+					link={link}
 				/>
 
 				{isError ? (

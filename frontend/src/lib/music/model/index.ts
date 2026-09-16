@@ -36,6 +36,7 @@ export interface Page {
 export interface Playlist {
 	name?: string;
 	cover?: string;
+	owner?: string;
 	songs: Song[];
 	page: Page;
 }
@@ -46,6 +47,7 @@ export interface PlaylistSummary {
 	mosaic?: string;
 	cover?: string;
 	subtitle?: string;
+	owner?: string;
 }
 
 export interface Audio {

@@ -1,7 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { RefreshCw } from "lucide-preact";
 import { useParams } from "wouter-preact";
-import getUserPlaylists from "@/lib/music/app/get-user-playlists";
+import getUserPlaylists, {
+	revalidateUserPlaylists,
+} from "@/lib/music/app/get-user-playlists";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
@@ -17,8 +19,9 @@ export function UserPage() {
 		enabled: !!user,
 	});
 
-	function handleRefresh() {
-		queryClient.invalidateQueries({ queryKey: ["user-playlists", user] });
+	async function handleRefresh() {
+		if (user) await revalidateUserPlaylists(user).catch(() => {});
+		await queryClient.invalidateQueries({ queryKey: ["user-playlists", user] });
 	}
 
 	const playlists = data ?? [];
@@ -52,6 +55,7 @@ export function UserPage() {
 							id: p.id,
 							name: p.name,
 							cover: p.cover ?? p.mosaic,
+							subtitle: p.owner,
 						}),
 					)}
 					to={(id) => `/playlist/${id}`}

@@ -2,7 +2,10 @@ import { computed, effect, signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
 import { useEffect } from "preact/hooks";
-import { getFullPlaylist } from "@/lib/music/app/get-playlist";
+import {
+	getFullPlaylist,
+	revalidateFullPlaylist,
+} from "@/lib/music/app/get-playlist";
 import type { Playlist, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
@@ -109,6 +112,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	async function handleRefresh() {
 		refreshing.value = true;
+		await revalidateFullPlaylist(id).catch(() => {});
 		queryClient.removeQueries({ queryKey: ["playlist", id] });
 		await queryClient.fetchQuery({
 			queryKey: ["playlist", id],
@@ -159,6 +163,9 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				cover={cover}
 				title={name}
 				subtitle={`${songs.length} track${songs.length === 1 ? "" : "s"}`}
+				link={
+					data?.owner ? { to: `/${data.owner}`, label: data.owner } : undefined
+				}
 			/>
 
 			<div className="grid grid-cols-[1fr_auto_auto] gap-2">

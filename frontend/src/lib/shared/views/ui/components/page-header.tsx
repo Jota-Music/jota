@@ -1,13 +1,27 @@
 import { Disc3 } from "lucide-preact";
+import { Link } from "wouter-preact";
+
+function LinkLine({ link }: { link: { to: string; label: string } }) {
+	return (
+		<Link
+			to={link.to}
+			class="mt-1 block truncate text-sm opacity-70 hover:opacity-100 hover:underline"
+		>
+			{link.label}
+		</Link>
+	);
+}
 
 export function PageHeader({
 	cover,
 	title,
 	subtitle,
+	link,
 }: {
 	cover?: string;
 	title: string;
 	subtitle?: string;
+	link?: { to: string; label: string };
 }) {
 	return (
 		<header class="flex shrink-0 items-center gap-4">
@@ -25,6 +39,7 @@ export function PageHeader({
 			<div class="min-w-0">
 				<h2 class="truncate text-xl font-semibold leading-tight">{title}</h2>
 				{subtitle && <p class="text-sm opacity-70 mt-1">{subtitle}</p>}
+				{link && <LinkLine link={link} />}
 			</div>
 		</header>
 	);
