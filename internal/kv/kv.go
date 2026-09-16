@@ -77,10 +77,3 @@ func Close() {
 	db = nil
 	openErr = nil
 }
-
-func checkDB() error {
-	if db == nil {
-		return ErrNotStarted
-	}
-	return nil
-}

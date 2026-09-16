@@ -23,9 +23,6 @@ func (b *Bucket) SetObject(key string, value any, ttl ...time.Duration) error {
 	if err := EnsureStarted(); err != nil {
 		return err
 	}
-	if err := checkDB(); err != nil {
-		return err
-	}
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -47,9 +44,6 @@ func (b *Bucket) Delete(key string) error {
 	if err := EnsureStarted(); err != nil {
 		return err
 	}
-	if err := checkDB(); err != nil {
-		return err
-	}
 	return db.Update(func(txn *badger.Txn) error {
 		err := txn.Delete(b.key(key))
 		if err == badger.ErrKeyNotFound {
@@ -61,9 +55,6 @@ func (b *Bucket) Delete(key string) error {
 
 func (b *Bucket) GetObject(key string, out any) error {
 	if err := EnsureStarted(); err != nil {
-		return err
-	}
-	if err := checkDB(); err != nil {
 		return err
 	}
 	var data []byte
@@ -88,9 +79,6 @@ func (b *Bucket) SetString(key string, value string, ttl ...time.Duration) error
 	if err := EnsureStarted(); err != nil {
 		return err
 	}
-	if err := checkDB(); err != nil {
-		return err
-	}
 	data := []byte(value)
 	var d time.Duration
 	if len(ttl) > 0 {
@@ -107,9 +95,6 @@ func (b *Bucket) SetString(key string, value string, ttl ...time.Duration) error
 
 func (b *Bucket) GetString(key string) (string, error) {
 	if err := EnsureStarted(); err != nil {
-		return "", err
-	}
-	if err := checkDB(); err != nil {
 		return "", err
 	}
 	var data []byte
