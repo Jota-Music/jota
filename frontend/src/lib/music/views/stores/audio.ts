@@ -29,9 +29,64 @@ let knownDuration = 0;
 let loadToken = 0;
 
 let onTrackEndedCallback: (() => void) | null = null;
+let endedElement: HTMLAudioElement | null = null;
+let endWatch: ReturnType<typeof setInterval> | null = null;
 
 export function setOnTrackEnded(fn: () => void) {
 	onTrackEndedCallback = fn;
+}
+
+function stopEndWatch() {
+	if (endWatch !== null) {
+		clearInterval(endWatch);
+		endWatch = null;
+	}
+}
+
+function endPlayback(a: HTMLAudioElement) {
+	if (audio !== a || endedElement === a) return;
+	endedElement = a;
+	stopEndWatch();
+	a.pause();
+	progress.value = 0;
+	isPlaying.value = false;
+	media.update(currentSong.value, false);
+	onTrackEndedCallback?.();
+}
+
+// WebKit on macOS does not always fire `ended` for YouTube CDN streams, so end
+// the track once it reaches its known duration or stalls right at the end.
+function watchEnd(a: HTMLAudioElement) {
+	stopEndWatch();
+	let last = -1;
+	let still = 0;
+	endWatch = setInterval(() => {
+		if (audio !== a || a.ended) {
+			stopEndWatch();
+			return;
+		}
+		if (a.paused) {
+			last = -1;
+			still = 0;
+			return;
+		}
+		const elementDuration = a.duration;
+		const fromElement = Number.isFinite(elementDuration) && elementDuration > 0;
+		const time = a.currentTime;
+		if (time === last) {
+			still += 250;
+		} else {
+			still = 0;
+			last = time;
+		}
+		// `knownDuration` is truncated from the URL, so only use it as a
+		// near-end gate; the element duration triggers the end itself.
+		const gate = knownDuration > 0 ? knownDuration : elementDuration;
+		const reached = fromElement && time >= elementDuration - 0.25;
+		const stalled =
+			Number.isFinite(gate) && time > 0 && time >= gate - 2 && still >= 1000;
+		if (reached || stalled) endPlayback(a);
+	}, 250);
 }
 
 export const isLoading = signal(false);
@@ -134,6 +189,9 @@ async function loadSongIntoPlayer(
 	startSeconds?: number | (() => number),
 ): Promise<boolean> {
 	const token = ++loadToken;
+
+	stopEndWatch();
+	endedElement = null;
 
 	if (audio) {
 		const prevId = loadedSongId;
@@ -303,7 +361,7 @@ export function getPlaybackSeconds(): number {
 }
 
 export function hasLoadedAudio(): boolean {
-	return !!audio && !audio.error;
+	return !!audio && !audio.error && endedElement !== audio;
 }
 
 export function pause() {
@@ -313,7 +371,7 @@ export function pause() {
 // Recover playback after a failed stream: reload the current song from a
 // freshly resolved URL instead of reusing the dead element/URL.
 export async function resume(): Promise<boolean> {
-	if (audio && !audio.error) {
+	if (audio && !audio.error && endedElement !== audio) {
 		try {
 			await audio.play();
 			return true;
@@ -368,7 +426,7 @@ export function setMuted(value: boolean) {
 }
 
 export async function togglePlayPause(): Promise<boolean> {
-	if (audio && !audio.error && !audio.paused) {
+	if (audio && !audio.error && endedElement !== audio && !audio.paused) {
 		audio.pause();
 		return false;
 	}
@@ -377,6 +435,8 @@ export async function togglePlayPause(): Promise<boolean> {
 
 export function stopPlayer() {
 	loadToken++;
+	stopEndWatch();
+	endedElement = null;
 	if (audio) {
 		const prevId = loadedSongId;
 		audio.pause();
@@ -397,6 +457,7 @@ export function stopPlayer() {
 
 function bindEvents(a: HTMLAudioElement) {
 	const syncDuration = () => {
+		if (audio !== a) return;
 		const d = knownDurationOr(a.duration);
 		audioDuration.value = Number.isFinite(d) && d > 0 ? d : 0;
 	};
@@ -405,28 +466,34 @@ function bindEvents(a: HTMLAudioElement) {
 	a.ondurationchange = syncDuration;
 
 	a.onplay = () => {
+		if (audio !== a) return;
+		endedElement = null;
 		isPlaying.value = true;
 		media.update(currentSong.value, true);
+		watchEnd(a);
 	};
 
 	a.onpause = () => {
+		if (audio !== a) return;
 		isPlaying.value = false;
 		media.update(currentSong.value, false);
+		stopEndWatch();
 	};
 
 	a.ontimeupdate = () => {
+		if (audio !== a) return;
 		if (!dragSeeking.value) progress.value = a.currentTime;
 		media.position(a, knownDuration);
 	};
 
 	a.onended = () => {
-		progress.value = 0;
-		onTrackEndedCallback?.();
+		endPlayback(a);
 	};
 
 	a.onerror = () => {
 		if (audio !== a) return;
 		a.onerror = null;
+		stopEndWatch();
 		isPlaying.value = false;
 		isLoading.value = false;
 		knownDuration = 0;
