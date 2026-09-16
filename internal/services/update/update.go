@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -116,7 +117,7 @@ func pick(releases []release) *release {
 		if !ok {
 			continue
 		}
-		if best == nil || less(bestVer, v) {
+		if best == nil || slices.Compare(bestVer[:], v[:]) < 0 {
 			best, bestVer = r, v
 		}
 	}
@@ -179,16 +180,7 @@ func newer(latest, current string) bool {
 	if !ok {
 		return false
 	}
-	return less(c, l)
-}
-
-func less(a, b [3]int) bool {
-	for i := range a {
-		if a[i] != b[i] {
-			return a[i] < b[i]
-		}
-	}
-	return false
+	return slices.Compare(c[:], l[:]) < 0
 }
 
 // parse reads the numeric MAJOR.MINOR.PATCH prefix of a tag, tolerating a

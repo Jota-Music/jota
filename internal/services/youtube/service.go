@@ -64,7 +64,7 @@ func (s *Service) searchAudio(cacheKey, search string) (music.Audio, error) {
 
 	var lastErr error
 	for _, youtubeId := range ids {
-		audio := cachedAudioByYoutube(youtubeId)
+		audio := cachedAudio(youtubeId)
 		if audio == nil {
 			audio, err = fetchAudio(youtubeId)
 			if err != nil {

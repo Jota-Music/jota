@@ -100,25 +100,7 @@ func (s *SpotifyService) Search(query string, searchType string) ([]music.Search
 	if sess == nil {
 		return nil, ErrNotConnected
 	}
-
-	results, err := Search(ctx, sess, query, searchType)
-	if err != nil {
-		return nil, err
-	}
-
-	out := make([]music.SearchResult, 0, len(results))
-	for _, r := range results {
-		out = append(out, music.SearchResult{
-			URI:        r.URI,
-			Name:       r.Name,
-			Type:       r.Type,
-			CoverURL:   r.CoverURL,
-			Artists:    r.Artists,
-			OwnerName:  r.OwnerName,
-			TrackCount: r.TrackCount,
-		})
-	}
-	return out, nil
+	return Search(ctx, sess, query, searchType)
 }
 
 func trackToSong(t Track) music.Song {

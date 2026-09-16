@@ -128,10 +128,6 @@ func (s *SpotifyService) IsConnected() bool {
 	return s.sess != nil
 }
 
-func (s *SpotifyService) Reconnect(ctx context.Context) error {
-	return s.Connect(ctx)
-}
-
 func (s *SpotifyService) Disconnect() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -298,12 +294,9 @@ func saveCreds(username string, data []byte) error {
 	})
 }
 
-type browserLogger struct{}
-
-func (l *browserLogger) Tracef(string, ...interface{}) {}
-func (l *browserLogger) Debugf(string, ...interface{}) {}
-func (l *browserLogger) Warnf(string, ...interface{})  {}
-func (l *browserLogger) Errorf(string, ...interface{}) {}
+type browserLogger struct {
+	librespot.NullLogger
+}
 
 func (l *browserLogger) Infof(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
@@ -312,14 +305,6 @@ func (l *browserLogger) Infof(format string, args ...interface{}) {
 		fmt.Printf("\n>>> Open this URL in your browser to log in: %s\n\n", url)
 	}
 }
-
-func (l *browserLogger) Trace(...interface{})                           {}
-func (l *browserLogger) Debug(...interface{})                           {}
-func (l *browserLogger) Info(...interface{})                            {}
-func (l *browserLogger) Warn(...interface{})                            {}
-func (l *browserLogger) Error(...interface{})                           {}
-func (l *browserLogger) WithField(string, interface{}) librespot.Logger { return l }
-func (l *browserLogger) WithError(error) librespot.Logger               { return l }
 
 var authURLPattern = regexp.MustCompile(`https://[^\s]+`)
 var ErrNotConnected = errors.New("spotify is not connected")

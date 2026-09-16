@@ -21,14 +21,6 @@ var (
 	openErr error
 )
 
-func getDatabasePath() (string, error) {
-	baseDir, err := storageBaseDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(baseDir, "jota", "storage", "kv"), nil
-}
-
 func EnsureStarted() error {
 	mu.Lock()
 	defer mu.Unlock()
@@ -40,11 +32,12 @@ func EnsureStarted() error {
 		return openErr
 	}
 
-	path, err := getDatabasePath()
+	baseDir, err := storageBaseDir()
 	if err != nil {
 		openErr = err
 		return err
 	}
+	path := filepath.Join(baseDir, "jota", "storage", "kv")
 
 	if err := os.MkdirAll(path, 0755); err != nil {
 		openErr = err

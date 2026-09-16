@@ -395,10 +395,6 @@ func cachedAudioBySong(cacheKey string) *music.Audio {
 	return cachedAudio("spotify:" + cacheKey)
 }
 
-func cachedAudioByYoutube(youtubeId string) *music.Audio {
-	return cachedAudio(youtubeId)
-}
-
 func saveAudioBySong(cacheKey string, audio music.Audio) {
 	_ = audioBucket.SetObject("spotify:"+cacheKey, audio)
 }

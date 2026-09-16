@@ -21,7 +21,7 @@ func TestSetYoutubeIdInvalidatesAudioCache(t *testing.T) {
 	if got := cachedAudioBySong(song); got != nil {
 		t.Fatalf("song cache not invalidated: %+v", got)
 	}
-	if got := cachedAudioByYoutube("old_video1"); got != nil {
+	if got := cachedAudio("old_video1"); got != nil {
 		t.Fatalf("youtube cache not invalidated: %+v", got)
 	}
 }

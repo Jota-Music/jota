@@ -151,7 +151,6 @@ type compactPlaylistRenderer struct {
 	PlaylistId string    `json:"playlistId"`
 	Title      text      `json:"title"`
 	ByLine     text      `json:"shortBylineText"`
-	VideoCount text      `json:"videoCountText"`
 	Thumbnail  thumbnail `json:"thumbnail"`
 }
 
