@@ -37,7 +37,20 @@ func (s *Service) ResolveAudio(song music.Song) (music.Audio, error) {
 			return audio, nil
 		}
 	}
-	return s.searchAudio(song.Id, audioQuery(song))
+	audio, err := s.searchAudio(song.Id, audioQuery(song))
+	if err == nil {
+		return audio, nil
+	}
+
+	// A title-first query can come back empty; YouTube search indexes "artist
+	// title" better, so retry the other way before giving up.
+	if alt := audioQueryArtistFirst(song); alt != audioQuery(song) {
+		if retry, retryErr := s.searchAudio(song.Id, alt); retryErr == nil {
+			return retry, nil
+		}
+	}
+
+	return audio, err
 }
 
 func (s *Service) searchAudio(cacheKey, search string) (music.Audio, error) {
@@ -81,13 +94,25 @@ func (s *Service) SetYoutubeId(cacheKey, youtubeId string) error {
 }
 
 func audioQuery(song music.Song) string {
+	return strings.TrimSpace(song.Name + " " + artistNames(song))
+}
+
+func audioQueryArtistFirst(song music.Song) string {
+	names := artistNames(song)
+	if names == "" {
+		return strings.TrimSpace(song.Name)
+	}
+	return strings.TrimSpace(names + " " + song.Name)
+}
+
+func artistNames(song music.Song) string {
 	names := make([]string, 0, len(song.Artists))
 	for _, artist := range song.Artists {
 		if artist.Name != "" {
 			names = append(names, artist.Name)
 		}
 	}
-	return strings.TrimSpace(song.Name + " " + strings.Join(names, ", "))
+	return strings.Join(names, ", ")
 }
 
 var youtubeIdRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]{11}$`)
