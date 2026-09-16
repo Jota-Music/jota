@@ -31,3 +31,15 @@ func revalidateUserPlaylists(user string) error {
 func cachedUserProfile(username string, fetch func() (music.UserProfile, error)) (music.UserProfile, error) {
 	return kv.Cached(musicBucket, "user:"+strings.ToLower(username), musicCacheTTL, fetch)
 }
+
+func cachedArtist(uri string, fetch func() (music.ArtistInfo, error)) (music.ArtistInfo, error) {
+	return kv.Cached(musicBucket, "artist:"+uri, musicCacheTTL, fetch)
+}
+
+func cachedArtistDiscography(uri string, fetch func() (music.ArtistDiscography, error)) (music.ArtistDiscography, error) {
+	return kv.Cached(musicBucket, "artist-discography:"+uri, musicCacheTTL, fetch)
+}
+
+func cachedAlbumTracks(uri string, fetch func() ([]music.Song, error)) ([]music.Song, error) {
+	return kv.Cached(musicBucket, "album:"+uri, musicCacheTTL, fetch)
+}

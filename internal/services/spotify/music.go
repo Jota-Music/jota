@@ -228,6 +228,12 @@ func normalizeAlbumID(id string) string {
 
 func (s *SpotifyService) GetArtist(uri string) (music.ArtistInfo, error) {
 	normalizedURI := normalizeArtistID(uri)
+	return cachedArtist(normalizedURI, func() (music.ArtistInfo, error) {
+		return s.artist(normalizedURI)
+	})
+}
+
+func (s *SpotifyService) artist(normalizedURI string) (music.ArtistInfo, error) {
 	ctx := context.Background()
 	sess := s.Session()
 	if sess == nil {
@@ -254,6 +260,12 @@ func (s *SpotifyService) GetArtist(uri string) (music.ArtistInfo, error) {
 
 func (s *SpotifyService) GetArtistDiscography(uri string) (music.ArtistDiscography, error) {
 	normalizedURI := normalizeArtistID(uri)
+	return cachedArtistDiscography(normalizedURI, func() (music.ArtistDiscography, error) {
+		return s.artistDiscography(normalizedURI)
+	})
+}
+
+func (s *SpotifyService) artistDiscography(normalizedURI string) (music.ArtistDiscography, error) {
 	ctx := context.Background()
 	sess := s.Session()
 	if sess == nil {
@@ -289,6 +301,12 @@ func (s *SpotifyService) GetArtistDiscography(uri string) (music.ArtistDiscograp
 
 func (s *SpotifyService) GetAlbumTracks(uri string) ([]music.Song, error) {
 	normalizedURI := normalizeAlbumID(uri)
+	return cachedAlbumTracks(normalizedURI, func() ([]music.Song, error) {
+		return s.albumTracks(normalizedURI)
+	})
+}
+
+func (s *SpotifyService) albumTracks(normalizedURI string) ([]music.Song, error) {
 	ctx := context.Background()
 	sess := s.Session()
 	if sess == nil {
