@@ -71,6 +71,7 @@ func retryRequest(c clientConfig, url string, payload map[string]any, useVisitor
 			continue
 		}
 
+		adoptVisitor(data)
 		return data, nil
 	}
 	return nil, lastErr

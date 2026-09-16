@@ -6,8 +6,11 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/Jota-Music/jota/internal/kv"
 )
 
 // defaultAPIKey is Google's public InnerTube key, the same one shipped in the
@@ -19,6 +22,7 @@ var apiKeyEnv = os.Getenv("YOUTUBE_API_KEY")
 
 const (
 	visitorTTL       = 5 * time.Minute
+	visitorBackoff   = time.Minute
 	visitorFetchWait = 10 * time.Second
 	visitorRetries   = 3
 )
@@ -26,9 +30,28 @@ const (
 var (
 	innertubeApiKeyRe = regexp.MustCompile(`"INNERTUBE_API_KEY":"([^"]+)"`)
 	visitorDataRe     = regexp.MustCompile(`"VISITOR_DATA":"([^"]+)"`)
+	visitorTokenRe    = regexp.MustCompile(`"visitorData":"([^"]+)"`)
 )
 
-var visitorClient = &http.Client{Timeout: visitorFetchWait}
+// visitorBucket persists the last visitor token so a new session can resume it
+// instead of re-establishing one from the homepage, whose bot check is what
+// breaks resolution on a flagged IP.
+var visitorBucket = kv.UseBucket("youtube-visitor")
+
+const visitorKey = "data"
+
+var visitorClient = &http.Client{Timeout: visitorFetchWait, CheckRedirect: visitorRedirect}
+
+// visitorRedirect aborts the fetch as soon as YouTube bounces it to Google's
+// bot check (www.google.com/sorry), instead of grinding through the redirect
+// cap. The 3xx response is handed back and treated as a failed refresh.
+func visitorRedirect(req *http.Request, via []*http.Request) error {
+	host := req.URL.Hostname()
+	if len(via) >= 3 || host == "google.com" || strings.HasSuffix(host, ".google.com") {
+		return http.ErrUseLastResponse
+	}
+	return nil
+}
 
 type clientConfig struct {
 	Name        string
@@ -88,6 +111,7 @@ var (
 	visitorDataMu sync.RWMutex
 	visitorData   string
 	lastFetch     time.Time
+	blockedUntil  time.Time
 )
 
 func initialAPIKey() string {
@@ -123,17 +147,44 @@ func invalidateVisitor() {
 	visitorData = ""
 	lastFetch = time.Time{}
 	visitorDataMu.Unlock()
+	_ = visitorBucket.Delete(visitorKey)
+}
+
+// adoptVisitor stores the visitor token carried by an innertube response, so a
+// working session is reused instead of re-established from the homepage. This
+// is what keeps resolution off the bot-checked homepage once a request succeeds.
+func adoptVisitor(body []byte) {
+	m := visitorTokenRe.FindSubmatch(body)
+	if len(m) < 2 {
+		return
+	}
+	token := string(m[1])
+
+	visitorDataMu.Lock()
+	if visitorData != token {
+		visitorData = token
+		_ = visitorBucket.SetString(visitorKey, token, visitorTTL)
+	}
+	lastFetch = time.Now()
+	blockedUntil = time.Time{}
+	visitorDataMu.Unlock()
+}
+
+// visitorCached reports whether the cached token is still fresh or a previous
+// refresh failure is still backing off. Callers must hold visitorDataMu.
+func visitorCached() bool {
+	return (!lastFetch.IsZero() && time.Since(lastFetch) < visitorTTL) || time.Now().Before(blockedUntil)
 }
 
 // getVisitorData returns the cached visitor data and API key, refreshing them
 // from YouTube's homepage at most once per visitorTTL. Freshness is tracked by
 // lastFetch regardless of whether the homepage carried VISITOR_DATA, so a
 // homepage variant without it does not trigger a full fetch on every request.
-// A failed refresh degrades to the cached values instead of erroring, so a
-// flaky homepage never takes playback down.
+// A failed refresh degrades to the cached values and backs off for
+// visitorBackoff, so a bot-checked homepage is not hammered on every request.
 func getVisitorData() (string, string, error) {
 	visitorDataMu.RLock()
-	if !lastFetch.IsZero() && time.Since(lastFetch) < visitorTTL {
+	if visitorCached() {
 		vd := visitorData
 		visitorDataMu.RUnlock()
 		return vd, currentAPIKey(), nil
@@ -142,8 +193,18 @@ func getVisitorData() (string, string, error) {
 
 	visitorDataMu.Lock()
 	defer visitorDataMu.Unlock()
-	if !lastFetch.IsZero() && time.Since(lastFetch) < visitorTTL {
+	if visitorCached() {
 		return visitorData, currentAPIKey(), nil
+	}
+
+	// Resume the token a previous session persisted, so a cold start does not
+	// have to touch the homepage at all.
+	if visitorData == "" {
+		if stored, err := visitorBucket.GetString(visitorKey); err == nil && stored != "" {
+			visitorData = stored
+			lastFetch = time.Now()
+			return visitorData, currentAPIKey(), nil
+		}
 	}
 
 	var body []byte
@@ -184,7 +245,8 @@ func getVisitorData() (string, string, error) {
 	}
 
 	if !fetched {
-		log.Printf("youtube: visitor refresh failed, continuing with cached data")
+		blockedUntil = time.Now().Add(visitorBackoff)
+		log.Printf("youtube: visitor refresh failed, backing off %s", visitorBackoff)
 		return visitorData, currentAPIKey(), nil
 	}
 
@@ -198,7 +260,9 @@ func getVisitorData() (string, string, error) {
 
 	if m := visitorDataRe.FindSubmatch(body); len(m) > 1 {
 		visitorData = string(m[1])
+		_ = visitorBucket.SetString(visitorKey, visitorData, visitorTTL)
 	}
+	blockedUntil = time.Time{}
 	lastFetch = time.Now()
 
 	return visitorData, currentAPIKey(), nil

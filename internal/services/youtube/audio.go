@@ -18,6 +18,10 @@ var audioBucket = kv.UseBucket("youtube-audio")
 
 var probeClient = &http.Client{Timeout: 8 * time.Second}
 
+// errLoginRequired is YouTube's bot check: the player response carries no
+// stream URLs until the visitor token is refreshed or the client rotates.
+var errLoginRequired = errors.New("youtube: login required")
+
 // bestAudio picks the audio format with the fastest, most compatible start.
 // audio/mp4 (AAC) is preferred over audio/webm (Opus): WebKitGTK's GStreamer
 // backend streams MP4/AAC instantly but can stall on googlevideo's WebM/Opus,
@@ -141,22 +145,7 @@ func playerStreamURL(c clientConfig, videoID string) (string, error) {
 	}
 
 	if pr.PlayabilityStatus.Status == "LOGIN_REQUIRED" {
-		for i := range 2 {
-			invalidateVisitor()
-			data, err = retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, true, 3)
-			if err != nil {
-				return "", fmt.Errorf("player request failed: %w", err)
-			}
-			if err := json.Unmarshal(data, &pr); err != nil {
-				return "", fmt.Errorf("invalid JSON: %w", err)
-			}
-			if pr.PlayabilityStatus.Status == "OK" {
-				break
-			}
-			if i == 0 {
-				log.Printf("youtube: %s LOGIN_REQUIRED, retrying after visitor refresh", videoID)
-			}
-		}
+		return "", errLoginRequired
 	}
 
 	if pr.PlayabilityStatus.Status != "OK" {
@@ -205,10 +194,16 @@ func audioURL(videoID string) (string, clientConfig, error) {
 	}
 
 	var firstErr error
+	refreshed := false
 
 	for _, c := range allClients() {
 		raw, err := playerStreamURLFn(c, videoID)
 		if err != nil {
+			if errors.Is(err, errLoginRequired) && !refreshed {
+				log.Printf("youtube: %s LOGIN_REQUIRED, refreshing visitor once", videoID)
+				invalidateVisitor()
+				refreshed = true
+			}
 			if firstErr == nil {
 				firstErr = err
 			}
