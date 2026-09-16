@@ -12,7 +12,7 @@ info:
   description: "Self-hosted music streaming app" # The application description
   copyright: "(c) 2025, salvadorsru" # Copyright text
   comments: "Self-hosted music streaming app" # Comments
-  version: "0.0.0" # The application version
+  version: "0.0.1" # The application version
 
 # Dev mode configuration
 dev_mode:
