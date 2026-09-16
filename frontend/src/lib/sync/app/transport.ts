@@ -19,10 +19,6 @@ Events.On("sync:closed", () => {
 	store.peers.value = 0;
 });
 
-Events.On("sync:error", (ev) => {
-	store.error.value = String(ev.data ?? "sync error");
-});
-
 let pendingSnapshot: string | null = null;
 let snapshotScheduled = false;
 

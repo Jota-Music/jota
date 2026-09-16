@@ -23,7 +23,6 @@ export interface Song {
 	share: Share;
 	album: Album;
 	artists: Artist[];
-	isMock?: boolean;
 	youtubeId?: string;
 }
 
