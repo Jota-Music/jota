@@ -2,7 +2,7 @@ import type { RefObject } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 
 const MIN_THUMB_PX = 40;
-const GUTTER_PX = 14;
+const GUTTER_PX = 15;
 
 function thumbFor(el: HTMLElement) {
 	const { scrollTop, scrollHeight, clientHeight } = el;
@@ -26,8 +26,13 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 		const node = bar.current;
 		if (!el || !node) return;
 
-		const pad = Number.parseFloat(getComputedStyle(el).paddingRight) || 0;
-		el.style.paddingRight = `${Math.max(pad, GUTTER_PX)}px`;
+		const pad = Math.max(
+			Number.parseFloat(getComputedStyle(el).paddingRight) || 0,
+			GUTTER_PX,
+		);
+		el.style.paddingRight = `${pad}px`;
+		(node.firstElementChild as HTMLElement).style.marginRight =
+			`${(pad - 8) / 2}px`;
 
 		const sync = () => {
 			const thumb = thumbFor(el);
@@ -53,6 +58,7 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 			sizes.disconnect();
 			mutations.disconnect();
 			el.style.paddingRight = "";
+			(node.firstElementChild as HTMLElement).style.marginRight = "";
 		};
 	}, [target]);
 
@@ -97,7 +103,7 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 			onPointerCancel={onUp}
 			onLostPointerCapture={onUp}
 		>
-			<div class="ml-auto mr-1 h-full w-2 rounded-full bg-(--scrollbar-thumb) transition-colors pointer-fine:hover:bg-(--scrollbar-thumb-hover)" />
+			<div class="ml-auto h-full w-2 rounded-full bg-(--scrollbar-thumb) transition-colors pointer-fine:hover:bg-(--scrollbar-thumb-hover)" />
 		</div>
 	);
 }
