@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,8 +10,10 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -96,10 +99,10 @@ func ttlFromExpire(expireAt int64) (time.Duration, bool) {
 }
 
 func clientByName(name string) (clientConfig, bool) {
-	if name == "" || name == preferredClient.Name {
+	if name == "" {
 		return preferredClient, true
 	}
-	for _, c := range fallbackClients {
+	for _, c := range allClients() {
 		if c.Name == name {
 			return c, true
 		}
@@ -123,16 +126,110 @@ func audioCacheStillValid(a *music.Audio) bool {
 	return streamPlayable(c, a.Url)
 }
 
+// poTokenProviderURL points at a PO Token provider (e.g.
+// bgutil-ytdlp-pot-provider). Set YOUTUBE_POTOKEN_PROVIDER to its base URL; when
+// unset, the WEB client simply runs without a token.
+func poTokenProviderURL() string {
+	return strings.TrimRight(os.Getenv("YOUTUBE_POTOKEN_PROVIDER"), "/")
+}
+
+type potEntry struct {
+	token   string
+	expires time.Time
+}
+
+var (
+	potClient = &http.Client{Timeout: 10 * time.Second}
+	potMu     sync.Mutex
+	potCache  = map[string]potEntry{}
+)
+
+// webPoToken returns a player-context PO token bound to the video ID, cached
+// until it expires. Empty means no provider (or no token), and the WEB request
+// is sent without one.
+func webPoToken(videoID string) string {
+	base := poTokenProviderURL()
+	if base == "" {
+		return ""
+	}
+
+	potMu.Lock()
+	if e, ok := potCache[videoID]; ok && time.Now().Before(e.expires) {
+		potMu.Unlock()
+		return e.token
+	}
+	potMu.Unlock()
+
+	body, err := json.Marshal(map[string]any{"content_binding": videoID})
+	if err != nil {
+		return ""
+	}
+	req, err := http.NewRequest("POST", base+"/get_pot", bytes.NewReader(body))
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := potClient.Do(req)
+	if err != nil {
+		log.Printf("youtube: pot provider request failed: %v", err)
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("youtube: pot provider status %d", resp.StatusCode)
+		return ""
+	}
+
+	var out struct {
+		PoToken   string `json:"poToken"`
+		ExpiresAt string `json:"expiresAt"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil || out.PoToken == "" {
+		log.Printf("youtube: pot provider returned no token: %v", err)
+		return ""
+	}
+
+	expires := time.Now().Add(time.Hour)
+	if t, err := time.Parse(time.RFC3339, out.ExpiresAt); err == nil {
+		expires = t
+	}
+
+	potMu.Lock()
+	potCache[videoID] = potEntry{token: out.PoToken, expires: expires}
+	potMu.Unlock()
+	return out.PoToken
+}
+
+// playerPayload builds the innertube player body. The WEB client carries the
+// visitor id and, when a provider is configured, a PO token — matching how
+// yt-dlp feeds its `web` client.
+func playerPayload(c clientConfig, videoID string) map[string]any {
+	client := clientContext(c)
+	payload := map[string]any{
+		"videoId":        videoID,
+		"context":        map[string]any{"client": client},
+		"contentCheckOk": true,
+		"racyCheckOk":    true,
+	}
+
+	if c.Name == webClientName {
+		if visitor, _, err := getVisitorData(); err == nil && visitor != "" {
+			client["visitorData"] = visitor
+		}
+		if token := webPoToken(videoID); token != "" {
+			payload["serviceIntegrityDimensions"] = map[string]any{"poToken": token}
+		}
+	}
+
+	return payload
+}
+
 // playerStreamURLFn is a test hook; do not assign in production code.
 var playerStreamURLFn = playerStreamURL
 
 func playerStreamURL(c clientConfig, videoID string) (string, error) {
-	payload := map[string]any{
-		"videoId":        videoID,
-		"context":        map[string]any{"client": clientContext(c)},
-		"contentCheckOk": true,
-		"racyCheckOk":    true,
-	}
+	payload := playerPayload(c, videoID)
 
 	data, err := retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, true, 3)
 	if err != nil {
@@ -188,6 +285,11 @@ func streamPlayable(c clientConfig, raw string) bool {
 // first and falling back to others when its URL is not usable by the player.
 // It only returns URLs that pass a HEAD probe with the same headers the player
 // will use.
+//
+// A bot-checked client may only need a fresh visitor token, but refreshing hits
+// YouTube's homepage, so it is deferred until no client worked at all. That way
+// a healthy fallback (e.g. IOS while ANDROID_VR is bot-checked) never triggers a
+// homepage fetch.
 func audioURL(videoID string) (string, clientConfig, error) {
 	if len(videoID) != 11 {
 		return "", clientConfig{}, errors.New("invalid video ID length")

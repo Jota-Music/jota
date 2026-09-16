@@ -1,13 +1,134 @@
 package youtube
 
 import (
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/Jota-Music/jota/internal/music"
 )
+
+func resetPotCache(t *testing.T) {
+	t.Helper()
+	potMu.Lock()
+	orig := potCache
+	potCache = map[string]potEntry{}
+	potMu.Unlock()
+	t.Cleanup(func() {
+		potMu.Lock()
+		potCache = orig
+		potMu.Unlock()
+	})
+}
+
+func TestWebPoTokenProviderFailures(t *testing.T) {
+	cases := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{"server error", http.StatusInternalServerError, `{}`},
+		{"bad json", http.StatusOK, `not-json`},
+		{"empty token", http.StatusOK, `{"poToken":""}`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(c.status)
+				_, _ = io.WriteString(w, c.body)
+			}))
+			defer server.Close()
+			t.Setenv("YOUTUBE_POTOKEN_PROVIDER", server.URL)
+			resetPotCache(t)
+
+			if got := webPoToken("vid-fail"); got != "" {
+				t.Fatalf("token = %q, want empty", got)
+			}
+		})
+	}
+
+	t.Run("unreachable", func(t *testing.T) {
+		t.Setenv("YOUTUBE_POTOKEN_PROVIDER", "http://127.0.0.1:1")
+		resetPotCache(t)
+
+		if got := webPoToken("vid-unreachable"); got != "" {
+			t.Fatalf("token = %q, want empty", got)
+		}
+	})
+}
+
+// TestWebClientWithProviderIntegration is the automated validation gate for the
+// blocking issue: with a PO token provider running, the WEB client must produce
+// a stream. It is skipped unless YOUTUBE_POTOKEN_PROVIDER is set.
+func TestWebClientWithProviderIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: reaches YouTube")
+	}
+	if poTokenProviderURL() == "" {
+		t.Skip("set YOUTUBE_POTOKEN_PROVIDER to run the blocking gate")
+	}
+
+	if token := webPoToken("E9s9BNZFQLA"); token == "" {
+		t.Fatal("provider returned no PO token")
+	}
+
+	raw, err := playerStreamURL(webClient(), "E9s9BNZFQLA")
+	if err != nil {
+		t.Fatalf("WEB client failed with a provider token: %v", err)
+	}
+	if raw == "" {
+		t.Fatal("empty stream URL")
+	}
+}
+
+func TestPlayerPayloadAttachesPoTokenForWeb(t *testing.T) {
+	var hits int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/get_pot" {
+			t.Errorf("provider path = %q, want /get_pot", r.URL.Path)
+		}
+		atomic.AddInt32(&hits, 1)
+		w.Header().Set("Content-Type", "application/json")
+		expires := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+		fmt.Fprintf(w, `{"poToken":"tok-123","expiresAt":%q}`, expires)
+	}))
+	defer server.Close()
+
+	t.Setenv("YOUTUBE_POTOKEN_PROVIDER", server.URL)
+	resetPotCache(t)
+	seedVisitor(t, "v-token")
+
+	payload := playerPayload(webClient(), "vid12345678")
+	client := payload["context"].(map[string]any)["client"].(map[string]any)
+	if client["visitorData"] != "v-token" {
+		t.Fatalf("web client visitorData = %v, want v-token", client["visitorData"])
+	}
+	sid, ok := payload["serviceIntegrityDimensions"].(map[string]any)
+	if !ok || sid["poToken"] != "tok-123" {
+		t.Fatalf("poToken not attached: %#v", payload["serviceIntegrityDimensions"])
+	}
+
+	playerPayload(webClient(), "vid12345678")
+	if got := atomic.LoadInt32(&hits); got != 1 {
+		t.Fatalf("provider hit %d times, want 1 (cached by video id)", got)
+	}
+
+	if _, ok := playerPayload(preferredClient, "vid12345678")["serviceIntegrityDimensions"]; ok {
+		t.Fatal("non-web client must not carry a poToken")
+	}
+}
+
+func TestPlayerPayloadWithoutProviderHasNoPoToken(t *testing.T) {
+	t.Setenv("YOUTUBE_POTOKEN_PROVIDER", "")
+
+	if _, ok := playerPayload(webClient(), "vid12345678")["serviceIntegrityDimensions"]; ok {
+		t.Fatal("no provider configured, so no poToken expected")
+	}
+}
 
 func TestBestAudioPrefersMP4(t *testing.T) {
 	cases := []struct {
@@ -151,6 +272,7 @@ func TestClientByName(t *testing.T) {
 		{"preferred", "VISIONOS", "VISIONOS", true},
 		{"android vr", "ANDROID_VR", "ANDROID_VR", true},
 		{"ios", "IOS", "IOS", true},
+		{"web", "WEB", "WEB", true},
 		{"unknown", "WATCH", "", false},
 	}
 

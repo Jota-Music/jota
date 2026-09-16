@@ -22,6 +22,7 @@ var apiKeyEnv = os.Getenv("YOUTUBE_API_KEY")
 
 const (
 	visitorTTL       = 5 * time.Minute
+	versionTTL       = 24 * time.Hour
 	visitorBackoff   = time.Minute
 	visitorFetchWait = 10 * time.Second
 	visitorRetries   = 3
@@ -29,6 +30,7 @@ const (
 
 var (
 	innertubeApiKeyRe = regexp.MustCompile(`"INNERTUBE_API_KEY":"([^"]+)"`)
+	clientVersionRe   = regexp.MustCompile(`"INNERTUBE_CLIENT_VERSION":"([^"]+)"`)
 	visitorDataRe     = regexp.MustCompile(`"VISITOR_DATA":"([^"]+)"`)
 	visitorTokenRe    = regexp.MustCompile(`"visitorData":"([^"]+)"`)
 )
@@ -38,7 +40,10 @@ var (
 // breaks resolution on a flagged IP.
 var visitorBucket = kv.UseBucket("youtube-visitor")
 
-const visitorKey = "data"
+const (
+	visitorKey = "data"
+	versionKey = "web-version"
+)
 
 var visitorClient = &http.Client{Timeout: visitorFetchWait, CheckRedirect: visitorRedirect}
 
@@ -101,8 +106,37 @@ var fallbackClients = []clientConfig{
 	},
 }
 
+// webClientName is the innertube "web" client. It is the one that needs a PO
+// token, matching yt-dlp's `visionos,web` strategy: preferred first, web as the
+// fallback that a provider-generated token can unblock.
+const (
+	webClientName = "WEB"
+	webUserAgent  = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
+var (
+	webVersionMu sync.RWMutex
+	webVersion   = "2.20250101.00.00"
+)
+
+func currentWebVersion() string {
+	webVersionMu.RLock()
+	defer webVersionMu.RUnlock()
+	return webVersion
+}
+
+func webClient() clientConfig {
+	return clientConfig{
+		Name:       webClientName,
+		Version:    currentWebVersion(),
+		ClientName: 1,
+		UserAgent:  webUserAgent,
+	}
+}
+
 func allClients() []clientConfig {
-	return append([]clientConfig{preferredClient}, fallbackClients...)
+	clients := append([]clientConfig{preferredClient}, fallbackClients...)
+	return append(clients, webClient())
 }
 
 var (
@@ -197,8 +231,13 @@ func getVisitorData() (string, string, error) {
 		return visitorData, currentAPIKey(), nil
 	}
 
-	// Resume the token a previous session persisted, so a cold start does not
-	// have to touch the homepage at all.
+	// Resume what a previous session persisted, so a cold start does not have to
+	// touch the homepage at all.
+	if stored, err := visitorBucket.GetString(versionKey); err == nil && stored != "" {
+		webVersionMu.Lock()
+		webVersion = stored
+		webVersionMu.Unlock()
+	}
 	if visitorData == "" {
 		if stored, err := visitorBucket.GetString(visitorKey); err == nil && stored != "" {
 			visitorData = stored
@@ -256,6 +295,15 @@ func getVisitorData() (string, string, error) {
 			apiKey = string(m[1])
 			apiKeyMu.Unlock()
 		}
+	}
+
+	// Keep the web client version current so it does not rot into an outdated
+	// string that YouTube rejects.
+	if m := clientVersionRe.FindSubmatch(body); len(m) > 1 {
+		webVersionMu.Lock()
+		webVersion = string(m[1])
+		webVersionMu.Unlock()
+		_ = visitorBucket.SetString(versionKey, string(m[1]), versionTTL)
 	}
 
 	if m := visitorDataRe.FindSubmatch(body); len(m) > 1 {
