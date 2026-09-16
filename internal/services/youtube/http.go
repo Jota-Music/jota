@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+// innertubeClient bounds every API call. http.DefaultClient has no timeout, so
+// a hung connection would stall a resolve (and playback) forever.
+var innertubeClient = &http.Client{Timeout: 15 * time.Second}
+
 func doRequest(c clientConfig, url string, payload map[string]any, useVisitor bool) (*http.Response, error) {
 	visitor, key, err := getVisitorData()
 	if err != nil {
@@ -39,7 +43,7 @@ func doRequest(c clientConfig, url string, payload map[string]any, useVisitor bo
 		req.Header.Set("X-Goog-Visitor-Id", visitor)
 	}
 
-	return http.DefaultClient.Do(req)
+	return innertubeClient.Do(req)
 }
 
 func retryRequest(c clientConfig, url string, payload map[string]any, useVisitor bool, retries int) ([]byte, error) {
