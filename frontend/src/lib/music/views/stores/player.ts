@@ -271,35 +271,27 @@ function pickRandom(songs: Song[], i: number): number | null {
 	return songs.findIndex((song) => song.id === pick.id);
 }
 
-function pickNext(
+function pick(
 	songs: Song[],
 	i: number,
 	mode: "off" | "all" | "one",
 	shuffleOn: boolean,
+	step: 1 | -1,
 ): number | null {
 	if (mode === "one") return i;
 	if (shuffleOn) return pickRandom(songs, i);
-	if (i >= songs.length - 1) return mode === "all" ? 0 : null;
-	return i + 1;
-}
-
-function pickPrev(
-	songs: Song[],
-	i: number,
-	mode: "off" | "all" | "one",
-	shuffleOn: boolean,
-): number | null {
-	if (mode === "one") return i;
-	if (shuffleOn) return pickRandom(songs, i);
-	if (i <= 0) return mode === "all" ? songs.length - 1 : null;
-	return i - 1;
+	const next = i + step;
+	if (next < 0 || next > songs.length - 1) {
+		return mode === "all" ? (step > 0 ? 0 : songs.length - 1) : null;
+	}
+	return next;
 }
 
 export async function nextSong() {
 	forward({ action: "next" });
 	const q = queue.value;
 	if (q.length === 0) return;
-	const next = pickNext(q, currentIndex.value, repeat.value, shuffle.value);
+	const next = pick(q, currentIndex.value, repeat.value, shuffle.value, 1);
 	if (next == null) return;
 	await playAtIndex(next);
 }
@@ -308,7 +300,7 @@ export async function prevSong() {
 	forward({ action: "prev" });
 	const q = queue.value;
 	if (q.length === 0) return;
-	const prev = pickPrev(q, currentIndex.value, repeat.value, shuffle.value);
+	const prev = pick(q, currentIndex.value, repeat.value, shuffle.value, -1);
 	if (prev == null) return;
 	await playAtIndex(prev);
 }
@@ -317,7 +309,7 @@ setOnTrackEnded(() => {
 	if (!autoAdvance.value) return;
 	const q = queue.value;
 	if (q.length === 0) return;
-	const next = pickNext(q, currentIndex.value, repeat.value, shuffle.value);
+	const next = pick(q, currentIndex.value, repeat.value, shuffle.value, 1);
 	if (next == null) return;
 	void playAtIndex(next);
 });
