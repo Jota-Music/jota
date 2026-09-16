@@ -2,7 +2,6 @@ import { useState } from "preact/hooks";
 import {
 	dismissYouTubeSignInSuggestion,
 	loginYouTubeWithBrowser,
-	youtubeBrowserLoginSupported,
 	youtubeSignInSuggested,
 } from "@/lib/auth/views/stores/youtube";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
@@ -42,40 +41,24 @@ export function SignInPrompt() {
 					</p>
 				</div>
 
-				{youtubeBrowserLoginSupported.value ? (
-					<div class="flex items-center gap-2">
-						<button
-							type="button"
-							disabled={busy}
-							onClick={() => void signIn()}
-							class="rounded-full bg-[#FF0000] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-85 cursor-pointer disabled:opacity-50"
-						>
-							{busy ? "Waiting for sign-in…" : "Sign in"}
-						</button>
-						<button
-							type="button"
-							disabled={busy}
-							onClick={() => dismissYouTubeSignInSuggestion()}
-							class="rounded-full px-5 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer disabled:opacity-50"
-						>
-							Not now
-						</button>
-					</div>
-				) : (
-					<div class="space-y-3">
-						<p class="text-xs text-zinc-500">
-							In-app sign-in is not available on this platform. Paste your
-							cookies or import a cookies.txt in Settings → Account.
-						</p>
-						<button
-							type="button"
-							onClick={() => dismissYouTubeSignInSuggestion()}
-							class="rounded-full bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer"
-						>
-							OK
-						</button>
-					</div>
-				)}
+				<div class="flex items-center gap-2">
+					<button
+						type="button"
+						disabled={busy}
+						onClick={() => void signIn()}
+						class="rounded-full bg-[#FF0000] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-85 cursor-pointer disabled:opacity-50"
+					>
+						{busy ? "Waiting for sign-in…" : "Sign in"}
+					</button>
+					<button
+						type="button"
+						disabled={busy}
+						onClick={() => dismissYouTubeSignInSuggestion()}
+						class="rounded-full px-5 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer disabled:opacity-50"
+					>
+						Not now
+					</button>
+				</div>
 			</div>
 		</Modal>
 	);

@@ -211,15 +211,6 @@ export function YouTubeBrowserLogin(): $CancellablePromise<void> {
     return $Call.ByID(2263405944);
 }
 
-/**
- * YouTubeBrowserLoginSupported reports whether the in-app browser login can run.
- * On Android the WebView is a single fullscreen view owned by the Activity and
- * cannot load an external URL, so only paste and cookies.txt import work there.
- */
-export function YouTubeBrowserLoginSupported(): $CancellablePromise<boolean> {
-    return $Call.ByID(716896478);
-}
-
 export function YouTubeSignedIn(): $CancellablePromise<boolean> {
     return $Call.ByID(513882258);
 }

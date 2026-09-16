@@ -32,6 +32,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
@@ -64,6 +66,8 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private WailsBridge bridge;
+    // Launches YouTubeLoginActivity and forwards its cookies to the frontend.
+    private ActivityResultLauncher<Intent> youtubeLoginLauncher;
     // Battery: system-event receivers are registered only while the activity is
     // in the foreground (onStart) and torn down in onStop, so background battery/
     // network/screen broadcasts don't wake the app.
@@ -94,6 +98,23 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         applySafeArea();
+
+        youtubeLoginLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    String cookies = null;
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        cookies = result.getData()
+                                .getStringExtra(YouTubeLoginActivity.EXTRA_COOKIES);
+                    }
+                    final String payload = cookies == null ? "null" : JSONObject.quote(cookies);
+                    if (webView != null) {
+                        webView.evaluateJavascript(
+                                "window.__jotaYouTubeCookies && window.__jotaYouTubeCookies("
+                                        + payload + ")",
+                                null);
+                    }
+                });
 
         // Initialize the native Go library
         bridge = new WailsBridge(this);
@@ -258,6 +279,11 @@ public class MainActivity extends AppCompatActivity {
         String url = WAILS_SCHEME + "://" + WAILS_HOST + "/";
         if (DEBUG) Log.d(TAG, "Loading URL: " + url);
         webView.loadUrl(url);
+    }
+
+    /** Opens the YouTube sign-in WebView; results come back via the launcher. */
+    public void startYouTubeLogin() {
+        youtubeLoginLauncher.launch(new Intent(this, YouTubeLoginActivity.class));
     }
 
     @Override

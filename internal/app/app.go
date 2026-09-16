@@ -8,7 +8,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"runtime"
 	stdsync "sync"
 	"time"
 
@@ -263,22 +262,11 @@ func (a *App) ClearYouTubeCookies() error {
 	return youtube.ClearCookies()
 }
 
-// YouTubeBrowserLoginSupported reports whether the in-app browser login can run.
-// On Android the WebView is a single fullscreen view owned by the Activity and
-// cannot load an external URL, so only paste and cookies.txt import work there.
-func (a *App) YouTubeBrowserLoginSupported() bool {
-	return runtime.GOOS != "android"
-}
-
 // YouTubeBrowserLogin opens a window on youtube.com so the user can sign in
 // normally; the page beacons its document.cookie back to a local listener, which
 // is stored for innertube requests. Blocks until signed in, the window is
 // closed, or it times out.
 func (a *App) YouTubeBrowserLogin() error {
-	if !a.YouTubeBrowserLoginSupported() {
-		return errors.New("in-app browser login is not available on this platform")
-	}
-
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return fmt.Errorf("login listener: %w", err)

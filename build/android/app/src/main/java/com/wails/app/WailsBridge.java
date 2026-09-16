@@ -132,6 +132,16 @@ public class WailsBridge {
     }
 
     /**
+     * Opens the YouTube sign-in WebView. Cookies come back through
+     * {@code window.__jotaYouTubeCookies} in the app page.
+     */
+    public void startYouTubeLogin() {
+        if (activity instanceof MainActivity) {
+            ((MainActivity) activity).startYouTubeLogin();
+        }
+    }
+
+    /**
      * Initialize the native Go library
      */
     public void initialize() {
