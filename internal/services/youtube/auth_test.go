@@ -49,6 +49,41 @@ func TestSetCookiesValidatesSapisid(t *testing.T) {
 	}
 }
 
+func TestNormalizeCookies(t *testing.T) {
+	header := "SID=a; SAPISID=b; HSID=c"
+	if got := normalizeCookies(header); got != header {
+		t.Fatalf("header = %q, want %q", got, header)
+	}
+
+	netscape := "# Netscape HTTP Cookie File\n" +
+		".youtube.com\tTRUE\t/\tTRUE\t0\tSAPISID\tsapisid123\n" +
+		".youtube.com\tTRUE\t/\tFALSE\t0\tSID\tsidval\n" +
+		"#HttpOnly_.google.com\tTRUE\t/\tTRUE\t0\tHSID\thsidval\n" +
+		".example.com\tTRUE\t/\tTRUE\t0\tOTHER\tnope\n"
+	got := normalizeCookies(netscape)
+	for _, want := range []string{"SAPISID=sapisid123", "SID=sidval", "HSID=hsidval"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("%q missing from %q", want, got)
+		}
+	}
+	if strings.Contains(got, "OTHER") {
+		t.Fatalf("non-youtube domain kept: %q", got)
+	}
+}
+
+func TestSetCookiesAcceptsCookiesTxt(t *testing.T) {
+	resetAuth(t)
+
+	txt := ".youtube.com\tTRUE\t/\tTRUE\t0\tSAPISID\tsapisid123\n" +
+		".youtube.com\tTRUE\t/\tFALSE\t0\tSID\tabc\n"
+	if err := SetCookies(txt); err != nil {
+		t.Fatalf("SetCookies(cookies.txt): %v", err)
+	}
+	if !HasAuth() {
+		t.Fatal("expected to be signed in")
+	}
+}
+
 func TestAuthHeadersSignature(t *testing.T) {
 	resetAuth(t)
 	if err := SetCookies("SAPISID=sapisid123; SID=abc"); err != nil {

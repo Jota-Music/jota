@@ -53,24 +53,64 @@ func cookies() string {
 }
 
 // SetCookies stores the account cookie string. It must carry SAPISID, which is
-// what the request signature is derived from.
+// what the request signature is derived from. Accepts either a raw Cookie header
+// ("a=1; b=2") or a Netscape cookies.txt export.
 func SetCookies(raw string) error {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
+	normalized := normalizeCookies(raw)
+	if normalized == "" {
 		return errors.New("empty cookies")
 	}
-	if cookieValue(raw, "SAPISID") == "" {
+	if cookieValue(normalized, "SAPISID") == "" {
 		return errors.New("cookies missing SAPISID")
 	}
-	if err := authBucket.SetString(authKey, raw); err != nil {
+	if err := authBucket.SetString(authKey, normalized); err != nil {
 		return err
 	}
 
 	authMu.Lock()
-	authCookie = raw
+	authCookie = normalized
 	authLoaded = true
 	authMu.Unlock()
 	return nil
+}
+
+// normalizeCookies turns a raw Cookie header or a Netscape cookies.txt export
+// into the header form, keeping only YouTube/Google cookies.
+func normalizeCookies(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+
+	if strings.Contains(raw, "\t") {
+		var pairs []string
+		for _, line := range strings.Split(raw, "\n") {
+			line = strings.TrimRight(strings.TrimPrefix(line, "#HttpOnly_"), "\r")
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			fields := strings.Split(line, "\t")
+			if len(fields) < 7 {
+				continue
+			}
+			domain, name, value := fields[0], fields[5], fields[6]
+			if name == "" || (!strings.Contains(domain, "youtube.com") && !strings.Contains(domain, "google.com")) {
+				continue
+			}
+			pairs = append(pairs, name+"="+value)
+		}
+		return strings.Join(pairs, "; ")
+	}
+
+	raw = strings.TrimPrefix(strings.TrimSpace(raw), "Cookie:")
+	parts := strings.Split(raw, ";")
+	pairs := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			pairs = append(pairs, part)
+		}
+	}
+	return strings.Join(pairs, "; ")
 }
 
 func ClearCookies() error {
