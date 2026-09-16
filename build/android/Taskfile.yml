@@ -6,7 +6,6 @@ includes:
 vars:
   APP_ID: '{{.APP_ID | default "com.jotamusic.jota"}}'
   MIN_SDK: '21'
-  TARGET_SDK: '35'
   # JDK for Android builds (Gradle 9 rejects Java 26+)
   JAVA_HOME:
     sh: 'echo "${JAVA_HOME:-$HOME/.local/share/jota-jdk21}"'
