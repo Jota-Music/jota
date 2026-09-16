@@ -54,6 +54,6 @@ export async function install(): Promise<void> {
 	} catch (e) {
 		installing.value = false;
 		progress.value = null;
-		addError(e instanceof Error ? e.message : String(e));
+		addError(e, `update install ${update.value?.latest ?? ""}`.trim());
 	}
 }

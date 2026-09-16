@@ -159,7 +159,16 @@ function waitForPlayable(
 
 async function waitUntilBufferedEnough(el: HTMLAudioElement): Promise<void> {
 	if (await waitForPlayable(el)) return;
-	throw new Error("audio load error");
+	throw new Error(
+		`audio load error (code ${el.error?.code ?? 0}, readyState ${el.readyState})`,
+	);
+}
+
+// Identifies the track in error reports: the Spotify id plus the YouTube id
+// when known, which is what actually explains a failed resolve or stream.
+function songLabel(song: Song | null): string {
+	if (!song) return "unknown song";
+	return song.youtubeId ? `${song.id} (yt ${song.youtubeId})` : song.id;
 }
 
 function knownDurationOr(d: number): number {
@@ -221,19 +230,18 @@ async function loadSongIntoPlayer(
 		if (token !== loadToken) return false;
 		isLoading.value = false;
 		isPlaying.value = false;
-		const detail = err instanceof Error ? err.message : String(err);
-		addError(`Failed to load audio — ${detail}`);
+		addError(err, `resolve audio ${songLabel(song)}`);
 		return false;
 	}
 
 	let instance: HTMLAudioElement;
 	try {
 		instance = await AudioCache.getAudioElement(song);
-	} catch {
+	} catch (err) {
 		if (token !== loadToken) return false;
 		isLoading.value = false;
 		isPlaying.value = false;
-		addError("Failed to create audio element");
+		addError(err, `audio element ${songLabel(song)}`);
 		return false;
 	}
 	if (token !== loadToken) {
@@ -267,9 +275,10 @@ async function loadSongIntoPlayer(
 		if (wantsStart) {
 			try {
 				await waitUntilBufferedEnough(instance);
-			} catch {
+			} catch (err) {
 				isLoading.value = false;
 				isPlaying.value = false;
+				addError(err, `buffer ${songLabel(song)}`);
 				return false;
 			}
 			const t = startAt();
@@ -288,9 +297,7 @@ async function loadSongIntoPlayer(
 			if (!isAbortError(err)) {
 				isPlaying.value = false;
 				isLoading.value = false;
-				addError(
-					"Playback failed — check your connection or try a different song",
-				);
+				addError(err, `play ${songLabel(song)}`);
 				return false;
 			}
 		}
@@ -298,9 +305,10 @@ async function loadSongIntoPlayer(
 		isPlaying.value = false;
 		try {
 			await waitUntilBufferedEnough(instance);
-		} catch {
+		} catch (err) {
 			isLoading.value = false;
 			isPlaying.value = false;
+			addError(err, `buffer ${songLabel(song)}`);
 			return false;
 		}
 		if (wantsStart) {
@@ -377,7 +385,7 @@ async function resume(): Promise<boolean> {
 			return true;
 		} catch (err) {
 			if (isAbortError(err)) return false;
-			addError("Playback failed — check your connection");
+			addError(err, `resume ${songLabel(currentSong.value)}`);
 			return false;
 		}
 	}
@@ -492,6 +500,8 @@ function bindEvents(a: HTMLAudioElement) {
 
 	a.onerror = () => {
 		if (audio !== a) return;
+		const code = a.error?.code ?? 0;
+		const label = songLabel(currentSong.value);
 		a.onerror = null;
 		stopEndWatch();
 		isPlaying.value = false;
@@ -502,7 +512,10 @@ function bindEvents(a: HTMLAudioElement) {
 		loadedSongId = null;
 		AudioCache.pin(null);
 		media.update(currentSong.value, false);
-		addError("Playback stopped — check your connection");
+		addError(
+			new Error(`media error code ${code}`),
+			`playback stopped ${label}`,
+		);
 	};
 }
 
