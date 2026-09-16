@@ -241,6 +241,21 @@ func (a *App) RemoveYouTubePlaylist(id string) error {
 	return a.YouTube.RemovePlaylist(id)
 }
 
+// SetYouTubeCookies stores the Google account cookies used to sign innertube
+// requests. Playing age-restricted videos and avoiding the bot check requires
+// it; using an account this way can get it banned by Google.
+func (a *App) SetYouTubeCookies(cookies string) error {
+	return youtube.SetCookies(cookies)
+}
+
+func (a *App) ClearYouTubeCookies() error {
+	return youtube.ClearCookies()
+}
+
+func (a *App) YouTubeSignedIn() bool {
+	return youtube.HasAuth()
+}
+
 // ----- Sync bindings -----
 
 func (a *App) SyncCheck(relayURL string) (bool, error) {

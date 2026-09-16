@@ -3,6 +3,7 @@ import { lazy, Suspense } from "preact/compat";
 import { useEffect } from "preact/hooks";
 import { Route, Switch } from "wouter-preact";
 import { syncSpotifyStatus } from "@/lib/auth/views/stores/session";
+import { syncYouTubeStatus } from "@/lib/auth/views/stores/youtube";
 import { RequireSpotify } from "@/lib/auth/views/ui/spotify-connect";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
 import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
@@ -55,6 +56,7 @@ const queryClient = new QueryClient({
 function Router() {
 	useEffect(() => {
 		void syncSpotifyStatus();
+		void syncYouTubeStatus();
 		void loadVersion();
 		void checkUpdate();
 	}, []);

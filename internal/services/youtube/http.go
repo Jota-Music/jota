@@ -33,14 +33,20 @@ func doRequest(c clientConfig, url string, payload map[string]any, useVisitor bo
 	if err != nil {
 		return nil, err
 	}
+	origin := originOf(url)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", c.UserAgent)
 	req.Header.Set("X-YouTube-Client-Name", fmt.Sprintf("%d", c.ClientName))
 	req.Header.Set("X-YouTube-Client-Version", c.Version)
-	req.Header.Set("Origin", "https://www.youtube.com")
-	req.Header.Set("Referer", "https://www.youtube.com/")
+	req.Header.Set("Origin", origin)
+	req.Header.Set("Referer", origin+"/")
 	if useVisitor && visitor != "" {
 		req.Header.Set("X-Goog-Visitor-Id", visitor)
+	}
+	// Signed-in requests carry SAPISIDHASH, which is what unlocks age-restricted
+	// videos and avoids the bot check for the account's session.
+	for k, v := range authHeaders(origin) {
+		req.Header.Set(k, v)
 	}
 
 	return innertubeClient.Do(req)

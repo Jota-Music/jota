@@ -27,6 +27,10 @@ export function CheckUpdate(): $CancellablePromise<update$0.Info> {
     return $Call.ByID(1914456057);
 }
 
+export function ClearYouTubeCookies(): $CancellablePromise<void> {
+    return $Call.ByID(438744125);
+}
+
 export function FollowUser(account: string, user: string): $CancellablePromise<void> {
     return $Call.ByID(2248055530, account, user);
 }
@@ -132,6 +136,15 @@ export function SearchYouTubePlaylists(query: string): $CancellablePromise<music
     return $Call.ByID(4089111504, query);
 }
 
+/**
+ * SetYouTubeCookies stores the Google account cookies used to sign innertube
+ * requests. Playing age-restricted videos and avoiding the bot check requires
+ * it; using an account this way can get it banned by Google.
+ */
+export function SetYouTubeCookies(cookies: string): $CancellablePromise<void> {
+    return $Call.ByID(2898265424, cookies);
+}
+
 export function SetYouTubeId(cacheKey: string, youtubeId: string): $CancellablePromise<void> {
     return $Call.ByID(965987300, cacheKey, youtubeId);
 }
@@ -186,4 +199,8 @@ export function UnfollowUser(account: string, user: string): $CancellablePromise
 
 export function Version(): $CancellablePromise<string> {
     return $Call.ByID(3689526796);
+}
+
+export function YouTubeSignedIn(): $CancellablePromise<boolean> {
+    return $Call.ByID(513882258);
 }
