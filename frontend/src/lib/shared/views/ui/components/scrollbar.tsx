@@ -26,11 +26,8 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 		const node = bar.current;
 		if (!el || !node) return;
 
-		const fine = window.matchMedia("(pointer: fine)").matches;
-		if (fine) {
-			const pad = Number.parseFloat(getComputedStyle(el).paddingRight) || 0;
-			el.style.paddingRight = `${Math.max(pad, GUTTER_PX)}px`;
-		}
+		const pad = Number.parseFloat(getComputedStyle(el).paddingRight) || 0;
+		el.style.paddingRight = `${Math.max(pad, GUTTER_PX)}px`;
 
 		const sync = () => {
 			const thumb = thumbFor(el);
@@ -55,7 +52,7 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 			el.removeEventListener("scroll", sync);
 			sizes.disconnect();
 			mutations.disconnect();
-			if (fine) el.style.paddingRight = "";
+			el.style.paddingRight = "";
 		};
 	}, [target]);
 
