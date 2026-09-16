@@ -215,12 +215,16 @@ jobs:
         run: |
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
           CGO_ENABLED=0 go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
-      - name: Build unsigned NSIS installer
-        run: wails3 task windows:create:nsis:installer VERSION="${GITHUB_REF_NAME#v}"
+      - name: Build unsigned NSIS installer (per-user, no UAC)
+        run: wails3 task windows:create:nsis:installer VERSION="${GITHUB_REF_NAME#v}" INSTALL_SCOPE=user
+      - name: Name the raw executable for the in-app updater
+        run: cp bin/jota.exe bin/jota-windows-amd64.exe
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-installer
-          path: bin/*-installer.exe
+          path: |
+            bin/*-installer.exe
+            bin/jota-windows-amd64.exe
 
   macos:
     if: ${{ !github.event.inputs.jobs || github.event.inputs.jobs == 'all' || contains(github.event.inputs.jobs, 'macos') }}
@@ -252,10 +256,14 @@ jobs:
           CGO_ENABLED=0 go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
       - name: Package unsigned universal .dmg
         run: wails3 task darwin:package:dmg VERSION="${GITHUB_REF_NAME#v}"
+      - name: Zip the .app for in-app updates
+        run: ditto -c -k --keepParent bin/jota.app bin/jota-macos.zip
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: macos-dmg
-          path: bin/*.dmg
+          path: |
+            bin/*.dmg
+            bin/jota-macos.zip
 
   publish:
     needs: [linux, android, windows, flatpak, macos]
@@ -282,7 +290,7 @@ jobs:
             echo "files<<EOF"
             find dist \( -name '*.deb' -o -name '*.rpm' -o -name '*.pkg.tar.*' \
               -o -name '*.AppImage' -o -name '*.flatpak' -o -name '*.apk' \
-              -o -name '*-installer.exe' -o -name '*.dmg' \) -type f | sort
+              -o -name '*.exe' -o -name '*.dmg' -o -name '*.zip' \) -type f | sort
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
