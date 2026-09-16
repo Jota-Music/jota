@@ -4,12 +4,14 @@ import type { Song } from "@/lib/music/model";
 type CachedAudio = {
 	url: string;
 	duration: number;
-	audio?: HTMLAudioElement;
 	lastUsed: number;
 	youtube: string;
 	expireAt: number;
 };
 
+// WebKit grants autoplay per media element, so a new element created mid-playlist
+// needs its own user gesture and gets blocked. Reuse one element for every track
+// and swap its src, which is WebKit's documented way to play tracks back to back.
 // biome-ignore lint/complexity/noStaticOnlyClass: <   >
 export class AudioCache {
 	private static cache = new Map<string, CachedAudio>();
@@ -17,11 +19,10 @@ export class AudioCache {
 
 	private static maxCache = 25;
 
-	private static maxElements = 3;
-
-	private static pinnedId: string | null = null;
-
 	private static expiryMarginSeconds = 30;
+
+	private static player: HTMLAudioElement | null = null;
+	private static playerUrl: string | null = null;
 
 	// Stream URLs carry a YouTube expiry; a cached URL past it must be re-resolved.
 	private static isExpired(item: CachedAudio): boolean {
@@ -29,19 +30,6 @@ export class AudioCache {
 		const now = Math.floor(Date.now() / 1000);
 		return item.expireAt <= now + AudioCache.expiryMarginSeconds;
 	}
-
-	// An element whose load failed stays dead until rebuilt, so never reuse it.
-	private static isBroken(audio: HTMLAudioElement | undefined): boolean {
-		return (
-			!!audio &&
-			(audio.error !== null ||
-				audio.networkState === HTMLMediaElement.NETWORK_NO_SOURCE)
-		);
-	}
-
-	/* -------------------------------------------------
-       INTERNAL HELPERS
-    -------------------------------------------------- */
 
 	private static touch(id: string) {
 		const item = AudioCache.cache.get(id);
@@ -52,39 +40,6 @@ export class AudioCache {
 		// LRU: reinsert to mark as most recently used
 		AudioCache.cache.delete(id);
 		AudioCache.cache.set(id, item);
-	}
-
-	private static release(item: CachedAudio) {
-		if (!item.audio) return;
-
-		item.audio.pause();
-		item.audio.src = "";
-		item.audio.load();
-		item.audio = undefined;
-	}
-
-	// Pin the audio element the player is using so eviction never cuts playback.
-	static pin(id: string | null) {
-		AudioCache.pinnedId = id;
-	}
-
-	// Keep only the most recent audio elements alive. URLs stay cached, so an
-	// evicted song is re-created on demand without resolving the stream again.
-	private static enforceElements() {
-		const pinned = AudioCache.pinnedId
-			? AudioCache.cache.get(AudioCache.pinnedId)
-			: undefined;
-
-		const droppable = [...AudioCache.cache.values()].filter(
-			(item) => item.audio && item !== pinned,
-		);
-
-		const excess =
-			droppable.length - (AudioCache.maxElements - (pinned ? 1 : 0));
-
-		for (let i = 0; i < excess; i++) {
-			AudioCache.release(droppable[i]);
-		}
 	}
 
 	private static enforceLimit() {
@@ -98,16 +53,9 @@ export class AudioCache {
 		const excess = AudioCache.cache.size - AudioCache.maxCache;
 
 		for (let i = 0; i < excess; i++) {
-			const [id, item] = entries[i];
-
-			AudioCache.release(item);
-			AudioCache.cache.delete(id);
+			AudioCache.cache.delete(entries[i][0]);
 		}
 	}
-
-	/* -------------------------------------------------
-       GET (CACHE + DEDUPE)
-    -------------------------------------------------- */
 
 	static async get(song: Song): Promise<CachedAudio> {
 		const cached = AudioCache.cache.get(song.id);
@@ -147,76 +95,43 @@ export class AudioCache {
 		return request;
 	}
 
-	/* -------------------------------------------------
-       PRELOAD AUDIO
-    -------------------------------------------------- */
-
+	// Only the resolved URL is worth warming now that playback shares one element.
 	static async preload(...songs: Song[]): Promise<void> {
 		await Promise.all(
-			songs.map(async (song) => {
-				if (AudioCache.cache.has(song.id) || AudioCache.pending.has(song.id))
-					return;
-
-				const data = await AudioCache.get(song);
-
-				if (data.audio && !AudioCache.isBroken(data.audio)) return;
-				if (data.audio) AudioCache.release(data);
-
-				const audio = new Audio(data.url);
-				audio.preload = "auto";
-				audio.load();
-
-				const cached = AudioCache.cache.get(song.id);
-				if (cached) {
-					cached.audio = audio;
-					cached.lastUsed = Date.now();
-					AudioCache.touch(song.id);
-					AudioCache.enforceElements();
-				}
-			}),
+			songs.map((song) => AudioCache.get(song).catch(() => undefined)),
 		);
 	}
 
-	/* -------------------------------------------------
-       GET AUDIO ELEMENT
-    -------------------------------------------------- */
-
+	// The single element every track plays through, so its autoplay grant
+	// survives the whole session instead of being needed per song.
 	static async getAudioElement(song: Song): Promise<HTMLAudioElement> {
 		const cached = await AudioCache.get(song);
 
-		if (cached.audio && !AudioCache.isBroken(cached.audio)) {
-			AudioCache.touch(song.id);
-			return cached.audio;
+		if (!AudioCache.player) {
+			const player = new Audio();
+			player.preload = "auto";
+			AudioCache.player = player;
 		}
-		if (cached.audio) AudioCache.release(cached);
+		const player = AudioCache.player;
 
-		const audio = new Audio(cached.url);
-		audio.preload = "auto";
-		audio.load();
+		if (AudioCache.playerUrl !== cached.url) {
+			AudioCache.playerUrl = cached.url;
+			player.src = cached.url;
+			player.load();
+		}
 
-		cached.audio = audio;
-		cached.lastUsed = Date.now();
-		AudioCache.enforceElements();
-
-		return audio;
+		return player;
 	}
 
-	/* -------------------------------------------------
-       CACHE MANAGEMENT
-    -------------------------------------------------- */
+	// Keep the element; just make the next getAudioElement reload the stream.
+	static releaseElement(_id: string): void {
+		AudioCache.player?.pause();
+		AudioCache.playerUrl = null;
+	}
 
 	static remove(id: string): void {
-		const item = AudioCache.cache.get(id);
-		if (item) AudioCache.release(item);
-
 		AudioCache.cache.delete(id);
 		AudioCache.pending.delete(id);
-	}
-
-	// Drop a cached audio element that the player has emptied (src=""), so a
-	// later replay rebuilds it instead of reusing a src-less element.
-	static releaseElement(id: string): void {
-		const item = AudioCache.cache.get(id);
-		if (item) AudioCache.release(item);
+		AudioCache.playerUrl = null;
 	}
 }

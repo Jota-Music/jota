@@ -10,6 +10,9 @@ export type RoomError = {
 export const roomErrors = signal<RoomError[]>([]);
 
 function detail(error: unknown): string {
+	if (typeof DOMException !== "undefined" && error instanceof DOMException) {
+		return `${error.name}: ${error.message}`;
+	}
 	if (error instanceof Error) return error.stack ?? error.message;
 	if (typeof error === "string") return error;
 	try {

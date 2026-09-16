@@ -7,6 +7,7 @@ import {
 	dragSeeking,
 	hasLoadedAudio,
 	play,
+	playbackBlocked,
 	progress,
 	seek,
 	setOnTrackEnded,
@@ -101,20 +102,16 @@ async function playAtIndex(
 	currentSong.value = song;
 	persistQueue();
 
-	let ok = await play(song);
+	// play() exhausts this track's recovery ladder before returning false.
+	const ok = await play(song);
 	if (queue.value[currentIndex.value]?.id !== song.id) return;
 
 	if (!ok) {
-		// A dead cached stream URL (usually an expired YouTube link) or element
-		// is the usual cause and it is recoverable: drop the cache entry and
-		// resolve a fresh stream once before giving up on this track, instead
-		// of skipping straight to the next one.
-		AudioCache.remove(song.id);
-		ok = await play(song);
-		if (queue.value[currentIndex.value]?.id !== song.id) return;
-	}
+		// WebKit blocked playback for lack of user activation: the track is fine,
+		// so keep the queue here and let the user interact instead of sweeping
+		// every song through the recovery ladder.
+		if (playbackBlocked()) return;
 
-	if (!ok) {
 		tried.add(i);
 		const next = nextUntried(queue.value.length, i, tried);
 		if (next != null) {

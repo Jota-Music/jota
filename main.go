@@ -159,6 +159,15 @@ func main() {
 		Linux: application.LinuxOptions{
 			ProgramName: "jota", // Linux program name (used in .desktop GTK app id)
 		},
+		Windows: application.WindowsOptions{
+			// WebView2 is Chromium: allow audio to start without a user gesture
+			// and keep it running while the window is unfocused or minimised.
+			AdditionalBrowserArgs: []string{
+				"--autoplay-policy=no-user-gesture-required",
+				"--disable-background-timer-throttling",
+				"--disable-renderer-backgrounding",
+			},
+		},
 		SingleInstance: singleInstance,
 	})
 
@@ -174,6 +183,13 @@ func main() {
 		AlwaysOnTop:      state.AlwaysOnTop,
 		BackgroundType:   application.BackgroundTypeSolid,
 		BackgroundColour: application.NewRGBA(12, 10, 9, 255),
+		Mac: application.MacWindow{
+			WebviewPreferences: application.MacWebviewPreferences{
+				// WKWebView: clear mediaTypesRequiringUserActionForPlayback so
+				// audio never waits for a gesture.
+				EnableAutoplayWithoutUserAction: application.Enabled,
+			},
+		},
 		Linux: application.LinuxWindow{
 			Icon:             icon,
 			WebviewGpuPolicy: application.WebviewGpuPolicyOnDemand,

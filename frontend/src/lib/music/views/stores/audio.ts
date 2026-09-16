@@ -3,7 +3,7 @@ import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
 import { setSongYoutubeId } from "@/lib/music/views/stores/queue";
-import { addError } from "@/lib/shared/views/stores/errors";
+import { addError, logError } from "@/lib/shared/views/stores/errors";
 
 const VOLUME_STORAGE_KEY = "audio-volume";
 const MUTED_STORAGE_KEY = "audio-muted";
@@ -27,6 +27,13 @@ let audio: HTMLAudioElement | null = null;
 let loadedSongId: string | null = null;
 let knownDuration = 0;
 let loadToken = 0;
+// True while the recovery ladder is running, so element errors are logged with
+// detail instead of each surfacing in the error bar.
+let recovering = false;
+// Set when WebKit rejects play() because the page has no user activation. That
+// gates every track the same way, so it must stop the queue instead of failing
+// each song in turn.
+let blockedByPolicy = false;
 
 let onTrackEndedCallback: (() => void) | null = null;
 let endedElement: HTMLAudioElement | null = null;
@@ -100,6 +107,19 @@ export const muted = signal(getInitialMuted());
 
 export const currentSong = signal<Song | null>(null);
 
+// Songs whose every recovery attempt failed, so the queue can flag them.
+export const failedSongs = signal<Set<string>>(new Set());
+
+function markFailed(id: string, failed: boolean): void {
+	const next = new Set(failedSongs.value);
+	if (failed) {
+		next.add(id);
+	} else {
+		next.delete(id);
+	}
+	failedSongs.value = next;
+}
+
 // Apply a resolved YouTube ID to the song on screen and to its queued copy, so
 // queue edits and replays keep it visible.
 export function setYoutube(song: Song, youtube: string) {
@@ -171,6 +191,21 @@ function songLabel(song: Song | null): string {
 	return song.youtubeId ? `${song.id} (yt ${song.youtubeId})` : song.id;
 }
 
+// What the media pipeline actually reported, so a failed load names its cause
+// (bad source vs. decode vs. aborted) instead of a bare "play failed".
+function mediaState(el: HTMLAudioElement | null): string {
+	if (!el) return "element=none";
+	const err = el.error;
+	return [
+		`readyState=${el.readyState}`,
+		`networkState=${el.networkState}`,
+		`paused=${el.paused}`,
+		err
+			? `mediaError=${err.code}(${err.message || "no message"})`
+			: "mediaError=none",
+	].join(" ");
+}
+
 function knownDurationOr(d: number): number {
 	return knownDuration > 0 ? knownDuration : d;
 }
@@ -192,6 +227,16 @@ function isAbortError(err: unknown): boolean {
 	);
 }
 
+// WebKit's autoplay policy rejects play() until the page has user activation.
+// Not a broken track: retrying, rebuilding or re-resolving cannot change it.
+function isNotAllowedError(err: unknown): boolean {
+	return (
+		typeof err === "object" &&
+		err !== null &&
+		(err as { name?: string }).name === "NotAllowedError"
+	);
+}
+
 async function loadSongIntoPlayer(
 	song: Song,
 	autostart: boolean,
@@ -203,15 +248,10 @@ async function loadSongIntoPlayer(
 	endedElement = null;
 
 	if (audio) {
-		const prevId = loadedSongId;
 		audio.pause();
-		audio.src = "";
-		audio.load();
 		audio = null;
 		loadedSongId = null;
 		knownDuration = 0;
-		AudioCache.pin(null);
-		if (prevId) AudioCache.releaseElement(prevId);
 	}
 
 	progress.value = 0;
@@ -230,7 +270,7 @@ async function loadSongIntoPlayer(
 		if (token !== loadToken) return false;
 		isLoading.value = false;
 		isPlaying.value = false;
-		addError(err, `resolve audio ${songLabel(song)}`);
+		logError(err, `resolve ${songLabel(song)}`);
 		return false;
 	}
 
@@ -241,17 +281,13 @@ async function loadSongIntoPlayer(
 		if (token !== loadToken) return false;
 		isLoading.value = false;
 		isPlaying.value = false;
-		addError(err, `audio element ${songLabel(song)}`);
+		logError(err, `element ${songLabel(song)}`);
 		return false;
 	}
-	if (token !== loadToken) {
-		AudioCache.releaseElement(song.id);
-		return false;
-	}
+	if (token !== loadToken) return false;
 
 	audio = instance;
 	loadedSongId = song.id;
-	AudioCache.pin(song.id);
 
 	instance.volume = volume.value;
 	instance.muted = muted.value;
@@ -278,7 +314,7 @@ async function loadSongIntoPlayer(
 			} catch (err) {
 				isLoading.value = false;
 				isPlaying.value = false;
-				addError(err, `buffer ${songLabel(song)}`);
+				logError(err, `buffer ${songLabel(song)} | ${mediaState(instance)}`);
 				return false;
 			}
 			const t = startAt();
@@ -295,9 +331,10 @@ async function loadSongIntoPlayer(
 		} catch (err) {
 			if (token !== loadToken) return false;
 			if (!isAbortError(err)) {
+				if (isNotAllowedError(err)) blockedByPolicy = true;
 				isPlaying.value = false;
 				isLoading.value = false;
-				addError(err, `play ${songLabel(song)}`);
+				logError(err, `play ${songLabel(song)} | ${mediaState(instance)}`);
 				return false;
 			}
 		}
@@ -323,11 +360,116 @@ async function loadSongIntoPlayer(
 	return true;
 }
 
+// Retry the element already loaded for this song, without rebuilding it or
+// re-resolving the stream. The cheapest recovery step.
+async function retryElement(song: Song): Promise<boolean> {
+	if (
+		!audio ||
+		loadedSongId !== song.id ||
+		audio.error ||
+		endedElement === audio
+	) {
+		return false;
+	}
+	try {
+		await audio.play();
+		isPlaying.value = true;
+		return true;
+	} catch (err) {
+		if (!isAbortError(err)) {
+			if (isNotAllowedError(err)) blockedByPolicy = true;
+			logError(err, `retry element ${songLabel(song)} | ${mediaState(audio)}`);
+		}
+		return false;
+	}
+}
+
+// Play a song, escalating recovery from cheapest to costliest: reuse the cached
+// stream, retry the loaded element, rebuild it, then ask the backend for a fresh
+// stream (expired link, bad generation, bot check). Only when every step fails
+// does the caller skip the track.
 export async function play(
 	song: Song,
 	startSeconds?: number | (() => number),
 ): Promise<boolean> {
-	return await loadSongIntoPlayer(song, true, startSeconds);
+	blockedByPolicy = false;
+
+	const success = () => {
+		markFailed(song.id, false);
+		return true;
+	};
+
+	recovering = true;
+	try {
+		if (await loadSongIntoPlayer(song, true, startSeconds)) return success();
+		if (blockedByPolicy) return blocked(song);
+
+		if (await retryElement(song)) return success();
+		if (blockedByPolicy) return blocked(song);
+
+		AudioCache.releaseElement(song.id);
+		if (await loadSongIntoPlayer(song, true, startSeconds)) return success();
+		if (blockedByPolicy) return blocked(song);
+
+		AudioCache.remove(song.id);
+		if (await loadSongIntoPlayer(song, true, startSeconds)) return success();
+	} finally {
+		recovering = false;
+	}
+
+	markFailed(song.id, true);
+	addError(
+		new Error("every recovery attempt failed"),
+		`play "${song.name}" (${song.id})`,
+	);
+	return false;
+}
+
+// WebKit rejected play() for lack of user activation. The track is fine, so it
+// must not be flagged or skipped; the caller stops and waits for an interaction.
+function blocked(song: Song): false {
+	markFailed(song.id, false);
+	armRecovery(song);
+	addError(
+		new Error("the browser needs a click to allow playback"),
+		`play "${song.name}"`,
+	);
+	return false;
+}
+
+// Retry on the next user gesture. The retry runs synchronously inside the
+// handler, so WebKit accepts it as gesture-initiated and grants the shared
+// element permission for the rest of the session.
+let recoveryArmed = false;
+
+function armRecovery(song: Song): void {
+	if (recoveryArmed || typeof window === "undefined") return;
+	recoveryArmed = true;
+
+	const retry = () => {
+		window.removeEventListener("pointerdown", retry, true);
+		window.removeEventListener("keydown", retry, true);
+		recoveryArmed = false;
+
+		if (audio && loadedSongId === song.id && !audio.error) {
+			void audio.play().then(
+				() => {
+					isPlaying.value = true;
+					markFailed(song.id, false);
+				},
+				() => {},
+			);
+			return;
+		}
+		void play(song);
+	};
+
+	window.addEventListener("pointerdown", retry, true);
+	window.addEventListener("keydown", retry, true);
+}
+
+export function playbackBlocked(): boolean {
+	return blockedByPolicy;
 }
 
 export async function prepareSong(
@@ -337,24 +479,13 @@ export async function prepareSong(
 	return await loadSongIntoPlayer(song, false, startSeconds);
 }
 
-export async function warm(song: Song, timeoutMs = 6000): Promise<boolean> {
-	let el: HTMLAudioElement;
+export async function warm(song: Song): Promise<boolean> {
 	try {
-		el = await AudioCache.getAudioElement(song);
+		await AudioCache.get(song);
+		return true;
 	} catch {
 		return false;
 	}
-	if (el.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) return true;
-
-	return await Promise.race([
-		waitForPlayable(el),
-		new Promise<boolean>((resolve) => {
-			setTimeout(
-				() => resolve(el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA),
-				timeoutMs,
-			);
-		}),
-	]);
 }
 
 export function getPlaybackSeconds(): number {
@@ -372,10 +503,6 @@ export function hasLoadedAudio(): boolean {
 	return !!audio && !audio.error && endedElement !== audio;
 }
 
-export function pause() {
-	audio?.pause();
-}
-
 // Recover playback after a failed stream: reload the current song from a
 // freshly resolved URL instead of reusing the dead element/URL.
 async function resume(): Promise<boolean> {
@@ -385,13 +512,14 @@ async function resume(): Promise<boolean> {
 			return true;
 		} catch (err) {
 			if (isAbortError(err)) return false;
-			addError(err, `resume ${songLabel(currentSong.value)}`);
-			return false;
+			logError(
+				err,
+				`resume ${songLabel(currentSong.value)} | ${mediaState(audio)}`,
+			);
 		}
 	}
 	const song = currentSong.value;
 	if (!song) return false;
-	AudioCache.remove(song.id);
 	return await play(song);
 }
 
@@ -446,16 +574,11 @@ export function stopPlayer() {
 	stopEndWatch();
 	endedElement = null;
 	if (audio) {
-		const prevId = loadedSongId;
 		audio.pause();
-		audio.src = "";
-		audio.load();
 		audio = null;
 		loadedSongId = null;
 		knownDuration = 0;
-		if (prevId) AudioCache.releaseElement(prevId);
 	}
-	AudioCache.pin(null);
 	currentSong.value = null;
 	media.clear();
 	progress.value = 0;
@@ -510,12 +633,13 @@ function bindEvents(a: HTMLAudioElement) {
 		if (loadedSongId) AudioCache.remove(loadedSongId);
 		audio = null;
 		loadedSongId = null;
-		AudioCache.pin(null);
 		media.update(currentSong.value, false);
-		addError(
-			new Error(`media error code ${code}`),
-			`playback stopped ${label}`,
-		);
+		const detail = `playback stopped ${label} | ${mediaState(a)}`;
+		if (recovering) {
+			logError(new Error(`media error code ${code}`), detail);
+		} else {
+			addError(new Error(`media error code ${code}`), detail);
+		}
 	};
 }
 

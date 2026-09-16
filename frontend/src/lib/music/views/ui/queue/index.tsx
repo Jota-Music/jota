@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
 	ArrowUpFromLine,
 	ChevronDown,
+	CircleAlert,
 	GripVertical,
 	ListMusic,
 	Loader,
@@ -14,7 +15,11 @@ import {
 } from "lucide-preact";
 import { useEffect, useRef } from "preact/hooks";
 import { useQueuePanel } from "@/lib/music/views/hooks/use-queue";
-import { isLoading, isPlaying } from "@/lib/music/views/stores/audio";
+import {
+	failedSongs,
+	isLoading,
+	isPlaying,
+} from "@/lib/music/views/stores/audio";
 import { showQueue } from "@/lib/music/views/stores/queue";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
@@ -289,9 +294,19 @@ function Queue() {
 												))}
 										</div>
 										<div class="min-w-0 flex-1 pr-1">
-											<p class="truncate text-[13px] leading-tight sm:text-sm text-zinc-100">
-												{song.name}
-											</p>
+											<div class="flex items-center gap-1.5">
+												<p class="truncate text-[13px] leading-tight sm:text-sm text-zinc-100">
+													{song.name}
+												</p>
+												{failedSongs.value.has(song.id) && (
+													<span
+														title="Could not play this track"
+														class="shrink-0 text-red-400"
+													>
+														<CircleAlert size={14} />
+													</span>
+												)}
+											</div>
 											<p class="truncate text-[11px] text-zinc-500 sm:text-xs">
 												<ArtistLinks artists={song.artists} />
 												{song.album.title && (
