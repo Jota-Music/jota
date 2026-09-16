@@ -33,7 +33,7 @@ func browseData(playlistID, continuation string) ([]byte, error) {
 		payload["browseId"] = "VL" + playlistID
 	}
 
-	data, err := retryRequest(preferredClient, browseEndpoint, payload, true, 3)
+	data, err := retryRequest(preferredClient, browseEndpoint, payload, 3)
 	if err != nil {
 		return nil, fmt.Errorf("browse request failed: %w", err)
 	}
@@ -101,12 +101,6 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 		Name:  name,
 		Cover: cover,
 		Songs: songs,
-		Page: music.Page{
-			Size:    len(songs),
-			Offset:  0,
-			Total:   len(songs),
-			HasNext: false,
-		},
 	}, nil
 }
 
@@ -148,14 +142,6 @@ func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 	return kv.Cached(playlistBucket, "playlist:"+playlistID, playlistCacheTTL, func() (music.Playlist, error) {
 		return fetchFullPlaylist(playlistID)
 	})
-}
-
-func (s *Service) GetFullPlaylistNoCache(id string) (music.Playlist, error) {
-	playlistID := normalizePlaylistId(id)
-	if playlistID == "" {
-		return music.Playlist{}, errors.New("invalid playlist id")
-	}
-	return fetchFullPlaylist(playlistID)
 }
 
 func (s *Service) RevalidateFullPlaylist(id string) error {

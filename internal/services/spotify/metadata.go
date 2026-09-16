@@ -4,22 +4,8 @@ import (
 	"context"
 	"strings"
 
-	extmetadatapb "github.com/devgianlu/go-librespot/proto/spotify/extendedmetadata"
-	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 	"github.com/devgianlu/go-librespot/session"
 )
-
-func GetTrack(ctx context.Context, sess *session.Session, uri string) (Track, error) {
-	id, err := spotifyID(uri, "track")
-	if err != nil {
-		return Track{}, err
-	}
-	var track metadatapb.Track
-	if err := sess.Spclient().ExtendedMetadataSimple(ctx, id, extmetadatapb.ExtensionKind_TRACK_V4, &track); err != nil {
-		return Track{}, err
-	}
-	return trackFromProto(&track), nil
-}
 
 func GetPlaylistTracksPage(ctx context.Context, sess *session.Session, uri string, offset, limit int) ([]Track, error) {
 	if _, err := spotifyID(uri, "playlist"); err != nil {

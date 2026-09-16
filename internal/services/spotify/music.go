@@ -8,22 +8,6 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
-func (s *SpotifyService) GetSong(id string) (music.Song, error) {
-	uri := normalizeTrackID(id)
-
-	ctx := context.Background()
-	sess := s.Session()
-	if sess == nil {
-		return music.Song{}, ErrNotConnected
-	}
-
-	track, err := GetTrack(ctx, sess, uri)
-	if err != nil {
-		return music.Song{}, err
-	}
-	return trackToSong(track), nil
-}
-
 func (s *SpotifyService) GetFullPlaylist(playlistID string) (music.Playlist, error) {
 	return cachedFullPlaylist(playlistID, func() (music.Playlist, error) {
 		return s.fullPlaylist(playlistID)
@@ -34,12 +18,8 @@ func (s *SpotifyService) RevalidateFullPlaylist(playlistID string) error {
 	return revalidateFullPlaylist(playlistID)
 }
 
-func (s *SpotifyService) GetFullPlaylistNoCache(playlistID string) (music.Playlist, error) {
-	return s.fullPlaylist(playlistID)
-}
-
 func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error) {
-	uri := normalizePlaylistID(playlistID)
+	uri := normalizeID(playlistID, "playlist")
 
 	ctx := context.Background()
 	sess := s.Session()
@@ -73,12 +53,6 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 		Cover: meta.cover,
 		Owner: meta.owner,
 		Songs: allSongs,
-		Page: music.Page{
-			Size:    len(allSongs),
-			Offset:  0,
-			Total:   len(allSongs),
-			HasNext: false,
-		},
 	}, nil
 }
 
@@ -90,10 +64,6 @@ func (s *SpotifyService) GetUserPlaylists(user string) ([]music.PlaylistSummary,
 
 func (s *SpotifyService) RevalidateUserPlaylists(user string) error {
 	return revalidateUserPlaylists(user)
-}
-
-func (s *SpotifyService) GetUserPlaylistsNoCache(user string) ([]music.PlaylistSummary, error) {
-	return s.userPlaylists(user)
 }
 
 func (s *SpotifyService) userPlaylists(user string) ([]music.PlaylistSummary, error) {
@@ -115,11 +85,10 @@ func (s *SpotifyService) userPlaylists(user string) ([]music.PlaylistSummary, er
 			continue
 		}
 		out = append(out, music.PlaylistSummary{
-			Id:     id,
-			Name:   p.Name,
-			Mosaic: "",
-			Cover:  p.CoverURL,
-			Owner:  p.Owner,
+			Id:    id,
+			Name:  p.Name,
+			Cover: p.CoverURL,
+			Owner: p.Owner,
 		})
 	}
 	return out, nil
@@ -150,22 +119,6 @@ func (s *SpotifyService) Search(query string, searchType string) ([]music.Search
 		})
 	}
 	return out, nil
-}
-
-func normalizeTrackID(id string) string {
-	id = strings.TrimSpace(id)
-	if strings.HasPrefix(id, URITrackPrefix) {
-		return id
-	}
-	return URITrackPrefix + id
-}
-
-func normalizePlaylistID(id string) string {
-	id = strings.TrimSpace(id)
-	if strings.HasPrefix(id, URIPlaylistPrefix) {
-		return id
-	}
-	return URIPlaylistPrefix + id
 }
 
 func trackToSong(t Track) music.Song {
@@ -212,24 +165,8 @@ func trackToSong(t Track) music.Song {
 	}
 }
 
-func normalizeArtistID(id string) string {
-	id = strings.TrimSpace(id)
-	if strings.HasPrefix(id, URIArtistPrefix) {
-		return id
-	}
-	return URIArtistPrefix + id
-}
-
-func normalizeAlbumID(id string) string {
-	id = strings.TrimSpace(id)
-	if strings.HasPrefix(id, URIAlbumPrefix) {
-		return id
-	}
-	return URIAlbumPrefix + id
-}
-
 func (s *SpotifyService) GetArtist(uri string) (music.ArtistInfo, error) {
-	normalizedURI := normalizeArtistID(uri)
+	normalizedURI := normalizeID(uri, "artist")
 	return cachedArtist(normalizedURI, func() (music.ArtistInfo, error) {
 		return s.artist(normalizedURI)
 	})
@@ -261,7 +198,7 @@ func (s *SpotifyService) artist(normalizedURI string) (music.ArtistInfo, error) 
 }
 
 func (s *SpotifyService) GetArtistDiscography(uri string) (music.ArtistDiscography, error) {
-	normalizedURI := normalizeArtistID(uri)
+	normalizedURI := normalizeID(uri, "artist")
 	return cachedArtistDiscography(normalizedURI, func() (music.ArtistDiscography, error) {
 		return s.artistDiscography(normalizedURI)
 	})
@@ -302,7 +239,7 @@ func (s *SpotifyService) artistDiscography(normalizedURI string) (music.ArtistDi
 }
 
 func (s *SpotifyService) GetAlbumTracks(uri string) ([]music.Song, error) {
-	normalizedURI := normalizeAlbumID(uri)
+	normalizedURI := normalizeID(uri, "album")
 	return cachedAlbumTracks(normalizedURI, func() ([]music.Song, error) {
 		return s.albumTracks(normalizedURI)
 	})

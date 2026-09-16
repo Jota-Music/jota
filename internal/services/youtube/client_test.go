@@ -53,7 +53,7 @@ func TestRetryRequestRetriesRateLimitAndServerErrors(t *testing.T) {
 		}
 	})
 
-	data, err := retryRequest(preferredClient, "https://example.test/player", map[string]any{}, true, 5)
+	data, err := retryRequest(preferredClient, "https://example.test/player", map[string]any{}, 5)
 	if err != nil {
 		t.Fatalf("retryRequest: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestRetryRequestGivesUpAfterRetries(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusServiceUnavailable, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(""))}, nil
 	})
 
-	if _, err := retryRequest(preferredClient, "https://example.test/player", map[string]any{}, true, 3); err == nil {
+	if _, err := retryRequest(preferredClient, "https://example.test/player", map[string]any{}, 3); err == nil {
 		t.Fatal("expected an error once retries are exhausted")
 	}
 	if got := atomic.LoadInt32(&calls); got != 3 {
@@ -91,7 +91,7 @@ func TestDoRequestSendsVisitorHeader(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("{}"))}, nil
 	})
 
-	if _, err := retryRequest(preferredClient, "https://example.test/player", map[string]any{}, true, 1); err != nil {
+	if _, err := retryRequest(preferredClient, "https://example.test/player", map[string]any{}, 1); err != nil {
 		t.Fatalf("retryRequest: %v", err)
 	}
 	if got != "vis-xyz" {

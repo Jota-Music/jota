@@ -165,7 +165,7 @@ func TestDoRequestSignsWhenSignedIn(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("{}"))}, nil
 	})
 
-	if _, err := retryRequest(webClient(), "https://www.youtube.com/youtubei/v1/player", map[string]any{}, true, 1); err != nil {
+	if _, err := retryRequest(webClient(), "https://www.youtube.com/youtubei/v1/player", map[string]any{}, 1); err != nil {
 		t.Fatalf("retryRequest: %v", err)
 	}
 	if !strings.HasPrefix(gotAuth, "SAPISIDHASH ") {

@@ -9,7 +9,6 @@ export type {
     ArtistInfo,
     Audio,
     Follow,
-    Page,
     Playlist,
     PlaylistSummary,
     SearchResult,

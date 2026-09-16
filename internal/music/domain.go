@@ -30,19 +30,11 @@ type Artist struct {
 	Name string `json:"name"`
 }
 
-type Page struct {
-	Size    int  `json:"size"`
-	Offset  int  `json:"offset"`
-	Total   int  `json:"total"`
-	HasNext bool `json:"hasNext"`
-}
-
 type Playlist struct {
 	Name  string `json:"name,omitempty"`
 	Cover string `json:"cover,omitempty"`
 	Owner string `json:"owner,omitempty"`
 	Songs []Song `json:"songs"`
-	Page  Page   `json:"page"`
 }
 
 type Audio struct {
@@ -56,7 +48,6 @@ type Audio struct {
 type PlaylistSummary struct {
 	Id       string `json:"id"`
 	Name     string `json:"name"`
-	Mosaic   string `json:"mosaic,omitempty"`
 	Cover    string `json:"cover,omitempty"`
 	Subtitle string `json:"subtitle,omitempty"`
 	Owner    string `json:"owner,omitempty"`

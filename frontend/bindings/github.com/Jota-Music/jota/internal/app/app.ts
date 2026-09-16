@@ -63,20 +63,8 @@ export function GetFullPlaylist(id: string): $CancellablePromise<music$0.Playlis
     return $Call.ByID(3017102079, id);
 }
 
-export function GetFullPlaylistNoCache(id: string): $CancellablePromise<music$0.Playlist> {
-    return $Call.ByID(3221186334, id);
-}
-
-export function GetSong(id: string): $CancellablePromise<music$0.Song> {
-    return $Call.ByID(2619436861, id);
-}
-
 export function GetUserPlaylists(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
     return $Call.ByID(1067966734, user);
-}
-
-export function GetUserPlaylistsNoCache(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
-    return $Call.ByID(882132541, user);
 }
 
 export function GetUserProfile(username: string): $CancellablePromise<music$0.UserProfile> {
@@ -171,10 +159,6 @@ export function SpotifyLogin(): $CancellablePromise<string> {
 
 export function SpotifyLoginAndWait(): $CancellablePromise<void> {
     return $Call.ByID(57797921);
-}
-
-export function SpotifyReconnect(): $CancellablePromise<void> {
-    return $Call.ByID(4133825283);
 }
 
 export function SyncCheck(relayURL: string): $CancellablePromise<boolean> {

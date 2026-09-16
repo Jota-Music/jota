@@ -19,8 +19,6 @@ type Playlist struct {
 	Name       string
 	Owner      string
 	CoverURL   string
-	UpdatedAt  int64 // epoch ms; 0 if not available
-	CreatedAt  int64 // epoch ms; 0 if not available
 	TrackCount int32 // -1 if not available
 }
 
@@ -70,15 +68,13 @@ func enrichPlaylistsWithTracks(ctx context.Context, sess *session.Session, pls [
 	type result struct {
 		name       string
 		cover      string
-		updatedAt  int64
-		createdAt  int64
 		trackCount int32
 	}
 	results := make([]result, len(pls))
 	var wg sync.WaitGroup
 	for i := range pls {
 		needsMeta := pls[i].Name == "" || pls[i].CoverURL == ""
-		if !needsMeta && pls[i].UpdatedAt > 0 && pls[i].TrackCount >= 0 {
+		if !needsMeta && pls[i].TrackCount >= 0 {
 			continue
 		}
 		wg.Add(1)
@@ -91,8 +87,6 @@ func enrichPlaylistsWithTracks(ctx context.Context, sess *session.Session, pls [
 				results[idx] = result{
 					name:       meta.name,
 					cover:      meta.cover,
-					updatedAt:  meta.updatedAt,
-					createdAt:  meta.createdAt,
 					trackCount: meta.trackCount,
 				}
 				if meta.cover != "" && meta.name != "" {
@@ -121,12 +115,6 @@ func enrichPlaylistsWithTracks(ctx context.Context, sess *session.Session, pls [
 		if p.CoverURL == "" && results[i].cover != "" {
 			p.CoverURL = results[i].cover
 		}
-		if results[i].updatedAt > p.UpdatedAt {
-			p.UpdatedAt = results[i].updatedAt
-		}
-		if results[i].createdAt > 0 && p.CreatedAt == 0 {
-			p.CreatedAt = results[i].createdAt
-		}
 		if p.TrackCount < 0 && results[i].trackCount > 0 {
 			p.TrackCount = results[i].trackCount
 		}
@@ -141,8 +129,6 @@ type playlistMeta struct {
 	name       string
 	cover      string
 	owner      string
-	updatedAt  int64
-	createdAt  int64
 	trackCount int32
 }
 
@@ -176,8 +162,6 @@ func getPlaylistMetadata(ctx context.Context, sess *session.Session, uri string)
 		}
 	}
 	m.owner = pl.GetOwnerUsername()
-	m.updatedAt = pl.GetTimestamp()
-	m.createdAt = pl.GetCreatedAt()
 	m.trackCount = pl.GetLength()
 	if m.name == "" {
 		return m, fmt.Errorf("sin nombre")

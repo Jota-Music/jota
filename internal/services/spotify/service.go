@@ -45,7 +45,6 @@ type SpotifyService struct {
 type pendingLogin struct {
 	verifier    string
 	redirectURL string
-	createdAt   time.Time
 	server      *callbackServer
 }
 
@@ -174,7 +173,6 @@ func (s *SpotifyService) StartupLogin() (string, error) {
 	p := &pendingLogin{
 		verifier:    verifier,
 		redirectURL: redirectURL,
-		createdAt:   time.Now(),
 		server:      cbServer,
 	}
 	s.pendingMu.Lock()

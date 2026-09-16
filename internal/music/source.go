@@ -4,7 +4,6 @@ import "strings"
 
 type Source interface {
 	GetFullPlaylist(id string) (Playlist, error)
-	GetFullPlaylistNoCache(id string) (Playlist, error)
 	RevalidateFullPlaylist(id string) error
 }
 
@@ -26,10 +25,6 @@ func (c *Catalog) source(id string) Source {
 
 func (c *Catalog) GetFullPlaylist(id string) (Playlist, error) {
 	return c.source(id).GetFullPlaylist(id)
-}
-
-func (c *Catalog) GetFullPlaylistNoCache(id string) (Playlist, error) {
-	return c.source(id).GetFullPlaylistNoCache(id)
 }
 
 func (c *Catalog) RevalidateFullPlaylist(id string) error {

@@ -16,7 +16,6 @@ type AlbumRef struct {
 	Name     string
 	Year     int32
 	CoverURL string
-	Tracks   []Track
 	Group    string
 }
 
@@ -103,6 +102,4 @@ func enrichOneAlbum(ctx context.Context, sess *session.Session, a *AlbumRef) {
 		a.Year = album.GetDate().GetYear()
 	}
 	a.CoverURL = coverURLFromAlbum(&album)
-	a.Tracks = tracksFromAlbum(&album)
-	enrichTracks(ctx, sess, a.Tracks)
 }

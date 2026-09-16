@@ -13,7 +13,7 @@ import (
 // a hung connection would stall a resolve (and playback) forever.
 var innertubeClient = &http.Client{Timeout: 15 * time.Second}
 
-func doRequest(c clientConfig, url string, payload map[string]any, useVisitor bool) (*http.Response, error) {
+func doRequest(c clientConfig, url string, payload map[string]any) (*http.Response, error) {
 	visitor, key, err := getVisitorData()
 	if err != nil {
 		return nil, fmt.Errorf("getting visitor data: %w", err)
@@ -40,7 +40,7 @@ func doRequest(c clientConfig, url string, payload map[string]any, useVisitor bo
 	req.Header.Set("X-YouTube-Client-Version", c.Version)
 	req.Header.Set("Origin", origin)
 	req.Header.Set("Referer", origin+"/")
-	if useVisitor && visitor != "" {
+	if visitor != "" {
 		req.Header.Set("X-Goog-Visitor-Id", visitor)
 	}
 	// Signed-in requests carry SAPISIDHASH, which is what unlocks age-restricted
@@ -52,10 +52,10 @@ func doRequest(c clientConfig, url string, payload map[string]any, useVisitor bo
 	return innertubeClient.Do(req)
 }
 
-func retryRequest(c clientConfig, url string, payload map[string]any, useVisitor bool, retries int) ([]byte, error) {
+func retryRequest(c clientConfig, url string, payload map[string]any, retries int) ([]byte, error) {
 	var lastErr error
 	for i := range retries {
-		resp, err := doRequest(c, url, payload, useVisitor)
+		resp, err := doRequest(c, url, payload)
 		if err != nil {
 			lastErr = err
 			time.Sleep(time.Duration(100+(i*200)) * time.Millisecond)

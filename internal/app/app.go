@@ -125,10 +125,6 @@ func (a *App) SpotifyLoginAndWait() error {
 	return a.Spotify.CompleteLogin()
 }
 
-func (a *App) SpotifyReconnect() error {
-	return a.Spotify.Reconnect(a.ctx)
-}
-
 func (a *App) SpotifyDisconnect() error {
 	return a.Spotify.Disconnect()
 }
@@ -146,20 +142,12 @@ func (a *App) GetFullPlaylist(id string) (music.Playlist, error) {
 	return a.Catalog.GetFullPlaylist(id)
 }
 
-func (a *App) GetFullPlaylistNoCache(id string) (music.Playlist, error) {
-	return a.Catalog.GetFullPlaylistNoCache(id)
-}
-
 func (a *App) RevalidateFullPlaylist(id string) error {
 	return a.Catalog.RevalidateFullPlaylist(id)
 }
 
 func (a *App) GetUserPlaylists(user string) ([]music.PlaylistSummary, error) {
 	return a.Spotify.GetUserPlaylists(user)
-}
-
-func (a *App) GetUserPlaylistsNoCache(user string) ([]music.PlaylistSummary, error) {
-	return a.Spotify.GetUserPlaylistsNoCache(user)
 }
 
 func (a *App) RevalidateUserPlaylists(user string) error {
@@ -190,10 +178,6 @@ func (a *App) FollowUser(account string, user string) error {
 
 func (a *App) UnfollowUser(account string, user string) error {
 	return a.Follows.Unfollow(account, user)
-}
-
-func (a *App) GetSong(id string) (music.Song, error) {
-	return a.Spotify.GetSong(id)
 }
 
 func (a *App) Search(query string, searchType string) ([]music.SearchResult, error) {

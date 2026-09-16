@@ -11,15 +11,10 @@ import (
 	"time"
 )
 
-type callbackResult struct {
-	code string
-	err  error
-}
-
 type callbackServer struct {
 	server *http.Server
 	port   int
-	result chan callbackResult
+	result chan string
 	once   sync.Once
 }
 
@@ -31,7 +26,7 @@ func newCallbackServer() (*callbackServer, error) {
 
 	c := &callbackServer{
 		port:   ln.Addr().(*net.TCPAddr).Port,
-		result: make(chan callbackResult, 1),
+		result: make(chan string, 1),
 	}
 
 	mux := http.NewServeMux()
@@ -54,7 +49,7 @@ func newCallbackServer() (*callbackServer, error) {
 func (c *callbackServer) handle(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	c.once.Do(func() {
-		c.result <- callbackResult{code: code, err: nil}
+		c.result <- code
 	})
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -67,8 +62,8 @@ func (c *callbackServer) handle(w http.ResponseWriter, r *http.Request) {
 
 func (c *callbackServer) wait(ctx context.Context) (string, error) {
 	select {
-	case r := <-c.result:
-		return r.code, r.err
+	case code := <-c.result:
+		return code, nil
 	case <-ctx.Done():
 		return "", ctx.Err()
 	}

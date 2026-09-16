@@ -231,7 +231,7 @@ var playerStreamURLFn = playerStreamURL
 func playerStreamURL(c clientConfig, videoID string) (string, error) {
 	payload := playerPayload(c, videoID)
 
-	data, err := retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, true, 3)
+	data, err := retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, 3)
 	if err != nil {
 		return "", fmt.Errorf("player request failed: %w", err)
 	}

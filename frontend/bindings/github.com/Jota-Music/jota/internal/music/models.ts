@@ -49,25 +49,16 @@ export interface Follow {
     "kind": string;
 }
 
-export interface Page {
-    "size": number;
-    "offset": number;
-    "total": number;
-    "hasNext": boolean;
-}
-
 export interface Playlist {
     "name"?: string;
     "cover"?: string;
     "owner"?: string;
     "songs": Song[] | null;
-    "page": Page;
 }
 
 export interface PlaylistSummary {
     "id": string;
     "name": string;
-    "mosaic"?: string;
     "cover"?: string;
     "subtitle"?: string;
     "owner"?: string;

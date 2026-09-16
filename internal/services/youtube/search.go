@@ -31,7 +31,7 @@ func (s *Service) Search(query string) ([]Video, error) {
 		"racyCheckOk":    true,
 	}
 
-	data, err := retryRequest(preferredClient, "https://music.youtube.com/youtubei/v1/search", payload, true, 3)
+	data, err := retryRequest(preferredClient, "https://music.youtube.com/youtubei/v1/search", payload, 3)
 	if err != nil {
 		return nil, fmt.Errorf("search request failed: %w", err)
 	}
@@ -101,7 +101,7 @@ func fetchVideo(id string) (Video, error) {
 		"racyCheckOk":    true,
 	}
 
-	data, err := retryRequest(preferredClient, "https://www.youtube.com/youtubei/v1/player", payload, true, 3)
+	data, err := retryRequest(preferredClient, "https://www.youtube.com/youtubei/v1/player", payload, 3)
 	if err != nil {
 		return Video{}, fmt.Errorf("player request failed: %w", err)
 	}
@@ -158,7 +158,7 @@ func (s *Service) SearchPlaylists(query string) ([]music.PlaylistSummary, error)
 		"racyCheckOk":    true,
 	}
 
-	data, err := retryRequest(preferredClient, "https://www.youtube.com/youtubei/v1/search", payload, true, 3)
+	data, err := retryRequest(preferredClient, "https://www.youtube.com/youtubei/v1/search", payload, 3)
 	if err != nil {
 		return nil, fmt.Errorf("search request failed: %w", err)
 	}

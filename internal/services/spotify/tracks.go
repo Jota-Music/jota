@@ -13,16 +13,14 @@ import (
 )
 
 type Track struct {
-	URI         string
-	Name        string
-	Artists     []string
-	ArtistURIs  []string
-	Album       string
-	AlbumURI    string
-	CoverURL    string
-	Duration    int
-	TrackNumber int
-	Popularity  int
+	URI        string
+	Name       string
+	Artists    []string
+	ArtistURIs []string
+	Album      string
+	AlbumURI   string
+	CoverURL   string
+	Duration   int
 }
 
 func trackFromProto(track *metadatapb.Track) Track {
@@ -61,12 +59,6 @@ func mergeTrackFromProto(t *Track, track *metadatapb.Track) {
 	}
 	if t.Duration == 0 {
 		t.Duration = int(track.GetDuration())
-	}
-	if t.TrackNumber == 0 {
-		t.TrackNumber = int(track.GetNumber())
-	}
-	if t.Popularity == 0 {
-		t.Popularity = int(track.GetPopularity())
 	}
 }
 

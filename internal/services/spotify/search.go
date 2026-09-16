@@ -109,42 +109,24 @@ func getTrackResult(ctx context.Context, sess *session.Session, id librespot.Spo
 	}}, nil
 }
 
-type albumResultData struct {
-	URI      string
-	Name     string
-	Artists  []string
-	CoverURL string
-}
-
 func getAlbumResult(ctx context.Context, sess *session.Session, id librespot.SpotifyId) ([]SearchResult, error) {
 	var album metadatapb.Album
 	if err := sess.Spclient().ExtendedMetadataSimple(ctx, id, extmetadatapb.ExtensionKind_ALBUM_V4, &album); err != nil {
 		return nil, fmt.Errorf("failed to fetch album: %w", err)
 	}
 
-	data := albumResultData{
+	result := SearchResult{
 		URI:      id.Uri(),
 		Name:     album.GetName(),
+		Type:     "album",
 		CoverURL: coverURLFromAlbum(&album),
 	}
 	for _, a := range album.GetArtist() {
 		if name := a.GetName(); name != "" {
-			data.Artists = append(data.Artists, name)
+			result.Artists = append(result.Artists, name)
 		}
 	}
-	return []SearchResult{{
-		URI:      data.URI,
-		Name:     data.Name,
-		Type:     "album",
-		CoverURL: data.CoverURL,
-		Artists:  data.Artists,
-	}}, nil
-}
-
-type artistResultData struct {
-	URI      string
-	Name     string
-	CoverURL string
+	return []SearchResult{result}, nil
 }
 
 func getArtistResult(ctx context.Context, sess *session.Session, id librespot.SpotifyId) ([]SearchResult, error) {
@@ -153,15 +135,10 @@ func getArtistResult(ctx context.Context, sess *session.Session, id librespot.Sp
 		return nil, fmt.Errorf("failed to fetch artist: %w", err)
 	}
 
-	data := artistResultData{
+	return []SearchResult{{
 		URI:  id.Uri(),
 		Name: artist.GetName(),
-	}
-	return []SearchResult{{
-		URI:      data.URI,
-		Name:     data.Name,
-		Type:     "artist",
-		CoverURL: data.CoverURL,
+		Type: "artist",
 	}}, nil
 }
 

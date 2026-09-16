@@ -2,7 +2,6 @@ package youtube
 
 import (
 	"errors"
-	"regexp"
 	"strings"
 
 	"github.com/Jota-Music/jota/internal/music"
@@ -115,8 +114,6 @@ func artistNames(song music.Song) string {
 	return strings.Join(names, ", ")
 }
 
-var youtubeIdRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]{11}$`)
-
 func isYoutubeId(id string) bool {
-	return youtubeIdRegex.MatchString(id)
+	return videoIdPattern.MatchString(id)
 }
