@@ -89,6 +89,7 @@ async function playAtIndex(i: number): Promise<void> {
 	persistQueue();
 
 	const ok = await play(song);
+	if (queue.value[currentIndex.value]?.id !== song.id) return;
 	if (!ok) {
 		const next = pickNext(
 			queue.value,

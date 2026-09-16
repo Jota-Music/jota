@@ -25,6 +25,7 @@ function parseStoredMuted(raw: string | null): boolean {
 
 let audio: HTMLAudioElement | null = null;
 let loadedSongId: string | null = null;
+let loadToken = 0;
 
 let onTrackEndedCallback: (() => void) | null = null;
 
@@ -131,6 +132,8 @@ async function loadSongIntoPlayer(
 	autostart: boolean,
 	startSeconds?: number | (() => number),
 ): Promise<boolean> {
+	const token = ++loadToken;
+
 	if (audio) {
 		const prevId = loadedSongId;
 		audio.pause();
@@ -154,6 +157,7 @@ async function loadSongIntoPlayer(
 		data = await AudioCache.get(song);
 		if (data.youtube) setYoutube(song, data.youtube);
 	} catch (err) {
+		if (token !== loadToken) return false;
 		isLoading.value = false;
 		isPlaying.value = false;
 		const detail = err instanceof Error ? err.message : String(err);
@@ -165,9 +169,14 @@ async function loadSongIntoPlayer(
 	try {
 		instance = await AudioCache.getAudioElement(song);
 	} catch {
+		if (token !== loadToken) return false;
 		isLoading.value = false;
 		isPlaying.value = false;
 		addError("Failed to create audio element");
+		return false;
+	}
+	if (token !== loadToken) {
+		AudioCache.releaseElement(song.id);
 		return false;
 	}
 
@@ -208,8 +217,13 @@ async function loadSongIntoPlayer(
 		}
 		try {
 			await instance.play();
+			if (token !== loadToken) {
+				instance.pause();
+				return false;
+			}
 			isPlaying.value = true;
 		} catch (err) {
+			if (token !== loadToken) return false;
 			if (!isAbortError(err)) {
 				isPlaying.value = false;
 				isLoading.value = false;
@@ -235,6 +249,7 @@ async function loadSongIntoPlayer(
 		}
 	}
 
+	if (token !== loadToken) return false;
 	isLoading.value = false;
 	return true;
 }
@@ -358,6 +373,7 @@ export async function togglePlayPause(): Promise<boolean> {
 }
 
 export function stopPlayer() {
+	loadToken++;
 	if (audio) {
 		const prevId = loadedSongId;
 		audio.pause();
