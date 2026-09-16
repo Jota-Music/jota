@@ -3,18 +3,19 @@ import { useEffect, useRef } from "preact/hooks";
 
 const MIN_THUMB_PX = 40;
 const GUTTER_PX = 15;
-const INSET_PX = 3;
+const CORNER_PX = 2;
 
 function thumbFor(el: HTMLElement) {
 	const { scrollTop, scrollHeight, clientHeight } = el;
-	const track = el.offsetHeight - INSET_PX * 2;
+	const inset = el.clientTop > 0 ? CORNER_PX : 0;
+	const track = el.offsetHeight - inset * 2;
 	if (clientHeight === 0 || scrollHeight <= clientHeight || track <= 0) {
 		return null;
 	}
 	const ratio = clientHeight / scrollHeight;
 	const height = Math.min(track, Math.max(MIN_THUMB_PX, ratio * track));
 	const travel = track - height;
-	const top = INSET_PX + (scrollTop / (scrollHeight - clientHeight)) * travel;
+	const top = inset + (scrollTop / (scrollHeight - clientHeight)) * travel;
 	return { top, height, travel };
 }
 
