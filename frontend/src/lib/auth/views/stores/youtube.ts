@@ -1,6 +1,7 @@
 import {
 	ClearYouTubeCookies,
 	SetYouTubeCookies,
+	YouTubeBrowserLogin,
 	YouTubeSignedIn,
 } from "@bindings/app";
 import { signal } from "@preact/signals";
@@ -20,6 +21,16 @@ export async function syncYouTubeStatus(): Promise<void> {
 export async function saveYouTubeCookies(cookies: string): Promise<void> {
 	await SetYouTubeCookies(cookies);
 	await syncYouTubeStatus();
+}
+
+// Opens a window on youtube.com so the user can sign in normally; the page
+// hands its cookies back to the app.
+export async function loginYouTubeWithBrowser(): Promise<void> {
+	try {
+		await YouTubeBrowserLogin();
+	} finally {
+		await syncYouTubeStatus();
+	}
 }
 
 export async function signOutYouTube(): Promise<void> {

@@ -201,6 +201,16 @@ export function Version(): $CancellablePromise<string> {
     return $Call.ByID(3689526796);
 }
 
+/**
+ * YouTubeBrowserLogin opens a window on youtube.com so the user can sign in
+ * normally; the page beacons its document.cookie back to a local listener, which
+ * is stored for innertube requests. Blocks until signed in, the window is
+ * closed, or it times out.
+ */
+export function YouTubeBrowserLogin(): $CancellablePromise<void> {
+    return $Call.ByID(2263405944);
+}
+
 export function YouTubeSignedIn(): $CancellablePromise<boolean> {
     return $Call.ByID(513882258);
 }

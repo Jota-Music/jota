@@ -3,7 +3,11 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"log"
+	"net"
+	"net/http"
 	stdsync "sync"
 	"time"
 
@@ -17,6 +21,7 @@ import (
 	"github.com/Jota-Music/jota/internal/services/youtube"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 type App struct {
@@ -250,6 +255,73 @@ func (a *App) SetYouTubeCookies(cookies string) error {
 
 func (a *App) ClearYouTubeCookies() error {
 	return youtube.ClearCookies()
+}
+
+// YouTubeBrowserLogin opens a window on youtube.com so the user can sign in
+// normally; the page beacons its document.cookie back to a local listener, which
+// is stored for innertube requests. Blocks until signed in, the window is
+// closed, or it times out.
+func (a *App) YouTubeBrowserLogin() error {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return fmt.Errorf("login listener: %w", err)
+	}
+	defer ln.Close()
+
+	cookies := make(chan string, 8)
+	server := &http.Server{
+		ReadHeaderTimeout: 5 * time.Second,
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(io.LimitReader(r.Body, 64<<10))
+			if len(body) > 0 {
+				select {
+				case cookies <- string(body):
+				default:
+				}
+			}
+		}),
+	}
+	defer server.Close()
+	go func() { _ = server.Serve(ln) }()
+
+	beacon := fmt.Sprintf("navigator.sendBeacon(%q, document.cookie)",
+		fmt.Sprintf("http://127.0.0.1:%d/", ln.Addr().(*net.TCPAddr).Port))
+
+	window := application.Get().Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:  "Sign in to YouTube",
+		URL:    "https://www.youtube.com/",
+		Width:  520,
+		Height: 760,
+	})
+	defer window.Close()
+
+	closed := make(chan struct{})
+	window.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
+		select {
+		case <-closed:
+		default:
+			close(closed)
+		}
+	})
+
+	ticker := time.NewTicker(1200 * time.Millisecond)
+	defer ticker.Stop()
+	timeout := time.After(3 * time.Minute)
+
+	for {
+		select {
+		case raw := <-cookies:
+			if err := youtube.SetCookies(raw); err == nil {
+				return nil
+			}
+		case <-ticker.C:
+			window.ExecJS(beacon)
+		case <-closed:
+			return errors.New("login window closed")
+		case <-timeout:
+			return errors.New("login timed out")
+		}
+	}
 }
 
 func (a *App) YouTubeSignedIn() bool {
