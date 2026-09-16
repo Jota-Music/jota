@@ -1,11 +1,5 @@
-import {
-	ReadClipboard,
-	SyncCheck,
-	SyncConnect,
-	SyncSend,
-	SyncStop,
-} from "@bindings/app";
-import { Clipboard, Events } from "@wailsio/runtime";
+import { SyncCheck, SyncConnect, SyncSend, SyncStop } from "@bindings/app";
+import { Events } from "@wailsio/runtime";
 import type { PeerMessage } from "@/lib/sync/model";
 import * as store from "@/lib/sync/views/stores";
 
@@ -86,18 +80,6 @@ export function stop(): void {
 
 export function send(msg: PeerMessage): void {
 	SyncSend(JSON.stringify(msg)).catch(() => {});
-}
-
-export async function paste(): Promise<string> {
-	try {
-		return await ReadClipboard();
-	} catch {
-		return "";
-	}
-}
-
-export async function copy(text: string): Promise<void> {
-	await Clipboard.SetText(text);
 }
 
 function reset(): void {

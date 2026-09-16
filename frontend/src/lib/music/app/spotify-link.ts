@@ -1,4 +1,4 @@
-export type SpotifyRef = {
+type SpotifyRef = {
 	type: "user" | "track" | "album" | "playlist" | "artist";
 	id: string;
 };

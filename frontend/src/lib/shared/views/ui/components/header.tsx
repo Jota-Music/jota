@@ -43,15 +43,7 @@ function loadType(): SpotifyType {
 		: "user";
 }
 
-export function Header({
-	class: _class,
-	className,
-	onDragStart,
-}: {
-	class?: string;
-	className?: string;
-	onDragStart?: (e: MouseEvent) => void;
-}) {
+export function Header() {
 	const [location, setLocation] = useLocation();
 	const desktop = System.IsDesktop();
 	const [openSearch, setOpenSearch] = useState(false);
@@ -99,17 +91,6 @@ export function Header({
 		}
 	}, [setLocation]);
 
-	function handleDragMouseDown(e: MouseEvent) {
-		const target = e.target as HTMLElement;
-		if (
-			target.closest(
-				"button, a, input, select, textarea, [role='slider'], [data-no-drag]",
-			)
-		)
-			return;
-		onDragStart?.(e);
-	}
-
 	const placeholder =
 		liveSource === "youtube"
 			? "Search in YouTube (videos or playlists)"
@@ -118,15 +99,9 @@ export function Header({
 				: `Spotify ${searchType.charAt(0).toUpperCase() + searchType.slice(1)} ID, URI or link...`;
 
 	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: pointer-only window drag surface
 		<header
 			style="--wails-draggable: drag"
-			onMouseDown={handleDragMouseDown}
-			class={cn(
-				"sticky top-0 z-40 md:z-100 border-b border-zinc-800 bg-zinc-950",
-				_class,
-				className,
-			)}
+			class="sticky top-0 z-40 md:z-100 border-b border-zinc-800 bg-zinc-950"
 		>
 			<div class="mx-auto flex items-center justify-between text-sm text-zinc-300 h-10 px-4">
 				<div class="flex h-full items-center gap-1 pl-1">

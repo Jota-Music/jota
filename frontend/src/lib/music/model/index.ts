@@ -1,4 +1,4 @@
-export interface Share {
+interface Share {
 	id: string;
 	url: string;
 }

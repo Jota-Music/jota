@@ -1,7 +1,5 @@
 import type { Song } from "@/lib/music/model";
 
-export type Role = "off" | "host" | "guest";
-
 export type ControlAction =
 	| { action: "toggle" }
 	| { action: "seek"; positionMs: number }

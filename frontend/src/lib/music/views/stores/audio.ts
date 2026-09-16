@@ -370,7 +370,7 @@ export function pause() {
 
 // Recover playback after a failed stream: reload the current song from a
 // freshly resolved URL instead of reusing the dead element/URL.
-export async function resume(): Promise<boolean> {
+async function resume(): Promise<boolean> {
 	if (audio && !audio.error && endedElement !== audio) {
 		try {
 			await audio.play();
@@ -413,7 +413,7 @@ export function setVolume(value: number) {
 	}
 }
 
-export function setMuted(value: boolean) {
+function setMuted(value: boolean) {
 	muted.value = value;
 	if (audio) audio.muted = muted.value;
 	if (typeof window !== "undefined") {

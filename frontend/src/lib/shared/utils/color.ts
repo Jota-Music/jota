@@ -1,7 +1,7 @@
 /* --------------------------------------------------
    NEUTRAL FILTER
 -------------------------------------------------- */
-export function isNeutral(r: number, g: number, b: number): boolean {
+function isNeutral(r: number, g: number, b: number): boolean {
 	const max = Math.max(r, g, b);
 	const min = Math.min(r, g, b);
 	return max - min < 20 || max < 25 || min > 230;
@@ -10,7 +10,7 @@ export function isNeutral(r: number, g: number, b: number): boolean {
 /* --------------------------------------------------
    RGB KEY
 -------------------------------------------------- */
-export function rgbToKey(r: number, g: number, b: number): string {
+function rgbToKey(r: number, g: number, b: number): string {
 	return `${r >> 4}-${g >> 4}-${b >> 4}`;
 }
 
@@ -138,7 +138,7 @@ export async function getDominantColorFromImage(
 /* --------------------------------------------------
    BRIGHTNESS (original)
 -------------------------------------------------- */
-export function getBrightness(r: number, g: number, b: number): number {
+function getBrightness(r: number, g: number, b: number): number {
 	return (r * 299 + g * 587 + b * 114) / 1000;
 }
 

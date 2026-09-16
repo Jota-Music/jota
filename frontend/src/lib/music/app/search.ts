@@ -18,7 +18,7 @@ export async function searchSpotify(
 	return (await Search(query, type_)) as unknown as SearchResult[];
 }
 
-export interface YouTubeVideo {
+interface YouTubeVideo {
 	id: string;
 	title: string;
 }

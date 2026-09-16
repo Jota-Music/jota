@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
 
-export type Status = "idle" | "connecting" | "open" | "closed";
+type Status = "idle" | "connecting" | "open" | "closed";
 
 export const role = signal<"off" | "host" | "guest">("off");
 export const status = signal<Status>("idle");

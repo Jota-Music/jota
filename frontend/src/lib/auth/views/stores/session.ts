@@ -34,13 +34,11 @@ export async function disconnectSpotify(): Promise<void> {
 export async function loginSpotifyAndWait(): Promise<boolean> {
 	try {
 		const url = await SpotifyLogin();
-		console.log("[auth] SpotifyLogin returned:", url);
 		if (!url) return false;
 
 		await open(url);
 		await SpotifyLoginAndWait();
 
-		console.log("[auth] Login complete");
 		await syncSpotifyStatus();
 		return true;
 	} catch (err) {

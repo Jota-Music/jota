@@ -43,7 +43,7 @@ export const compactPlayer = signal(
 		localStorage.getItem(PLAYER_COMPACT_KEY) === "1",
 );
 
-export function setCompactPlayer(value: boolean) {
+function setCompactPlayer(value: boolean) {
 	compactPlayer.value = value;
 	if (typeof window !== "undefined") {
 		localStorage.setItem(PLAYER_COMPACT_KEY, value ? "1" : "0");
