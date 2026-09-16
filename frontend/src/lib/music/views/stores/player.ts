@@ -2,6 +2,7 @@ import { signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 import {
 	audioDuration,
+	clampSeconds,
 	currentSong,
 	dragSeeking,
 	hasLoadedAudio,
@@ -25,30 +26,20 @@ import { forward, playGate } from "@/lib/music/views/stores/remote";
 
 export const autoAdvance = signal(true);
 
-function clampPlaybackSeconds(seconds: number): number {
-	if (!Number.isFinite(seconds) || seconds < 0) return 0;
-	const d = audioDuration.value;
-	if (Number.isFinite(d) && d > 0) {
-		const eps = 0.05;
-		return Math.min(seconds, Math.max(0, d - eps));
-	}
-	return seconds;
-}
-
 export function preloadUpcomingSongs(songs: Song[], idx: number) {
 	const upcoming = songs.slice(idx + 1, idx + 3);
 	if (upcoming.length > 0) void AudioCache.preload(...upcoming);
 }
 
 export function seekFromLocalControl(seconds: number) {
-	const clamped = clampPlaybackSeconds(seconds);
+	const clamped = clampSeconds(seconds, audioDuration.value);
 	forward({ action: "seek", positionMs: clamped * 1000 });
 	seek(clamped);
 }
 
 export function previewSeek(seconds: number) {
 	dragSeeking.value = true;
-	progress.value = clampPlaybackSeconds(seconds);
+	progress.value = clampSeconds(seconds, audioDuration.value);
 }
 
 export function commitSeek(seconds: number) {

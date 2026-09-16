@@ -152,24 +152,25 @@ export function update(song: Song | null, isPlaying: boolean) {
 	}
 }
 
-export function position(audio: HTMLAudioElement) {
+export function position(audio: HTMLAudioElement, durationOverride = 0) {
+	const duration = durationOverride > 0 ? durationOverride : audio.duration;
 	const media = session();
 	if (
 		media &&
-		Number.isFinite(audio.duration) &&
-		audio.duration > 0 &&
+		Number.isFinite(duration) &&
+		duration > 0 &&
 		Number.isFinite(audio.currentTime)
 	) {
 		try {
 			media.setPositionState({
-				duration: audio.duration,
+				duration,
 				playbackRate: audio.playbackRate,
-				position: Math.min(audio.currentTime, audio.duration),
+				position: Math.min(audio.currentTime, duration),
 			});
 		} catch {}
 	}
 
-	if (Number.isFinite(audio.duration)) storedDuration = audio.duration;
+	if (Number.isFinite(duration)) storedDuration = duration;
 	if (Number.isFinite(audio.currentTime)) storedPosition = audio.currentTime;
 	pushNative();
 }

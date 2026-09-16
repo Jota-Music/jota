@@ -25,6 +25,7 @@ function parseStoredMuted(raw: string | null): boolean {
 
 let audio: HTMLAudioElement | null = null;
 let loadedSongId: string | null = null;
+let knownDuration = 0;
 let loadToken = 0;
 
 let onTrackEndedCallback: (() => void) | null = null;
@@ -106,15 +107,15 @@ async function waitUntilBufferedEnough(el: HTMLAudioElement): Promise<void> {
 	throw new Error("audio load error");
 }
 
-function clampStartSeconds(
-	instance: HTMLAudioElement,
-	seconds: number,
-): number {
+function knownDurationOr(d: number): number {
+	return knownDuration > 0 ? knownDuration : d;
+}
+
+export function clampSeconds(seconds: number, duration: number): number {
 	if (!Number.isFinite(seconds) || seconds < 0) return 0;
-	const d = instance.duration;
-	if (Number.isFinite(d) && d > 0) {
+	if (Number.isFinite(duration) && duration > 0) {
 		const eps = 0.05;
-		return Math.min(seconds, Math.max(0, d - eps));
+		return Math.min(seconds, Math.max(0, duration - eps));
 	}
 	return seconds;
 }
@@ -141,6 +142,7 @@ async function loadSongIntoPlayer(
 		audio.load();
 		audio = null;
 		loadedSongId = null;
+		knownDuration = 0;
 		AudioCache.pin(null);
 		if (prevId) AudioCache.releaseElement(prevId);
 	}
@@ -152,9 +154,10 @@ async function loadSongIntoPlayer(
 	currentSong.value = song;
 	media.update(song, isPlaying.value);
 
-	let data: { url: string; youtube: string };
+	let data: { url: string; youtube: string; duration: number };
 	try {
 		data = await AudioCache.get(song);
+		knownDuration = data.duration > 0 ? data.duration : 0;
 		if (data.youtube) setYoutube(song, data.youtube);
 	} catch (err) {
 		if (token !== loadToken) return false;
@@ -190,7 +193,7 @@ async function loadSongIntoPlayer(
 
 	bindEvents(instance);
 
-	const d0 = instance.duration;
+	const d0 = knownDurationOr(instance.duration);
 	if (Number.isFinite(d0) && d0 > 0) {
 		audioDuration.value = d0;
 	}
@@ -199,7 +202,7 @@ async function loadSongIntoPlayer(
 	const startAt = (): number => {
 		const raw =
 			typeof startSeconds === "function" ? startSeconds() : startSeconds;
-		return clampStartSeconds(instance, raw ?? 0);
+		return clampSeconds(raw ?? 0, knownDurationOr(instance.duration));
 	};
 
 	if (autostart) {
@@ -381,6 +384,7 @@ export function stopPlayer() {
 		audio.load();
 		audio = null;
 		loadedSongId = null;
+		knownDuration = 0;
 		if (prevId) AudioCache.releaseElement(prevId);
 	}
 	AudioCache.pin(null);
@@ -393,7 +397,7 @@ export function stopPlayer() {
 
 function bindEvents(a: HTMLAudioElement) {
 	const syncDuration = () => {
-		const d = a.duration;
+		const d = knownDurationOr(a.duration);
 		audioDuration.value = Number.isFinite(d) && d > 0 ? d : 0;
 	};
 
@@ -412,7 +416,7 @@ function bindEvents(a: HTMLAudioElement) {
 
 	a.ontimeupdate = () => {
 		if (!dragSeeking.value) progress.value = a.currentTime;
-		media.position(a);
+		media.position(a, knownDuration);
 	};
 
 	a.onended = () => {
@@ -425,6 +429,7 @@ function bindEvents(a: HTMLAudioElement) {
 		a.onerror = null;
 		isPlaying.value = false;
 		isLoading.value = false;
+		knownDuration = 0;
 		if (loadedSongId) AudioCache.remove(loadedSongId);
 		audio = null;
 		loadedSongId = null;

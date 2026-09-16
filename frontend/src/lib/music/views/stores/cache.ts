@@ -3,6 +3,7 @@ import type { Song } from "@/lib/music/model";
 
 type CachedAudio = {
 	url: string;
+	duration: number;
 	audio?: HTMLAudioElement;
 	lastUsed: number;
 	youtube: string;
@@ -126,6 +127,7 @@ export class AudioCache {
 			.then((data) => {
 				const value: CachedAudio = {
 					url: data.url,
+					duration: data.duration,
 					lastUsed: Date.now(),
 					youtube: data.youtube,
 					expireAt: data.expireAt ?? 0,
