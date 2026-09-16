@@ -9,11 +9,15 @@ import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 export function SignInPrompt() {
 	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	async function signIn() {
 		setBusy(true);
+		setError(null);
 		try {
 			await loginYouTubeWithBrowser();
+		} catch (err) {
+			setError(err instanceof Error ? err.message : String(err));
 		} finally {
 			setBusy(false);
 		}
@@ -59,6 +63,12 @@ export function SignInPrompt() {
 						Not now
 					</button>
 				</div>
+
+				{error && (
+					<p class="text-xs text-red-400">
+						{error} — you can paste your cookies in Settings → Account instead.
+					</p>
+				)}
 			</div>
 		</Modal>
 	);

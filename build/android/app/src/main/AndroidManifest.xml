@@ -59,6 +59,7 @@
             android:name=".YouTubeLoginActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+            android:windowSoftInputMode="adjustResize"
             android:label="@string/app_name" />
 
         <provider

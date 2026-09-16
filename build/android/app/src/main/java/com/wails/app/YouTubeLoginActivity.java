@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -51,8 +52,16 @@ public class YouTubeLoginActivity extends AppCompatActivity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setUserAgentString(USER_AGENT);
+        settings.setLoadsImagesAutomatically(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(false);
+        settings.setSupportMultipleWindows(false);
         // Google's sign-in sets cookies across domains.
         cookieManager.setAcceptThirdPartyCookies(webView, true);
+
+        // Google's verification steps need a working soft keyboard and focus.
+        webView.setFocusable(true);
+        webView.setFocusableInTouchMode(true);
+        webView.requestFocus(View.FOCUS_DOWN);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -64,6 +73,12 @@ public class YouTubeLoginActivity extends AppCompatActivity {
 
         webView.loadUrl(YOUTUBE_URL);
         handler.postDelayed(poll, POLL_MS);
+    }
+
+    @Override
+    public void onBackPressed() {
+        setResult(RESULT_CANCELED);
+        super.onBackPressed();
     }
 
     private final Runnable poll = new Runnable() {
