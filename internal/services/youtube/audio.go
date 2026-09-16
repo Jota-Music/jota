@@ -267,9 +267,9 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 	return &audio, nil
 }
 
-func cachedAudioBySong(cacheKey string) *music.Audio {
+func cachedAudio(key string) *music.Audio {
 	var cached music.Audio
-	if err := audioBucket.GetObject("spotify:"+cacheKey, &cached); err == nil {
+	if err := audioBucket.GetObject(key, &cached); err == nil {
 		if audioCacheStillValid(&cached) {
 			return &cached
 		}
@@ -277,14 +277,12 @@ func cachedAudioBySong(cacheKey string) *music.Audio {
 	return nil
 }
 
+func cachedAudioBySong(cacheKey string) *music.Audio {
+	return cachedAudio("spotify:" + cacheKey)
+}
+
 func cachedAudioByYoutube(youtubeId string) *music.Audio {
-	var cached music.Audio
-	if err := audioBucket.GetObject(youtubeId, &cached); err == nil {
-		if audioCacheStillValid(&cached) {
-			return &cached
-		}
-	}
-	return nil
+	return cachedAudio(youtubeId)
 }
 
 func saveAudioBySong(cacheKey string, audio music.Audio) {
