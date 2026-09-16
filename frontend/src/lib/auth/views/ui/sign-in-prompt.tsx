@@ -1,15 +1,14 @@
-import { Loader2, LogIn, X } from "lucide-preact";
 import { useState } from "preact/hooks";
 import {
 	dismissYouTubeSignInSuggestion,
 	loginYouTubeWithBrowser,
 	youtubeSignInSuggested,
 } from "@/lib/auth/views/stores/youtube";
+import { Modal } from "@/lib/shared/views/ui/components/modal";
+import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 export function SignInPrompt() {
 	const [busy, setBusy] = useState(false);
-
-	if (!youtubeSignInSuggested.value) return null;
 
 	async function signIn() {
 		setBusy(true);
@@ -21,29 +20,46 @@ export function SignInPrompt() {
 	}
 
 	return (
-		<div class="relative flex items-center gap-3 border-b border-amber-900/40 bg-amber-950/40 px-4 py-2 text-sm">
-			<LogIn size={16} class="shrink-0 text-amber-300" />
-			<p class="min-w-0 flex-1 truncate text-amber-200">
-				This track needs a YouTube sign-in — it is age-restricted or YouTube
-				asked to confirm you are not a bot.
-			</p>
-			<button
-				type="button"
-				onClick={() => void signIn()}
-				disabled={busy}
-				class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-amber-950 transition-opacity hover:opacity-85 disabled:opacity-60"
-			>
-				{busy ? <Loader2 size={12} class="animate-spin" /> : null}
-				{busy ? "Waiting…" : "Sign in"}
-			</button>
-			<button
-				type="button"
-				onClick={() => dismissYouTubeSignInSuggestion()}
-				aria-label="Dismiss"
-				class="shrink-0 cursor-pointer text-amber-400/70 transition-colors hover:text-amber-200"
-			>
-				<X size={14} />
-			</button>
-		</div>
+		<Modal
+			open={youtubeSignInSuggested.value}
+			close={() => dismissYouTubeSignInSuggestion()}
+			labelledBy="youtube-signin-title"
+		>
+			<div class="flex flex-col items-center gap-4 p-6 text-center">
+				<YoutubeIcon width={36} height={36} class="text-[#FF0000]" />
+				<div class="space-y-1">
+					<h2 id="youtube-signin-title" class="text-lg font-bold text-zinc-100">
+						Sign in to YouTube
+					</h2>
+					<p class="text-sm text-zinc-400">
+						This track needs a signed-in YouTube account — it is age-restricted
+						or YouTube asked to confirm you are not a bot.
+					</p>
+					<p class="text-xs text-amber-300/80">
+						Risk: using an account this way can get it banned by Google. Prefer
+						a secondary account.
+					</p>
+				</div>
+
+				<div class="flex items-center gap-2">
+					<button
+						type="button"
+						disabled={busy}
+						onClick={() => void signIn()}
+						class="rounded-full bg-[#FF0000] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-85 cursor-pointer disabled:opacity-50"
+					>
+						{busy ? "Waiting for sign-in…" : "Sign in"}
+					</button>
+					<button
+						type="button"
+						disabled={busy}
+						onClick={() => dismissYouTubeSignInSuggestion()}
+						class="rounded-full px-5 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer disabled:opacity-50"
+					>
+						Not now
+					</button>
+				</div>
+			</div>
+		</Modal>
 	);
 }
