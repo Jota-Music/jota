@@ -26,8 +26,12 @@ import { forward, playGate } from "@/lib/music/views/stores/remote";
 
 export const autoAdvance = signal(true);
 
+// Resolve this many tracks ahead: an already-resolved stream keeps playing while
+// the YouTube API is blocked, so a wider window rides out longer outages.
+const PRELOAD_AHEAD = 4;
+
 export function preloadUpcomingSongs(songs: Song[], idx: number) {
-	const upcoming = songs.slice(idx + 1, idx + 3);
+	const upcoming = songs.slice(idx + 1, idx + 1 + PRELOAD_AHEAD);
 	if (upcoming.length > 0) void AudioCache.preload(...upcoming);
 }
 
