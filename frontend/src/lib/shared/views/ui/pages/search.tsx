@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/preact-query";
 import { Loader } from "lucide-preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
-import { Link, useLocation } from "wouter-preact";
+import { Link, useLocation, useParams } from "wouter-preact";
 import { type SearchResult, searchSpotify } from "@/lib/music/app/search";
 import type { Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
@@ -86,40 +86,6 @@ function resultToSong(item: SearchResult): Song {
 	};
 }
 
-function getSearchParams(): {
-	type: SearchType | undefined;
-	query: string;
-} {
-	const pathname = window.location.pathname;
-	const match = pathname.match(/^\/search\/([^/]+)\/(.+)$/);
-
-	if (!match) {
-		return {
-			type: undefined,
-			query: "",
-		};
-	}
-
-	const [, rawType, rawQuery] = match;
-
-	const validTypes: SearchType[] = [
-		"user",
-		"track",
-		"album",
-		"playlist",
-		"artist",
-	];
-
-	const type = validTypes.includes(rawType as SearchType)
-		? (rawType as SearchType)
-		: undefined;
-
-	return {
-		type,
-		query: rawQuery ? decodeURIComponent(rawQuery) : "",
-	};
-}
-
 function PlaylistGrid({ results }: { results: SearchResult[] }) {
 	return (
 		<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
@@ -131,7 +97,18 @@ function PlaylistGrid({ results }: { results: SearchResult[] }) {
 }
 
 export function SearchPage() {
-	const { type, query } = getSearchParams();
+	const params = useParams<{ type: string; query: string }>();
+	const validTypes: SearchType[] = [
+		"user",
+		"track",
+		"album",
+		"playlist",
+		"artist",
+	];
+	const type = validTypes.includes(params.type as SearchType)
+		? (params.type as SearchType)
+		: undefined;
+	const query = params.query ? decodeURIComponent(params.query) : "";
 	const [, setLocation] = useLocation();
 
 	const detailRoute = type ? detailRoutes[type] : undefined;
