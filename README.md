@@ -69,10 +69,18 @@ wails3 task package                            # .deb + .rpm + archlinux → bin
 
 ## Download
 
-Tagged releases ship `.deb`, `.rpm`, `.AppImage`, `.flatpak` and an AUR
-PKGBUILD for Linux, an `.apk` for Android, an unsigned NSIS `.exe` for Windows
-and an unsigned universal `.dmg` for macOS (Gatekeeper: right-click → **Open**
-on first launch).
+Tagged releases ship:
+
+| Platform | Artifacts |
+|----------|-----------|
+| Linux | `.deb`, `.rpm`, `.AppImage`, `.flatpak`, AUR PKGBUILD |
+| Android | `.apk` |
+| Windows | NSIS `.exe` |
+| macOS | universal `.dmg` |
+
+> [!WARNING]
+> The Windows `.exe` and macOS `.dmg` are unsigned and may be flagged or blocked
+> by SmartScreen and Gatekeeper.
 
 ## Roadmap
 
