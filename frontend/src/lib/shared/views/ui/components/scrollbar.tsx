@@ -1,5 +1,5 @@
 import type { RefObject } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 const MIN_THUMB_PX = 40;
 const GUTTER_PX = 15;
@@ -23,7 +23,7 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 	const bar = useRef<HTMLDivElement>(null);
 	const drag = useRef<{ y: number; top: number } | null>(null);
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		const el = target.current;
 		const node = bar.current;
 		if (!el || !node) return;
