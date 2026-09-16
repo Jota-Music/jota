@@ -325,7 +325,7 @@ func TestAudioURLDoesNotRefreshWhenFallbackWorks(t *testing.T) {
 
 	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
 		if c.Name == preferredClient.Name {
-			return "", errLoginRequired
+			return "", ErrLoginRequired
 		}
 		return okServer.URL, nil
 	}
@@ -364,7 +364,7 @@ func TestAudioURLRefreshesVisitorWhenNoClientPlays(t *testing.T) {
 	calls := 0
 	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
 		calls++
-		return "", errLoginRequired
+		return "", ErrLoginRequired
 	}
 
 	_, _, err := audioURL("dQw4w9WgXcQ")

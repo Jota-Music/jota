@@ -5,8 +5,20 @@ import {
 	YouTubeSignedIn,
 } from "@bindings/app";
 import { signal } from "@preact/signals";
+import { Events } from "@wailsio/runtime";
 
 export const youtubeSignedIn = signal(false);
+
+// Set when a track fails because it needs a signed-in YouTube session.
+export const youtubeSignInSuggested = signal(false);
+
+Events.On("youtube:signin-required", () => {
+	if (!youtubeSignedIn.value) youtubeSignInSuggested.value = true;
+});
+
+export function dismissYouTubeSignInSuggestion(): void {
+	youtubeSignInSuggested.value = false;
+}
 
 export async function syncYouTubeStatus(): Promise<void> {
 	try {
@@ -14,6 +26,7 @@ export async function syncYouTubeStatus(): Promise<void> {
 	} catch {
 		youtubeSignedIn.value = false;
 	}
+	if (youtubeSignedIn.value) youtubeSignInSuggested.value = false;
 }
 
 // Storing account cookies is what unlocks age-restricted videos and avoids the

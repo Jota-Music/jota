@@ -21,9 +21,9 @@ var audioBucket = kv.UseBucket("youtube-audio")
 
 var probeClient = &http.Client{Timeout: 8 * time.Second}
 
-// errLoginRequired is YouTube's bot check: the player response carries no
-// stream URLs until the visitor token is refreshed or the client rotates.
-var errLoginRequired = errors.New("youtube: login required")
+// ErrLoginRequired means YouTube wants a signed-in session: either the bot
+// check, or an age-restricted video. Neither resolves without account cookies.
+var ErrLoginRequired = errors.New("youtube: login required")
 
 // bestAudio picks the audio format with the fastest, most compatible start.
 // audio/mp4 (AAC) is preferred over audio/webm (Opus): WebKitGTK's GStreamer
@@ -242,7 +242,7 @@ func playerStreamURL(c clientConfig, videoID string) (string, error) {
 	}
 
 	if pr.PlayabilityStatus.Status == "LOGIN_REQUIRED" {
-		return "", errLoginRequired
+		return "", ErrLoginRequired
 	}
 
 	if pr.PlayabilityStatus.Status != "OK" {
@@ -304,7 +304,7 @@ func audioURL(videoID string) (string, clientConfig, error) {
 		for _, c := range allClients() {
 			raw, err := playerStreamURLFn(c, videoID)
 			if err != nil {
-				if errors.Is(err, errLoginRequired) {
+				if errors.Is(err, ErrLoginRequired) {
 					loginRequired = true
 				}
 				if firstErr == nil {

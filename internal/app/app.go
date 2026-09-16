@@ -218,6 +218,11 @@ func (a *App) ResolveAudio(song music.Song) (music.Audio, error) {
 	if err != nil {
 		log.Printf("resolve-audio failed id=%q youtubeId=%q name=%q err=%v",
 			song.Id, song.YoutubeId, song.Name, err)
+
+		// A sign-in would fix it, so nudge the UI to offer one.
+		if errors.Is(err, youtube.ErrLoginRequired) && !youtube.HasAuth() {
+			application.Get().Event.Emit("youtube:signin-required", song.Name)
+		}
 	}
 	return audio, err
 }

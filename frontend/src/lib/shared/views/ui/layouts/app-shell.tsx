@@ -1,5 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { useRef } from "preact/hooks";
+import { SignInPrompt } from "@/lib/auth/views/ui/sign-in-prompt";
 import { Welcome } from "@/lib/auth/views/ui/welcome";
 import Queue from "@/lib/music/views/ui/queue";
 import { cn } from "@/lib/shared/utils/tw";
@@ -28,6 +29,7 @@ export function AppShell({
 				<div class="flex flex-col bg-stone-950">
 					<Header />
 					<UpdateBanner />
+					<SignInPrompt />
 				</div>
 
 				<div
