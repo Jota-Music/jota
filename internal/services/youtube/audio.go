@@ -141,13 +141,21 @@ func playerStreamURL(c clientConfig, videoID string) (string, error) {
 	}
 
 	if pr.PlayabilityStatus.Status == "LOGIN_REQUIRED" {
-		invalidateVisitor()
-		data, err = retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, true, 3)
-		if err != nil {
-			return "", fmt.Errorf("player request failed: %w", err)
-		}
-		if err := json.Unmarshal(data, &pr); err != nil {
-			return "", fmt.Errorf("invalid JSON: %w", err)
+		for i := range 2 {
+			invalidateVisitor()
+			data, err = retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, true, 3)
+			if err != nil {
+				return "", fmt.Errorf("player request failed: %w", err)
+			}
+			if err := json.Unmarshal(data, &pr); err != nil {
+				return "", fmt.Errorf("invalid JSON: %w", err)
+			}
+			if pr.PlayabilityStatus.Status == "OK" {
+				break
+			}
+			if i == 0 {
+				log.Printf("youtube: %s LOGIN_REQUIRED, retrying after visitor refresh", videoID)
+			}
 		}
 	}
 

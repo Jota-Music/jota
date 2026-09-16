@@ -16,8 +16,8 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func TestGetVisitorDataNegativeCache(t *testing.T) {
-	origClient := http.DefaultClient
-	defer func() { http.DefaultClient = origClient }()
+	origClient := visitorClient
+	defer func() { visitorClient = origClient }()
 
 	apiKeyMu.Lock()
 	origKey := apiKey
@@ -38,7 +38,7 @@ func TestGetVisitorDataNegativeCache(t *testing.T) {
 	var hits int32
 	// Homepage variant WITHOUT VISITOR_DATA: exercises the negative cache.
 	body := `"INNERTUBE_API_KEY":"test_key"`
-	http.DefaultClient = &http.Client{
+	visitorClient = &http.Client{
 		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			atomic.AddInt32(&hits, 1)
 			return &http.Response{

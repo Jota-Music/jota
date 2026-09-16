@@ -1,8 +1,8 @@
 package youtube
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -17,12 +17,18 @@ const defaultAPIKey = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
 
 var apiKeyEnv = os.Getenv("YOUTUBE_API_KEY")
 
-const visitorTTL = 5 * time.Minute
+const (
+	visitorTTL       = 5 * time.Minute
+	visitorFetchWait = 10 * time.Second
+	visitorRetries   = 3
+)
 
 var (
 	innertubeApiKeyRe = regexp.MustCompile(`"INNERTUBE_API_KEY":"([^"]+)"`)
 	visitorDataRe     = regexp.MustCompile(`"VISITOR_DATA":"([^"]+)"`)
 )
+
+var visitorClient = &http.Client{Timeout: visitorFetchWait}
 
 type clientConfig struct {
 	Name        string
@@ -123,6 +129,8 @@ func invalidateVisitor() {
 // from YouTube's homepage at most once per visitorTTL. Freshness is tracked by
 // lastFetch regardless of whether the homepage carried VISITOR_DATA, so a
 // homepage variant without it does not trigger a full fetch on every request.
+// A failed refresh degrades to the cached values instead of erroring, so a
+// flaky homepage never takes playback down.
 func getVisitorData() (string, string, error) {
 	visitorDataMu.RLock()
 	if !lastFetch.IsZero() && time.Since(lastFetch) < visitorTTL {
@@ -138,26 +146,46 @@ func getVisitorData() (string, string, error) {
 		return visitorData, currentAPIKey(), nil
 	}
 
-	req, err := http.NewRequest("GET", "https://www.youtube.com/", nil)
-	if err != nil {
-		return "", "", err
-	}
-	req.Header.Set("User-Agent", preferredClient.UserAgent)
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	var body []byte
+	fetched := false
+	for i := range visitorRetries {
+		req, err := http.NewRequest("GET", "https://www.youtube.com/", nil)
+		if err != nil {
+			log.Printf("youtube: visitor fetch request build failed: %v", err)
+			break
+		}
+		req.Header.Set("User-Agent", preferredClient.UserAgent)
+		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", "", err
-	}
-	defer resp.Body.Close()
+		resp, err := visitorClient.Do(req)
+		if err != nil {
+			log.Printf("youtube: visitor fetch attempt %d/%d failed: %v", i+1, visitorRetries, err)
+			time.Sleep(time.Duration(1<<i) * time.Second)
+			continue
+		}
 
-	if resp.StatusCode != 200 {
-		return "", "", fmt.Errorf("unexpected status: %d", resp.StatusCode)
+		if resp.StatusCode != 200 {
+			resp.Body.Close()
+			log.Printf("youtube: visitor fetch attempt %d/%d: status %d", i+1, visitorRetries, resp.StatusCode)
+			time.Sleep(time.Duration(1<<i) * time.Second)
+			continue
+		}
+
+		data, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			log.Printf("youtube: visitor fetch attempt %d/%d: read error: %v", i+1, visitorRetries, err)
+			time.Sleep(time.Duration(1<<i) * time.Second)
+			continue
+		}
+		body = data
+		fetched = true
+		break
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", "", err
+	if !fetched {
+		log.Printf("youtube: visitor refresh failed, continuing with cached data")
+		return visitorData, currentAPIKey(), nil
 	}
 
 	if apiKeyEnv == "" {
