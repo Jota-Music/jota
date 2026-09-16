@@ -1,132 +1,94 @@
 # Jota
 
-Your music, your rules. Jota is a self-hosted music streaming app for desktop
-and mobile: browse Spotify, stream the audio through YouTube, and soon build
-your own library without depending on either.
+<p align="center">
+  <img src="assets/banner.png" alt="Jota — your music, your rules.">
+</p>
 
-No cloud, no tracking, no subscriptions. Your playlists, your queue, your
-listening — all on devices you control.
+> Your music, your rules.
+
+Developed by [salvadorsru](https://github.com/salvadorsru) — a hobby project,
+not affiliated with Spotify, Google or any music label.
+
+A self-hosted music streaming app for desktop and mobile. Browse Spotify, play
+the audio through YouTube, and start a jam over a relay you own.
+
+**No cloud. No tracking. No subscriptions.**
+
+[![CI](https://github.com/Jota-Music/jota/actions/workflows/ci.yml/badge.svg)](https://github.com/Jota-Music/jota/actions/workflows/ci.yml)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-4ea94b.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/go-1.26-00add8.svg)](go.mod)
 
 ## Features
 
-- **Two sources, one app.** Browse Spotify and YouTube side by side and play
-  either from the same player, queue and search bar. Spotify is optional — the
-  YouTube side works on its own.
-- **Spotify browsing.** Connect your account and browse playlists, albums,
-  artists, tracks and other users' public playlists, with search across all of
-  them.
-- **YouTube as a first-class source.** Search videos and playlists, save
-  playlists to your home shelf, and paste a YouTube link or ID to jump straight
-  to it. Playlists behave like any other: open, filter, order and play them.
-- **YouTube audio.** Every track is resolved to a YouTube stream at play time —
-  using its saved YouTube ID when it has one, or matching by title and artist.
-  When a match is wrong you can link the correct YouTube ID by hand.
-- **Full player.** Play/pause, seek, volume, shuffle and repeat (off/all/one),
-  plus a queue you can add to, reorder, move after the current track and remove.
-  Upcoming tracks are preloaded so playback stays smooth.
-- **Native media controls.** Playback integrates with the OS media session, so
-  media keys, lock-screen and notification controls work on desktop and mobile.
-- **Listen together.** Sync playback across devices through your own WebSocket
-  relay: queue, play/pause, position, shuffle and repeat. One person hosts the
-  room and shares the code, the rest tune in.
-- **Cross-platform.** Built with Wails 3 — native desktop on Linux, Windows and
-  macOS, plus Android from the same codebase. The window is frameless
-  with custom controls, remembers its size and position, and can stay on top.
-- **Self-hosted by design.** The relay is a small Go binary you can run
-  anywhere — Docker, a VPS, your home server.
+- **Two sources, one player.** Browse Spotify and YouTube side by side and
+  play either from the same queue and search bar. Spotify is optional — the
+  YouTube side works standalone.
+- **Browse Spotify.** Log in to browse playlists, albums, artists, tracks and
+  other users' public playlists, with search across all of them.
+- **YouTube first-class.** Search videos and playlists, save them to your home
+  shelf, or paste a link to jump straight in. Tracks resolve to a YouTube
+  stream at play time by saved ID or title/artist match — fix a wrong match by
+  hand.
+- **Full player.** Play/pause, seek, volume, shuffle and repeat, plus a queue
+  you can add to, reorder and prune. Upcoming tracks preload so playback stays
+  smooth.
+- **Native media controls.** Media keys, lock-screen and notification controls
+  work on desktop and mobile.
+- **Jams.** Sync queue, play/pause, position, shuffle and repeat across
+  devices over your own WebSocket relay
+  ([`Jota-Music/relay`](https://github.com/Jota-Music/relay)).
+- **Cross-platform.** Built with Wails 3 — native desktop on Linux, Windows
+  and macOS, plus Android, from one codebase.
 - **Private by default.** Data stays local. No accounts, no telemetry, no
   third-party servers.
 
-## Requirements
+## Screenshots
 
-- Go 1.26+
-- Bun 1.x (frontend)
-- Linux dev libraries: `webkit2gtk-4.1`, `gtk+-3.0`
-- Xcode command line tools for macOS builds
-- `wails3` CLI at `~/go/bin/wails3`
-- JDK ≤ 24 for Android builds (Gradle 9)
+<p align="center">
+  <img src="assets/screenshot-home.png" width="640" alt="Home — saved playlists from Spotify and YouTube">
+</p>
 
-## Usage
+<p align="center">
+  <img src="assets/screenshot-search.png" width="640" alt="Search across Spotify and YouTube">
+</p>
+
+<p align="center">
+  <img src="assets/screenshot-player.png" width="640" alt="Full player">
+</p>
+
+## Get started
+
+Requirements: Go 1.26+, Bun and `wails3`; on Linux also `webkit2gtk-4.1` and
+`gtk+-3.0`. Android builds need JDK ≤ 24, macOS needs Xcode CLT.
 
 ```bash
-WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev    # live reload + vite dev server (:9245)
-wails3 task build                              # binary -> bin/jota
-wails3 task package                            # .deb + .rpm + archlinux -> bin/
+WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev    # live reload (vite on :9245)
+wails3 task build                              # binary → bin/jota
+wails3 task package                            # .deb + .rpm + archlinux → bin/
 ```
 
-## Packages
+## Download
 
-Release artifacts are produced on tag (see `.github/workflows/release.yml`):
-
-- **Linux**: `.deb`, `.rpm`, `.AppImage`, `.flatpak`, AUR PKGBUILD.
-- **Android**: `.apk`.
-- **Windows**: unsigned NSIS installer.
-- **macOS**: unsigned universal `.dmg` (arm64 + amd64).
-
-The macOS build is neither signed nor notarized, so Gatekeeper blocks the first
-launch: right-click the app and choose **Open**, or run
-`xattr -dr com.apple.quarantine /Applications/Jota.app`.
-
-The Flatpak targets `org.gnome.Platform`, which already ships GTK3 + WebKit2GTK 4.1,
-so it runs on any distribution with Flatpak and needs nothing from the host.
-
-The AppImage is intentionally thin — it bundles only the Go binary and uses the
-host's **GTK3 + WebKit2GTK 4.1** (`gtk3`, `webkit2gtk-4.1` packages) so it runs
-across distributions; GStreamer plugins are needed for in-app media playback. It
-ships a statically linked runtime, so it does not require `libfuse2`, and when the
-host is missing GTK3/WebKit2GTK it prints the packages to install instead of
-failing inside the dynamic loader.
-
-## Listen together
-
-The app can sync playback across multiple devices. It's optional: it needs a
-WebSocket relay that each user hosts wherever they want.
-
-- One person hosts the room and shares the code; the rest join and listen to the
-  same thing — queue, play/pause, position, shuffle and repeat. Late joiners and
-  reconnects catch up from the last cached state.
-- Audio stays aligned across the room as devices keep their clocks in sync.
-- Rooms can be protected with an optional password, and the relay itself can
-  require a shared auth token.
-- The relay is `github.com/Jota-Music/relay`: a small Go binary, self-hostable
-  behind TLS (`wss://`) or with `docker run -e PORT=8080 -p 8080:8080 ghcr.io/jota-music/relay`.
-- In the app, open "Listen together", paste the relay URL and the room code.
+Tagged releases ship `.deb`, `.rpm`, `.AppImage`, `.flatpak` and an AUR
+PKGBUILD for Linux, an `.apk` for Android, an unsigned NSIS `.exe` for Windows
+and an unsigned universal `.dmg` for macOS (Gatekeeper: right-click → **Open**
+on first launch).
 
 ## Roadmap
 
-- **Internal playlists.** Search and create playlists stored locally, without
-  depending on Spotify or YouTube.
-- **More sources.** Additional music sources beyond Spotify and YouTube.
+- **Internal playlists** — search and create local playlists without depending
+  on Spotify or YouTube.
+- **More sources** beyond Spotify and YouTube.
 
 ## Disclaimer
 
-Jota is provided "as-is" for personal and educational use. This software
-interfaces with Spotify's public OAuth API and YouTube's undocumented innertube
-API for audio playback.
-
-- **Spotify**: uses the standard OAuth flow via
-  [go-librespot](https://github.com/Jota-Music/go-librespot), a fork of
-  [devgianlu/go-librespot](https://github.com/devgianlu/go-librespot). Users
-  should have a valid Spotify account. Jota does not bypass Spotify's access
-  controls.
-- **YouTube**: audio streams are fetched via YouTube's undocumented innertube
-  API. This usage is not endorsed by YouTube/Google and may violate their Terms
-  of Service. Users are responsible for ensuring their use complies with
-  applicable laws and platform policies. Respect the rights of content owners
-  and use music streaming features in accordance with your own subscriptions
-  and regional laws.
-
-Jota does not distribute, cache or monetize any copyrighted content. All music
-metadata and audio streams are fetched at runtime and belong to their
-respective rights holders. The developers assume no liability for misuse of
-this software. Use at your own discretion.
-
-## Documentation
-
-Full architecture, Spotify auth, bindings and conventions in `AGENTS.md`.
+Jota interfaces with Spotify's public OAuth API and YouTube's undocumented
+innertube API for audio. It does not bypass Spotify's access controls; YouTube
+usage is not endorsed by Google and may violate their Terms of Service — you
+are responsible for complying with applicable laws and platform policies. No
+content is distributed, cached or monetized: everything is fetched at runtime
+and belongs to its respective rights holders.
 
 ## License
 
-Copyright (C) 2026 salvadorsru
-
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+[GPL-3.0](LICENSE) · Copyright (C) 2026 salvadorsru
