@@ -47,7 +47,7 @@ export function SyncPanel() {
 							)}
 						/>
 						<h2 id="sync-panel-title" class="text-sm font-medium">
-							Listen together
+							Jams
 						</h2>
 						<span class="text-xs text-zinc-500 tabular-nums">
 							{active
@@ -107,7 +107,7 @@ function SessionForm() {
 					<p class="text-sm font-medium text-zinc-100">Relay server required</p>
 					<p class="text-xs text-zinc-500">
 						To use this feature you need a relay server. Configure one in
-						Settings to start or join a room.
+						Settings to start or join a jam.
 					</p>
 				</div>
 				<button
@@ -125,7 +125,7 @@ function SessionForm() {
 	return (
 		<div class="flex flex-col gap-3">
 			<label for="sync-room" class="text-xs text-zinc-500">
-				Room code
+				Jam code
 			</label>
 			<div class="flex gap-2">
 				<input
@@ -147,22 +147,22 @@ function SessionForm() {
 			<p class="text-xs text-zinc-500">
 				{active ? (
 					<>
-						You are in room{" "}
+						You are in jam{" "}
 						<span class="font-mono text-zinc-300">{currentRoom}</span>. Edit the
-						code to switch rooms.
+						code to switch jams.
 					</>
 				) : (
 					"If nobody is hosting it yet, you become the host; otherwise you join and listen in sync."
 				)}
 			</p>
 			<label for="sync-pass" class="text-xs text-zinc-500">
-				Room password
+				Jam password
 			</label>
 			<PasswordInput
 				id="sync-pass"
 				class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
 				placeholder="optional"
-				label="Room password"
+				label="Jam password"
 				value={store.password.value}
 				onValue={(v) => (store.password.value = v)}
 			/>
@@ -173,7 +173,7 @@ function SessionForm() {
 				onClick={() => void transport.connect(code.trim())}
 			>
 				<Link size={16} />
-				{connecting ? "Connecting…" : active ? "Switch room" : "Connect"}
+				{connecting ? "Connecting…" : active ? "Switch jam" : "Connect"}
 			</button>
 			{active && (
 				<button

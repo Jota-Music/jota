@@ -184,7 +184,7 @@ export function Header({
 					<button
 						onClick={() => (showSync.value = !showSync.value)}
 						type="button"
-						title="Listen together"
+						title="Jams"
 						class="flex size-8 items-center justify-center cursor-pointer"
 					>
 						<Radio class="size-5 md:size-4 text-zinc-400 hover:text-zinc-100" />
