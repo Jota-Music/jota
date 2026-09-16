@@ -6,7 +6,6 @@ import {
 	RefreshCw,
 	Settings,
 	Unplug,
-	Users,
 	X,
 } from "lucide-preact";
 import { useRef, useState } from "preact/hooks";
@@ -37,14 +36,16 @@ export function SyncPanel() {
 			<header class="flex shrink-0 flex-col gap-1 border-b border-zinc-800 px-4 py-3">
 				<div class="flex items-center justify-between gap-2 text-white">
 					<div class="flex items-center gap-2">
-						{active ? (
-							<Radio
-								size={22}
-								class={cn(connected ? "text-green-400" : "text-yellow-400")}
-							/>
-						) : (
-							<Users size={22} class="text-zinc-400" />
-						)}
+						<Radio
+							size={22}
+							class={cn(
+								active
+									? connected
+										? "text-green-400"
+										: "text-yellow-400"
+									: "text-zinc-400",
+							)}
+						/>
 						<h2 id="sync-panel-title" class="text-sm font-medium">
 							Listen together
 						</h2>

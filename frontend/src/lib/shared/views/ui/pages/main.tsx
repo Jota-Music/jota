@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
+import { ListMusic, Users } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
@@ -6,7 +7,12 @@ import {
 	getYouTubePlaylists,
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
-import { type Item, Shelf, YouTubeHint } from "@/lib/music/views/ui/shelf";
+import {
+	type IconType,
+	type Item,
+	Shelf,
+	YouTubeHint,
+} from "@/lib/music/views/ui/shelf";
 import { FollowingShelf } from "@/lib/music/views/ui/user/following";
 import { cn } from "@/lib/shared/utils/tw";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
@@ -71,10 +77,10 @@ export function MainPage() {
 		),
 	];
 
-	const tabs: { id: Tab; label: string }[] = [
-		{ id: "playlists", label: "Playlists" },
+	const tabs: { id: Tab; label: string; icon: IconType }[] = [
+		{ id: "playlists", label: "Playlists", icon: ListMusic },
 		...(spotifyConnected.value
-			? [{ id: "following" as Tab, label: "Following" }]
+			? [{ id: "following" as Tab, label: "Following", icon: Users }]
 			: []),
 	];
 
@@ -82,19 +88,21 @@ export function MainPage() {
 		<DefaultLayout class="gap-6">
 			<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
 				<div class="flex shrink-0 items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-					{tabs.map(({ id, label }) => (
+					{tabs.map(({ id, label, icon: Icon }) => (
 						<button
 							key={id}
 							type="button"
+							title={label}
+							aria-label={label}
 							onClick={() => setTab(id)}
 							class={cn(
-								"h-8 cursor-pointer rounded-md px-4 text-xs font-medium transition-colors",
+								"flex h-8 cursor-pointer items-center rounded-md px-3 transition-colors",
 								activeTab === id
 									? "bg-zinc-800 text-white"
 									: "text-zinc-500 hover:text-zinc-300",
 							)}
 						>
-							{label}
+							<Icon size={16} />
 						</button>
 					))}
 				</div>

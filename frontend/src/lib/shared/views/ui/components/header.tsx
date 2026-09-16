@@ -3,9 +3,9 @@ import {
 	ArrowLeft,
 	ChevronDown,
 	House,
+	Radio,
 	Search,
 	Settings,
-	Users,
 	X,
 } from "lucide-preact";
 import { useCallback, useEffect, useState } from "preact/hooks";
@@ -187,7 +187,7 @@ export function Header({
 						title="Listen together"
 						class="flex size-8 items-center justify-center cursor-pointer"
 					>
-						<Users class="size-5 md:size-4 text-zinc-400 hover:text-zinc-100" />
+						<Radio class="size-5 md:size-4 text-zinc-400 hover:text-zinc-100" />
 					</button>
 				</div>
 
