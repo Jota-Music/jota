@@ -58,11 +58,7 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 	const maxConcurrency = 3
 
 	batchCount := (total + batchSize - 1) / batchSize
-	type batchResult struct {
-		songs []music.Song
-		err   error
-	}
-	results := make([]batchResult, batchCount)
+	results := make([][]music.Song, batchCount)
 
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, maxConcurrency)
@@ -87,18 +83,15 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 			for _, t := range tracks {
 				songs = append(songs, trackToSong(t))
 			}
-			results[idx] = batchResult{songs: songs}
+			results[idx] = songs
 		}(i)
 	}
 
 	wg.Wait()
 
 	allSongs := make([]music.Song, 0, total)
-	for _, r := range results {
-		if r.err != nil {
-			return music.Playlist{}, r.err
-		}
-		allSongs = append(allSongs, r.songs...)
+	for _, songs := range results {
+		allSongs = append(allSongs, songs...)
 	}
 
 	meta, _ := getPlaylistMetadata(ctx, sess, uri)
