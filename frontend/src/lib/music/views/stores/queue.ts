@@ -9,11 +9,26 @@ const REPEAT_STORAGE_KEY = "music-repeat";
 
 type RepeatMode = "off" | "all" | "one";
 
-function loadQueue(): Song[] {
-	if (typeof window === "undefined") return [];
+function read(key: string): string | null {
+	if (typeof window === "undefined") return null;
 	try {
-		const raw = localStorage.getItem(QUEUE_STORAGE_KEY);
-		if (!raw) return [];
+		return localStorage.getItem(key);
+	} catch {
+		return null;
+	}
+}
+
+function write(key: string, value: string): void {
+	if (typeof window === "undefined") return;
+	try {
+		localStorage.setItem(key, value);
+	} catch {}
+}
+
+function loadQueue(): Song[] {
+	const raw = read(QUEUE_STORAGE_KEY);
+	if (!raw) return [];
+	try {
 		const parsed = JSON.parse(raw);
 		return Array.isArray(parsed) ? parsed : [];
 	} catch {
@@ -22,63 +37,35 @@ function loadQueue(): Song[] {
 }
 
 function loadIndex(): number {
-	if (typeof window === "undefined") return -1;
-	try {
-		const raw = localStorage.getItem(INDEX_STORAGE_KEY);
-		if (!raw) return -1;
-		const parsed = Number(raw);
-		return Number.isFinite(parsed) ? parsed : -1;
-	} catch {
-		return -1;
-	}
+	const raw = read(INDEX_STORAGE_KEY);
+	if (!raw) return -1;
+	const parsed = Number(raw);
+	return Number.isFinite(parsed) ? parsed : -1;
 }
 
 function loadShuffle(): boolean {
-	if (typeof window === "undefined") return false;
-	try {
-		const raw = localStorage.getItem(SHUFFLE_STORAGE_KEY);
-		return raw === "1";
-	} catch {
-		return false;
-	}
+	return read(SHUFFLE_STORAGE_KEY) === "1";
 }
 
 function loadRepeat(): RepeatMode {
-	if (typeof window === "undefined") return "off";
-	try {
-		const raw = localStorage.getItem(REPEAT_STORAGE_KEY);
-		return raw === "all" || raw === "one" ? raw : "off";
-	} catch {
-		return "off";
-	}
+	const raw = read(REPEAT_STORAGE_KEY);
+	return raw === "all" || raw === "one" ? raw : "off";
 }
 
 function saveQueue(q: Song[]) {
-	if (typeof window === "undefined") return;
-	try {
-		localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(q));
-	} catch {}
+	write(QUEUE_STORAGE_KEY, JSON.stringify(q));
 }
 
 function saveIndex(i: number) {
-	if (typeof window === "undefined") return;
-	try {
-		localStorage.setItem(INDEX_STORAGE_KEY, String(i));
-	} catch {}
+	write(INDEX_STORAGE_KEY, String(i));
 }
 
 function saveShuffle(v: boolean) {
-	if (typeof window === "undefined") return;
-	try {
-		localStorage.setItem(SHUFFLE_STORAGE_KEY, v ? "1" : "0");
-	} catch {}
+	write(SHUFFLE_STORAGE_KEY, v ? "1" : "0");
 }
 
 function saveRepeat(v: RepeatMode) {
-	if (typeof window === "undefined") return;
-	try {
-		localStorage.setItem(REPEAT_STORAGE_KEY, v);
-	} catch {}
+	write(REPEAT_STORAGE_KEY, v);
 }
 
 export const queue = signal<Song[]>(loadQueue());

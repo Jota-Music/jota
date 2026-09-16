@@ -36,11 +36,7 @@ function Queue() {
 	const viewStart = idx >= 0 ? Math.max(0, idx - QUEUE_VIEW_LOOKBACK) : 0;
 	const viewCount = songs.length === 0 ? 0 : songs.length - viewStart;
 
-	const handleMaskClick = () => {
-		showQueue.value = false;
-	};
-
-	const handleCloseClick = () => {
+	const closeQueue = () => {
 		showQueue.value = false;
 	};
 
@@ -156,7 +152,7 @@ function Queue() {
 	return (
 		<Modal
 			open={panel.open}
-			close={handleMaskClick}
+			close={closeQueue}
 			labelledBy="queue-panel-title"
 			closeLabel="Close queue"
 		>
@@ -177,7 +173,7 @@ function Queue() {
 						type="button"
 						class="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white cursor-pointer"
 						aria-label="Close"
-						onClick={handleCloseClick}
+						onClick={closeQueue}
 					>
 						<X size={20} />
 					</button>
