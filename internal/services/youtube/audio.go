@@ -196,28 +196,37 @@ func audioURL(videoID string) (string, clientConfig, error) {
 	var firstErr error
 	refreshed := false
 
-	for _, c := range allClients() {
-		raw, err := playerStreamURLFn(c, videoID)
-		if err != nil {
-			if errors.Is(err, errLoginRequired) && !refreshed {
-				log.Printf("youtube: %s LOGIN_REQUIRED, refreshing visitor once", videoID)
-				invalidateVisitor()
-				refreshed = true
+	for {
+		loginRequired := false
+
+		for _, c := range allClients() {
+			raw, err := playerStreamURLFn(c, videoID)
+			if err != nil {
+				if errors.Is(err, errLoginRequired) {
+					loginRequired = true
+				}
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+			if streamPlayable(c, raw) {
+				if c.Name != preferredClient.Name {
+					log.Printf("youtube: %s fell back to client %s", videoID, c.Name)
+				}
+				return raw, c, nil
 			}
 			if firstErr == nil {
-				firstErr = err
+				firstErr = fmt.Errorf("client %s returned unplayable URL", c.Name)
 			}
-			continue
 		}
-		if streamPlayable(c, raw) {
-			if c.Name != preferredClient.Name {
-				log.Printf("youtube: %s fell back to client %s", videoID, c.Name)
-			}
-			return raw, c, nil
+
+		if refreshed || !loginRequired {
+			break
 		}
-		if firstErr == nil {
-			firstErr = fmt.Errorf("client %s returned unplayable URL", c.Name)
-		}
+		log.Printf("youtube: %s no client played, refreshing visitor once", videoID)
+		invalidateVisitor()
+		refreshed = true
 	}
 
 	if firstErr != nil {

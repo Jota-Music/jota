@@ -181,6 +181,86 @@ func TestAudioURLRejectsUnplayableStreams(t *testing.T) {
 	}
 }
 
+func TestAudioURLDoesNotRefreshWhenFallbackWorks(t *testing.T) {
+	oldFn := playerStreamURLFn
+	defer func() { playerStreamURLFn = oldFn }()
+
+	okServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer okServer.Close()
+
+	visitorDataMu.Lock()
+	origVisitor, origLast, origBlocked := visitorData, lastFetch, blockedUntil
+	visitorData, lastFetch = "seed-token", time.Now()
+	blockedUntil = time.Time{}
+	visitorDataMu.Unlock()
+	defer func() {
+		visitorDataMu.Lock()
+		visitorData, lastFetch, blockedUntil = origVisitor, origLast, origBlocked
+		visitorDataMu.Unlock()
+	}()
+
+	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
+		if c.Name == preferredClient.Name {
+			return "", errLoginRequired
+		}
+		return okServer.URL, nil
+	}
+
+	url, client, err := audioURL("dQw4w9WgXcQ")
+	if err != nil {
+		t.Fatalf("expected a fallback to play, got %v", err)
+	}
+	if url != okServer.URL || client.Name == preferredClient.Name {
+		t.Fatalf("expected a non-preferred client, got %q/%q", url, client.Name)
+	}
+
+	visitorDataMu.RLock()
+	got := visitorData
+	visitorDataMu.RUnlock()
+	if got != "seed-token" {
+		t.Fatalf("visitor refreshed although a fallback worked: %q", got)
+	}
+}
+
+func TestAudioURLRefreshesVisitorWhenNoClientPlays(t *testing.T) {
+	oldFn := playerStreamURLFn
+	defer func() { playerStreamURLFn = oldFn }()
+
+	visitorDataMu.Lock()
+	origVisitor, origLast, origBlocked := visitorData, lastFetch, blockedUntil
+	visitorData, lastFetch = "seed-token", time.Now()
+	blockedUntil = time.Time{}
+	visitorDataMu.Unlock()
+	defer func() {
+		visitorDataMu.Lock()
+		visitorData, lastFetch, blockedUntil = origVisitor, origLast, origBlocked
+		visitorDataMu.Unlock()
+	}()
+
+	calls := 0
+	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
+		calls++
+		return "", errLoginRequired
+	}
+
+	_, _, err := audioURL("dQw4w9WgXcQ")
+	if err == nil {
+		t.Fatal("expected an error when every client is bot-checked")
+	}
+	if want := 2 * len(allClients()); calls != want {
+		t.Fatalf("clients probed %d times, want %d (one refresh, one retry)", calls, want)
+	}
+
+	visitorDataMu.RLock()
+	got := visitorData
+	visitorDataMu.RUnlock()
+	if got != "" {
+		t.Fatalf("expected the visitor to be invalidated, got %q", got)
+	}
+}
+
 func TestAudioURLReturnsFirstPlayableClient(t *testing.T) {
 	oldFn := playerStreamURLFn
 	defer func() { playerStreamURLFn = oldFn }()
