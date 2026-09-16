@@ -2,7 +2,10 @@ package app
 
 import (
 	"context"
+	"errors"
 	"log"
+	stdsync "sync"
+	"time"
 
 	"github.com/Jota-Music/jota/internal/env"
 	"github.com/Jota-Music/jota/internal/kv"
@@ -10,6 +13,7 @@ import (
 	"github.com/Jota-Music/jota/internal/services/follows"
 	"github.com/Jota-Music/jota/internal/services/spotify"
 	"github.com/Jota-Music/jota/internal/services/sync"
+	"github.com/Jota-Music/jota/internal/services/update"
 	"github.com/Jota-Music/jota/internal/services/youtube"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -17,6 +21,7 @@ import (
 
 type App struct {
 	ctx     context.Context
+	version string
 	Spotify *spotify.SpotifyService
 	Catalog *music.Catalog
 	YouTube *youtube.Service
@@ -24,11 +29,14 @@ type App struct {
 	Follows *follows.Service
 }
 
-func New() *App {
+var installMu stdsync.Mutex
+
+func New(version string) *App {
 	cfg := env.Load()
 	spotifySvc := spotify.NewSpotifyService(cfg.SpotifyClientID)
 	youTubeSvc := youtube.NewService()
 	return &App{
+		version: version,
 		Spotify: spotifySvc,
 		Catalog: music.NewCatalog(spotifySvc, youTubeSvc),
 		YouTube: youTubeSvc,
@@ -50,6 +58,36 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 func (a *App) ServiceShutdown() error {
 	kv.Close()
+	return nil
+}
+
+// ----- App bindings -----
+
+func (a *App) Version() string {
+	return a.version
+}
+
+func (a *App) CheckUpdate() (update.Info, error) {
+	return update.Check(a.version)
+}
+
+// InstallUpdate downloads and swaps in the newest release, then quits so the
+// relaunch scheduled by the updater can start the new version.
+func (a *App) InstallUpdate() error {
+	if !installMu.TryLock() {
+		return errors.New("update: install already in progress")
+	}
+	defer installMu.Unlock()
+
+	if err := update.Install(a.version, func(p update.Progress) {
+		application.Get().Event.Emit("update:progress", p)
+	}); err != nil {
+		return err
+	}
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		application.Get().Quit()
+	}()
 	return nil
 }
 

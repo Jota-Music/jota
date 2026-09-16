@@ -1,12 +1,11 @@
 import {
-	OpenURL,
 	SpotifyDisconnect,
 	SpotifyGetStatus,
 	SpotifyLogin,
 	SpotifyLoginAndWait,
 } from "@bindings/app";
 import { signal } from "@preact/signals";
-import { Browser } from "@wailsio/runtime";
+import { open } from "@/lib/shared/utils/open";
 
 export const spotifyConnected = signal(false);
 export const spotifyUser = signal<string | null>(null);
@@ -38,11 +37,7 @@ export async function loginSpotifyAndWait(): Promise<boolean> {
 		console.log("[auth] SpotifyLogin returned:", url);
 		if (!url) return false;
 
-		if (isAndroid()) {
-			await OpenURL(url);
-		} else {
-			await Browser.OpenURL(url);
-		}
+		await open(url);
 		await SpotifyLoginAndWait();
 
 		console.log("[auth] Login complete");
@@ -53,8 +48,4 @@ export async function loginSpotifyAndWait(): Promise<boolean> {
 		await syncSpotifyStatus();
 		return false;
 	}
-}
-
-function isAndroid(): boolean {
-	return navigator.userAgent.toLowerCase().includes("android");
 }

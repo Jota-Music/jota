@@ -1,6 +1,12 @@
-import { OpenURL } from "@bindings/app";
-import { Browser } from "@wailsio/runtime";
-import { RadioTower, TriangleAlert, UserRound } from "lucide-preact";
+import {
+	Download,
+	ExternalLink,
+	Info,
+	Loader2,
+	RadioTower,
+	TriangleAlert,
+	UserRound,
+} from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
 	disconnectSpotify,
@@ -8,12 +14,20 @@ import {
 	spotifyUser,
 } from "@/lib/auth/views/stores/session";
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
+import { open } from "@/lib/shared/utils/open";
 import { cn } from "@/lib/shared/utils/tw";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import ClearLayout from "@/lib/shared/views/ui/layouts/clear";
 import * as transport from "@/lib/sync/app/transport";
 import * as store from "@/lib/sync/views/stores";
+import {
+	install,
+	installing,
+	percent,
+	update,
+	version,
+} from "@/lib/update/views/stores/update";
 
 const inputClass =
 	"w-full rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all";
@@ -37,6 +51,7 @@ function SettingsPage() {
 
 					<AccountSettings />
 					<RelaySettings />
+					<AboutSettings />
 
 					<footer class="mt-auto pt-6 text-center text-xs text-zinc-600">
 						Developed by{" "}
@@ -58,11 +73,60 @@ function SettingsPage() {
 const GITHUB_URL = "https://github.com/salvadorsru";
 
 function openDeveloper(): void {
-	if (navigator.userAgent.toLowerCase().includes("android")) {
-		void OpenURL(GITHUB_URL);
-	} else {
-		void Browser.OpenURL(GITHUB_URL);
+	void open(GITHUB_URL);
+}
+
+function AboutSettings() {
+	return (
+		<section class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
+			<div class="flex items-center gap-2">
+				<Info size={18} class="text-zinc-400" />
+				<h2 class="text-sm font-semibold text-zinc-200">About</h2>
+			</div>
+
+			<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
+				<div class="min-w-0">
+					<p class="text-xs text-zinc-500">Version</p>
+					<p class="truncate text-sm text-zinc-100">{version.value || "dev"}</p>
+				</div>
+				<UpdateAction />
+			</div>
+		</section>
+	);
+}
+
+function UpdateAction() {
+	const info = update.value;
+
+	if (!info?.available) {
+		return null;
 	}
+
+	const p = installing.value ? percent() : null;
+
+	return (
+		<button
+			type="button"
+			disabled={installing.value}
+			onClick={() => (info.installable ? void install() : void open(info.url))}
+			class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-(--dominant-color) px-3 py-2 text-xs font-semibold text-(--binary-color) transition-opacity hover:opacity-85 disabled:opacity-50"
+		>
+			{installing.value ? (
+				<Loader2 size={12} class="animate-spin" />
+			) : info.installable ? (
+				<Download size={12} />
+			) : (
+				<ExternalLink size={12} />
+			)}
+			{installing.value
+				? p == null
+					? "Updating…"
+					: `Updating… ${p}%`
+				: info.installable
+					? `Update to ${info.latest}`
+					: `Download ${info.latest}`}
+		</button>
+	);
 }
 
 function RelaySettings() {

@@ -7,6 +7,7 @@ import { Header } from "@/lib/shared/views/ui/components/header";
 import { OverlayHost } from "@/lib/shared/views/ui/components/modal";
 import { ErrorBar } from "@/lib/shared/views/ui/error-bar";
 import { SyncPanel } from "@/lib/sync/views/ui/session";
+import { UpdateBanner } from "@/lib/update/views/banner";
 
 export function AppShell({
 	children,
@@ -26,6 +27,7 @@ export function AppShell({
 			<div class={cn("h-dvh min-h-0 flex flex-col", rootClass)}>
 				<div class="flex flex-col bg-stone-950">
 					<Header />
+					<UpdateBanner />
 				</div>
 
 				<div

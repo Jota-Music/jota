@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter-preact";
 import { syncSpotifyStatus } from "@/lib/auth/views/stores/session";
 import { RequireSpotify } from "@/lib/auth/views/ui/spotify-connect";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
+import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
 
 const PlaylistPage = lazy(() =>
 	import("@/lib/shared/views/ui/pages/playlist").then((m) => ({
@@ -48,6 +49,8 @@ const queryClient = new QueryClient();
 function Router() {
 	useEffect(() => {
 		void syncSpotifyStatus();
+		void loadVersion();
+		void checkUpdate();
 	}, []);
 
 	return (

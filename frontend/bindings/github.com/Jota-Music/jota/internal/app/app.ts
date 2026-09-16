@@ -10,6 +10,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as music$0 from "../music/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as update$0 from "../services/update/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as youtube$0 from "../services/youtube/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -18,6 +21,10 @@ import * as $models from "./models.js";
 
 export function AddYouTubePlaylist(id: string): $CancellablePromise<music$0.PlaylistSummary> {
     return $Call.ByID(2929125534, id);
+}
+
+export function CheckUpdate(): $CancellablePromise<update$0.Info> {
+    return $Call.ByID(1914456057);
 }
 
 export function FollowUser(account: string, user: string): $CancellablePromise<void> {
@@ -74,6 +81,14 @@ export function GetUserProfile(username: string): $CancellablePromise<music$0.Us
 
 export function GetYouTubePlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
     return $Call.ByID(4268478320);
+}
+
+/**
+ * InstallUpdate downloads and swaps in the newest release, then quits so the
+ * relaunch scheduled by the updater can start the new version.
+ */
+export function InstallUpdate(): $CancellablePromise<void> {
+    return $Call.ByID(668692034);
 }
 
 /**
@@ -167,4 +182,8 @@ export function SyncStop(): $CancellablePromise<void> {
 
 export function UnfollowUser(account: string, user: string): $CancellablePromise<void> {
     return $Call.ByID(2753135609, account, user);
+}
+
+export function Version(): $CancellablePromise<string> {
+    return $Call.ByID(3689526796);
 }
