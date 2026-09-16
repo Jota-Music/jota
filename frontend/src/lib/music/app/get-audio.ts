@@ -14,25 +14,15 @@ function toAudio(data: Audio, fallback: string): Audio & { youtube: string } {
 export async function getAudio(
 	song: Song,
 ): Promise<Audio & { youtube: string }> {
-	try {
-		const data = (await ResolveAudio(
-			song as unknown as Parameters<typeof ResolveAudio>[0],
-		)) as unknown as Audio;
-		return toAudio(data, song.youtubeId ?? song.id);
-	} catch (error) {
-		console.error(error);
-		throw error;
-	}
+	const data = (await ResolveAudio(
+		song as unknown as Parameters<typeof ResolveAudio>[0],
+	)) as unknown as Audio;
+	return toAudio(data, song.youtubeId ?? song.id);
 }
 
 export async function updateYoutubeId(
 	songId: string,
 	youtubeId: string,
 ): Promise<void> {
-	try {
-		await SetYouTubeId(songId, youtubeId);
-	} catch (error) {
-		console.error("Error updating YouTube ID:", error);
-		throw error;
-	}
+	await SetYouTubeId(songId, youtubeId);
 }

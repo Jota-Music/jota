@@ -4,10 +4,5 @@ import type { PlaylistSummary } from "@/lib/music/model";
 export default async function getUserPlaylists(
 	user: string,
 ): Promise<PlaylistSummary[]> {
-	try {
-		return (await GetUserPlaylists(user)) as unknown as PlaylistSummary[];
-	} catch (error) {
-		console.error(error);
-		throw error;
-	}
+	return (await GetUserPlaylists(user)) as unknown as PlaylistSummary[];
 }

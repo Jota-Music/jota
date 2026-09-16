@@ -15,12 +15,7 @@ export async function searchSpotify(
 	type_: "user" | "track" | "album" | "playlist" | "artist",
 	query: string,
 ): Promise<SearchResult[]> {
-	try {
-		return (await Search(query, type_)) as unknown as SearchResult[];
-	} catch (error) {
-		console.error(error);
-		throw error;
-	}
+	return (await Search(query, type_)) as unknown as SearchResult[];
 }
 
 export interface YouTubeVideo {
