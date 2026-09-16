@@ -25,6 +25,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -76,6 +77,10 @@ public class MainActivity extends AppCompatActivity {
     private static final int VIDEO_CAPTURE_REQUEST = 7003;
     private static final int CAMERA_PERMISSION_REQUEST = 7010;
     private static final int WEBVIEW_CAMERA_PERMISSION_REQUEST = 7011;
+    private static final int WEBVIEW_FILE_CHOOSER_REQUEST = 7012;
+    // In-flight <input type="file"> callback; must be resolved exactly once or
+    // the input stops working after the first pick.
+    private ValueCallback<Uri[]> pendingFileChooser;
     private File pendingCaptureFile;
     private boolean pendingCaptureIsVideo;
     private PermissionRequest pendingWebCameraRequest;
@@ -229,6 +234,24 @@ public class MainActivity extends AppCompatActivity {
         // Grant camera access requested from web content (getUserMedia), used by
         // the in-app QR scanner. Requires the CAMERA runtime permission first.
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                                             FileChooserParams params) {
+                if (pendingFileChooser != null) {
+                    pendingFileChooser.onReceiveValue(null);
+                    pendingFileChooser = null;
+                }
+                pendingFileChooser = callback;
+                try {
+                    startActivityForResult(params.createIntent(), WEBVIEW_FILE_CHOOSER_REQUEST);
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to launch file chooser", e);
+                    pendingFileChooser = null;
+                    callback.onReceiveValue(null);
+                }
+                return true;
+            }
+
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> {
@@ -537,6 +560,16 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PHOTO_CAPTURE_REQUEST || requestCode == VIDEO_CAPTURE_REQUEST) {
             handleCaptureResult(resultCode, data);
+            return;
+        }
+        if (requestCode == WEBVIEW_FILE_CHOOSER_REQUEST) {
+            if (pendingFileChooser != null) {
+                Uri[] result = (resultCode == RESULT_OK && data != null)
+                        ? WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+                        : null;
+                pendingFileChooser.onReceiveValue(result);
+                pendingFileChooser = null;
+            }
             return;
         }
         if (requestCode != FILE_PICKER_REQUEST) {
