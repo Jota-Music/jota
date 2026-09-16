@@ -73,7 +73,7 @@ Tagged releases ship:
 
 | Platform | Artifacts |
 |----------|-----------|
-| Linux | `.deb`, `.rpm`, `.AppImage`, `.flatpak`, AUR PKGBUILD |
+| Linux | `.deb`, `.rpm`, `.AppImage`, `.flatpak`, `PKGBUILD` (AUR) |
 | Android | `.apk` |
 | Windows | NSIS `.exe` |
 | macOS | universal `.dmg` |
