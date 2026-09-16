@@ -60,7 +60,7 @@ func SetCookies(raw string) error {
 	if normalized == "" {
 		return errors.New("empty cookies")
 	}
-	if cookieValue(normalized, "SAPISID") == "" {
+	if sidValue(normalized) == "" {
 		return errors.New("cookies missing SAPISID")
 	}
 	if err := authBucket.SetString(authKey, normalized); err != nil {
@@ -122,7 +122,18 @@ func ClearCookies() error {
 }
 
 func HasAuth() bool {
-	return cookieValue(cookies(), "SAPISID") != ""
+	return sidValue(cookies()) != ""
+}
+
+// sidValue returns the signing secret, in preference order. SAPISID is often
+// absent in modern exports; __Secure-3PAPISID covers it.
+func sidValue(raw string) string {
+	for _, name := range []string{"SAPISID", "__Secure-3PAPISID", "__Secure-1PAPISID"} {
+		if v := cookieValue(raw, name); v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func cookieValue(raw, name string) string {
@@ -148,7 +159,7 @@ func originOf(rawURL string) string {
 // in, so callers can send the request unauthenticated.
 func authHeaders(origin string) map[string]string {
 	cookie := cookies()
-	sapisid := cookieValue(cookie, "SAPISID")
+	sapisid := sidValue(cookie)
 	if sapisid == "" {
 		return nil
 	}

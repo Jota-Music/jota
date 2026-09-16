@@ -272,26 +272,66 @@ func (a *App) YouTubeBrowserLogin() error {
 	server := &http.Server{
 		ReadHeaderTimeout: 5 * time.Second,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			body, _ := io.ReadAll(io.LimitReader(r.Body, 64<<10))
-			if len(body) > 0 {
+			if r.Method == http.MethodOptions {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+				w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "*")
+				w.Header().Set("Access-Control-Allow-Private-Network", "true")
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			_ = r.ParseForm()
+			value := r.FormValue("c")
+			if value == "" {
+				body, _ := io.ReadAll(io.LimitReader(r.Body, 64<<10))
+				value = string(body)
+			}
+			log.Printf("youtube: browser login received %d bytes", len(value))
+			if value != "" {
 				select {
-				case cookies <- string(body):
+				case cookies <- value:
 				default:
 				}
 			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = io.WriteString(w, "<!doctype html><title>Jota</title><p>Signed in. You can close this window.</p>")
 		}),
 	}
 	defer server.Close()
 	go func() { _ = server.Serve(ln) }()
 
-	beacon := fmt.Sprintf("navigator.sendBeacon(%q, document.cookie)",
-		fmt.Sprintf("http://127.0.0.1:%d/", ln.Addr().(*net.TCPAddr).Port))
+	// ExecJS is gated on the page loading the Wails runtime, which an external
+	// page never does, so inject the collector through WebviewWindowOptions.JS:
+	// it runs on every load. Once SAPISID shows up it hands document.cookie over
+	// as a top-level form POST, which sidesteps CORS, PNA and mixed content.
+	collector := fmt.Sprintf(`(function () {
+  var target = %q;
+  function send() {
+    try {
+      if (document.cookie.indexOf("SAPISID=") === -1 &&
+          document.cookie.indexOf("__Secure-3PAPISID=") === -1) return;
+      var form = document.createElement("form");
+      form.method = "POST";
+      form.action = target;
+      var field = document.createElement("textarea");
+      field.name = "c";
+      field.value = document.cookie;
+      form.appendChild(field);
+      (document.body || document.documentElement).appendChild(form);
+      form.submit();
+    } catch (e) {}
+  }
+  setInterval(send, 1500);
+  send();
+})();`, fmt.Sprintf("http://127.0.0.1:%d/", ln.Addr().(*net.TCPAddr).Port))
 
 	window := application.Get().Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:  "Sign in to YouTube",
 		URL:    "https://www.youtube.com/",
 		Width:  520,
 		Height: 760,
+		JS:     collector,
 	})
 	defer window.Close()
 
@@ -304,18 +344,15 @@ func (a *App) YouTubeBrowserLogin() error {
 		}
 	})
 
-	ticker := time.NewTicker(1200 * time.Millisecond)
-	defer ticker.Stop()
 	timeout := time.After(3 * time.Minute)
-
 	for {
 		select {
 		case raw := <-cookies:
-			if err := youtube.SetCookies(raw); err == nil {
-				return nil
+			if err := youtube.SetCookies(raw); err != nil {
+				log.Printf("youtube: browser login cookies rejected: %v", err)
+				continue
 			}
-		case <-ticker.C:
-			window.ExecJS(beacon)
+			return nil
 		case <-closed:
 			return errors.New("login window closed")
 		case <-timeout:

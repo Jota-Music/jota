@@ -84,6 +84,20 @@ func TestSetCookiesAcceptsCookiesTxt(t *testing.T) {
 	}
 }
 
+func TestSetCookiesAcceptsSecure3Papisid(t *testing.T) {
+	resetAuth(t)
+
+	if err := SetCookies("SID=abc; __Secure-3PAPISID=val3p"); err != nil {
+		t.Fatalf("SetCookies: %v", err)
+	}
+	if !HasAuth() {
+		t.Fatal("expected to be signed in")
+	}
+	if h := authHeaders("https://www.youtube.com"); h == nil {
+		t.Fatal("expected auth headers from __Secure-3PAPISID")
+	}
+}
+
 func TestAuthHeadersSignature(t *testing.T) {
 	resetAuth(t)
 	if err := SetCookies("SAPISID=sapisid123; SID=abc"); err != nil {
