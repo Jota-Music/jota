@@ -1,5 +1,5 @@
 import { useSignal } from "@preact/signals";
-import { Check, Edit2, X } from "lucide-preact";
+import { Check, Edit2 } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { updateYoutubeId } from "@/lib/music/app/get-audio";
 import type { Song } from "@/lib/music/model";
@@ -137,25 +137,14 @@ export default function SaveYoutubeId({
 						}}
 					/>
 
-					<div class="flex justify-end gap-2">
-						<button
-							type="button"
-							title="Cancel"
-							aria-label="Cancel"
-							class="cursor-pointer rounded-md p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
-							onClick={() => setOpen(false)}
-						>
-							<X class="size-4" />
-						</button>
-						<button
-							type="submit"
-							title="Save"
-							aria-label="Save"
-							class="cursor-pointer rounded-md p-2 text-white transition hover:bg-zinc-700"
-						>
-							<Check class="size-4" />
-						</button>
-					</div>
+					<button
+						type="submit"
+						title="Save"
+						aria-label="Save"
+						class="cursor-pointer self-end rounded-md p-2 text-white transition hover:bg-zinc-700"
+					>
+						<Check class="size-4" />
+					</button>
 				</form>
 			</Modal>
 		</>

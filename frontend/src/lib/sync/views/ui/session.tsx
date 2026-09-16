@@ -6,7 +6,6 @@ import {
 	RefreshCw,
 	Settings,
 	Unplug,
-	X,
 } from "lucide-preact";
 import { useRef, useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
@@ -59,14 +58,6 @@ export function SyncPanel() {
 									: "Offline"}
 						</span>
 					</div>
-					<button
-						type="button"
-						class="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white cursor-pointer"
-						aria-label="Close"
-						onClick={() => (showSync.value = false)}
-					>
-						<X size={20} />
-					</button>
 				</div>
 			</header>
 

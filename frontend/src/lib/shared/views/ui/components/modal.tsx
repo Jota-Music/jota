@@ -1,3 +1,4 @@
+import { X } from "lucide-preact";
 import { type ComponentChildren, createContext, type RefObject } from "preact";
 import { createPortal } from "preact/compat";
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
@@ -144,6 +145,16 @@ export function Modal({
 				>
 					<div class="h-1.5 w-10 rounded-full bg-zinc-700" />
 				</div>
+
+				<button
+					type="button"
+					class="absolute right-2 top-2 z-20 rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white cursor-pointer"
+					aria-label={closeLabel}
+					onClick={close}
+				>
+					<X size={20} />
+				</button>
+
 				{children}
 			</div>
 		</div>,
