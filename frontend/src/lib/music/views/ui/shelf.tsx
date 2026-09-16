@@ -135,8 +135,10 @@ export function Shelf({
 		localStorage.setItem(filterKey, next);
 	};
 
+	const filterable = items.some((item) => item.source);
+
 	const filteredItems =
-		sourceFilter === "all"
+		sourceFilter === "all" || !filterable
 			? items
 			: items.filter((i) => i.source === sourceFilter);
 
@@ -153,7 +155,7 @@ export function Shelf({
 			) : (
 				<>
 					<div class="flex shrink-0 items-center justify-end px-3 py-2 gap-2">
-						{items.some((item) => item.source) && (
+						{filterable && (
 							<div class="mr-auto flex overflow-hidden rounded-md border border-zinc-800">
 								<button
 									type="button"

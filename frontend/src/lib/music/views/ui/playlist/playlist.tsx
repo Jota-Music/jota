@@ -1,6 +1,7 @@
 import { computed, effect, signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
+import { useEffect } from "preact/hooks";
 import { getFullPlaylist } from "@/lib/music/app/get-playlist";
 import type { Playlist, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
@@ -11,7 +12,6 @@ const storageKey = "playlist_filters";
 type OrderType = "added" | "reverse" | "duration-asc" | "duration-desc";
 
 type Filters = {
-	search: string;
 	order: OrderType;
 };
 
@@ -23,17 +23,15 @@ function isValidFilters(value: unknown): value is Filters {
 	const v = value as Record<string, unknown>;
 
 	return (
-		typeof v.search === "string" &&
-		(v.order === "added" ||
-			v.order === "reverse" ||
-			v.order === "duration-asc" ||
-			v.order === "duration-desc")
+		v.order === "added" ||
+		v.order === "reverse" ||
+		v.order === "duration-asc" ||
+		v.order === "duration-desc"
 	);
 }
 
 function loadFilters(): Filters {
 	const fallback: Filters = {
-		search: "",
 		order: "added",
 	};
 
@@ -84,13 +82,12 @@ function getSelectValue(e: Event): OrderType {
 
 const initial = loadFilters();
 
-const search = signal<string>(initial.search);
+const search = signal<string>("");
 const order = signal<OrderType>(initial.order);
 
 // persist reactively
 effect(() => {
 	saveFilters({
-		search: search.value,
 		order: order.value,
 	});
 });
@@ -100,6 +97,10 @@ effect(() => {
 export default function PlaylistPlain({ id }: { id: string }) {
 	const queryClient = useQueryClient();
 	const refreshing = signal(false);
+
+	useEffect(() => {
+		search.value = "";
+	}, [id]);
 
 	const { data, isLoading, isError } = useQuery<Playlist>({
 		queryKey: ["playlist", id],
