@@ -1,17 +1,10 @@
 import { useQuery } from "@tanstack/preact-query";
 import { Heart, User as UserIcon } from "lucide-preact";
-import type { ComponentChildren } from "preact";
 import { spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserProfile from "@/lib/music/app/get-user-profile";
 import { useFollows } from "@/lib/music/views/ui/user/follow";
 
-export function UserHeader({
-	username,
-	actions,
-}: {
-	username: string;
-	actions?: ComponentChildren;
-}) {
+export function UserHeader({ username }: { username: string }) {
 	const account = spotifyUser.value ?? "";
 
 	const profile = useQuery({
@@ -60,8 +53,6 @@ export function UserHeader({
 			>
 				<Heart size={14} class={isFollowing ? "fill-current" : ""} />
 			</button>
-
-			{actions}
 		</header>
 	);
 }

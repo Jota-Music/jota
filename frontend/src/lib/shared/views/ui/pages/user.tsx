@@ -1,4 +1,3 @@
-import { signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { RefreshCw } from "lucide-preact";
 import { useParams } from "wouter-preact";
@@ -11,7 +10,6 @@ export function UserPage() {
 	const { user } = useParams<{ user: string }>();
 
 	const queryClient = useQueryClient();
-	const refreshing = signal(false);
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["user-playlists", user],
@@ -19,14 +17,8 @@ export function UserPage() {
 		enabled: !!user,
 	});
 
-	async function handleRefresh() {
-		refreshing.value = true;
-		queryClient.removeQueries({ queryKey: ["user-playlists", user] });
-		await queryClient.fetchQuery({
-			queryKey: ["user-playlists", user],
-			queryFn: () => getUserPlaylists(user ?? ""),
-		});
-		refreshing.value = false;
+	function handleRefresh() {
+		queryClient.invalidateQueries({ queryKey: ["user-playlists", user] });
 	}
 
 	const playlists = data ?? [];
@@ -52,23 +44,7 @@ export function UserPage() {
 	return (
 		<DefaultLayout class="gap-6">
 			<div class="flex flex-col gap-6 min-h-0 flex-1">
-				<UserHeader
-					username={user ?? ""}
-					actions={
-						<button
-							type="button"
-							onClick={handleRefresh}
-							disabled={refreshing.value}
-							aria-label="Refresh playlists"
-							class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
-						>
-							<RefreshCw
-								size={14}
-								class={refreshing.value ? "animate-spin" : ""}
-							/>
-						</button>
-					}
-				/>
+				<UserHeader username={user ?? ""} />
 
 				<Shelf
 					items={playlists.map(
