@@ -50,7 +50,7 @@ export function UserPage() {
 	return (
 		<DefaultLayout class="gap-6">
 			<div class="flex flex-col gap-6 min-h-0 flex-1">
-				<UserHeader username={user ?? ""} />
+				<UserHeader username={user} />
 
 				<Shelf
 					items={playlists.map(

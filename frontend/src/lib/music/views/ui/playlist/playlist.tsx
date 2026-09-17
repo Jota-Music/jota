@@ -65,10 +65,10 @@ function sortSongs(songs: Song[], order: OrderType): Song[] {
 			return [...songs].reverse();
 
 		case "duration-asc":
-			return [...songs].sort((a, b) => (a.duration ?? 0) - (b.duration ?? 0));
+			return [...songs].sort((a, b) => a.duration - b.duration);
 
 		case "duration-desc":
-			return [...songs].sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0));
+			return [...songs].sort((a, b) => b.duration - a.duration);
 
 		default:
 			return songs;

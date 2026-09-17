@@ -6,7 +6,7 @@ import { useFollows } from "@/lib/music/views/ui/user/follow";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 
-export function UserHeader({ username }: { username: string }) {
+export function UserHeader({ username = "" }: { username?: string }) {
 	const account = spotifyUser.value ?? "";
 
 	const profile = useQuery({

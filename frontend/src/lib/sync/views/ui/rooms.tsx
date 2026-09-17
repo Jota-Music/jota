@@ -39,14 +39,14 @@ type Live = "idle" | "connecting" | "connected";
 
 function Status({
 	status,
-	pending,
+	pending = false,
 	size,
 	live,
 	members,
 	needsPassword,
 }: {
 	status?: RoomStatus;
-	pending: boolean;
+	pending?: boolean;
 	size: number;
 	live: Live;
 	members: number;
@@ -254,7 +254,7 @@ export function RoomsShelf() {
 			placeholder: (size) => (
 				<Status
 					status={query?.data}
-					pending={query?.isLoading ?? false}
+					pending={query?.isLoading}
 					size={size}
 					live={live}
 					members={members}
