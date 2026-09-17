@@ -196,6 +196,16 @@ func webPoToken(videoID string) string {
 	}
 
 	potMu.Lock()
+	// Expired tokens are never read again; sweep them so a long session over
+	// many videos does not grow the map without bound.
+	if len(potCache) >= 128 {
+		now := time.Now()
+		for id, e := range potCache {
+			if now.After(e.expires) {
+				delete(potCache, id)
+			}
+		}
+	}
 	potCache[videoID] = potEntry{token: out.PoToken, expires: expires}
 	potMu.Unlock()
 	return out.PoToken
