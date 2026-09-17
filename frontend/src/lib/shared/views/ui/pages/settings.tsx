@@ -1,6 +1,8 @@
 import { useRef } from "preact/hooks";
 import { AccountSettings } from "@/lib/auth/views/ui/account-settings";
+import { t } from "@/lib/shared/i18n";
 import { open } from "@/lib/shared/utils/open";
+import { LanguageSettings } from "@/lib/shared/views/ui/components/language-settings";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { RelaySettings } from "@/lib/sync/views/ui/relay-settings";
@@ -23,18 +25,19 @@ function SettingsPage() {
 					class="h-full flex flex-col gap-6 overflow-y-auto py-6"
 				>
 					<header class="space-y-1">
-						<h1 class="text-xl font-bold text-zinc-100">Settings</h1>
-						<p class="text-sm text-zinc-500">
-							Manage your account and how Jota syncs playback.
-						</p>
+						<h1 class="text-xl font-bold text-zinc-100">
+							{t("settings.title")}
+						</h1>
+						<p class="text-sm text-zinc-500">{t("settings.subtitle")}</p>
 					</header>
 
 					<AccountSettings />
+					<LanguageSettings />
 					<RelaySettings />
 					<AboutSettings />
 
 					<footer class="mt-auto pt-6 text-center text-xs text-zinc-600">
-						Developed by{" "}
+						{t("settings.developedBy")}{" "}
 						<button
 							type="button"
 							onClick={openDeveloper}
