@@ -483,8 +483,11 @@ export function Player() {
 				mobileOnly
 				closeLabel="Close player"
 			>
-				<div class="relative min-h-0 flex-1">
-					<div ref={modalListRef} class="h-full overflow-y-auto px-6 pt-6 pb-4">
+				<div class="relative flex min-h-0 flex-1 flex-col">
+					<div
+						ref={modalListRef}
+						class="min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-4"
+					>
 						<FullPlayerContent {...player} />
 					</div>
 					<Scrollbar target={modalListRef} />
