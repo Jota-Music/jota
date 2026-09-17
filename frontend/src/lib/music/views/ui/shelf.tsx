@@ -247,7 +247,7 @@ export function Shelf({
 								<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
 									{filteredItems.map((item) => (
 										<Link key={item.id} href={to(item.id)}>
-											<div class="group flex cursor-pointer flex-col gap-2 overflow-hidden rounded-md">
+											<div class="group flex cursor-pointer flex-col gap-2 overflow-hidden rounded-md [contain-intrinsic-size:auto_220px] [content-visibility:auto]">
 												<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
 													{item.cover ? (
 														<img
@@ -297,7 +297,10 @@ export function Shelf({
 							) : (
 								<ul class="flex flex-col">
 									{filteredItems.map((item) => (
-										<li key={item.id}>
+										<li
+											key={item.id}
+											class="[contain-intrinsic-size:auto_52px] [content-visibility:auto]"
+										>
 											<Link href={to(item.id)}>
 												<div class="group relative flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-zinc-900">
 													<div class="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-900">
