@@ -96,10 +96,14 @@ export function useRoomForm() {
 	}, [code, savedRoom]);
 
 	// Closing the panel without a room drops a password typed for nothing; a
-	// room still connected keeps its password for a reconnect.
+	// room still connected keeps its password for a reconnect. A reconnect in
+	// flight (status "closed") must keep it too, or a locked room is rejoined
+	// without a password.
 	useEffect(() => {
 		return () => {
-			if (store.role.value === "off") store.password.value = "";
+			if (store.role.value === "off" && store.status.value === "idle") {
+				store.password.value = "";
+			}
 		};
 	}, []);
 
