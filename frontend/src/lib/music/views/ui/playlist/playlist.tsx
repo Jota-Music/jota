@@ -1,7 +1,7 @@
-import { computed, effect, signal } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
-import { useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import {
 	getFullPlaylist,
 	revalidateFullPlaylist,
@@ -99,7 +99,7 @@ effect(() => {
 
 export default function PlaylistPlain({ id }: { id: string }) {
 	const queryClient = useQueryClient();
-	const refreshing = signal(false);
+	const [refreshing, setRefreshing] = useState(false);
 
 	useEffect(() => {
 		search.value = "";
@@ -111,35 +111,31 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	});
 
 	async function handleRefresh() {
-		refreshing.value = true;
+		setRefreshing(true);
 		await revalidateFullPlaylist(id).catch(() => {});
 		queryClient.removeQueries({ queryKey: ["playlist", id] });
 		await queryClient.fetchQuery({
 			queryKey: ["playlist", id],
 			queryFn: () => getFullPlaylist(id),
 		});
-		refreshing.value = false;
+		setRefreshing(false);
 	}
 
 	const songs = data?.songs ?? [];
 	const cover = data?.cover ?? songs[0]?.album?.covers?.[0];
 	const name = data?.name || "Playlist";
 
-	const filteredSongs = computed(() => {
-		const query = search.value.trim().toLowerCase();
-
-		const base =
-			query.length === 0
-				? songs
-				: songs.filter((song) => {
-						return (
-							song.name.toLowerCase().includes(query) ||
-							song.artists.some((a) => a.name.toLowerCase().includes(query))
-						);
-					});
-
-		return sortSongs(base, order.value);
-	});
+	const query = search.value.trim().toLowerCase();
+	const base =
+		query.length === 0
+			? songs
+			: songs.filter((song) => {
+					return (
+						song.name.toLowerCase().includes(query) ||
+						song.artists.some((a) => a.name.toLowerCase().includes(query))
+					);
+				});
+	const filteredSongs = sortSongs(base, order.value);
 
 	if (isError) {
 		return (
@@ -148,7 +144,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				<button
 					type="button"
 					onClick={handleRefresh}
-					disabled={refreshing.value}
+					disabled={refreshing}
 					className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50 transition-colors cursor-pointer"
 				>
 					Retry
@@ -223,10 +219,10 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				<button
 					type="button"
 					onClick={handleRefresh}
-					disabled={refreshing.value}
+					disabled={refreshing}
 					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
 				>
-					<RefreshCw size={16} class={refreshing.value ? "animate-spin" : ""} />
+					<RefreshCw size={16} class={refreshing ? "animate-spin" : ""} />
 				</button>
 			</div>
 
@@ -235,7 +231,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 					<Loader size={40} class="animate-spin" />
 				</div>
 			) : (
-				<Virtualization songs={filteredSongs.value} />
+				<Virtualization songs={filteredSongs} />
 			)}
 		</div>
 	);
