@@ -42,7 +42,6 @@ export function useSheetDrag(
 	mounted: boolean,
 ): boolean {
 	const [dragging, setDragging] = useState(false);
-	const [pressed, setPressed] = useState(false);
 	const [canDrag, setCanDrag] = useState(false);
 	const closeRef = useRef(close);
 	closeRef.current = close;
@@ -78,7 +77,6 @@ export function useSheetDrag(
 		};
 
 		const finish = () => {
-			setPressed(false);
 			if (!g.active) {
 				g.possible = false;
 				return;
@@ -108,9 +106,6 @@ export function useSheetDrag(
 			const me = e as MouseEvent | TouchEvent;
 			if ((me.target as HTMLElement).closest(INTERACTIVE)) return;
 			const scroll = scrollableWithin(me.target as HTMLElement);
-			if (!scroll || scroll.scrollTop <= 0) {
-				setPressed(true);
-			}
 			g.startY = clientYOf(me);
 			g.startTime = performance.now();
 			g.offset = 0;
@@ -126,7 +121,6 @@ export function useSheetDrag(
 			if (!g.active) {
 				if (delta < -DRAG_START_PX || (g.scroll && g.scroll.scrollTop > 0)) {
 					g.possible = false;
-					setPressed(false);
 					return;
 				}
 				if (delta < DRAG_START_PX) return;
@@ -187,18 +181,19 @@ export function useSheetDrag(
 	}, [mounted, panelRef, backdropRef]);
 
 	useEffect(() => {
-		if (dragging || pressed) {
-			document.body.style.cursor = "grabbing";
-		} else if (canDrag) {
-			document.body.style.cursor = "grab";
-		} else {
+		if (dragging) {
+			document.body.classList.add("pointer-dragging");
 			document.body.style.cursor = "";
+		} else {
+			document.body.classList.remove("pointer-dragging");
+			document.body.style.cursor = canDrag ? "grab" : "";
 		}
 
 		return () => {
+			document.body.classList.remove("pointer-dragging");
 			document.body.style.cursor = "";
 		};
-	}, [dragging, pressed, canDrag]);
+	}, [dragging, canDrag]);
 
 	return dragging;
 }
