@@ -3,6 +3,7 @@ package com.wails.app;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
+import android.content.ComponentCallbacks2;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -24,7 +25,9 @@ import android.provider.OpenableColumns;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.PermissionRequest;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -134,7 +137,9 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupWebView() {
-        webView = findViewById(R.id.webview);
+        if (webView == null) {
+            webView = findViewById(R.id.webview);
+        }
         bridge.setWebView(webView);
 
         // Configure WebView settings
@@ -229,6 +234,18 @@ public class MainActivity extends AppCompatActivity {
                 // current battery / network / theme so the UI starts populated.
                 emitSystemSnapshot();
             }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                // The renderer is a separate process and Android kills it under
+                // memory pressure (or when it crashes). Returning false here makes
+                // the framework kill this whole app process, which is the usual
+                // cause of the app closing by itself after a while. Rebuild the
+                // WebView and keep running instead.
+                Log.e(TAG, "WebView renderer gone (crashed=" + detail.didCrash() + "); rebuilding");
+                recoverWebView();
+                return true;
+            }
         });
 
         // Grant camera access requested from web content (getUserMedia), used by
@@ -281,6 +298,37 @@ public class MainActivity extends AppCompatActivity {
         String url = WAILS_SCHEME + "://" + WAILS_HOST + "/";
         if (DEBUG) Log.d(TAG, "Loading URL: " + url);
         webView.loadUrl(url);
+    }
+
+    // The old WebView is unusable once its renderer is gone: detach it before
+    // destroying (destroying an attached WebView is itself a known crash) and
+    // put a fresh one in its place.
+    private void recoverWebView() {
+        if (webView == null || isFinishing() || isDestroyed()) return;
+        ViewGroup parent = (ViewGroup) webView.getParent();
+        if (parent != null) {
+            parent.removeView(webView);
+        }
+        webView.destroy();
+
+        webView = new WebView(this);
+        webView.setId(R.id.webview);
+        webView.setBackgroundColor(0xFF0C0A09);
+        webView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        if (parent != null) {
+            parent.addView(webView);
+        }
+        setupWebView();
+        loadApplication();
+    }
+
+    // Drop the WebView RAM cache (disk cache is kept) under memory pressure.
+    private void trimWebViewMemory() {
+        if (webView == null) return;
+        webView.clearCache(false);
+        webView.clearFormData();
     }
 
     @Override
@@ -914,8 +962,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onLowMemory() {
         super.onLowMemory();
+        trimWebViewMemory();
         if (bridge != null) {
             bridge.onLowMemory();
+        }
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
+                || level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+            trimWebViewMemory();
         }
     }
 
@@ -929,6 +987,10 @@ public class MainActivity extends AppCompatActivity {
             bridge.shutdown();
         }
         if (webView != null) {
+            ViewGroup parent = (ViewGroup) webView.getParent();
+            if (parent != null) {
+                parent.removeView(webView);
+            }
             webView.destroy();
         }
     }
