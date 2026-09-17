@@ -137,7 +137,7 @@ func sidValue(raw string) string {
 }
 
 func cookieValue(raw, name string) string {
-	for _, part := range strings.Split(raw, ";") {
+	for part := range strings.SplitSeq(raw, ";") {
 		k, v, ok := strings.Cut(strings.TrimSpace(part), "=")
 		if ok && k == name {
 			return v
@@ -165,7 +165,7 @@ func authHeaders(origin string) map[string]string {
 	}
 
 	ts := time.Now().Unix()
-	sum := sha1.Sum([]byte(fmt.Sprintf("%d %s %s", ts, sapisid, origin)))
+	sum := sha1.Sum(fmt.Appendf(nil, "%d %s %s", ts, sapisid, origin))
 	return map[string]string{
 		"Authorization":   fmt.Sprintf("SAPISIDHASH %d_%s", ts, hex.EncodeToString(sum[:])),
 		"X-Origin":        origin,
