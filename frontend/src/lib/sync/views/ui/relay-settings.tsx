@@ -1,4 +1,4 @@
-import { RadioTower, TriangleAlert } from "lucide-preact";
+import { TriangleAlert, Turntable } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import { cn } from "@/lib/shared/utils/tw";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
@@ -42,7 +42,7 @@ export function RelaySettings() {
 	return (
 		<section class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
 			<div class="flex items-center gap-2">
-				<RadioTower size={18} class="text-zinc-400" />
+				<Turntable size={18} class="text-zinc-400" />
 				<h2 class="text-sm font-semibold text-zinc-200">Jams</h2>
 			</div>
 			<p class="text-xs text-zinc-500">

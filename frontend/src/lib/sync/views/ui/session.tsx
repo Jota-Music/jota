@@ -1,10 +1,9 @@
 import {
 	Link,
 	LogOut,
-	Radio,
-	RadioTower,
 	RefreshCw,
 	Settings,
+	Turntable,
 	Unplug,
 } from "lucide-preact";
 import { useRef, useState } from "preact/hooks";
@@ -36,7 +35,7 @@ export function SyncPanel() {
 			<header class="flex shrink-0 flex-col gap-1 border-b border-zinc-800 px-4 py-3">
 				<div class="flex items-center justify-between gap-2 text-white">
 					<div class="flex items-center gap-2">
-						<Radio
+						<Turntable
 							size={22}
 							class={cn(
 								active
@@ -95,7 +94,7 @@ function SessionForm() {
 		return (
 			<div class="flex h-full flex-col items-center justify-center gap-4 text-center">
 				<div class="flex size-14 items-center justify-center rounded-full bg-zinc-900 ring-1 ring-zinc-800">
-					<RadioTower size={26} class="text-zinc-500" />
+					<Turntable size={26} class="text-zinc-500" />
 				</div>
 				<div class="space-y-1">
 					<p class="text-sm font-medium text-zinc-100">Relay server required</p>

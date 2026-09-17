@@ -3,9 +3,9 @@ import {
 	ArrowLeft,
 	ChevronDown,
 	House,
-	Radio,
 	Search,
 	Settings,
+	Turntable,
 	X,
 } from "lucide-preact";
 import { useCallback, useEffect, useState } from "preact/hooks";
@@ -164,7 +164,7 @@ export function Header() {
 						title="Jams"
 						class="flex size-8 items-center justify-center cursor-pointer"
 					>
-						<Radio
+						<Turntable
 							class={cn(
 								"size-5 md:size-4",
 								connected
