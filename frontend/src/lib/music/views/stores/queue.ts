@@ -110,12 +110,16 @@ export function applyShuffle(on: boolean, s?: number) {
 	persistQueue();
 }
 
+const REPEAT_MODES: RepeatMode[] = ["off", "all", "one"];
+
+export function nextRepeat(mode: RepeatMode): RepeatMode {
+	return REPEAT_MODES[(REPEAT_MODES.indexOf(mode) + 1) % REPEAT_MODES.length];
+}
+
 export function cycleRepeat() {
-	const modes: RepeatMode[] = ["off", "all", "one"];
-	const current = repeat.value;
-	const next = modes[(modes.indexOf(current) + 1) % modes.length];
-	repeat.value = next;
-	saveRepeat(next);
+	const mode = nextRepeat(repeat.value);
+	setRepeat(mode);
+	publish({ action: "repeat", mode });
 }
 
 export function setRepeat(v: RepeatMode) {

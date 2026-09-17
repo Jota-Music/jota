@@ -41,12 +41,12 @@ export type ArtistDiscography = Omit<GeneratedArtistDiscography, "albums"> & {
 // A control is applied locally and broadcast to the room. Track changes and
 // queue edits are not controls: they go through the load round and the shared
 // queue respectively.
+export type RepeatMode = "off" | "all" | "one";
+
 export type ControlAction =
 	| { action: "toggle" }
 	| { action: "play" }
 	| { action: "pause" }
 	| { action: "seek"; positionMs: number }
 	| { action: "shuffle"; on: boolean; seed?: number }
-	| { action: "repeat" };
-
-export type RepeatMode = "off" | "all" | "one";
+	| { action: "repeat"; mode: RepeatMode };

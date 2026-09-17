@@ -20,7 +20,7 @@ import { preloadUpcomingSongs } from "@/lib/music/views/stores/player";
 import {
 	applyShuffle,
 	currentIndex,
-	cycleRepeat,
+	nextRepeat,
 	persistQueue,
 	queue,
 	repeat,
@@ -319,7 +319,7 @@ function applyControl(a: ControlAction): void {
 			applyShuffle(a.on ?? !shuffle.value, a.seed);
 			break;
 		case "repeat":
-			cycleRepeat();
+			setRepeat(a.mode ?? nextRepeat(repeat.value));
 			break;
 	}
 }
