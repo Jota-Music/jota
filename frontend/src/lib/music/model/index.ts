@@ -1,30 +1,42 @@
-interface Share {
-	id: string;
-	url: string;
-}
+import type {
+	Album,
+	AlbumSummary,
+	Artist,
+	Audio,
+	Follow,
+	ArtistDiscography as GeneratedArtistDiscography,
+	ArtistInfo as GeneratedArtistInfo,
+	Playlist as GeneratedPlaylist,
+	PlaylistSummary,
+	SearchResult,
+	Share,
+	Song,
+	UserProfile,
+} from "@models/music/models";
 
-export interface Album {
-	id?: string;
-	title: string;
-	url: string;
-	covers: string[];
-}
+export type {
+	Album,
+	AlbumSummary,
+	Artist,
+	Audio,
+	Follow,
+	PlaylistSummary,
+	SearchResult,
+	Share,
+	Song,
+	UserProfile,
+};
 
-export interface Artist {
-	name: string;
-	id?: string;
-}
-
-export interface Song {
-	id: string;
-	url: string;
-	name: string;
-	duration: number;
-	share: Share;
-	album: Album;
-	artists: Artist[];
-	youtubeId?: string;
-}
+// The generated bindings type slices as nullable because Go's JSON
+// encoder emits `null` for empty slices. The app only ever consumes these
+// as arrays, so narrow them here instead of at every call site.
+export type Playlist = Omit<GeneratedPlaylist, "songs"> & { songs: Song[] };
+export type ArtistInfo = Omit<GeneratedArtistInfo, "tracks"> & {
+	tracks: Song[];
+};
+export type ArtistDiscography = Omit<GeneratedArtistDiscography, "albums"> & {
+	albums: AlbumSummary[];
+};
 
 // A control is applied locally and broadcast to the room. Track changes and
 // queue edits are not controls: they go through the load round and the shared
@@ -34,57 +46,3 @@ export type ControlAction =
 	| { action: "seek"; positionMs: number }
 	| { action: "shuffle" }
 	| { action: "repeat" };
-
-export interface Playlist {
-	name?: string;
-	cover?: string;
-	owner?: string;
-	songs: Song[];
-}
-
-export interface PlaylistSummary {
-	id: string;
-	name: string;
-	mosaic?: string;
-	cover?: string;
-	subtitle?: string;
-	owner?: string;
-}
-
-export interface Audio {
-	url: string;
-	duration: number;
-	expireAt: number;
-	videoId?: string;
-}
-
-export interface AlbumSummary {
-	id: string;
-	name: string;
-	year: number;
-	cover?: string;
-	group: string;
-}
-
-export interface UserProfile {
-	displayName: string;
-	imageUrl?: string;
-}
-
-export interface Follow {
-	id: string;
-	name: string;
-	imageUrl?: string;
-	kind: "artist" | "user";
-}
-
-export interface ArtistInfo {
-	name: string;
-	imageUrl?: string;
-	tracks: Song[];
-}
-
-export interface ArtistDiscography {
-	name: string;
-	albums: AlbumSummary[];
-}

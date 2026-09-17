@@ -78,6 +78,7 @@ function resultToSong(item: SearchResult): Song {
 			url: `https://open.spotify.com/track/${id}`,
 		},
 		album: {
+			id: "",
 			title: "",
 			url: "",
 			covers: coverUrl ? [coverUrl] : [],

@@ -14,9 +14,7 @@ function toAudio(data: Audio, fallback: string): Audio & { youtube: string } {
 export async function getAudio(
 	song: Song,
 ): Promise<Audio & { youtube: string }> {
-	const data = (await ResolveAudio(
-		song as unknown as Parameters<typeof ResolveAudio>[0],
-	)) as unknown as Audio;
+	const data = await ResolveAudio(song);
 	return toAudio(data, song.youtubeId ?? song.id);
 }
 

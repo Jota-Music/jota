@@ -1,21 +1,13 @@
 import { Search, SearchYouTube, SearchYouTubePlaylists } from "@bindings/app";
-import type { PlaylistSummary, Song } from "@/lib/music/model";
+import type { PlaylistSummary, SearchResult, Song } from "@/lib/music/model";
 
-export type SearchResult = {
-	uri: string;
-	name: string;
-	type: string;
-	coverUrl?: string;
-	artists?: string[];
-	ownerName?: string;
-	trackCount?: number;
-};
+export type { SearchResult } from "@/lib/music/model";
 
 export async function searchSpotify(
 	type_: "user" | "track" | "album" | "playlist" | "artist",
 	query: string,
 ): Promise<SearchResult[]> {
-	return (await Search(query, type_)) as unknown as SearchResult[];
+	return (await Search(query, type_)) ?? [];
 }
 
 interface YouTubeVideo {
@@ -24,20 +16,14 @@ interface YouTubeVideo {
 }
 
 export async function searchYouTube(query: string): Promise<YouTubeVideo[]> {
-	const results = (await SearchYouTube(query)) as unknown as Array<{
-		ID: string;
-		Title: string;
-	}>;
-	return results.map((r) => ({ id: r.ID, title: r.Title }));
+	const results = (await SearchYouTube(query)) ?? [];
+	return results.map((v) => ({ id: v.id, title: v.title }));
 }
 
 export async function searchYouTubePlaylists(
 	query: string,
 ): Promise<PlaylistSummary[]> {
-	const results = (await SearchYouTubePlaylists(query)) as unknown as
-		| PlaylistSummary[]
-		| null;
-	return results ?? [];
+	return (await SearchYouTubePlaylists(query)) ?? [];
 }
 
 export function youtubeVideoToSong(video: YouTubeVideo): Song {
@@ -53,6 +39,7 @@ export function youtubeVideoToSong(video: YouTubeVideo): Song {
 			url: `https://www.youtube.com/watch?v=${video.id}`,
 		},
 		album: {
+			id: "",
 			title: "YouTube",
 			url: "",
 			covers: [thumbnailUrl],

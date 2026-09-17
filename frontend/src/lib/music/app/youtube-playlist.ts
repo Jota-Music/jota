@@ -6,14 +6,11 @@ import {
 import type { PlaylistSummary } from "@/lib/music/model";
 
 export async function getYouTubePlaylists(): Promise<PlaylistSummary[]> {
-	const playlists = (await GetYouTubePlaylists()) as unknown as
-		| PlaylistSummary[]
-		| null;
-	return playlists ?? [];
+	return (await GetYouTubePlaylists()) ?? [];
 }
 
 export async function addYouTubePlaylist(id: string): Promise<PlaylistSummary> {
-	return (await AddYouTubePlaylist(id)) as unknown as PlaylistSummary;
+	return AddYouTubePlaylist(id);
 }
 
 export async function removeYouTubePlaylist(id: string): Promise<void> {

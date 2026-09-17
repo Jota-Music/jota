@@ -70,7 +70,7 @@ export function MainPage() {
 			(p): Item => ({
 				id: p.id,
 				name: isLiked(p.id) ? t("music.likedSongs") : p.name,
-				cover: isLiked(p.id) ? likedCover : (p.cover ?? p.mosaic),
+				cover: isLiked(p.id) ? likedCover : p.cover,
 				source: "spotify",
 			}),
 		),
@@ -78,7 +78,7 @@ export function MainPage() {
 			(p): Item => ({
 				id: p.id,
 				name: p.name,
-				cover: p.cover ?? p.mosaic,
+				cover: p.cover,
 				subtitle: p.subtitle,
 				source: "youtube",
 				removable: true,

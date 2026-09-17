@@ -3,8 +3,8 @@ package youtube
 import "encoding/json"
 
 type Video struct {
-	ID    string
-	Title string
+	ID    string `json:"id"`
+	Title string `json:"title"`
 }
 
 type format struct {

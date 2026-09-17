@@ -139,7 +139,9 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			: songs.filter((song) => {
 					return (
 						song.name.toLowerCase().includes(query) ||
-						song.artists.some((a) => a.name.toLowerCase().includes(query))
+						(song.artists ?? []).some((a) =>
+							a.name.toLowerCase().includes(query),
+						)
 					);
 				});
 	const filteredSongs = sortSongs(base, order.value);

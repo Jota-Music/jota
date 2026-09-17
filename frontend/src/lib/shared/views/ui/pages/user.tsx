@@ -57,7 +57,7 @@ export function UserPage() {
 						(p): Item => ({
 							id: p.id,
 							name: p.name,
-							cover: p.cover ?? p.mosaic,
+							cover: p.cover,
 							subtitle: p.owner,
 						}),
 					)}

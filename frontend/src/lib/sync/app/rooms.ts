@@ -1,6 +1,6 @@
 import { ListRooms, RemoveRoom, SaveRoom, SyncRoomStatus } from "@bindings/app";
-import type { Room } from "../../../../bindings/github.com/Jota-Music/jota/internal/services/rooms/models";
-import type { RoomStatus } from "../../../../bindings/github.com/Jota-Music/jota/internal/services/sync/models";
+import type { Room } from "@models/services/rooms/models";
+import type { RoomStatus } from "@models/services/sync/models";
 
 export type { Room, RoomStatus };
 

@@ -4,7 +4,7 @@ import type { Artist } from "@/lib/music/model";
 import { cn } from "@/lib/shared/utils/tw";
 
 type Props = {
-	artists: Artist[];
+	artists?: Artist[] | null;
 	class?: string;
 };
 
@@ -34,7 +34,7 @@ function ArtistLink({
 export function ArtistLinks({ artists, class: className }: Props) {
 	return (
 		<span class={className}>
-			{artists.map((artist, i) => (
+			{(artists ?? []).map((artist, i) => (
 				<span key={`${artist.name}-${i}`}>
 					{i > 0 && ", "}
 					<ArtistLink artist={artist} />

@@ -250,7 +250,7 @@ function PlaylistCard({
 			<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
 				<Link href={`/playlist/${playlist.id}`}>
 					<PlaylistCover
-						src={playlist.cover ?? playlist.mosaic}
+						src={playlist.cover}
 						alt={playlist.name}
 						imgClass="h-full w-full object-cover transition-opacity group-hover:opacity-80"
 					/>

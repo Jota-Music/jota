@@ -4,5 +4,5 @@ import type { UserProfile } from "@/lib/music/model";
 export default async function getUserProfile(
 	username: string,
 ): Promise<UserProfile> {
-	return (await GetUserProfile(username)) as unknown as UserProfile;
+	return GetUserProfile(username);
 }

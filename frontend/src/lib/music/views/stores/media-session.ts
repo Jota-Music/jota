@@ -45,7 +45,7 @@ function pushNative(force = false) {
 	bridge.mediaUpdate(
 		JSON.stringify({
 			title: current.name,
-			artist: current.artists.map((artist) => artist.name).join(", "),
+			artist: (current.artists ?? []).map((artist) => artist.name).join(", "),
 			album: current.album.title,
 			artwork: current.album.covers?.[0] ?? "",
 			playing,
@@ -127,7 +127,7 @@ export function update(song: Song | null, isPlaying: boolean) {
 		if (song) {
 			media.metadata = new MediaMetadata({
 				title: song.name,
-				artist: song.artists.map((artist) => artist.name).join(", "),
+				artist: (song.artists ?? []).map((artist) => artist.name).join(", "),
 				album: song.album.title,
 				artwork: song.album.covers?.[0]
 					? [{ src: song.album.covers[0], sizes: "512x512" }]
