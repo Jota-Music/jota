@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { parseYoutubeLink } from "./youtube-link";
+import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 
 const VIDEO = { type: "video", id: "dQw4w9WgXcQ" } as const;
 const PLAYLIST = { type: "playlist", id: "PL1234567890abcdef" } as const;

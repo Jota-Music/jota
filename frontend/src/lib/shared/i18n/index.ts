@@ -1,5 +1,10 @@
 import { effect, signal } from "@preact/signals";
-import { type Catalog, format, lookup, type Params } from "./translate";
+import {
+	type Catalog,
+	format,
+	lookup,
+	type Params,
+} from "@/lib/shared/i18n/translate";
 
 const BASE = "en";
 const STORAGE_KEY = "locale";

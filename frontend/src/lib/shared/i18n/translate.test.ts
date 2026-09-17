@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { format, interpolate, lookup } from "./translate";
+import { format, interpolate, lookup } from "@/lib/shared/i18n/translate";
 
 test("lookup resolves nested keys and misses undefined", () => {
 	const catalog = { a: { b: { c: "value" } } };
