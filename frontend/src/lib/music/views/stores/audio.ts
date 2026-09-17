@@ -27,9 +27,12 @@ let audio: HTMLAudioElement | null = null;
 let loadedSongId: string | null = null;
 let knownDuration = 0;
 let loadToken = 0;
-// True while the recovery ladder is running, so element errors are logged with
-// detail instead of each surfacing in the error bar.
-let recovering = false;
+// Identifies the latest play() call. A superseded call (a newer one started)
+// must bail out without touching the shared element or reporting a failure.
+let playSeq = 0;
+// Counts running recovery ladders, so element errors are logged with detail
+// instead of each surfacing in the error bar.
+let recovering = 0;
 // Set when WebKit rejects play() because the page has no user activation. That
 // gates every track the same way, so it must stop the queue instead of failing
 // each song in turn.
@@ -240,11 +243,15 @@ function isNotAllowedError(err: unknown): boolean {
 	);
 }
 
+// "aborted" means a newer load superseded this one, which is not a failure and
+// must not run the recovery ladder nor mark the song as failed.
+type LoadStatus = "ok" | "failed" | "aborted";
+
 async function loadSongIntoPlayer(
 	song: Song,
 	autostart: boolean,
 	startSeconds?: number | (() => number),
-): Promise<boolean> {
+): Promise<LoadStatus> {
 	const token = ++loadToken;
 
 	stopEndWatch();
@@ -270,24 +277,24 @@ async function loadSongIntoPlayer(
 		knownDuration = data.duration > 0 ? data.duration : 0;
 		if (data.youtube) setYoutube(song, data.youtube);
 	} catch (err) {
-		if (token !== loadToken) return false;
+		if (token !== loadToken) return "aborted";
 		isLoading.value = false;
 		isPlaying.value = false;
 		logError(err, `resolve ${songLabel(song)}`);
-		return false;
+		return "failed";
 	}
 
 	let instance: HTMLAudioElement;
 	try {
 		instance = await AudioCache.getAudioElement(song);
 	} catch (err) {
-		if (token !== loadToken) return false;
+		if (token !== loadToken) return "aborted";
 		isLoading.value = false;
 		isPlaying.value = false;
 		logError(err, `element ${songLabel(song)}`);
-		return false;
+		return "failed";
 	}
-	if (token !== loadToken) return false;
+	if (token !== loadToken) return "aborted";
 
 	audio = instance;
 	loadedSongId = song.id;
@@ -318,7 +325,7 @@ async function loadSongIntoPlayer(
 				isLoading.value = false;
 				isPlaying.value = false;
 				logError(err, `buffer ${songLabel(song)} | ${mediaState(instance)}`);
-				return false;
+				return "failed";
 			}
 			const t = startAt();
 			instance.currentTime = t;
@@ -328,17 +335,17 @@ async function loadSongIntoPlayer(
 			await instance.play();
 			if (token !== loadToken) {
 				instance.pause();
-				return false;
+				return "aborted";
 			}
 			isPlaying.value = true;
 		} catch (err) {
-			if (token !== loadToken) return false;
+			if (token !== loadToken) return "aborted";
 			if (!isAbortError(err)) {
 				if (isNotAllowedError(err)) blockedByPolicy = true;
 				isPlaying.value = false;
 				isLoading.value = false;
 				logError(err, `play ${songLabel(song)} | ${mediaState(instance)}`);
-				return false;
+				return "failed";
 			}
 		}
 	} else {
@@ -349,7 +356,7 @@ async function loadSongIntoPlayer(
 			isLoading.value = false;
 			isPlaying.value = false;
 			addError(err, `buffer ${songLabel(song)}`);
-			return false;
+			return "failed";
 		}
 		if (wantsStart) {
 			const t = startAt();
@@ -358,9 +365,9 @@ async function loadSongIntoPlayer(
 		}
 	}
 
-	if (token !== loadToken) return false;
+	if (token !== loadToken) return "aborted";
 	isLoading.value = false;
-	return true;
+	return "ok";
 }
 
 // Retry the element already loaded for this song, without rebuilding it or
@@ -395,12 +402,17 @@ export async function play(
 	song: Song,
 	startSeconds?: number | (() => number),
 ): Promise<boolean> {
+	const seq = ++playSeq;
+	const superseded = () => seq !== playSeq;
+
 	blockedByPolicy = false;
 
 	const success = () => {
 		markFailed(song.id, false);
 		return true;
 	};
+
+	if (superseded()) return false;
 
 	// A consensus round already prepared this exact stream (the host waits for the
 	// room, the guest warms it): resume it instead of rebuilding the pipeline and
@@ -428,23 +440,32 @@ export async function play(
 		}
 	}
 
-	recovering = true;
+	recovering++;
 	try {
-		if (await loadSongIntoPlayer(song, true, startSeconds)) return success();
+		const first = await loadSongIntoPlayer(song, true, startSeconds);
+		if (first === "aborted" || superseded()) return false;
+		if (first === "ok") return success();
 		if (blockedByPolicy) return blocked(song);
 
 		if (await retryElement(song)) return success();
+		if (superseded()) return false;
 		if (blockedByPolicy) return blocked(song);
 
 		AudioCache.releaseElement(song.id);
-		if (await loadSongIntoPlayer(song, true, startSeconds)) return success();
+		const second = await loadSongIntoPlayer(song, true, startSeconds);
+		if (second === "aborted" || superseded()) return false;
+		if (second === "ok") return success();
 		if (blockedByPolicy) return blocked(song);
 
 		AudioCache.remove(song.id);
-		if (await loadSongIntoPlayer(song, true, startSeconds)) return success();
+		const third = await loadSongIntoPlayer(song, true, startSeconds);
+		if (third === "aborted" || superseded()) return false;
+		if (third === "ok") return success();
 	} finally {
-		recovering = false;
+		recovering--;
 	}
+
+	if (superseded()) return false;
 
 	markFailed(song.id, true);
 	addError(
@@ -508,7 +529,7 @@ export async function prepareSong(
 	song: Song,
 	startSeconds?: number | (() => number),
 ): Promise<boolean> {
-	return await loadSongIntoPlayer(song, false, startSeconds);
+	return (await loadSongIntoPlayer(song, false, startSeconds)) === "ok";
 }
 
 export function getPlaybackSeconds(): number {
@@ -524,6 +545,12 @@ export function getPlaybackSeconds(): number {
 
 export function hasLoadedAudio(): boolean {
 	return !!audio && !audio.error && endedElement !== audio;
+}
+
+// True when the element currently holds this exact song, so callers do not
+// mistake a still-loaded previous track for the one the queue points at.
+export function hasLoaded(songId: string): boolean {
+	return loadedSongId === songId && hasLoadedAudio();
 }
 
 // Recover playback after a failed stream: reload the current song from a
@@ -692,7 +719,7 @@ function bindEvents(a: HTMLAudioElement) {
 		loadedSongId = null;
 		media.update(currentSong.value, false);
 		const detail = `playback stopped ${label} | ${mediaState(a)}`;
-		if (recovering) {
+		if (recovering > 0) {
 			logError(new Error(`media error code ${code}`), detail);
 		} else {
 			addError(new Error(`media error code ${code}`), detail);

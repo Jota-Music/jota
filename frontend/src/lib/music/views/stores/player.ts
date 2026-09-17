@@ -4,7 +4,7 @@ import {
 	clampSeconds,
 	currentSong,
 	dragSeeking,
-	hasLoadedAudio,
+	hasLoaded,
 	play,
 	playbackBlocked,
 	progress,
@@ -27,6 +27,15 @@ import { playGate, publish } from "@/lib/music/views/stores/remote";
 // Resolve this many tracks ahead: an already-resolved stream keeps playing while
 // the YouTube API is blocked, so a wider window rides out longer outages.
 const PRELOAD_AHEAD = 4;
+
+const SKIP_DEBOUNCE_MS = 200;
+let skipTimer: ReturnType<typeof setTimeout> | null = null;
+
+function cancelSkip() {
+	if (skipTimer === null) return;
+	clearTimeout(skipTimer);
+	skipTimer = null;
+}
 
 export function preloadUpcomingSongs(songs: Song[], idx: number) {
 	const upcoming = songs.slice(idx + 1, idx + 1 + PRELOAD_AHEAD);
@@ -90,6 +99,8 @@ async function playAtIndex(
 	const q = queue.value;
 	if (i < 0 || i >= q.length) return;
 	const song = q[i];
+
+	cancelSkip();
 
 	currentIndex.value = i;
 	currentSong.value = song;
@@ -243,13 +254,7 @@ export async function playAt(i: number): Promise<void> {
 	const q = queue.value;
 
 	if (i < 0 || i >= q.length) return;
-	if (
-		i === currentIndex.value &&
-		currentSong.value?.id === q[i].id &&
-		hasLoadedAudio()
-	) {
-		return;
-	}
+	if (i === currentIndex.value && hasLoaded(q[i].id)) return;
 
 	await playAtIndex(i);
 }
@@ -282,12 +287,28 @@ function pick(
 	return next;
 }
 
+// Pressing next/previous fast must not resolve a stream per press: move the
+// position at once for instant feedback and let only the last press load.
+function scheduleSkip(i: number) {
+	const song = queue.value[i];
+	if (!song) return;
+	currentIndex.value = i;
+	currentSong.value = song;
+	persistQueue();
+	cancelSkip();
+	skipTimer = setTimeout(() => {
+		skipTimer = null;
+		if (queue.value[i]?.id !== song.id) return;
+		void playAtIndex(i);
+	}, SKIP_DEBOUNCE_MS);
+}
+
 export async function nextSong() {
 	const q = queue.value;
 	if (q.length === 0) return;
 	const next = pick(q, currentIndex.value, repeat.value, shuffle.value, 1);
 	if (next == null) return;
-	await playAtIndex(next);
+	scheduleSkip(next);
 }
 
 export async function prevSong() {
@@ -295,7 +316,7 @@ export async function prevSong() {
 	if (q.length === 0) return;
 	const prev = pick(q, currentIndex.value, repeat.value, shuffle.value, -1);
 	if (prev == null) return;
-	await playAtIndex(prev);
+	scheduleSkip(prev);
 }
 
 setOnTrackEnded(() => {
