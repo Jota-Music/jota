@@ -459,7 +459,7 @@ export async function play(
 function blocked(song: Song): false {
 	markFailed(song.id, false);
 	// Not a broken track but a blocked one: release the room spinner so a host
-	// keeps publishing state instead of freezing the whole jam.
+	// keeps publishing state instead of freezing the whole room.
 	pendingStart.value = false;
 	armRecovery(song);
 	addError(

@@ -10,7 +10,7 @@ Developed by [salvadorsru](https://github.com/salvadorsru) — a hobby project,
 not affiliated with Spotify, Google or any music label.
 
 A self-hosted music streaming app for desktop and mobile. Browse Spotify, play
-the audio through YouTube, and start a jam over a relay you own.
+the audio through YouTube, and start a room over a relay you own.
 
 **No cloud. No tracking. No subscriptions.**
 
@@ -34,7 +34,7 @@ the audio through YouTube, and start a jam over a relay you own.
   smooth.
 - **Native media controls.** Media keys, lock-screen and notification controls
   work on desktop and mobile.
-- **Jams.** Sync queue, play/pause, position, shuffle and repeat across
+- **Rooms.** Sync queue, play/pause, position, shuffle and repeat across
   devices over your own WebSocket relay
   ([`Jota-Music/relay`](https://github.com/Jota-Music/relay)).
 - **Cross-platform.** Built with Wails 3 — native desktop on Linux, Windows
