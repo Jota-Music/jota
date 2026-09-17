@@ -5,6 +5,7 @@ import getFriends from "@/lib/music/app/get-friends";
 import getUserProfile from "@/lib/music/app/get-user-profile";
 import { type IconType, type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { useFollows } from "@/lib/music/views/ui/user/follow";
+import { t } from "@/lib/shared/i18n";
 
 type Entry = {
 	id: string;
@@ -110,7 +111,7 @@ export function FollowingShelf({ account }: { account: string }) {
 			to={link}
 			viewKey="following_view"
 			isLoading={followedLoading || friends.isLoading || following.isLoading}
-			emptyMessage="No friends or followed accounts yet. Open a user profile and tap the heart to follow it."
+			emptyMessage={t("music.following.empty")}
 			onRemove={(id) => {
 				if (id.startsWith("user:")) unfollow.mutate(id.slice("user:".length));
 			}}

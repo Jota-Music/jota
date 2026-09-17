@@ -8,6 +8,7 @@ import {
 } from "@/lib/music/app/get-playlist";
 import type { Playlist, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import { t } from "@/lib/shared/i18n";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
 const storageKey = "playlist_filters";
@@ -123,7 +124,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	const songs = data?.songs ?? [];
 	const cover = data?.cover ?? songs[0]?.album?.covers?.[0];
-	const name = data?.name || "Playlist";
+	const name = data?.name || t("music.playlist.defaultName");
 
 	const query = search.value.trim().toLowerCase();
 	const base =
@@ -140,14 +141,14 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	if (isError) {
 		return (
 			<div className="flex min-h-0 flex-1 flex-col items-start gap-3 p-4 text-sm">
-				<p className="text-red-400">Failed to load playlist</p>
+				<p className="text-red-400">{t("music.playlist.failed")}</p>
 				<button
 					type="button"
 					onClick={handleRefresh}
 					disabled={refreshing}
 					className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50 transition-colors cursor-pointer"
 				>
-					Retry
+					{t("common.retry")}
 				</button>
 			</div>
 		);
@@ -158,7 +159,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			<PageHeader
 				cover={cover}
 				title={name}
-				subtitle={`${songs.length} track${songs.length === 1 ? "" : "s"}`}
+				subtitle={t("music.trackCount", { count: songs.length })}
 				link={
 					data?.owner ? { to: `/${data.owner}`, label: data.owner } : undefined
 				}
@@ -173,7 +174,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 					/>
 					<input
 						type="text"
-						placeholder="Search songs or artists..."
+						placeholder={t("music.playlist.searchPlaceholder")}
 						value={search.value}
 						onInput={(e) => {
 							search.value = getInputValue(e);
@@ -187,7 +188,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 								search.value = "";
 							}}
 							className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
-							aria-label="Clear search"
+							aria-label={t("music.playlist.clearSearch")}
 						>
 							<X size={14} />
 						</button>
@@ -205,13 +206,17 @@ export default function PlaylistPlain({ id }: { id: string }) {
 						onInput={(e) => {
 							order.value = getSelectValue(e);
 						}}
-						aria-label="Order by"
+						aria-label={t("music.playlist.orderBy")}
 						className="h-10 w-max appearance-none rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
 					>
-						<option value="added">Oldest</option>
-						<option value="reverse">Newest</option>
-						<option value="duration-asc">Shortest</option>
-						<option value="duration-desc">Longest</option>
+						<option value="added">{t("music.playlist.order.added")}</option>
+						<option value="reverse">{t("music.playlist.order.reverse")}</option>
+						<option value="duration-asc">
+							{t("music.playlist.order.durationAsc")}
+						</option>
+						<option value="duration-desc">
+							{t("music.playlist.order.durationDesc")}
+						</option>
 					</select>
 				</div>
 

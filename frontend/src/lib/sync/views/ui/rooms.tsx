@@ -17,6 +17,8 @@ import {
 } from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
+import { t } from "@/lib/shared/i18n";
+import { cn } from "@/lib/shared/utils/tw";
 import {
 	listRooms,
 	type Room,
@@ -61,7 +63,7 @@ function Status({
 
 	if (live === "connecting") {
 		return (
-			<span title="Connecting">
+			<span title={t("sync.rooms.status.connecting")}>
 				<Loader size={size} class="animate-spin text-amber-400" />
 			</span>
 		);
@@ -70,7 +72,7 @@ function Status({
 	if (live === "connected") {
 		return (
 			<span
-				title={`Connected · ${members} listening`}
+				title={t("sync.rooms.status.connected", { count: members })}
 				class="relative flex flex-col items-center gap-0.5 text-green-400"
 			>
 				<Wifi size={size} />
@@ -87,7 +89,7 @@ function Status({
 
 	if (pending) {
 		return (
-			<span title="Checking">
+			<span title={t("sync.rooms.status.checking")}>
 				<Loader size={size} class="animate-spin text-zinc-500" />
 			</span>
 		);
@@ -95,7 +97,7 @@ function Status({
 
 	if (!status) {
 		return (
-			<span title="Status unavailable">
+			<span title={t("sync.rooms.status.unavailable")}>
 				<WifiOff size={size} class="text-amber-400" />
 			</span>
 		);
@@ -103,7 +105,7 @@ function Status({
 
 	if (!status.active) {
 		return (
-			<span title="Offline">
+			<span title={t("sync.rooms.status.offline")}>
 				<PowerOff size={size} class="text-zinc-500" />
 			</span>
 		);
@@ -112,15 +114,15 @@ function Status({
 	// A room with members but no host is winding down, so warn instead of
 	// showing the usual live green.
 	const title = status.hasHost
-		? `${status.members} listening`
-		: "The host left";
+		? t("sync.rooms.status.listening", { count: status.members })
+		: t("sync.rooms.status.hostLeft");
 	return (
 		<span
 			title={title}
-			class={[
+			class={cn(
 				"relative flex flex-col items-center gap-0.5",
 				status.hasHost ? "text-green-400" : "text-amber-400",
-			].join(" ")}
+			)}
 		>
 			{status.hasHost ? <Wifi size={size} /> : <TriangleAlert size={size} />}
 			{count}
@@ -281,7 +283,7 @@ export function RoomsShelf() {
 
 				if (connecting) {
 					return (
-						<span title="Connecting" class={buttonClass}>
+						<span title={t("sync.rooms.status.connecting")} class={buttonClass}>
 							<Loader size={16} class="animate-spin text-amber-400" />
 						</span>
 					);
@@ -292,26 +294,26 @@ export function RoomsShelf() {
 						{connected ? (
 							<button
 								type="button"
-								title="Leave room"
+								title={t("sync.rooms.leave")}
 								onClick={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
 									leave();
 								}}
-								class={`${buttonClass} hover:text-red-300`}
+								class={cn(buttonClass, "hover:text-red-300")}
 							>
 								<LogOut size={16} />
 							</button>
 						) : (
 							<button
 								type="button"
-								title="Connect"
+								title={t("sync.rooms.connect")}
 								onClick={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
 									join(room);
 								}}
-								class={`${buttonClass} hover:text-green-400`}
+								class={cn(buttonClass, "hover:text-green-400")}
 							>
 								<LogIn size={16} />
 							</button>
@@ -319,7 +321,7 @@ export function RoomsShelf() {
 						{room.id === ACTIVE_ID && (
 							<button
 								type="button"
-								title="Save room"
+								title={t("sync.rooms.save")}
 								onClick={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
@@ -333,7 +335,7 @@ export function RoomsShelf() {
 										savedAt: 0,
 									});
 								}}
-								class={`${buttonClass} hover:text-amber-300`}
+								class={cn(buttonClass, "hover:text-amber-300")}
 							>
 								<BookmarkPlus size={16} />
 							</button>
@@ -342,7 +344,7 @@ export function RoomsShelf() {
 				);
 			}}
 			isLoading={rooms.isLoading}
-			emptyMessage="No saved rooms. Connect to a room and save it from the Rooms panel."
+			emptyMessage={t("sync.rooms.empty")}
 			onRemove={onRemove}
 		/>
 	);

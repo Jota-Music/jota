@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
@@ -22,11 +23,11 @@ type Source = "spotify" | "youtube";
 type SpotifyType = "user" | "track" | "album" | "playlist" | "artist";
 
 const spotifyTypeOptions = [
-	{ value: "user", label: "User" },
-	{ value: "track", label: "Track" },
-	{ value: "album", label: "Album" },
-	{ value: "playlist", label: "Playlist" },
-	{ value: "artist", label: "Artist" },
+	{ value: "user", label: "search.type.user" },
+	{ value: "track", label: "search.type.track" },
+	{ value: "album", label: "search.type.album" },
+	{ value: "playlist", label: "search.type.playlist" },
+	{ value: "artist", label: "search.type.artist" },
 ] as const;
 
 const sourceKey = "search_source";
@@ -95,10 +96,12 @@ export function Header() {
 
 	const placeholder =
 		liveSource === "youtube"
-			? "Search in YouTube (videos or playlists)"
+			? t("search.youtubePlaceholder")
 			: searchType === "user"
-				? "Spotify username or link..."
-				: `Spotify ${searchType.charAt(0).toUpperCase() + searchType.slice(1)} ID, URI or link...`;
+				? t("search.userPlaceholder")
+				: t("search.spotifyPlaceholder", {
+						type: t(`search.type.${searchType}`),
+					});
 
 	return (
 		<header
@@ -111,7 +114,7 @@ export function Header() {
 						type="button"
 						onClick={goBack}
 						disabled={location === "/"}
-						title="Back"
+						title={t("nav.back")}
 						class={cn(
 							"flex aspect-square h-full items-center justify-center cursor-pointer transition-colors",
 							location === "/"
@@ -137,7 +140,7 @@ export function Header() {
 
 					<Link
 						href="/settings"
-						title="Settings"
+						title={t("nav.settings")}
 						class={cn(
 							"flex aspect-square h-full items-center justify-center transition-colors",
 							location.startsWith("/settings")
@@ -161,7 +164,7 @@ export function Header() {
 					<button
 						onClick={() => (showSync.value = !showSync.value)}
 						type="button"
-						title="Rooms"
+						title={t("nav.rooms")}
 						class="flex size-8 items-center justify-center cursor-pointer"
 					>
 						<Turntable
@@ -220,7 +223,7 @@ export function Header() {
 								</div>
 								<button
 									type="submit"
-									title="Search"
+									title={t("search.title")}
 									class="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-(--binary-color) bg-(--dominant-color) transition-opacity hover:opacity-75"
 								>
 									<Search class="size-5" strokeWidth={2.5} />
@@ -249,7 +252,7 @@ export function Header() {
 							<button
 								class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg px-3 py-2 text-(--binary-color) bg-(--dominant-color) transition-opacity hover:opacity-75"
 								type="submit"
-								title="Search"
+								title={t("search.title")}
 							>
 								<Search class="size-4" strokeWidth={2.5} />
 							</button>
@@ -275,7 +278,7 @@ function SourceToggle({
 			{showSpotify && (
 				<button
 					type="button"
-					title="Search in Spotify"
+					title={t("search.inSpotify")}
 					onClick={() => onSelect("spotify")}
 					class={cn(
 						"flex w-11 items-center justify-center transition-colors cursor-pointer md:w-10",
@@ -289,7 +292,7 @@ function SourceToggle({
 			)}
 			<button
 				type="button"
-				title="Search in YouTube"
+				title={t("search.inYouTube")}
 				onClick={() => onSelect("youtube")}
 				class={cn(
 					"flex w-11 items-center justify-center transition-colors cursor-pointer md:w-10",
@@ -332,7 +335,7 @@ function TypeSelect({
 			>
 				{spotifyTypeOptions.map((opt) => (
 					<option key={opt.value} value={opt.value} class="bg-zinc-950">
-						{opt.label}
+						{t(opt.label)}
 					</option>
 				))}
 			</select>
@@ -366,7 +369,7 @@ function SearchInput({
 			{clearable && value && (
 				<button
 					type="button"
-					title="Clear"
+					title={t("search.clear")}
 					onClick={() => onInput("")}
 					class="absolute right-2 flex size-6 cursor-pointer items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-white"
 				>

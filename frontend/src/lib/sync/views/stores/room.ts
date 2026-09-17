@@ -27,6 +27,7 @@ import {
 } from "@/lib/music/views/stores/queue";
 import { control, playGate } from "@/lib/music/views/stores/remote";
 import { binaryColor, dominantColor } from "@/lib/music/views/stores/theme";
+import { translateError } from "@/lib/shared/i18n/errors";
 import { addError } from "@/lib/shared/views/stores/errors";
 import * as transport from "@/lib/sync/app/transport";
 import type { Playback, ServerMessage } from "@/lib/sync/model";
@@ -307,7 +308,7 @@ function handleMessage(msg: ServerMessage): void {
 			store.role.value = msg.role;
 			return;
 		case "error":
-			store.error.value = msg.reason;
+			store.error.value = translateError(msg.reason);
 			addError(msg.reason, "room");
 			transport.abandon();
 			return;

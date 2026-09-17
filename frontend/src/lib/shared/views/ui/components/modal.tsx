@@ -2,6 +2,7 @@ import { X } from "lucide-preact";
 import { type ComponentChildren, createContext, type RefObject } from "preact";
 import { createPortal } from "preact/compat";
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { useSheetDrag } from "@/lib/shared/views/ui/hooks/use-sheet-drag";
 
@@ -24,7 +25,7 @@ export function Modal({
 	open,
 	close,
 	labelledBy,
-	closeLabel = "Close",
+	closeLabel = t("common.close"),
 	mobileOnly = false,
 	children,
 }: ModalProps) {

@@ -5,6 +5,8 @@ import {
 	youtubeBrowserLoginSupported,
 	youtubeSignInSuggested,
 } from "@/lib/auth/views/stores/youtube";
+import { t } from "@/lib/shared/i18n";
+import { translateError } from "@/lib/shared/i18n/errors";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
@@ -18,7 +20,7 @@ export function SignInPrompt() {
 		try {
 			await loginYouTubeWithBrowser();
 		} catch (err) {
-			setError(err instanceof Error ? err.message : String(err));
+			setError(translateError(err));
 		} finally {
 			setBusy(false);
 		}
@@ -34,15 +36,11 @@ export function SignInPrompt() {
 				<YoutubeIcon width={36} height={36} class="text-[#FF0000]" />
 				<div class="space-y-1">
 					<h2 id="youtube-signin-title" class="text-lg font-bold text-zinc-100">
-						Sign in to YouTube
+						{t("auth.youtube.signInTitle")}
 					</h2>
-					<p class="text-sm text-zinc-400">
-						This track needs a signed-in YouTube account — it is age-restricted
-						or YouTube asked to confirm you are not a bot.
-					</p>
+					<p class="text-sm text-zinc-400">{t("auth.youtube.signInBody")}</p>
 					<p class="text-xs text-amber-300/80">
-						Risk: using an account this way can get it banned by Google. Prefer
-						a secondary account.
+						{t("auth.youtube.signInRisk")}
 					</p>
 				</div>
 
@@ -54,7 +52,7 @@ export function SignInPrompt() {
 							onClick={() => void signIn()}
 							class="rounded-full bg-[#FF0000] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-85 cursor-pointer disabled:opacity-50"
 						>
-							{busy ? "Waiting for sign-in…" : "Sign in"}
+							{busy ? t("auth.youtube.waiting") : t("auth.youtube.signIn")}
 						</button>
 						<button
 							type="button"
@@ -62,15 +60,12 @@ export function SignInPrompt() {
 							onClick={() => dismissYouTubeSignInSuggestion()}
 							class="rounded-full px-5 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer disabled:opacity-50"
 						>
-							Not now
+							{t("auth.notNow")}
 						</button>
 					</div>
 				) : (
 					<div class="space-y-3">
-						<p class="text-xs text-zinc-500">
-							In-app sign-in is not available on this platform. Paste your
-							cookies or import a cookies.txt in Settings → Account.
-						</p>
+						<p class="text-xs text-zinc-500">{t("auth.youtube.unavailable")}</p>
 						<button
 							type="button"
 							onClick={() => dismissYouTubeSignInSuggestion()}
@@ -83,7 +78,7 @@ export function SignInPrompt() {
 
 				{error && (
 					<p class="text-xs text-red-400">
-						{error} — you can paste your cookies in Settings → Account instead.
+						{t("auth.youtube.errorHint", { error })}
 					</p>
 				)}
 			</div>

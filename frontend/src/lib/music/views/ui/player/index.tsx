@@ -25,6 +25,7 @@ import {
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
 import Toggle from "@/lib/music/views/ui/player/toggle";
 import VolumeControl from "@/lib/music/views/ui/volume";
+import { t } from "@/lib/shared/i18n";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
@@ -194,7 +195,11 @@ function FullPlayerContent(props: FullPlayerProps) {
 					<div class="flex items-center gap-2">
 						<button
 							type="button"
-							title={shuffle.value ? "Disable shuffle" : "Enable shuffle"}
+							title={
+								shuffle.value
+									? t("music.player.disableShuffle")
+									: t("music.player.enableShuffle")
+							}
 							onClick={toggleShuffle}
 							aria-pressed={shuffle.value}
 							class={cn(
@@ -211,13 +216,13 @@ function FullPlayerContent(props: FullPlayerProps) {
 							type="button"
 							title={
 								repeat.value === "off"
-									? "Repeat all"
+									? t("music.player.repeatAll")
 									: repeat.value === "all"
-										? "Repeat one"
-										: "No repeat"
+										? t("music.player.repeatOne")
+										: t("music.player.noRepeat")
 							}
 							onClick={cycleRepeat}
-							aria-label="Repeat mode"
+							aria-label={t("music.player.repeatMode")}
 							aria-pressed={repeat.value !== "off"}
 							class={cn(
 								"rounded-md p-1 transition cursor-pointer",
@@ -246,7 +251,7 @@ function FullPlayerContent(props: FullPlayerProps) {
 
 					<button
 						type="button"
-						title="Playback queue"
+						title={t("music.player.queue")}
 						aria-expanded={showQueue.value}
 						onClick={() => {
 							showQueue.value = !showQueue.value;
@@ -258,7 +263,7 @@ function FullPlayerContent(props: FullPlayerProps) {
 
 					<button
 						type="button"
-						title="Compact player"
+						title={t("music.player.compact")}
 						onClick={() => setCompactPlayer(true)}
 						class="hidden md:block rounded-md p-1 transition hover:bg-white/10 cursor-pointer"
 					>
@@ -380,7 +385,11 @@ export function Player() {
 						<div class="flex items-center gap-0.5 max-md:hidden">
 							<button
 								type="button"
-								title={shuffle.value ? "Disable shuffle" : "Enable shuffle"}
+								title={
+									shuffle.value
+										? t("music.player.disableShuffle")
+										: t("music.player.enableShuffle")
+								}
 								onClick={toggleShuffle}
 								aria-pressed={shuffle.value}
 								class={cn(
@@ -397,13 +406,13 @@ export function Player() {
 								type="button"
 								title={
 									repeat.value === "off"
-										? "Repeat all"
+										? t("music.player.repeatAll")
 										: repeat.value === "all"
-											? "Repeat one"
-											: "No repeat"
+											? t("music.player.repeatOne")
+											: t("music.player.noRepeat")
 								}
 								onClick={cycleRepeat}
-								aria-label="Repeat mode"
+								aria-label={t("music.player.repeatMode")}
 								aria-pressed={repeat.value !== "off"}
 								class={cn(
 									"rounded-md p-1.5 transition cursor-pointer",
@@ -452,7 +461,7 @@ export function Player() {
 						<div class="flex items-center gap-0.5">
 							<button
 								type="button"
-								title="Playback queue"
+								title={t("music.player.queue")}
 								aria-expanded={showQueue.value}
 								onClick={() => {
 									showQueue.value = !showQueue.value;
@@ -464,7 +473,7 @@ export function Player() {
 
 							<button
 								type="button"
-								aria-label="Expand player"
+								aria-label={t("music.player.expand")}
 								onClick={(e) => {
 									e.stopPropagation();
 									onExpand();
@@ -484,7 +493,7 @@ export function Player() {
 					playerModalOpen.value = false;
 				}}
 				mobileOnly
-				closeLabel="Close player"
+				closeLabel={t("music.player.close")}
 			>
 				<div class="relative flex min-h-0 flex-1 flex-col">
 					<div

@@ -6,6 +6,7 @@ import getUserPlaylists, {
 } from "@/lib/music/app/get-user-playlists";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
+import { t } from "@/lib/shared/i18n";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function UserPage() {
@@ -30,11 +31,13 @@ export function UserPage() {
 		return (
 			<DefaultLayout>
 				<div class="flex flex-col items-start gap-3 p-6 text-sm">
-					<p class="text-red-400">Failed to load playlists for @{user}</p>
+					<p class="text-red-400">
+						{t("pages.user.failed", { user: user ?? "" })}
+					</p>
 					<button
 						type="button"
 						onClick={handleRefresh}
-						title="Retry"
+						title={t("common.retry")}
 						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white transition-colors"
 					>
 						<RefreshCw size={14} />
@@ -61,7 +64,7 @@ export function UserPage() {
 					to={(id) => `/playlist/${id}`}
 					viewKey="user_view"
 					isLoading={isLoading}
-					emptyMessage="No playlists found."
+					emptyMessage={t("pages.user.noPlaylists")}
 				/>
 			</div>
 		</DefaultLayout>

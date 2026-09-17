@@ -4,6 +4,7 @@ import { useRef, useState } from "preact/hooks";
 import { Link } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
@@ -42,7 +43,11 @@ function SourceBadge({ source }: { source?: Source }) {
 	return (
 		<span
 			class="flex size-5 items-center justify-center text-zinc-400"
-			title={source === "spotify" ? "Spotify" : "YouTube"}
+			title={
+				source === "spotify"
+					? t("music.shelf.source.spotify")
+					: t("music.shelf.source.youtube")
+			}
 		>
 			{source === "spotify" ? (
 				<SpotifyIcon size={14} />
@@ -53,13 +58,13 @@ function SourceBadge({ source }: { source?: Source }) {
 	);
 }
 
-const hintSteps = [
-	"Search a playlist by name, or paste its link in the search bar.",
-	"Open the Playlists tab in the results.",
-	"Tap the heart to save it here.",
-];
-
 export function YouTubeHint() {
+	const hintSteps = [
+		t("music.hint.step1"),
+		t("music.hint.step2"),
+		t("music.hint.step3"),
+	];
+
 	return (
 		<div class="relative flex w-full max-w-sm flex-col items-center gap-5 px-6 py-8 text-center">
 			<div class="pointer-events-none absolute top-0 size-32 rounded-full bg-red-600/20 blur-3xl" />
@@ -70,11 +75,9 @@ export function YouTubeHint() {
 
 			<div class="relative flex flex-col gap-1">
 				<p class="text-sm font-semibold text-zinc-100">
-					No YouTube playlists yet
+					{t("music.hint.title")}
 				</p>
-				<p class="text-xs text-zinc-500">
-					Save any playlist and it shows up here.
-				</p>
+				<p class="text-xs text-zinc-500">{t("music.hint.body")}</p>
 			</div>
 
 			<ol class="relative flex w-full flex-col text-left">
@@ -130,7 +133,7 @@ export function Shelf({
 	onSelect,
 	actions,
 	isLoading = false,
-	emptyMessage = "No items found.",
+	emptyMessage = t("music.shelf.empty"),
 	onRemove,
 }: Props) {
 	const [variant, setVariant] = useState<Variant>(() => loadVariant(viewKey));
@@ -147,7 +150,7 @@ export function Shelf({
 				{removable && (
 					<button
 						type="button"
-						title="Remove"
+						title={t("common.remove")}
 						onClick={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
@@ -183,7 +186,7 @@ export function Shelf({
 		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
 			{isLoading ? (
 				<div class="flex flex-1 items-center justify-center p-8 text-sm text-zinc-400">
-					Loading...
+					{t("common.loading")}
 				</div>
 			) : items.length === 0 ? (
 				<div class="flex flex-1 items-center justify-center p-8 text-sm text-zinc-500">
@@ -197,7 +200,7 @@ export function Shelf({
 								<button
 									type="button"
 									onClick={() => setFilter("all")}
-									aria-label="All"
+									aria-label={t("music.shelf.all")}
 									class={cn(
 										"h-10 md:h-8 px-3 cursor-pointer flex items-center justify-center transition-colors text-xs font-medium",
 										sourceFilter === "all"
@@ -210,7 +213,7 @@ export function Shelf({
 								<button
 									type="button"
 									onClick={() => setFilter("youtube")}
-									aria-label="YouTube"
+									aria-label={t("music.shelf.source.youtube")}
 									class={cn(
 										"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
 										sourceFilter === "youtube"
@@ -223,7 +226,7 @@ export function Shelf({
 								<button
 									type="button"
 									onClick={() => setFilter("spotify")}
-									aria-label="Spotify"
+									aria-label={t("music.shelf.source.spotify")}
 									class={cn(
 										"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
 										sourceFilter === "spotify"
@@ -240,7 +243,7 @@ export function Shelf({
 							<button
 								type="button"
 								onClick={() => toggle("grid")}
-								aria-label="Vista grilla"
+								aria-label={t("music.shelf.gridView")}
 								class={cn(
 									"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
 									variant === "grid"
@@ -254,7 +257,7 @@ export function Shelf({
 							<button
 								type="button"
 								onClick={() => toggle("compact")}
-								aria-label="Vista compacta"
+								aria-label={t("music.shelf.compactView")}
 								class={cn(
 									"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
 									variant === "compact"
@@ -275,7 +278,7 @@ export function Shelf({
 									{sourceFilter === "spotify" && !spotifyConnected.value ? (
 										<SpotifyConnect />
 									) : sourceFilter === "spotify" ? (
-										"No Spotify playlists."
+										t("music.shelf.noSpotify")
 									) : (
 										<YouTubeHint />
 									)}

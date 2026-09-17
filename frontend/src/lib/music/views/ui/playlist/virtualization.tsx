@@ -14,6 +14,7 @@ import {
 } from "@/lib/music/views/stores/player";
 import TrackArt from "@/lib/music/views/ui/components/track-art";
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
+import { t } from "@/lib/shared/i18n";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
@@ -75,7 +76,7 @@ function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
 				<SaveYoutubeId song={song} compact />
 				<button
 					type="button"
-					title="Enqueue after current track"
+					title={t("music.track.enqueueAfter")}
 					onClick={(e) => {
 						e.stopPropagation();
 						enqueue(song);
@@ -108,7 +109,7 @@ export function Virtualization({ songs }: Props) {
 			>
 				{songs.length === 0 ? (
 					<div className="flex min-h-32 flex-1 items-center justify-center px-4 py-8 text-sm text-zinc-500">
-						No songs
+						{t("music.track.noSongs")}
 					</div>
 				) : (
 					<div

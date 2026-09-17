@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 
 type ProgressProps = {
@@ -115,7 +116,7 @@ function Progress({
 			aria-valuenow={value}
 			aria-valuemin={min}
 			aria-valuemax={max}
-			aria-label="Seek"
+			aria-label={t("music.player.seek")}
 		>
 			<div
 				class="absolute left-0 top-0 h-full bg-current rounded-full"

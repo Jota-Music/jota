@@ -6,6 +6,8 @@ import {
 	SyncStop,
 } from "@bindings/app";
 import { Events } from "@wailsio/runtime";
+import { t } from "@/lib/shared/i18n";
+import { translateError } from "@/lib/shared/i18n/errors";
 import { addError } from "@/lib/shared/views/stores/errors";
 import type { ClientMessage, ServerMessage } from "@/lib/sync/model";
 import * as store from "@/lib/sync/views/stores";
@@ -145,9 +147,9 @@ export async function connect(code: string): Promise<void> {
 		const msg = String(err);
 		if (/token/i.test(msg)) {
 			store.tokenRequired.value = true;
-			store.error.value = "This relay requires a token.";
+			store.error.value = t("errors.relay.tokenRequired");
 		} else {
-			store.error.value = msg;
+			store.error.value = translateError(msg);
 		}
 		addError(store.error.value, "room");
 	}

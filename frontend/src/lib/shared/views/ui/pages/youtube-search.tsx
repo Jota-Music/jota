@@ -18,6 +18,7 @@ import {
 	enqueue,
 	playFromQueueSelection,
 } from "@/lib/music/views/stores/player";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
@@ -141,7 +142,7 @@ export function YouTubeSearchPage() {
 						<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
 							<button
 								type="button"
-								title="Videos"
+								title={t("pages.youtube.videos")}
 								onClick={() => setTab("videos")}
 								class={cn(
 									"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
@@ -154,7 +155,7 @@ export function YouTubeSearchPage() {
 							</button>
 							<button
 								type="button"
-								title="Playlists"
+								title={t("pages.youtube.playlists")}
 								onClick={() => setTab("playlists")}
 								class={cn(
 									"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
@@ -170,19 +171,21 @@ export function YouTubeSearchPage() {
 				</header>
 
 				{!hasResults && !loading ? (
-					<p class="text-sm text-zinc-500">No results found.</p>
+					<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
 				) : activeTab === "playlists" ? (
 					<div class="relative min-h-0 flex-1">
 						<section ref={listRef} class="h-full flex flex-col overflow-y-auto">
 							{playlistsQuery.isLoading ? (
 								<div class="flex items-center gap-2 text-sm text-zinc-500">
 									<Loader size={14} class="animate-spin" />
-									Loading...
+									{t("common.loading")}
 								</div>
 							) : playlistsQuery.isError ? (
-								<p class="text-red-400">Failed to search YouTube</p>
+								<p class="text-red-400">{t("pages.youtube.failed")}</p>
 							) : playlists.length === 0 ? (
-								<p class="text-sm text-zinc-500">No playlists found.</p>
+								<p class="text-sm text-zinc-500">
+									{t("pages.youtube.noPlaylists")}
+								</p>
 							) : (
 								<div class="grid grid-cols-2 gap-3 pt-1 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
 									{playlists.map((playlist) => (
@@ -208,9 +211,9 @@ export function YouTubeSearchPage() {
 						<Loader size={24} class="animate-spin" />
 					</div>
 				) : videosQuery.isError ? (
-					<p class="text-red-400">Failed to search YouTube</p>
+					<p class="text-red-400">{t("pages.youtube.failed")}</p>
 				) : songs.length === 0 ? (
-					<p class="text-sm text-zinc-500">No results found.</p>
+					<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
 				) : (
 					<div class="relative min-h-0 flex-1">
 						<section
@@ -255,7 +258,9 @@ function PlaylistCard({
 
 				<button
 					type="button"
-					title={saved ? "Remove from home" : "Add to home"}
+					title={
+						saved ? t("pages.youtube.removeHome") : t("pages.youtube.addHome")
+					}
 					onClick={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
@@ -311,7 +316,7 @@ function YouTubeVideoItem({
 
 			<button
 				type="button"
-				title="Add to queue"
+				title={t("pages.youtube.addQueue")}
 				onClick={(e) => {
 					e.stopPropagation();
 					enqueue(song);

@@ -1,5 +1,6 @@
 import { LogError } from "@bindings/app";
 import { signal } from "@preact/signals";
+import { translateError } from "@/lib/shared/i18n/errors";
 
 export type RoomError = {
 	id: string;
@@ -22,10 +23,6 @@ function detail(error: unknown): string {
 	}
 }
 
-function summary(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
-}
-
 function line(context: string | undefined, text: string): string {
 	return context ? `${context}: ${text}` : text;
 }
@@ -46,7 +43,7 @@ export function addError(error: unknown, context?: string): void {
 
 	const entry: RoomError = {
 		id: `${Date.now()}-${Math.random()}`,
-		message: line(context, summary(error)),
+		message: line(context, translateError(error)),
 		timestamp: Date.now(),
 	};
 

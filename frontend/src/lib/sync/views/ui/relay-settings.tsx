@@ -1,5 +1,6 @@
 import { TriangleAlert, Turntable } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
 import * as transport from "@/lib/sync/app/transport";
@@ -43,24 +44,23 @@ export function RelaySettings() {
 		<section class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
 			<div class="flex items-center gap-2">
 				<Turntable size={18} class="text-zinc-400" />
-				<h2 class="text-sm font-semibold text-zinc-200">Rooms</h2>
+				<h2 class="text-sm font-semibold text-zinc-200">
+					{t("sync.relay.title")}
+				</h2>
 			</div>
-			<p class="text-xs text-zinc-500">
-				Relay server that syncs playback between devices. Rooms and their
-				passwords are set from the Rooms panel.
-			</p>
+			<p class="text-xs text-zinc-500">{t("sync.relay.body")}</p>
 
 			<div class="space-y-1.5">
 				<div class="flex items-center justify-between">
 					<label for="sync-relay" class="text-xs font-medium text-zinc-400">
-						Relay server
+						{t("sync.relay.label")}
 					</label>
 					<RelayStatus state={relay} />
 				</div>
 				<input
 					id="sync-relay"
 					class={inputClass}
-					placeholder="relay.example.com"
+					placeholder={t("sync.relay.placeholder")}
 					value={url}
 					onInput={(e) => (store.relayUrl.value = e.currentTarget.value)}
 				/>
@@ -75,18 +75,18 @@ export function RelaySettings() {
 				<div class="min-h-0 overflow-hidden">
 					<div class="space-y-1.5 pt-1.5">
 						<label for="sync-token" class="text-xs font-medium text-zinc-400">
-							Auth token
+							{t("sync.relay.token")}
 						</label>
 						<PasswordInput
 							id="sync-token"
 							class={inputClass}
-							label="Auth token"
+							label={t("sync.relay.token")}
 							value={store.token.value}
 							onValue={(v) => (store.token.value = v)}
 						/>
 						<p class="flex items-center gap-1.5 text-xs text-yellow-400">
 							<TriangleAlert size={14} class="shrink-0" />
-							This relay requires an auth token.
+							{t("sync.relay.tokenRequired")}
 						</p>
 					</div>
 				</div>
@@ -103,12 +103,20 @@ function RelayStatus({
 	const status = {
 		idle: null,
 		checking: {
-			label: "Checking…",
+			label: t("sync.relay.checking"),
 			text: "text-zinc-400",
 			dot: "bg-zinc-500 animate-pulse",
 		},
-		ok: { label: "Reachable", text: "text-green-400", dot: "bg-green-400" },
-		error: { label: "Not reachable", text: "text-red-400", dot: "bg-red-400" },
+		ok: {
+			label: t("sync.relay.reachable"),
+			text: "text-green-400",
+			dot: "bg-green-400",
+		},
+		error: {
+			label: t("sync.relay.unreachable"),
+			text: "text-red-400",
+			dot: "bg-red-400",
+		},
 	}[state];
 
 	if (!status) {

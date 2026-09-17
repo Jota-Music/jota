@@ -12,6 +12,7 @@ import {
 import { useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { pendingStart } from "@/lib/music/views/stores/audio";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
@@ -31,7 +32,7 @@ export function SyncPanel() {
 			open={showSync.value}
 			close={() => (showSync.value = false)}
 			labelledBy="sync-panel-title"
-			closeLabel="Close Sync"
+			closeLabel={t("sync.session.close")}
 		>
 			<header class="flex shrink-0 flex-col gap-1 border-b border-zinc-800 px-4 py-3">
 				<div class="flex items-center justify-between gap-2 text-white">
@@ -47,18 +48,20 @@ export function SyncPanel() {
 							)}
 						/>
 						<h2 id="sync-panel-title" class="text-sm font-medium">
-							Rooms
+							{t("sync.session.title")}
 						</h2>
 						<span class="text-xs text-zinc-500 tabular-nums">
 							{active
 								? connected
 									? store.joined.value
-										? `${store.peers.value} connected`
-										: "Joining..."
-									: "Connecting..."
+										? t("sync.session.connected", {
+												count: store.peers.value,
+											})
+										: t("sync.session.joining")
+									: t("sync.session.connecting")
 								: store.status.value === "connecting"
-									? "Connecting..."
-									: "Offline"}
+									? t("sync.session.connecting")
+									: t("sync.session.offline")}
 						</span>
 					</div>
 				</div>
@@ -111,10 +114,11 @@ function SessionForm() {
 					<Turntable size={26} class="text-zinc-500" />
 				</div>
 				<div class="space-y-1">
-					<p class="text-sm font-medium text-zinc-100">Relay server required</p>
+					<p class="text-sm font-medium text-zinc-100">
+						{t("sync.session.relayRequired")}
+					</p>
 					<p class="text-xs text-zinc-500">
-						To use this feature you need a relay server. Configure one in
-						Settings to start or join a room.
+						{t("sync.session.relayRequiredBody")}
 					</p>
 				</div>
 				<button
@@ -123,7 +127,7 @@ function SessionForm() {
 					onClick={openSettings}
 				>
 					<Settings size={16} />
-					Open settings
+					{t("sync.session.openSettings")}
 				</button>
 			</div>
 		);
@@ -132,7 +136,7 @@ function SessionForm() {
 	return (
 		<div class="flex flex-col gap-3">
 			<label for="sync-room" class="text-xs text-zinc-500">
-				Room code
+				{t("sync.session.roomCode")}
 			</label>
 			<div class="flex gap-2">
 				<input
@@ -148,28 +152,22 @@ function SessionForm() {
 					onClick={generate}
 				>
 					<RefreshCw size={16} />
-					Generate
+					{t("sync.session.generate")}
 				</button>
 			</div>
 			<p class="text-xs text-zinc-500">
-				{active ? (
-					<>
-						You are in room{" "}
-						<span class="font-mono text-zinc-300">{currentRoom}</span>. Edit the
-						code to switch rooms.
-					</>
-				) : (
-					"If nobody is hosting it yet, you become the host; otherwise you join and listen in sync."
-				)}
+				{active
+					? t("sync.session.inRoom", { room: currentRoom })
+					: t("sync.session.hostHint")}
 			</p>
 			<label for="sync-pass" class="text-xs text-zinc-500">
-				Room password
+				{t("sync.session.password")}
 			</label>
 			<PasswordInput
 				id="sync-pass"
 				class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
-				placeholder="Optional"
-				label="Room password"
+				placeholder={t("common.optional")}
+				label={t("sync.session.password")}
 				value={password}
 				onValue={setPassword}
 				onBlur={commitPassword}
@@ -181,29 +179,33 @@ function SessionForm() {
 				onClick={connect}
 			>
 				<LogIn size={16} />
-				{connecting ? "Connecting…" : active ? "Switch room" : "Connect"}
+				{connecting
+					? t("sync.session.connecting")
+					: active
+						? t("sync.session.switch")
+						: t("sync.session.connect")}
 			</button>
 			{ready && !savedRoom && (
 				<button
 					type="button"
-					title="Save this room to the Rooms shelf"
+					title={t("sync.session.saveTitle")}
 					class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 disabled:opacity-40"
 					disabled={saving}
 					onClick={save}
 				>
 					<BookmarkPlus size={16} />
-					{saving ? "Saving…" : "Save room"}
+					{saving ? t("common.saving") : t("sync.session.saveRoom")}
 				</button>
 			)}
 			{ready && savedRoom && (
 				<div class="flex items-center gap-2">
 					<p class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm text-green-400">
 						<BookmarkCheck size={16} />
-						{saving ? "Saving…" : "Saved to Rooms"}
+						{saving ? t("common.saving") : t("sync.session.saved")}
 					</p>
 					<button
 						type="button"
-						title="Remove from Rooms"
+						title={t("sync.session.removeTitle")}
 						class="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-zinc-800 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-red-300 disabled:opacity-40"
 						disabled={removing}
 						onClick={() => unsave(savedRoom.id)}
@@ -219,23 +221,23 @@ function SessionForm() {
 					onClick={leave}
 				>
 					{host ? <Unplug size={16} /> : <LogOut size={16} />}
-					{host ? "Stop session" : "Leave session"}
+					{host ? t("sync.session.stop") : t("sync.session.leave")}
 				</button>
 			)}
 			{pendingStart.value && (
-				<p class="text-xs text-zinc-500">Waiting for the room to load…</p>
+				<p class="text-xs text-zinc-500">{t("sync.session.waiting")}</p>
 			)}
 			{store.error.value && (
 				<p class="text-xs text-red-400">{store.error.value}</p>
 			)}
 			<p class="pt-1 text-xs text-zinc-600">
-				Relay: <span class="text-zinc-400">{relay}</span>{" "}
+				{t("sync.session.relay", { url: relay })}{" "}
 				<button
 					type="button"
 					class="underline hover:text-zinc-400 cursor-pointer"
 					onClick={openSettings}
 				>
-					Settings
+					{t("sync.session.settings")}
 				</button>
 			</p>
 		</div>

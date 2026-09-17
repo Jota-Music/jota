@@ -1,5 +1,6 @@
 import { Eye, EyeOff } from "lucide-preact";
 import { useState } from "preact/hooks";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 
 interface PasswordInputProps {
@@ -38,7 +39,7 @@ export function PasswordInput({
 			<button
 				type="button"
 				tabIndex={-1}
-				aria-label={visible ? "Hide" : "Show"}
+				aria-label={visible ? t("password.hide") : t("password.show")}
 				onClick={() => setVisible((v) => !v)}
 				class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-zinc-500 transition-colors hover:text-zinc-200 cursor-pointer"
 			>

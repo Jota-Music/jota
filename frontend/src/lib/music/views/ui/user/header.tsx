@@ -3,6 +3,8 @@ import { Heart, User as UserIcon } from "lucide-preact";
 import { spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserProfile from "@/lib/music/app/get-user-profile";
 import { useFollows } from "@/lib/music/views/ui/user/follow";
+import { t } from "@/lib/shared/i18n";
+import { cn } from "@/lib/shared/utils/tw";
 
 export function UserHeader({ username }: { username: string }) {
 	const account = spotifyUser.value ?? "";
@@ -46,10 +48,13 @@ export function UserHeader({ username }: { username: string }) {
 				type="button"
 				onClick={() => (isFollowing ? unfollow : follow).mutate(username)}
 				disabled={!account || follow.isPending || unfollow.isPending}
-				aria-label={isFollowing ? "Unfollow user" : "Follow user"}
-				class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white disabled:opacity-50 ${
-					isFollowing ? "text-red-400" : "text-zinc-400"
-				}`}
+				aria-label={
+					isFollowing ? t("pages.user.unfollow") : t("pages.user.follow")
+				}
+				class={cn(
+					"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white disabled:opacity-50",
+					isFollowing ? "text-red-400" : "text-zinc-400",
+				)}
 			>
 				<Heart size={14} class={isFollowing ? "fill-current" : ""} />
 			</button>

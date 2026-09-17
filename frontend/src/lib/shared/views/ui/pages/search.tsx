@@ -6,6 +6,7 @@ import { type SearchResult, searchSpotify } from "@/lib/music/app/search";
 import type { Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
+import { t } from "@/lib/shared/i18n";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
@@ -54,8 +55,7 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 
 					{item.trackCount != null && (
 						<p class="truncate text-xs text-zinc-500">
-							{item.trackCount} track
-							{item.trackCount === 1 ? "" : "s"}
+							{t("music.trackCount", { count: item.trackCount })}
 						</p>
 					)}
 				</div>
@@ -133,7 +133,7 @@ export function SearchPage() {
 	if (isError) {
 		return (
 			<DefaultLayout class="gap-6">
-				<p class="text-red-400">Failed to search</p>
+				<p class="text-red-400">{t("pages.search.failed")}</p>
 			</DefaultLayout>
 		);
 	}
@@ -155,7 +155,7 @@ export function SearchPage() {
 							<Loader size={24} class="animate-spin" />
 						</div>
 					) : songs.length === 0 ? (
-						<p class="text-sm text-zinc-500">No results found.</p>
+						<p class="text-sm text-zinc-500">{t("common.noResults")}</p>
 					) : (
 						<Virtualization songs={songs} />
 					)}
@@ -172,7 +172,7 @@ export function SearchPage() {
 				) : (
 					<header class="shrink-0">
 						<h2 class="text-xl font-semibold leading-tight">
-							Playlists by {query}
+							{t("pages.search.playlistsBy", { query })}
 						</h2>
 					</header>
 				)}
@@ -185,10 +185,12 @@ export function SearchPage() {
 						{isLoading ? (
 							<div class="flex items-center gap-2 text-sm text-zinc-500">
 								<Loader size={14} class="animate-spin" />
-								Loading...
+								{t("common.loading")}
 							</div>
 						) : results.length === 0 ? (
-							<p class="text-sm text-zinc-500">No playlists found.</p>
+							<p class="text-sm text-zinc-500">
+								{t("pages.search.noPlaylists")}
+							</p>
 						) : (
 							<PlaylistGrid results={results} />
 						)}

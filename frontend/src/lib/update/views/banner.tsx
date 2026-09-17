@@ -5,6 +5,7 @@ import {
 	Loader2,
 	X,
 } from "lucide-preact";
+import { t } from "@/lib/shared/i18n";
 import { open } from "@/lib/shared/utils/open";
 import {
 	dismissed,
@@ -25,14 +26,15 @@ export function UpdateBanner() {
 			<ArrowDownToLine size={16} class="shrink-0 text-(--dominant-color)" />
 
 			<p class="min-w-0 flex-1 truncate text-zinc-400">
-				<span class="font-medium text-zinc-100">Jota {info.latest}</span> is
-				available
+				{t("update.available", { version: info.latest })}
 			</p>
 
 			{installing.value ? (
 				<span class="flex shrink-0 items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300">
 					<Loader2 size={12} class="animate-spin" />
-					{p == null ? "Updating…" : `Updating… ${p}%`}
+					{p == null
+						? t("update.updating")
+						: t("update.updatingPercent", { percent: p })}
 				</span>
 			) : (
 				<button
@@ -47,14 +49,14 @@ export function UpdateBanner() {
 					) : (
 						<ExternalLink size={12} />
 					)}
-					{info.installable ? "Update" : "View release"}
+					{info.installable ? t("update.update") : t("update.viewRelease")}
 				</button>
 			)}
 
 			<button
 				type="button"
 				onClick={() => (dismissed.value = true)}
-				aria-label="Dismiss"
+				aria-label={t("common.dismiss")}
 				class="shrink-0 cursor-pointer text-zinc-500 transition-colors hover:text-zinc-200"
 			>
 				<X size={14} />

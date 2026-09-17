@@ -26,6 +26,7 @@ import {
 } from "@/lib/music/views/stores/player";
 import { queue, showQueue } from "@/lib/music/views/stores/queue";
 import TrackArt from "@/lib/music/views/ui/components/track-art";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
@@ -96,7 +97,7 @@ const QueueRow = memo(function QueueRow({
 	return (
 		<div
 			draggable={draggable}
-			title={draggable ? "Drag row to reorder" : undefined}
+			title={draggable ? t("music.queue.drag") : undefined}
 			role="none"
 			class={cn(
 				"flex h-full w-full select-none items-center gap-1 border-b border-zinc-900/80 px-1 sm:gap-2 sm:px-2",
@@ -137,10 +138,7 @@ const QueueRow = memo(function QueueRow({
 						{song.name}
 					</p>
 					{failed && (
-						<span
-							title="Could not play this track"
-							class="shrink-0 text-red-400"
-						>
+						<span title={t("music.queue.failed")} class="shrink-0 text-red-400">
 							<CircleAlert size={14} />
 						</span>
 					)}
@@ -160,7 +158,7 @@ const QueueRow = memo(function QueueRow({
 				<button
 					type="button"
 					draggable={false}
-					title="Play now"
+					title={t("music.queue.playNow")}
 					disabled={isCurrent}
 					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-(--dominant-color) disabled:cursor-not-allowed disabled:opacity-30"
 					onClick={() => void playAt(globalIndex)}
@@ -170,7 +168,7 @@ const QueueRow = memo(function QueueRow({
 				<button
 					type="button"
 					draggable={false}
-					title="Move down one position"
+					title={t("music.queue.moveDown")}
 					disabled={!canMoveDown}
 					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
 					onClick={() => void moveQueue(globalIndex, globalIndex + 1)}
@@ -180,7 +178,7 @@ const QueueRow = memo(function QueueRow({
 				<button
 					type="button"
 					draggable={false}
-					title="Place just below the playing track"
+					title={t("music.queue.snapBelow")}
 					disabled={!canSnapBelow}
 					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
 					onClick={() => void moveAfterCurrent(globalIndex)}
@@ -190,7 +188,7 @@ const QueueRow = memo(function QueueRow({
 				<button
 					type="button"
 					draggable={false}
-					title="Remove from queue"
+					title={t("music.queue.remove")}
 					class="cursor-pointer rounded-md p-1.5 text-zinc-500 transition hover:bg-red-950/50 hover:text-red-300"
 					onClick={() => void unqueue(globalIndex)}
 				>
@@ -274,19 +272,19 @@ function Queue() {
 			open={panel.open}
 			close={closeQueue}
 			labelledBy="queue-panel-title"
-			closeLabel="Close queue"
+			closeLabel={t("music.queue.close")}
 		>
 			<header class="flex shrink-0 flex-col gap-1 border-b border-zinc-800 px-4 py-3">
 				<div class="flex items-center justify-between gap-2 text-white">
 					<div class="flex items-center gap-2">
 						<ListMusic size={22} class="text-(--dominant-color)" />
 						<h2 id="queue-panel-title" class="sr-only">
-							Cola
+							{t("music.queue.title")}
 						</h2>
 						<span class="text-xs text-zinc-500 tabular-nums">
 							{songs.length === 0
-								? "empty"
-								: `${songs.length} tema${songs.length === 1 ? "" : "s"}`}
+								? t("music.queue.emptyShort")
+								: t("music.trackCount", { count: songs.length })}
 						</span>
 					</div>
 				</div>
@@ -299,17 +297,15 @@ function Queue() {
 						"min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1",
 						dragFrom.value != null && "[&_button]:pointer-events-none",
 					)}
-					aria-label="Queue"
+					aria-label={t("music.queue.aria")}
 					onDragOverCapture={handleDragOverCapture}
 					onDrop={handleDrop}
 					onDragEnd={endDrag}
 				>
 					{songs.length === 0 ? (
 						<li class="flex min-h-40 list-none flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-zinc-500">
-							<p>Empty queue.</p>
-							<p class="text-xs text-zinc-600">
-								Pick a playlist and click a track to start.
-							</p>
+							<p>{t("music.queue.empty")}</p>
+							<p class="text-xs text-zinc-600">{t("music.queue.emptyHint")}</p>
 						</li>
 					) : (
 						<div

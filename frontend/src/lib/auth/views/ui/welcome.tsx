@@ -10,6 +10,7 @@ import {
 	welcomeDismissed,
 	welcomeOpen,
 } from "@/lib/auth/views/stores/welcome";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
@@ -43,11 +44,9 @@ export function Welcome() {
 				<SpotifyIcon size={32} class="text-green-500" />
 				<div class="space-y-1">
 					<h2 id="welcome-title" class="text-lg font-bold text-zinc-100">
-						Welcome to Jota
+						{t("auth.welcome.title")}
 					</h2>
-					<p class="text-sm text-zinc-400">
-						Log in with Spotify to search, play and sync your music.
-					</p>
+					<p class="text-sm text-zinc-400">{t("auth.welcome.body")}</p>
 				</div>
 
 				<div class="flex items-center gap-2">
@@ -57,7 +56,7 @@ export function Welcome() {
 						onClick={() => void connect()}
 						class="rounded-full bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer disabled:opacity-50"
 					>
-						{busy ? "Connecting…" : "Connect with Spotify"}
+						{busy ? t("auth.welcome.connecting") : t("auth.welcome.connect")}
 					</button>
 					<button
 						type="button"
@@ -65,7 +64,7 @@ export function Welcome() {
 						onClick={() => dismissWelcome(mute)}
 						class="rounded-full px-5 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer disabled:opacity-50"
 					>
-						Not now
+						{t("auth.notNow")}
 					</button>
 				</div>
 
@@ -86,7 +85,7 @@ export function Welcome() {
 					>
 						<Check size={12} strokeWidth={3} />
 					</span>
-					Don't show this message again
+					{t("auth.welcome.dontShow")}
 				</label>
 			</div>
 		</Modal>

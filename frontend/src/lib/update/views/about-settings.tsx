@@ -1,4 +1,5 @@
 import { Download, ExternalLink, Info, Loader2 } from "lucide-preact";
+import { t } from "@/lib/shared/i18n";
 import { open } from "@/lib/shared/utils/open";
 import {
 	install,
@@ -13,13 +14,17 @@ export function AboutSettings() {
 		<section class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
 			<div class="flex items-center gap-2">
 				<Info size={18} class="text-zinc-400" />
-				<h2 class="text-sm font-semibold text-zinc-200">About</h2>
+				<h2 class="text-sm font-semibold text-zinc-200">
+					{t("update.about.title")}
+				</h2>
 			</div>
 
 			<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
 				<div class="min-w-0">
-					<p class="text-xs text-zinc-500">Version</p>
-					<p class="truncate text-sm text-zinc-100">{version.value || "dev"}</p>
+					<p class="text-xs text-zinc-500">{t("update.about.version")}</p>
+					<p class="truncate text-sm text-zinc-100">
+						{version.value || t("update.about.dev")}
+					</p>
 				</div>
 				<UpdateAction />
 			</div>
@@ -52,11 +57,11 @@ function UpdateAction() {
 			)}
 			{installing.value
 				? p == null
-					? "Updating…"
-					: `Updating… ${p}%`
+					? t("update.updating")
+					: t("update.updatingPercent", { percent: p })
 				: info.installable
-					? `Update to ${info.latest}`
-					: `Download ${info.latest}`}
+					? t("update.about.updateTo", { version: info.latest })
+					: t("update.about.download", { version: info.latest })}
 		</button>
 	);
 }

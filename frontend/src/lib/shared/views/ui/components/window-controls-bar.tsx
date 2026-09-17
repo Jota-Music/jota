@@ -2,11 +2,17 @@ import { Application, Events, System, Window } from "@wailsio/runtime";
 import { Copy, Minus, Pin, X } from "lucide-preact";
 import { createPortal } from "preact/compat";
 import { useEffect, useState } from "preact/hooks";
+import { t } from "@/lib/shared/i18n";
+import { cn } from "@/lib/shared/utils/tw";
 
 export function WindowControlsBar() {
 	const isDesktop = System.IsDesktop();
 	const [isMaximised, setIsMaximised] = useState(false);
 	const [isOnTop, setIsOnTop] = useState(false);
+
+	const buttonClass =
+		"flex aspect-square h-full items-center justify-center text-zinc-400 transition-colors cursor-pointer";
+	const hoverClass = "hover:text-zinc-100 hover:bg-white/5";
 
 	useEffect(() => {
 		if (!isDesktop) return;
@@ -41,36 +47,37 @@ export function WindowControlsBar() {
 			<button
 				type="button"
 				onClick={() => void Events.Emit("window:always-on-top:toggle")}
-				class="flex aspect-square h-full items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors cursor-pointer"
-				title={isOnTop ? "Desactivar siempre encima" : "Siempre encima"}
+				class={cn(buttonClass, hoverClass)}
+				title={isOnTop ? t("window.unpin") : t("window.pin")}
 			>
 				<Pin
-					class={`size-3.5 transition-transform duration-150 ease-out ${
-						isOnTop ? "translate-y-[2px] text-zinc-100" : "rotate-[25deg]"
-					}`}
+					class={cn(
+						"size-3.5 transition-transform duration-150 ease-out",
+						isOnTop ? "translate-y-0.5 text-zinc-100" : "rotate-25",
+					)}
 				/>
 			</button>
 			<button
 				type="button"
 				onClick={() => void Window.Minimise()}
-				class="flex aspect-square h-full items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors cursor-pointer"
-				title="Minimise"
+				class={cn(buttonClass, hoverClass)}
+				title={t("window.minimise")}
 			>
 				<Minus class="size-3.5" />
 			</button>
 			<button
 				type="button"
 				onClick={() => void onMaximize()}
-				class="flex aspect-square h-full items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors cursor-pointer"
-				title={isMaximised ? "Restore" : "Maximise"}
+				class={cn(buttonClass, hoverClass)}
+				title={isMaximised ? t("window.restore") : t("window.maximise")}
 			>
 				<Copy class="size-3.5" />
 			</button>
 			<button
 				type="button"
 				onClick={() => void onQuit()}
-				class="flex aspect-square h-full items-center justify-center text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-				title="Close"
+				class={cn(buttonClass, "hover:text-red-400 hover:bg-red-500/10")}
+				title={t("window.close")}
 			>
 				<X class="size-3.5" />
 			</button>

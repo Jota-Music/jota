@@ -12,6 +12,7 @@ import {
 	setYoutube,
 } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
+import { t } from "@/lib/shared/i18n";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
@@ -72,8 +73,8 @@ export default function SaveYoutubeId({
 					type="button"
 					title={
 						song.youtubeId
-							? `Edit YouTube ID (${song.youtubeId})`
-							: "Add YouTube ID"
+							? t("music.youtubeId.editWithId", { id: song.youtubeId })
+							: t("music.youtubeId.add")
 					}
 					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-amber-300"
 					onClick={(e) => {
@@ -98,7 +99,7 @@ export default function SaveYoutubeId({
 					{song.youtubeId && (
 						<span
 							class="cursor-pointer rounded p-1 opacity-0 transition hover:brightness-200 group-hover:opacity-100"
-							title="Edit YouTube ID"
+							title={t("music.youtubeId.edit")}
 						>
 							<Edit2 class="size-4" />
 						</span>
@@ -110,12 +111,12 @@ export default function SaveYoutubeId({
 				open={open}
 				close={() => setOpen(false)}
 				labelledBy="youtube-id-title"
-				closeLabel="Close YouTube ID editor"
+				closeLabel={t("music.youtubeId.close")}
 			>
 				<form class="flex flex-col gap-4 p-5" onSubmit={handlSubmit}>
 					<div class="flex flex-col gap-1">
 						<h2 id="youtube-id-title" class="text-sm font-semibold text-white">
-							YouTube ID
+							{t("music.youtubeId.title")}
 						</h2>
 						<p class="truncate text-xs text-zinc-500">{song.name}</p>
 					</div>
@@ -125,7 +126,7 @@ export default function SaveYoutubeId({
 						type="text"
 						value={youtubeId.value}
 						name="youtube"
-						placeholder="YouTube ID"
+						placeholder={t("music.youtubeId.placeholder")}
 						class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
 						onInput={(e) => {
 							youtubeId.value = (e.target as HTMLInputElement).value;
@@ -139,8 +140,8 @@ export default function SaveYoutubeId({
 
 					<button
 						type="submit"
-						title="Save"
-						aria-label="Save"
+						title={t("music.youtubeId.save")}
+						aria-label={t("music.youtubeId.save")}
 						class="cursor-pointer self-end rounded-md p-2 text-white transition hover:bg-zinc-700"
 					>
 						<Check class="size-4" />

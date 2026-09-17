@@ -9,6 +9,7 @@ import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import type { AlbumSummary, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
@@ -18,14 +19,15 @@ const view = signal<string>("tracks");
 const groupOrder = ["album", "single", "compilation"] as const;
 
 const groupLabels: Record<string, string> = {
-	album: "Albums",
-	single: "Singles",
-	compilation: "Compilations",
-	appears_on: "Appears on",
+	album: "pages.artist.groups.album",
+	single: "pages.artist.groups.single",
+	compilation: "pages.artist.groups.compilation",
+	appears_on: "pages.artist.groups.appears_on",
 };
 
 function groupLabel(key: string): string {
-	return groupLabels[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
+	const label = groupLabels[key];
+	return label ? t(label) : key.charAt(0).toUpperCase() + key.slice(1);
 }
 
 function groupKeysOf(albums: AlbumSummary[] | undefined): string[] {
@@ -91,7 +93,7 @@ export function ArtistPage() {
 		return (
 			<DefaultLayout class="gap-6">
 				<div class="flex flex-col gap-6 min-h-0 flex-1 items-center justify-center">
-					<p class="text-red-400">Failed to load artist</p>
+					<p class="text-red-400">{t("pages.artist.failed")}</p>
 				</div>
 			</DefaultLayout>
 		);
@@ -100,7 +102,10 @@ export function ArtistPage() {
 	return (
 		<DefaultLayout class="gap-4">
 			<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6">
-				<PageHeader cover={data?.imageUrl} title={data?.name ?? "Artist"} />
+				<PageHeader
+					cover={data?.imageUrl}
+					title={data?.name ?? t("pages.artist.defaultName")}
+				/>
 
 				<div class="flex flex-wrap items-center gap-2 shrink-0">
 					{tabs.map((tab) =>
@@ -119,7 +124,7 @@ export function ArtistPage() {
 								)}
 							>
 								<ListMusic size={14} />
-								Top tracks
+								{t("pages.artist.topTracks")}
 							</button>
 						) : (
 							<button
@@ -128,11 +133,12 @@ export function ArtistPage() {
 								onClick={() => {
 									view.value = tab;
 								}}
-								class={`flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm transition-colors ${
+								class={cn(
+									"flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm transition-colors",
 									activeTab === tab
 										? "border-zinc-600 bg-zinc-900 text-white"
-										: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white"
-								}`}
+										: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white",
+								)}
 							>
 								<Disc3 size={14} />
 								{groupLabel(tab)}
@@ -146,7 +152,7 @@ export function ArtistPage() {
 						<Loader
 							size={16}
 							class="animate-spin text-zinc-500"
-							aria-label="Loading discography"
+							aria-label={t("pages.artist.loadingDiscography")}
 						/>
 					)}
 				</div>
@@ -157,7 +163,7 @@ export function ArtistPage() {
 							<Loader size={24} class="animate-spin" />
 						</div>
 					) : tracks.length === 0 ? (
-						<p class="text-sm text-zinc-500">No songs found.</p>
+						<p class="text-sm text-zinc-500">{t("pages.artist.noSongs")}</p>
 					) : (
 						<Virtualization songs={tracks} />
 					)
@@ -174,7 +180,9 @@ export function ArtistPage() {
 						to={(id) => `/album/${id}`}
 						viewKey="artist_view"
 						isLoading={discoLoading}
-						emptyMessage={`No ${groupLabel(activeTab).toLowerCase()} found.`}
+						emptyMessage={t("pages.artist.noGroup", {
+							group: groupLabel(activeTab).toLowerCase(),
+						})}
 					/>
 				)}
 			</div>

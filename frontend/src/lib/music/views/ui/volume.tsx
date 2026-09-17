@@ -7,6 +7,7 @@ import {
 	toggleMute,
 	volume,
 } from "@/lib/music/views/stores/audio";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import Progress from "@/lib/shared/views/ui/components/progress";
 
@@ -37,7 +38,9 @@ function VolumeControl({ class: className }: { class?: string }) {
 			<button
 				type="button"
 				onClick={toggleMute}
-				aria-label={muted.value ? "Unmute" : "Mute"}
+				aria-label={
+					muted.value ? t("music.volume.unmute") : t("music.volume.mute")
+				}
 				class="contents"
 			>
 				<Icon class="size-9 cursor-pointer" />
