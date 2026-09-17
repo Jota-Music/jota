@@ -9,6 +9,7 @@ import {
 } from "lucide-preact";
 import { useRef, useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
+import { pendingStart } from "@/lib/music/views/stores/audio";
 import { cn } from "@/lib/shared/utils/tw";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
@@ -16,7 +17,7 @@ import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import * as transport from "@/lib/sync/app/transport";
 import * as store from "@/lib/sync/views/stores";
 import { showSync } from "@/lib/sync/views/stores";
-import "@/lib/sync/views/stores/sync";
+import "@/lib/sync/views/stores/room";
 
 export function SyncPanel() {
 	const r = store.role.value;
@@ -51,7 +52,9 @@ export function SyncPanel() {
 						<span class="text-xs text-zinc-500 tabular-nums">
 							{active
 								? connected
-									? `${store.peers.value} connected`
+									? store.joined.value
+										? `${store.peers.value} connected`
+										: "Joining..."
 									: "Connecting..."
 								: status === "connecting"
 									? "Connecting..."
@@ -175,6 +178,9 @@ function SessionForm() {
 					{role === "host" ? <Unplug size={16} /> : <LogOut size={16} />}
 					{role === "host" ? "Stop session" : "Leave session"}
 				</button>
+			)}
+			{pendingStart.value && (
+				<p class="text-xs text-zinc-500">Waiting for the room to load…</p>
 			)}
 			{store.error.value && (
 				<p class="text-xs text-red-400">{store.error.value}</p>

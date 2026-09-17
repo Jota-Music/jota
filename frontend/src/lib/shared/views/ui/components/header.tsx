@@ -16,7 +16,7 @@ import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
-import { showSync } from "@/lib/sync/views/stores";
+import { role, showSync, status } from "@/lib/sync/views/stores";
 
 type Source = "spotify" | "youtube";
 type SpotifyType = "user" | "track" | "album" | "playlist" | "artist";
@@ -52,6 +52,8 @@ export function Header() {
 	const [searchType, setSearchType] = useState<SpotifyType>(loadType);
 
 	const liveSource: Source = spotifyConnected.value ? source : "youtube";
+	const jams = role.value !== "off";
+	const connected = status.value === "open";
 
 	useEffect(() => {
 		localStorage.setItem(sourceKey, source);
@@ -162,7 +164,16 @@ export function Header() {
 						title="Jams"
 						class="flex size-8 items-center justify-center cursor-pointer"
 					>
-						<Radio class="size-5 md:size-4 text-zinc-400 hover:text-zinc-100" />
+						<Radio
+							class={cn(
+								"size-5 md:size-4",
+								connected
+									? "text-green-400"
+									: jams
+										? "text-yellow-400"
+										: "text-zinc-400 hover:text-zinc-100",
+							)}
+						/>
 					</button>
 				</div>
 
