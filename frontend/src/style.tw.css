@@ -37,6 +37,11 @@
 	user-select: none;
 }
 
+body.pointer-dragging,
+body.pointer-dragging * {
+	cursor: grabbing !important;
+}
+
 html,
 body {
 	overflow: hidden;

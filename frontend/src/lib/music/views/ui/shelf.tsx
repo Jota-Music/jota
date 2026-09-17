@@ -8,11 +8,13 @@ import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
+import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 const defaultViewKey = "cover_grid_view";
 const filterKey = "playlist_source_filter";
+const COARSE = window.matchMedia("(pointer: coarse)").matches;
 
 const dragFrom = signal<string | null>(null);
 const dragOver = signal<string | null>(null);
@@ -190,11 +192,42 @@ export function Shelf({
 		if (from !== id) onReorder?.(from, id);
 	};
 
+	const source = useRef<string | null>(null);
+
+	const { start, captureClick } = usePointerDrag({
+		begin: () => {
+			if (source.current == null) return;
+			dragFrom.value = source.current;
+			dragOver.value = source.current;
+		},
+		move: (e) => {
+			const el = document.elementFromPoint(e.clientX, e.clientY);
+			const id = el
+				?.closest("[data-reorder-id]")
+				?.getAttribute("data-reorder-id");
+			if (id != null && dragOver.value !== id) dragOver.value = id;
+		},
+		end: (dragged) => {
+			const from = dragFrom.value;
+			const to = dragOver.value;
+			endDrag();
+			if (dragged && from != null && to != null && from !== to) {
+				onReorder?.(from, to);
+			}
+		},
+	});
+
+	const handlePointerDown = (id: string) => (e: PointerEvent) => {
+		if (!reorderable) return;
+		if ((e.target as Element).closest("button")) return;
+		if (!start(e)) return;
+		source.current = id;
+	};
+
 	// A touch long-press starts the drag, but the browser would rather open the
 	// link menu. Suppress it on coarse pointers; keep the desktop context menu.
 	const preventMenu = (e: MouseEvent) => {
-		if (reorderable && window.matchMedia("(pointer: coarse)").matches)
-			e.preventDefault();
+		if (reorderable && COARSE) e.preventDefault();
 	};
 
 	const renderActions = (item: Item) => {
@@ -335,7 +368,11 @@ export function Shelf({
 					</div>
 
 					<div class="relative min-h-0 flex-1">
-						<div ref={listRef} class="h-full overflow-y-auto px-3 pb-3">
+						<div
+							ref={listRef}
+							class="h-full overflow-y-auto px-3 pb-3"
+							onClickCapture={captureClick}
+						>
 							{filteredItems.length === 0 ? (
 								<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
 									{sourceFilter === "spotify" && !spotifyConnected.value ? (
@@ -352,7 +389,9 @@ export function Shelf({
 										<Link
 											key={item.id}
 											href={to(item.id)}
-											draggable={reorderable}
+											data-reorder-id={item.id}
+											draggable={reorderable && COARSE}
+											onPointerDown={handlePointerDown(item.id)}
 											onClick={(e) => select(item, e)}
 											onContextMenu={preventMenu}
 											onDragStart={(e) => startDrag(item.id, e)}
@@ -416,7 +455,9 @@ export function Shelf({
 										>
 											<Link
 												href={to(item.id)}
-												draggable={reorderable}
+												data-reorder-id={item.id}
+												draggable={reorderable && COARSE}
+												onPointerDown={handlePointerDown(item.id)}
 												onClick={(e) => select(item, e)}
 												onContextMenu={preventMenu}
 												onDragStart={(e) => startDrag(item.id, e)}

@@ -9,7 +9,7 @@ import {
 	Trash2,
 } from "lucide-preact";
 import { memo } from "preact/compat";
-import { useEffect } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { useQueuePanel } from "@/lib/music/views/hooks/use-queue";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
@@ -32,9 +32,11 @@ import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
+import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 
 const ROW_PX = 64;
 const QUEUE_VIEW_LOOKBACK = 1;
+const COARSE = window.matchMedia("(pointer: coarse)").matches;
 
 const dragFrom = signal<number | null>(null);
 const dragOver = signal<number | null>(null);
@@ -91,13 +93,13 @@ const QueueRow = memo(function QueueRow({
 	isDragSource,
 	isDropTarget,
 }: QueueRowProps) {
-	const draggable = songsLength > 1;
+	const reorderable = songsLength > 1;
 	const canMoveDown = globalIndex < songsLength - 1;
 
 	return (
 		<div
-			draggable={draggable}
-			title={draggable ? t("music.queue.drag") : undefined}
+			draggable={reorderable && COARSE}
+			title={reorderable ? t("music.queue.drag") : undefined}
 			role="none"
 			class={cn(
 				"flex h-full w-full select-none items-center gap-1 border-b border-zinc-900/80 px-1 sm:gap-2 sm:px-2",
@@ -105,7 +107,7 @@ const QueueRow = memo(function QueueRow({
 				isDragSource && "opacity-40",
 				isDropTarget &&
 					"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/40 ring-inset",
-				draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default",
+				reorderable ? "cursor-pointer" : "cursor-default",
 			)}
 			onDragStart={(e) => startDrag(e, globalIndex)}
 			onDragEnd={endDrag}
@@ -256,6 +258,40 @@ function Queue() {
 		}
 	};
 
+	const source = useRef<number | null>(null);
+
+	const { start, captureClick } = usePointerDrag({
+		begin: () => {
+			if (source.current == null) return;
+			dragFrom.value = source.current;
+			dragOver.value = source.current;
+		},
+		move: (e) => {
+			const next = indexFromClientY(e.clientY);
+			if (dragOver.value !== next) dragOver.value = next;
+		},
+		end: (dragged) => {
+			const from = dragFrom.value;
+			const to = dragOver.value;
+			endDrag();
+			if (dragged && from != null && to != null && from !== to) {
+				void moveQueue(from, to);
+			}
+		},
+	});
+
+	const handlePointerDown = (e: PointerEvent) => {
+		if (songs.length <= 1) return;
+		const target = e.target as Element;
+		if (target.closest("button")) return;
+		const row = target.closest("[data-queue-index]");
+		if (!row) return;
+		const index = Number(row.getAttribute("data-queue-index"));
+		if (!Number.isInteger(index)) return;
+		if (!start(e)) return;
+		source.current = index;
+	};
+
 	useEffect(() => {
 		if (!panel.open) return;
 		const onKey = (e: KeyboardEvent) => {
@@ -298,6 +334,8 @@ function Queue() {
 						dragFrom.value != null && "[&_button]:pointer-events-none",
 					)}
 					aria-label={t("music.queue.aria")}
+					onPointerDown={handlePointerDown}
+					onClickCapture={captureClick}
 					onDragOverCapture={handleDragOverCapture}
 					onDrop={handleDrop}
 					onDragEnd={endDrag}
@@ -322,6 +360,7 @@ function Queue() {
 								return (
 									<div
 										key={`${song.id}-${globalIndex}`}
+										data-queue-index={globalIndex}
 										class="absolute left-0 w-full"
 										style={{
 											height: `${virtualRow.size}px`,
