@@ -16,9 +16,10 @@
 	--color-primary-900: #6e0e21;
 	--color-primary-950: #3b0711;
 
-	/* Player accent until cover analysis sets inline vars */
-	--dominant-color: var(--color-primary-400);
-	--binary-color: #ffffff;
+	/* Player accent until cover analysis sets inline vars (brand pink, matches
+	   the app icon). Black text keeps contrast on this light accent. */
+	--dominant-color: #ff6dd6;
+	--binary-color: #000000;
 }
 
 /* Wails frameless drag: JS hook (useWindowDrag) handles drag via WindowSetPosition.
