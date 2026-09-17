@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { applyOrder, move } from "./order";
+import { applyOrder, move } from "@/lib/music/app/reorder";
 
 const items = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
 

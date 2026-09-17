@@ -1,13 +1,4 @@
-// Pure clock math for a four-timestamp NTP exchange:
-//   t0 client send, t1 relay receive, t2 relay send, t3 client receive.
-// `offset` maps the local clock onto the relay clock and `roundTrip` bounds the
-// error of the sample (a lower round trip is a better sample).
-export interface Stamps {
-	t0: number;
-	t1: number;
-	t2: number;
-	t3: number;
-}
+import type { Stamps } from "@/lib/sync/model";
 
 export function offset(s: Stamps): number {
 	return (s.t1 - s.t0 + (s.t2 - s.t3)) / 2;

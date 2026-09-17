@@ -1,11 +1,7 @@
 import { effect } from "@preact/signals";
+import { offset as ntpOffset, project, roundTrip } from "@/lib/sync/app/clock";
 import * as transport from "@/lib/sync/app/transport";
 import type { ServerMessage } from "@/lib/sync/model";
-import {
-	offset as ntpOffset,
-	project,
-	roundTrip,
-} from "@/lib/sync/model/clock";
 import { offsetMs, status } from "@/lib/sync/views/stores";
 
 // Clock samples against the relay. The best round trip wins the offset: a low

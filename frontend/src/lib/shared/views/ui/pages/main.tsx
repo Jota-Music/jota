@@ -5,11 +5,11 @@ import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import { getOrder, saveOrder } from "@/lib/music/app/order";
+import { applyOrder, move } from "@/lib/music/app/reorder";
 import {
 	getYouTubePlaylists,
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
-import { applyOrder, move } from "@/lib/music/model/order";
 import {
 	type IconType,
 	type Item,

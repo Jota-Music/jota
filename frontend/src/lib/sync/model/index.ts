@@ -2,6 +2,16 @@ import type { ControlAction, Song } from "@/lib/music/model";
 
 export type Seat = "off" | "host" | "guest";
 
+// Four stamps of an NTP exchange (t0 client send, t1 relay receive, t2 relay
+// send, t3 client receive). `offset` maps the local clock onto the relay clock;
+// `roundTrip` bounds the sample error (a lower round trip is a better sample).
+export interface Stamps {
+	t0: number;
+	t1: number;
+	t2: number;
+	t3: number;
+}
+
 // What identifies a track in the shared queue, plus the room cosmetics. Sent by
 // the member that announces the next track.
 export interface Track {
