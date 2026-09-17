@@ -185,29 +185,60 @@ export function Header() {
 
 			<div
 				class={cn(
-					"mx-auto max-w-2xl overflow-hidden transition-all duration-200 px-4 md:px-0",
-					openSearch ? "max-h-40 opacity-100 py-2" : "max-h-0 opacity-0 py-0",
+					"mx-auto grid max-w-2xl overflow-hidden px-4 transition-[grid-template-rows,opacity] duration-200 md:px-0",
+					openSearch
+						? "grid-rows-[1fr] opacity-100"
+						: "grid-rows-[0fr] opacity-0",
 				)}
 			>
-				<form onSubmit={onSearchSubmit}>
-					{/* Mobile: source/type on top row, input + submit below */}
-					<div class="flex flex-col gap-1.5 md:hidden">
-						<div class="flex h-11 w-max items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
-							<SourceToggle
-								source={liveSource}
-								showSpotify={spotifyConnected.value}
-								onSelect={setSource}
-							/>
-							{liveSource === "spotify" && (
-								<TypeSelect
-									value={searchType}
-									onChange={setSearchType}
-									stretch
+				<form onSubmit={onSearchSubmit} class="min-h-0 overflow-hidden">
+					<div class="py-2">
+						{/* Mobile: source/type on top row, input + submit below */}
+						<div class="flex flex-col gap-1.5 md:hidden">
+							<div class="flex h-11 w-max items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+								<SourceToggle
+									source={liveSource}
+									showSpotify={spotifyConnected.value}
+									onSelect={setSource}
 								/>
-							)}
+								{liveSource === "spotify" && (
+									<TypeSelect
+										value={searchType}
+										onChange={setSearchType}
+										stretch
+									/>
+								)}
+							</div>
+							<div class="grid grid-cols-[1fr_max-content] gap-1.5">
+								<div class="flex h-11 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 transition-all focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600">
+									<SearchInput
+										value={searchDraft}
+										placeholder={placeholder}
+										onInput={setSearchDraft}
+										clearable
+									/>
+								</div>
+								<button
+									type="submit"
+									title="Search"
+									class="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-(--binary-color) bg-(--dominant-color) transition-opacity hover:opacity-75"
+								>
+									<Search class="size-5" strokeWidth={2.5} />
+								</button>
+							</div>
 						</div>
-						<div class="grid grid-cols-[1fr_max-content] gap-1.5">
-							<div class="flex h-11 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 transition-all focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600">
+
+						{/* Desktop: single pill + submit (unchanged) */}
+						<div class="hidden gap-2 md:grid md:grid-cols-[1fr_max-content]">
+							<div class="flex h-10 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 transition-all focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600">
+								<SourceToggle
+									source={liveSource}
+									showSpotify={spotifyConnected.value}
+									onSelect={setSource}
+								/>
+								{liveSource === "spotify" && (
+									<TypeSelect value={searchType} onChange={setSearchType} />
+								)}
 								<SearchInput
 									value={searchDraft}
 									placeholder={placeholder}
@@ -216,40 +247,13 @@ export function Header() {
 								/>
 							</div>
 							<button
+								class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg px-3 py-2 text-(--binary-color) bg-(--dominant-color) transition-opacity hover:opacity-75"
 								type="submit"
 								title="Search"
-								class="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-(--binary-color) bg-(--dominant-color) transition-opacity hover:opacity-75"
 							>
-								<Search class="size-5" strokeWidth={2.5} />
+								<Search class="size-4" strokeWidth={2.5} />
 							</button>
 						</div>
-					</div>
-
-					{/* Desktop: single pill + submit (unchanged) */}
-					<div class="hidden gap-2 md:grid md:grid-cols-[1fr_max-content]">
-						<div class="flex h-10 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 transition-all focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600">
-							<SourceToggle
-								source={liveSource}
-								showSpotify={spotifyConnected.value}
-								onSelect={setSource}
-							/>
-							{liveSource === "spotify" && (
-								<TypeSelect value={searchType} onChange={setSearchType} />
-							)}
-							<SearchInput
-								value={searchDraft}
-								placeholder={placeholder}
-								onInput={setSearchDraft}
-								clearable
-							/>
-						</div>
-						<button
-							class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg px-3 py-2 text-(--binary-color) bg-(--dominant-color) transition-opacity hover:opacity-75"
-							type="submit"
-							title="Search"
-						>
-							<Search class="size-4" strokeWidth={2.5} />
-						</button>
 					</div>
 				</form>
 			</div>
