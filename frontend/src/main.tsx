@@ -1,8 +1,16 @@
+import { effect } from "@preact/signals";
 import { render } from "preact";
+import { t } from "@/lib/shared/i18n";
 import { logError } from "@/lib/shared/views/stores/errors";
 import Router from "@/lib/shared/views/ui/router";
 import "@wailsio/runtime";
 import "./style.tw.css";
+
+const description = document.querySelector('meta[name="description"]');
+effect(() => {
+	document.title = t("app.title");
+	description?.setAttribute("content", t("app.description"));
+});
 
 // console.error is where unexpected failures land; mirror it to the log file.
 // console.warn/log are left alone: they are mostly benign in this app.

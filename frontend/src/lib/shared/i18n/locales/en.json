@@ -1,0 +1,321 @@
+{
+	"app": {
+		"title": "Jota | Free music self-hosted service",
+		"description": "Jota is a free, self-hosted music service. Stream your music anywhere, anytime."
+	},
+	"common": {
+		"loading": "Loading...",
+		"retry": "Retry",
+		"save": "Save",
+		"saving": "Saving…",
+		"remove": "Remove",
+		"close": "Close",
+		"dismiss": "Dismiss",
+		"optional": "Optional",
+		"noResults": "No results found."
+	},
+	"nav": {
+		"settings": "Settings",
+		"rooms": "Rooms",
+		"back": "Back"
+	},
+	"search": {
+		"title": "Search",
+		"clear": "Clear",
+		"inSpotify": "Search in Spotify",
+		"inYouTube": "Search in YouTube",
+		"youtubePlaceholder": "Search in YouTube (videos or playlists)",
+		"userPlaceholder": "Spotify username or link...",
+		"spotifyPlaceholder": "Spotify {type} ID, URI or link...",
+		"type": {
+			"user": "User",
+			"track": "Track",
+			"album": "Album",
+			"playlist": "Playlist",
+			"artist": "Artist"
+		}
+	},
+	"window": {
+		"pin": "Always on top",
+		"unpin": "Disable always on top",
+		"minimise": "Minimise",
+		"maximise": "Maximise",
+		"restore": "Restore",
+		"close": "Close"
+	},
+	"password": {
+		"show": "Show",
+		"hide": "Hide"
+	},
+	"settings": {
+		"title": "Settings",
+		"subtitle": "Manage your account and how Jota syncs playback.",
+		"developedBy": "Developed by",
+		"language": {
+			"title": "Language",
+			"description": "Interface language.",
+			"label": "Language"
+		}
+	},
+	"pages": {
+		"search": {
+			"failed": "Failed to search",
+			"playlistsBy": "Playlists by {query}",
+			"noPlaylists": "No playlists found."
+		},
+		"album": {
+			"defaultName": "Album",
+			"failed": "Failed to load album",
+			"noTracks": "No tracks found."
+		},
+		"artist": {
+			"defaultName": "Artist",
+			"failed": "Failed to load artist",
+			"noSongs": "No songs found.",
+			"noGroup": "No {group} found.",
+			"topTracks": "Top tracks",
+			"loadingDiscography": "Loading discography",
+			"groups": {
+				"album": "Albums",
+				"single": "Singles",
+				"compilation": "Compilations",
+				"appears_on": "Appears on"
+			}
+		},
+		"user": {
+			"failed": "Failed to load playlists for @{user}",
+			"noPlaylists": "No playlists found.",
+			"follow": "Follow user",
+			"unfollow": "Unfollow user"
+		},
+		"youtube": {
+			"videos": "Videos",
+			"playlists": "Playlists",
+			"failed": "Failed to search YouTube",
+			"noResults": "No results found.",
+			"noPlaylists": "No playlists found.",
+			"addHome": "Add to home",
+			"removeHome": "Remove from home",
+			"addQueue": "Add to queue"
+		},
+		"notFound": {
+			"title": "404 — Page not found",
+			"home": "Back home"
+		}
+	},
+	"auth": {
+		"notNow": "Not now",
+		"welcome": {
+			"title": "Welcome to Jota",
+			"body": "Log in with Spotify to search, play and sync your music.",
+			"connect": "Connect with Spotify",
+			"connecting": "Connecting…",
+			"dontShow": "Don't show this message again"
+		},
+		"spotify": {
+			"connect": "Connect with Spotify",
+			"prompt": "Connect with Spotify to use this.",
+			"completeLogin": "Complete Spotify login, then return here.",
+			"couldNotConnect": "Could not connect to Spotify."
+		},
+		"youtube": {
+			"signInTitle": "Sign in to YouTube",
+			"signInBody": "This track needs a signed-in YouTube account — it is age-restricted or YouTube asked to confirm you are not a bot.",
+			"signInRisk": "Risk: using an account this way can get it banned by Google. Prefer a secondary account.",
+			"signIn": "Sign in",
+			"waiting": "Waiting for sign-in…",
+			"unavailable": "In-app sign-in is not available on this platform. Paste your cookies or import a cookies.txt in Settings → Account.",
+			"errorHint": "{error} — you can paste your cookies in Settings → Account instead.",
+			"riskLabel": "Risk.",
+			"settingsRisk": "Signing in with a Google account and using it to play audio can get that account banned by Google. Use an account you can afford to lose, and prefer a secondary one.",
+			"signInBrowser": "Sign in with browser",
+			"orPaste": "or paste cookies",
+			"unavailableShort": "In-app sign-in is not available on this platform. Paste your cookies or import a cookies.txt export below.",
+			"pasteHint": "On a signed-in youtube.com tab, run copy(document.cookie) in the console and paste it below, or import a cookies.txt export.",
+			"pastePlaceholder": "Paste cookies (must include SAPISID) or a cookies.txt export",
+			"importFile": "Import cookies.txt"
+		},
+		"account": {
+			"title": "Account",
+			"connectedAs": "Connected as",
+			"disconnect": "Disconnect",
+			"youtubeHint": "YouTube — needed for age-restricted videos",
+			"signedIn": "Signed in",
+			"signOut": "Sign out"
+		}
+	},
+	"music": {
+		"trackCount": {
+			"one": "{count} track",
+			"other": "{count} tracks"
+		},
+		"shelf": {
+			"empty": "No items found.",
+			"all": "All",
+			"noSpotify": "No Spotify playlists.",
+			"gridView": "Grid view",
+			"compactView": "Compact view",
+			"source": {
+				"spotify": "Spotify",
+				"youtube": "YouTube"
+			}
+		},
+		"hint": {
+			"title": "No YouTube playlists yet",
+			"body": "Save any playlist and it shows up here.",
+			"step1": "Search a playlist by name, or paste its link in the search bar.",
+			"step2": "Open the Playlists tab in the results.",
+			"step3": "Tap the heart to save it here."
+		},
+		"queue": {
+			"title": "Queue",
+			"emptyShort": "empty",
+			"empty": "Empty queue.",
+			"emptyHint": "Pick a playlist and click a track to start.",
+			"drag": "Drag row to reorder",
+			"failed": "Could not play this track",
+			"playNow": "Play now",
+			"moveDown": "Move down one position",
+			"snapBelow": "Place just below the playing track",
+			"remove": "Remove from queue",
+			"aria": "Queue",
+			"close": "Close queue"
+		},
+		"playlist": {
+			"defaultName": "Playlist",
+			"failed": "Failed to load playlist",
+			"searchPlaceholder": "Search songs or artists...",
+			"clearSearch": "Clear search",
+			"orderBy": "Order by",
+			"order": {
+				"added": "Oldest",
+				"reverse": "Newest",
+				"durationAsc": "Shortest",
+				"durationDesc": "Longest"
+			}
+		},
+		"track": {
+			"enqueueAfter": "Enqueue after current track",
+			"noSongs": "No songs"
+		},
+		"player": {
+			"enableShuffle": "Enable shuffle",
+			"disableShuffle": "Disable shuffle",
+			"repeatAll": "Repeat all",
+			"repeatOne": "Repeat one",
+			"noRepeat": "No repeat",
+			"repeatMode": "Repeat mode",
+			"seek": "Seek",
+			"queue": "Playback queue",
+			"compact": "Compact player",
+			"close": "Close player",
+			"expand": "Expand player"
+		},
+		"youtubeId": {
+			"title": "YouTube ID",
+			"placeholder": "YouTube ID",
+			"add": "Add YouTube ID",
+			"edit": "Edit YouTube ID",
+			"editWithId": "Edit YouTube ID ({id})",
+			"save": "Save",
+			"close": "Close YouTube ID editor"
+		},
+		"volume": {
+			"mute": "Mute",
+			"unmute": "Unmute"
+		},
+		"following": {
+			"empty": "No friends or followed accounts yet. Open a user profile and tap the heart to follow it."
+		}
+	},
+	"sync": {
+		"rooms": {
+			"empty": "No saved rooms. Connect to a room and save it from the Rooms panel.",
+			"leave": "Leave room",
+			"connect": "Connect",
+			"save": "Save room",
+			"status": {
+				"connecting": "Connecting",
+				"connected": "Connected · {count} listening",
+				"checking": "Checking",
+				"unavailable": "Status unavailable",
+				"offline": "Offline",
+				"listening": "{count} listening",
+				"hostLeft": "The host left"
+			}
+		},
+		"session": {
+			"title": "Rooms",
+			"close": "Close Sync",
+			"connected": "{count} connected",
+			"joining": "Joining...",
+			"connecting": "Connecting...",
+			"offline": "Offline",
+			"relayRequired": "Relay server required",
+			"relayRequiredBody": "To use this feature you need a relay server. Configure one in Settings to start or join a room.",
+			"openSettings": "Open settings",
+			"roomCode": "Room code",
+			"generate": "Generate",
+			"inRoom": "You are in room {room}. Edit the code to switch rooms.",
+			"hostHint": "If nobody is hosting it yet, you become the host; otherwise you join and listen in sync.",
+			"password": "Room password",
+			"connect": "Connect",
+			"switch": "Switch room",
+			"saveTitle": "Save this room to the Rooms shelf",
+			"saveRoom": "Save room",
+			"saved": "Saved to Rooms",
+			"removeTitle": "Remove from Rooms",
+			"stop": "Stop session",
+			"leave": "Leave session",
+			"waiting": "Waiting for the room to load…",
+			"relay": "Relay: {url}",
+			"settings": "Settings"
+		},
+		"relay": {
+			"title": "Rooms",
+			"body": "Relay server that syncs playback between devices. Rooms and their passwords are set from the Rooms panel.",
+			"label": "Relay server",
+			"placeholder": "relay.example.com",
+			"token": "Auth token",
+			"tokenRequired": "This relay requires an auth token.",
+			"checking": "Checking…",
+			"reachable": "Reachable",
+			"unreachable": "Not reachable"
+		}
+	},
+	"update": {
+		"available": "Jota {version} is available",
+		"updating": "Updating…",
+		"updatingPercent": "Updating… {percent}%",
+		"update": "Update",
+		"viewRelease": "View release",
+		"about": {
+			"title": "About",
+			"version": "Version",
+			"dev": "dev",
+			"updateTo": "Update to {version}",
+			"download": "Download {version}"
+		}
+	},
+	"errors": {
+		"consensusTimeout": "consensus timeout",
+		"recoveryFailed": "every recovery attempt failed",
+		"playbackBlocked": "the browser needs a click to allow playback",
+		"backend": {
+			"loginUnavailable": "In-app browser login is not available on this platform",
+			"loginWindowClosed": "login window closed",
+			"loginTimedOut": "login timed out",
+			"emptyCookies": "empty cookies",
+			"missingSapisid": "cookies missing SAPISID",
+			"installInProgress": "update: install already in progress",
+			"installUnsupported": "update: automatic install is not supported on this channel"
+		},
+		"relay": {
+			"hostLeft": "host left",
+			"roomFull": "room is full",
+			"roomHasHost": "room already has a host",
+			"badPassword": "invalid room password",
+			"tokenRequired": "This relay requires a token."
+		}
+	}
+}

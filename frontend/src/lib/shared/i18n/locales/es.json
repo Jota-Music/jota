@@ -1,0 +1,321 @@
+{
+	"app": {
+		"title": "Jota | Servicio de música gratuito autohospedado",
+		"description": "Jota es un servicio de música gratuito y autohospedado. Escucha tu música donde quieras."
+	},
+	"common": {
+		"loading": "Cargando...",
+		"retry": "Reintentar",
+		"save": "Guardar",
+		"saving": "Guardando…",
+		"remove": "Quitar",
+		"close": "Cerrar",
+		"dismiss": "Descartar",
+		"optional": "Opcional",
+		"noResults": "Sin resultados."
+	},
+	"nav": {
+		"settings": "Ajustes",
+		"rooms": "Salas",
+		"back": "Atrás"
+	},
+	"search": {
+		"title": "Buscar",
+		"clear": "Limpiar",
+		"inSpotify": "Buscar en Spotify",
+		"inYouTube": "Buscar en YouTube",
+		"youtubePlaceholder": "Buscar en YouTube (vídeos o listas)",
+		"userPlaceholder": "Usuario de Spotify o enlace...",
+		"spotifyPlaceholder": "ID, URI o enlace de {type} de Spotify...",
+		"type": {
+			"user": "Usuario",
+			"track": "Canción",
+			"album": "Álbum",
+			"playlist": "Lista",
+			"artist": "Artista"
+		}
+	},
+	"window": {
+		"pin": "Siempre encima",
+		"unpin": "Desactivar siempre encima",
+		"minimise": "Minimizar",
+		"maximise": "Maximizar",
+		"restore": "Restaurar",
+		"close": "Cerrar"
+	},
+	"password": {
+		"show": "Mostrar",
+		"hide": "Ocultar"
+	},
+	"settings": {
+		"title": "Ajustes",
+		"subtitle": "Gestiona tu cuenta y cómo Jota sincroniza la reproducción.",
+		"developedBy": "Desarrollado por",
+		"language": {
+			"title": "Idioma",
+			"description": "Idioma de la interfaz.",
+			"label": "Idioma"
+		}
+	},
+	"pages": {
+		"search": {
+			"failed": "Error al buscar",
+			"playlistsBy": "Listas de {query}",
+			"noPlaylists": "No se encontraron listas."
+		},
+		"album": {
+			"defaultName": "Álbum",
+			"failed": "Error al cargar el álbum",
+			"noTracks": "No se encontraron canciones."
+		},
+		"artist": {
+			"defaultName": "Artista",
+			"failed": "Error al cargar el artista",
+			"noSongs": "No se encontraron canciones.",
+			"noGroup": "No se encontraron {group}.",
+			"topTracks": "Más escuchadas",
+			"loadingDiscography": "Cargando discografía",
+			"groups": {
+				"album": "Álbumes",
+				"single": "Sencillos",
+				"compilation": "Recopilatorios",
+				"appears_on": "Apariciones"
+			}
+		},
+		"user": {
+			"failed": "Error al cargar las listas de @{user}",
+			"noPlaylists": "No se encontraron listas.",
+			"follow": "Seguir usuario",
+			"unfollow": "Dejar de seguir"
+		},
+		"youtube": {
+			"videos": "Vídeos",
+			"playlists": "Listas",
+			"failed": "Error al buscar en YouTube",
+			"noResults": "Sin resultados.",
+			"noPlaylists": "No se encontraron listas.",
+			"addHome": "Añadir a inicio",
+			"removeHome": "Quitar de inicio",
+			"addQueue": "Añadir a la cola"
+		},
+		"notFound": {
+			"title": "404 — Página no encontrada",
+			"home": "Volver al inicio"
+		}
+	},
+	"auth": {
+		"notNow": "Ahora no",
+		"welcome": {
+			"title": "Bienvenido a Jota",
+			"body": "Inicia sesión con Spotify para buscar, reproducir y sincronizar tu música.",
+			"connect": "Conectar con Spotify",
+			"connecting": "Conectando…",
+			"dontShow": "No volver a mostrar este mensaje"
+		},
+		"spotify": {
+			"connect": "Conectar con Spotify",
+			"prompt": "Conecta con Spotify para usar esto.",
+			"completeLogin": "Completa el inicio de sesión de Spotify y vuelve aquí.",
+			"couldNotConnect": "No se pudo conectar con Spotify."
+		},
+		"youtube": {
+			"signInTitle": "Inicia sesión en YouTube",
+			"signInBody": "Esta canción necesita una cuenta de YouTube con sesión iniciada: tiene restricción de edad o YouTube pidió confirmar que no eres un bot.",
+			"signInRisk": "Riesgo: usar una cuenta así puede hacer que Google la banee. Prefiere una cuenta secundaria.",
+			"signIn": "Iniciar sesión",
+			"waiting": "Esperando el inicio de sesión…",
+			"unavailable": "El inicio de sesión integrado no está disponible en esta plataforma. Pega tus cookies o importa un cookies.txt en Ajustes → Cuenta.",
+			"errorHint": "{error} — también puedes pegar tus cookies en Ajustes → Cuenta.",
+			"riskLabel": "Riesgo.",
+			"settingsRisk": "Iniciar sesión con una cuenta de Google y usarla para reproducir audio puede hacer que Google la banee. Usa una cuenta que puedas permitirte perder y prefiere una secundaria.",
+			"signInBrowser": "Iniciar sesión con el navegador",
+			"orPaste": "o pega las cookies",
+			"unavailableShort": "El inicio de sesión integrado no está disponible en esta plataforma. Pega tus cookies o importa un cookies.txt abajo.",
+			"pasteHint": "En una pestaña de youtube.com con sesión iniciada, ejecuta copy(document.cookie) en la consola y pégalo abajo, o importa un archivo cookies.txt.",
+			"pastePlaceholder": "Pega las cookies (deben incluir SAPISID) o un cookies.txt",
+			"importFile": "Importar cookies.txt"
+		},
+		"account": {
+			"title": "Cuenta",
+			"connectedAs": "Conectado como",
+			"disconnect": "Desconectar",
+			"youtubeHint": "YouTube — necesario para vídeos con restricción de edad",
+			"signedIn": "Sesión iniciada",
+			"signOut": "Cerrar sesión"
+		}
+	},
+	"music": {
+		"trackCount": {
+			"one": "{count} canción",
+			"other": "{count} canciones"
+		},
+		"shelf": {
+			"empty": "No se encontraron elementos.",
+			"all": "Todo",
+			"noSpotify": "No hay listas de Spotify.",
+			"gridView": "Vista de cuadrícula",
+			"compactView": "Vista compacta",
+			"source": {
+				"spotify": "Spotify",
+				"youtube": "YouTube"
+			}
+		},
+		"hint": {
+			"title": "Aún no hay listas de YouTube",
+			"body": "Guarda cualquier lista y aparecerá aquí.",
+			"step1": "Busca una lista por nombre o pega su enlace en la barra de búsqueda.",
+			"step2": "Abre la pestaña Listas en los resultados.",
+			"step3": "Toca el corazón para guardarla aquí."
+		},
+		"queue": {
+			"title": "Cola",
+			"emptyShort": "vacía",
+			"empty": "Cola vacía.",
+			"emptyHint": "Elige una lista y haz clic en una canción para empezar.",
+			"drag": "Arrastra la fila para reordenar",
+			"failed": "No se pudo reproducir esta canción",
+			"playNow": "Reproducir ahora",
+			"moveDown": "Bajar una posición",
+			"snapBelow": "Colocar justo debajo de la canción en curso",
+			"remove": "Quitar de la cola",
+			"aria": "Cola",
+			"close": "Cerrar la cola"
+		},
+		"playlist": {
+			"defaultName": "Lista",
+			"failed": "Error al cargar la lista",
+			"searchPlaceholder": "Buscar canciones o artistas...",
+			"clearSearch": "Limpiar búsqueda",
+			"orderBy": "Ordenar por",
+			"order": {
+				"added": "Más antiguas",
+				"reverse": "Más recientes",
+				"durationAsc": "Más cortas",
+				"durationDesc": "Más largas"
+			}
+		},
+		"track": {
+			"enqueueAfter": "Encolar tras la canción actual",
+			"noSongs": "Sin canciones"
+		},
+		"player": {
+			"enableShuffle": "Activar aleatorio",
+			"disableShuffle": "Desactivar aleatorio",
+			"repeatAll": "Repetir todo",
+			"repeatOne": "Repetir una",
+			"noRepeat": "Sin repetición",
+			"repeatMode": "Modo de repetición",
+			"seek": "Buscar",
+			"queue": "Cola de reproducción",
+			"compact": "Reproductor compacto",
+			"close": "Cerrar el reproductor",
+			"expand": "Expandir el reproductor"
+		},
+		"youtubeId": {
+			"title": "ID de YouTube",
+			"placeholder": "ID de YouTube",
+			"add": "Añadir ID de YouTube",
+			"edit": "Editar ID de YouTube",
+			"editWithId": "Editar ID de YouTube ({id})",
+			"save": "Guardar",
+			"close": "Cerrar el editor de ID de YouTube"
+		},
+		"volume": {
+			"mute": "Silenciar",
+			"unmute": "Activar sonido"
+		},
+		"following": {
+			"empty": "Aún no hay amigos ni cuentas seguidas. Abre el perfil de un usuario y toca el corazón para seguirlo."
+		}
+	},
+	"sync": {
+		"rooms": {
+			"empty": "No hay salas guardadas. Conéctate a una sala y guárdala desde el panel de Salas.",
+			"leave": "Salir de la sala",
+			"connect": "Conectar",
+			"save": "Guardar sala",
+			"status": {
+				"connecting": "Conectando",
+				"connected": "Conectado · {count} escuchando",
+				"checking": "Comprobando",
+				"unavailable": "Estado no disponible",
+				"offline": "Sin conexión",
+				"listening": "{count} escuchando",
+				"hostLeft": "El anfitrión se fue"
+			}
+		},
+		"session": {
+			"title": "Salas",
+			"close": "Cerrar sincronización",
+			"connected": "{count} conectados",
+			"joining": "Uniéndose...",
+			"connecting": "Conectando...",
+			"offline": "Sin conexión",
+			"relayRequired": "Se requiere servidor relay",
+			"relayRequiredBody": "Para usar esta función necesitas un servidor relay. Configura uno en Ajustes para crear o unirte a una sala.",
+			"openSettings": "Abrir ajustes",
+			"roomCode": "Código de sala",
+			"generate": "Generar",
+			"inRoom": "Estás en la sala {room}. Edita el código para cambiar de sala.",
+			"hostHint": "Si nadie la está alojando, te conviertes en anfitrión; si no, te unes y escuchas en sincronía.",
+			"password": "Contraseña de la sala",
+			"connect": "Conectar",
+			"switch": "Cambiar de sala",
+			"saveTitle": "Guardar esta sala en la estantería de Salas",
+			"saveRoom": "Guardar sala",
+			"saved": "Guardada en Salas",
+			"removeTitle": "Quitar de Salas",
+			"stop": "Detener sesión",
+			"leave": "Salir de la sesión",
+			"waiting": "Esperando a que cargue la sala…",
+			"relay": "Relay: {url}",
+			"settings": "Ajustes"
+		},
+		"relay": {
+			"title": "Salas",
+			"body": "Servidor relay que sincroniza la reproducción entre dispositivos. Las salas y sus contraseñas se configuran desde el panel de Salas.",
+			"label": "Servidor relay",
+			"placeholder": "relay.example.com",
+			"token": "Token de autenticación",
+			"tokenRequired": "Este relay requiere un token de autenticación.",
+			"checking": "Comprobando…",
+			"reachable": "Accesible",
+			"unreachable": "No accesible"
+		}
+	},
+	"update": {
+		"available": "Jota {version} está disponible",
+		"updating": "Actualizando…",
+		"updatingPercent": "Actualizando… {percent}%",
+		"update": "Actualizar",
+		"viewRelease": "Ver versión",
+		"about": {
+			"title": "Acerca de",
+			"version": "Versión",
+			"dev": "dev",
+			"updateTo": "Actualizar a {version}",
+			"download": "Descargar {version}"
+		}
+	},
+	"errors": {
+		"consensusTimeout": "tiempo de espera del consenso",
+		"recoveryFailed": "todos los intentos de recuperación fallaron",
+		"playbackBlocked": "el navegador necesita un clic para permitir la reproducción",
+		"backend": {
+			"loginUnavailable": "El inicio de sesión con navegador integrado no está disponible en esta plataforma",
+			"loginWindowClosed": "ventana de inicio de sesión cerrada",
+			"loginTimedOut": "el inicio de sesión agotó el tiempo",
+			"emptyCookies": "cookies vacías",
+			"missingSapisid": "faltan cookies SAPISID",
+			"installInProgress": "update: ya hay una instalación en curso",
+			"installUnsupported": "update: la instalación automática no está soportada en este canal"
+		},
+		"relay": {
+			"hostLeft": "el anfitrión se fue",
+			"roomFull": "la sala está llena",
+			"roomHasHost": "la sala ya tiene anfitrión",
+			"badPassword": "contraseña de sala incorrecta",
+			"tokenRequired": "Este relay requiere un token."
+		}
+	}
+}
