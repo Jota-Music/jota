@@ -1,5 +1,5 @@
 import { computed } from "@preact/signals";
-import { ListPlus, Loader, Music, Pause } from "lucide-preact";
+import { ListPlus } from "lucide-preact";
 import { memo } from "preact/compat";
 import type { Song } from "@/lib/music/model";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
@@ -12,6 +12,7 @@ import {
 	enqueue,
 	playFromQueueSelection,
 } from "@/lib/music/views/stores/player";
+import TrackArt from "@/lib/music/views/ui/components/track-art";
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
@@ -41,38 +42,19 @@ function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
 			)}
 		>
 			<div class="grid grid-cols-[auto_1fr] gap-2">
-				<div
-					class={cn(
-						"relative",
-						isCurrent && "rounded-md outline-2 outline-(--dominant-color)",
-					)}
-				>
-					{isCurrent &&
-						(isLoading.value ? (
-							<Loader
-								size={23}
-								class="absolute inset-0 z-10 m-auto animate-spin text-zinc-400 drop-shadow-md drop-shadow-black"
-							/>
-						) : isPlaying.value ? (
-							<Music
-								size={25}
-								class="absolute inset-0 z-10 m-auto text-(--dominant-color) drop-shadow-md drop-shadow-black"
-							/>
-						) : (
-							<Pause
-								size={25}
-								class="absolute inset-0 z-10 m-auto fill-(--dominant-color) drop-shadow-md drop-shadow-black"
-							/>
-						))}
-
-					<img
-						loading="lazy"
-						decoding="async"
-						src={song.album?.covers?.[0]}
-						alt={song.name}
-						className={cn("h-10 w-10 rounded-md", isCurrent && "brightness-40")}
-					/>
-				</div>
+				<TrackArt
+					song={song}
+					current={isCurrent}
+					loading={isLoading.value}
+					playing={isPlaying.value}
+					alt={song.name}
+					class={
+						isCurrent
+							? "rounded-md outline-2 outline-(--dominant-color)"
+							: undefined
+					}
+					imgClass="h-10 w-10 rounded-md"
+				/>
 
 				<div class="flex min-w-0 flex-col text-start">
 					<span className="truncate text-sm text-white">{song.name}</span>

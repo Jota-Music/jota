@@ -5,9 +5,6 @@ import {
 	CircleAlert,
 	GripVertical,
 	ListMusic,
-	Loader,
-	Music,
-	Pause,
 	Play,
 	Trash2,
 } from "lucide-preact";
@@ -28,6 +25,7 @@ import {
 	unqueue,
 } from "@/lib/music/views/stores/player";
 import { queue, showQueue } from "@/lib/music/views/stores/queue";
+import TrackArt from "@/lib/music/views/ui/components/track-art";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
@@ -123,37 +121,16 @@ const QueueRow = memo(function QueueRow({
 			<span class="w-5 shrink-0 text-center text-[11px] tabular-nums text-zinc-600 sm:w-6 sm:text-xs mr-3">
 				{globalIndex + 1}
 			</span>
-			<div class="relative">
-				<img
-					loading="lazy"
-					decoding="async"
-					src={song.album?.covers?.[0]}
-					alt=""
-					class={cn(
-						"h-9 w-9 shrink-0 rounded-md sm:h-10 sm:w-10",
-						isCurrent && "ring-2 ring-(--dominant-color)/80",
-						isCurrent && "brightness-40",
-					)}
-				/>
-
-				{isCurrent &&
-					(loading ? (
-						<Loader
-							size={23}
-							class="absolute inset-0 z-10 m-auto animate-spin text-zinc-400 drop-shadow-md drop-shadow-black"
-						/>
-					) : playing ? (
-						<Music
-							size={25}
-							class="absolute inset-0 z-10 m-auto text-(--dominant-color) drop-shadow-md drop-shadow-black"
-						/>
-					) : (
-						<Pause
-							size={25}
-							class="absolute inset-0 z-10 m-auto fill-(--dominant-color) drop-shadow-md drop-shadow-black"
-						/>
-					))}
-			</div>
+			<TrackArt
+				song={song}
+				current={isCurrent}
+				loading={loading}
+				playing={playing}
+				imgClass={cn(
+					"h-9 w-9 shrink-0 rounded-md sm:h-10 sm:w-10",
+					isCurrent && "ring-2 ring-(--dominant-color)/80",
+				)}
+			/>
 			<div class="min-w-0 flex-1 pr-1">
 				<div class="flex items-center gap-1.5">
 					<p class="truncate text-[13px] leading-tight sm:text-sm text-zinc-100">
