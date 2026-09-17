@@ -5,23 +5,12 @@ const MIN_THUMB_PX = 40;
 const GUTTER_PX = 15;
 const CORNER_PX = 2;
 
-function thumbFor(el: HTMLElement) {
-	const { scrollTop, scrollHeight, clientHeight } = el;
-	const inset = el.clientTop > 0 ? CORNER_PX : 0;
-	const track = el.offsetHeight - inset * 2;
-	if (clientHeight === 0 || scrollHeight <= clientHeight || track <= 0) {
-		return null;
-	}
-	const ratio = clientHeight / scrollHeight;
-	const height = Math.min(track, Math.max(MIN_THUMB_PX, ratio * track));
-	const travel = track - height;
-	const top = inset + (scrollTop / (scrollHeight - clientHeight)) * travel;
-	return { top, height, travel };
-}
+type Metrics = { height: number; travel: number; max: number; inset: number };
 
 export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 	const bar = useRef<HTMLDivElement>(null);
 	const drag = useRef<{ y: number; top: number } | null>(null);
+	const metrics = useRef<Metrics>({ height: 0, travel: 0, max: 0, inset: 0 });
 
 	useLayoutEffect(() => {
 		const el = target.current;
@@ -36,18 +25,46 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 		(node.firstElementChild as HTMLElement).style.marginRight =
 			`${(pad - 8) / 2}px`;
 
-		const sync = () => {
-			const thumb = thumbFor(el);
-			node.style.top = `${thumb?.top ?? 0}px`;
-			node.style.height = `${thumb?.height ?? 0}px`;
+		const m = metrics.current;
+		let frame = 0;
+
+		const place = () => {
+			frame = 0;
+			const ratio = m.max > 0 ? el.scrollTop / m.max : 0;
+			node.style.transform = `translateY(${m.inset + ratio * m.travel}px)`;
 		};
 
-		const sizes = new ResizeObserver(sync);
+		const sync = () => {
+			if (frame === 0) frame = requestAnimationFrame(place);
+		};
+
+		const measure = () => {
+			const inset = el.clientTop > 0 ? CORNER_PX : 0;
+			const track = el.offsetHeight - inset * 2;
+			const { scrollHeight, clientHeight } = el;
+			if (clientHeight === 0 || scrollHeight <= clientHeight || track <= 0) {
+				m.height = 0;
+				m.travel = 0;
+				m.max = 0;
+				m.inset = 0;
+				node.style.height = "0px";
+			} else {
+				const ratio = clientHeight / scrollHeight;
+				m.height = Math.min(track, Math.max(MIN_THUMB_PX, ratio * track));
+				m.travel = track - m.height;
+				m.max = scrollHeight - clientHeight;
+				m.inset = inset;
+				node.style.height = `${m.height}px`;
+			}
+			place();
+		};
+
+		const sizes = new ResizeObserver(measure);
 		const observeContent = () => {
 			sizes.disconnect();
 			sizes.observe(el);
 			for (const child of el.children) sizes.observe(child);
-			sync();
+			measure();
 		};
 
 		const mutations = new MutationObserver(observeContent);
@@ -56,6 +73,7 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 
 		el.addEventListener("scroll", sync, { passive: true });
 		return () => {
+			if (frame !== 0) cancelAnimationFrame(frame);
 			el.removeEventListener("scroll", sync);
 			sizes.disconnect();
 			mutations.disconnect();
@@ -75,12 +93,10 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 	const onMove = (e: PointerEvent) => {
 		const el = target.current;
 		const start = drag.current;
-		if (!el || !start) return;
-		const thumb = thumbFor(el);
-		if (!thumb || thumb.travel <= 0) return;
-		const max = el.scrollHeight - el.clientHeight;
-		const next = start.top + ((e.clientY - start.y) / thumb.travel) * max;
-		el.scrollTop = Math.max(0, Math.min(max, next));
+		const m = metrics.current;
+		if (!el || !start || m.travel <= 0) return;
+		const next = start.top + ((e.clientY - start.y) / m.travel) * m.max;
+		el.scrollTop = Math.max(0, Math.min(m.max, next));
 	};
 
 	const onUp = (e: PointerEvent) => {
@@ -96,7 +112,7 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 		<div
 			ref={bar}
 			aria-hidden
-			class="absolute right-0 w-6 touch-none cursor-grab active:cursor-grabbing"
+			class="absolute right-0 top-0 w-6 touch-none cursor-grab active:cursor-grabbing"
 			onPointerDown={onDown}
 			onPointerMove={onMove}
 			onPointerUp={onUp}
