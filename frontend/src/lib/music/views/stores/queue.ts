@@ -1,12 +1,10 @@
 import { signal } from "@preact/signals";
-import type { Song } from "@/lib/music/model";
+import type { QueueSong, RepeatMode } from "@/lib/music/model";
 
 const QUEUE_STORAGE_KEY = "music-queue";
 const INDEX_STORAGE_KEY = "music-queue-index";
 const SHUFFLE_STORAGE_KEY = "music-shuffle";
 const REPEAT_STORAGE_KEY = "music-repeat";
-
-type RepeatMode = "off" | "all" | "one";
 
 function read(key: string): string | null {
 	if (typeof window === "undefined") return null;
@@ -24,12 +22,12 @@ function write(key: string, value: string): void {
 	} catch {}
 }
 
-function loadQueue(): Song[] {
+function loadQueue(): QueueSong[] {
 	const raw = read(QUEUE_STORAGE_KEY);
 	if (!raw) return [];
 	try {
 		const parsed = JSON.parse(raw);
-		return Array.isArray(parsed) ? parsed : [];
+		return Array.isArray(parsed) ? (parsed as QueueSong[]) : [];
 	} catch {
 		return [];
 	}
@@ -51,7 +49,7 @@ function loadRepeat(): RepeatMode {
 	return raw === "all" || raw === "one" ? raw : "off";
 }
 
-function saveQueue(q: Song[]) {
+function saveQueue(q: QueueSong[]) {
 	write(QUEUE_STORAGE_KEY, JSON.stringify(q));
 }
 
@@ -67,7 +65,7 @@ function saveRepeat(v: RepeatMode) {
 	write(REPEAT_STORAGE_KEY, v);
 }
 
-export const queue = signal<Song[]>(loadQueue());
+export const queue = signal<QueueSong[]>(loadQueue());
 
 export const currentIndex = signal<number>(loadIndex());
 

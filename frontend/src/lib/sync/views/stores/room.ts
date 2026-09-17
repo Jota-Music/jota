@@ -1,6 +1,6 @@
 import { SetYouTubeId } from "@bindings/app";
 import { effect } from "@preact/signals";
-import type { ControlAction, Song } from "@/lib/music/model";
+import type { ControlAction, QueueSong, Song } from "@/lib/music/model";
 import {
 	currentSong,
 	dragSeeking,
@@ -292,7 +292,7 @@ function applyQueue(input: string | Song[]): void {
 	}
 	if (!Array.isArray(parsed)) return;
 	suppressQueue = true;
-	queue.value = parsed as Song[];
+	queue.value = parsed as QueueSong[];
 	persistQueue();
 }
 

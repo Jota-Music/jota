@@ -1,3 +1,5 @@
+import { pick } from "@/lib/music/app/playback";
+import { clearQueued, insertQueued, pinAfter } from "@/lib/music/app/queue";
 import type { Song } from "@/lib/music/model";
 import {
 	audioDuration,
@@ -98,9 +100,13 @@ async function playAtIndex(
 ): Promise<void> {
 	const q = queue.value;
 	if (i < 0 || i >= q.length) return;
-	const song = q[i];
+
+	const cleared = clearQueued(q, i);
+	const song = cleared[i];
 
 	cancelSkip();
+
+	if (cleared !== q) queue.value = cleared;
 
 	currentIndex.value = i;
 	currentSong.value = song;
@@ -164,25 +170,10 @@ export function isQueue(songs: Song[]) {
 }
 
 export function enqueue(song: Song) {
-	const newQueue = [...queue.value];
-	const newIndex = currentIndex.value;
+	const next = insertQueued(queue.value, currentIndex.value, song);
 
-	if (newQueue.length === 0) {
-		newQueue.push(song);
-		queue.value = newQueue;
-		currentIndex.value = 0;
-		persistQueue();
-		void AudioCache.preload(song);
-		return;
-	}
-
-	const insertAt =
-		newIndex >= 0 && newIndex < newQueue.length
-			? newIndex + 1
-			: newQueue.length;
-
-	newQueue.splice(insertAt, 0, song);
-	queue.value = newQueue;
+	queue.value = next.queue;
+	if (next.index !== currentIndex.value) currentIndex.value = next.index;
 	persistQueue();
 
 	void AudioCache.preload(song);
@@ -241,27 +232,10 @@ export async function moveQueue(from: number, to: number): Promise<void> {
 }
 
 export async function moveAfterCurrent(from: number): Promise<void> {
-	const a = [...queue.value];
-	const n = a.length;
-	const ci = currentIndex.value;
+	const next = pinAfter(queue.value, currentIndex.value, from);
+	if (!next) return;
 
-	if (from < 0 || from >= n) return;
-	if (ci < 0 || ci >= n) return;
-	if (from === ci || from === ci + 1) return;
-
-	const playingId = a[ci].id;
-
-	const [it] = a.splice(from, 1);
-
-	const ci2 = a.findIndex((s) => s.id === playingId);
-	if (ci2 === -1) return;
-
-	const insertAt = Math.min(ci2 + 1, a.length);
-	a.splice(insertAt, 0, it);
-
-	const nextIndex = a.findIndex((s) => s.id === playingId);
-
-	setQueueState(a, nextIndex >= 0 ? nextIndex : 0);
+	setQueueState(next.queue, next.index);
 }
 
 export async function playAt(i: number): Promise<void> {
@@ -276,29 +250,6 @@ export async function playAt(i: number): Promise<void> {
 export async function toggleSong() {
 	publish({ action: "toggle" });
 	await togglePlayPause();
-}
-
-function pickRandom(songs: Song[], i: number): number | null {
-	const candidates = songs.filter((_, idx) => idx !== i);
-	if (candidates.length === 0) return null;
-	const pick = candidates[Math.floor(Math.random() * candidates.length)];
-	return songs.findIndex((song) => song.id === pick.id);
-}
-
-function pick(
-	songs: Song[],
-	i: number,
-	mode: "off" | "all" | "one",
-	shuffleOn: boolean,
-	step: 1 | -1,
-): number | null {
-	if (mode === "one") return i;
-	if (shuffleOn) return pickRandom(songs, i);
-	const next = i + step;
-	if (next < 0 || next > songs.length - 1) {
-		return mode === "all" ? (step > 0 ? 0 : songs.length - 1) : null;
-	}
-	return next;
 }
 
 // Pressing next/previous fast must not resolve a stream per press: move the

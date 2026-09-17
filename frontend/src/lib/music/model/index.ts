@@ -48,3 +48,9 @@ export type ControlAction =
 	| { action: "seek"; positionMs: number }
 	| { action: "shuffle" }
 	| { action: "repeat" };
+
+export type RepeatMode = "off" | "all" | "one";
+
+// The queue marks items explicitly queued to play next, so shuffle honors
+// them before drawing from the pool.
+export type QueueSong = Song & { queued?: boolean };
