@@ -1,5 +1,7 @@
 import { signal } from "@preact/signals";
-import type { QueueSong, RepeatMode } from "@/lib/music/model";
+import { permute, random, seed } from "@/lib/music/app/shuffle";
+import type { RepeatMode, Song } from "@/lib/music/model";
+import { publish } from "@/lib/music/views/stores/remote";
 
 const QUEUE_STORAGE_KEY = "music-queue";
 const INDEX_STORAGE_KEY = "music-queue-index";
@@ -22,12 +24,12 @@ function write(key: string, value: string): void {
 	} catch {}
 }
 
-function loadQueue(): QueueSong[] {
+function loadQueue(): Song[] {
 	const raw = read(QUEUE_STORAGE_KEY);
 	if (!raw) return [];
 	try {
 		const parsed = JSON.parse(raw);
-		return Array.isArray(parsed) ? (parsed as QueueSong[]) : [];
+		return Array.isArray(parsed) ? (parsed as Song[]) : [];
 	} catch {
 		return [];
 	}
@@ -49,7 +51,7 @@ function loadRepeat(): RepeatMode {
 	return raw === "all" || raw === "one" ? raw : "off";
 }
 
-function saveQueue(q: QueueSong[]) {
+function saveQueue(q: Song[]) {
 	write(QUEUE_STORAGE_KEY, JSON.stringify(q));
 }
 
@@ -65,7 +67,7 @@ function saveRepeat(v: RepeatMode) {
 	write(REPEAT_STORAGE_KEY, v);
 }
 
-export const queue = signal<QueueSong[]>(loadQueue());
+export const queue = signal<Song[]>(loadQueue());
 
 export const currentIndex = signal<number>(loadIndex());
 
@@ -81,9 +83,31 @@ export function persistQueue() {
 }
 
 export function toggleShuffle() {
-	const next = !shuffle.value;
-	shuffle.value = next;
-	saveShuffle(next);
+	if (shuffle.value) {
+		applyShuffle(false);
+		publish({ action: "shuffle", on: false });
+		return;
+	}
+	const s = seed();
+	applyShuffle(true, s);
+	publish({ action: "shuffle", on: true, seed: s });
+}
+
+// Reorders the queue for the announced seed. A peer applies the sender's seed
+// instead of drawing its own, so every member plays the same sequence.
+export function applyShuffle(on: boolean, s?: number) {
+	shuffle.value = on;
+	saveShuffle(on);
+	if (!on || s == null) return;
+
+	const anchor = queue.value[currentIndex.value];
+	const ordered = permute(queue.value, random(s));
+	queue.value = ordered;
+	if (anchor) {
+		const idx = ordered.findIndex((song) => song.id === anchor.id);
+		if (idx !== -1) currentIndex.value = idx;
+	}
+	persistQueue();
 }
 
 export function cycleRepeat() {
@@ -92,11 +116,6 @@ export function cycleRepeat() {
 	const next = modes[(modes.indexOf(current) + 1) % modes.length];
 	repeat.value = next;
 	saveRepeat(next);
-}
-
-export function setShuffle(v: boolean) {
-	shuffle.value = v;
-	saveShuffle(v);
 }
 
 export function setRepeat(v: RepeatMode) {

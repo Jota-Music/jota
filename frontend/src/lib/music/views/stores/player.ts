@@ -1,5 +1,6 @@
 import { pick } from "@/lib/music/app/playback";
-import { clearQueued, insertQueued, pinAfter } from "@/lib/music/app/queue";
+import { insertAfter, pinAfter, sameQueue } from "@/lib/music/app/queue";
+import { permute, random, seed } from "@/lib/music/app/shuffle";
 import type { Song } from "@/lib/music/model";
 import {
 	audioDuration,
@@ -44,12 +45,6 @@ export function preloadUpcomingSongs(songs: Song[], idx: number) {
 	if (upcoming.length > 0) void AudioCache.preload(...upcoming);
 }
 
-export function seekFromLocalControl(seconds: number) {
-	const clamped = clampSeconds(seconds, audioDuration.value);
-	publish({ action: "seek", positionMs: clamped * 1000 });
-	seek(clamped);
-}
-
 export function previewSeek(seconds: number) {
 	dragSeeking.value = true;
 	progress.value = clampSeconds(seconds, audioDuration.value);
@@ -57,7 +52,9 @@ export function previewSeek(seconds: number) {
 
 export function commitSeek(seconds: number) {
 	dragSeeking.value = false;
-	seekFromLocalControl(seconds);
+	const clamped = clampSeconds(seconds, audioDuration.value);
+	publish({ action: "seek", positionMs: clamped * 1000 });
+	seek(clamped);
 }
 
 function setQueueState(nextQueue: Song[], nextIndex: number) {
@@ -79,9 +76,9 @@ function setQueueState(nextQueue: Song[], nextIndex: number) {
 	preloadUpcomingSongs(nextQueue, nextIndex);
 }
 
-// Pick the next queued song that has not failed yet in this sweep, winding
-// around from `from`. Returns null once every song has been tried, so a totally
-// unavailable queue stops instead of looping forever.
+// Pick the next song in the queue that has not failed yet in this sweep,
+// winding around from `from`. Returns null once every song has been tried, so a
+// totally unavailable queue stops instead of looping forever.
 function nextUntried(
 	length: number,
 	from: number,
@@ -101,12 +98,9 @@ async function playAtIndex(
 	const q = queue.value;
 	if (i < 0 || i >= q.length) return;
 
-	const cleared = clearQueued(q, i);
-	const song = cleared[i];
+	const song = q[i];
 
 	cancelSkip();
-
-	if (cleared !== q) queue.value = cleared;
 
 	currentIndex.value = i;
 	currentSong.value = song;
@@ -151,29 +145,30 @@ export async function playFromQueueSelection(
 	const i = fullOrderedSongs.findIndex((s) => s.id === clicked.id);
 	if (i === -1) return;
 
-	await setQueueState(fullOrderedSongs.slice(), i);
-	await playAtIndex(i);
+	const ordered = shuffle.value
+		? permute(fullOrderedSongs, random(seed()))
+		: fullOrderedSongs.slice();
+	const index = ordered.findIndex((s) => s.id === clicked.id);
+	await setQueueState(ordered, index);
+	await playAtIndex(index);
 }
 
 export async function playAll(songs: Song[]) {
 	if (songs.length === 0) return;
-	const i = shuffle.value ? Math.floor(Math.random() * songs.length) : 0;
-	await setQueueState(songs.slice(), i);
-	await playAtIndex(i);
+	const ordered = shuffle.value
+		? permute(songs, random(seed()))
+		: songs.slice();
+	await setQueueState(ordered, 0);
+	await playAtIndex(0);
 }
 
 export function isQueue(songs: Song[]) {
-	return (
-		songs.length === queue.value.length &&
-		songs.every((s, i) => s.id === queue.value[i]?.id)
-	);
+	return sameQueue(queue.value, songs);
 }
 
 export function enqueue(song: Song) {
-	const next = insertQueued(queue.value, currentIndex.value, song);
-
-	queue.value = next.queue;
-	if (next.index !== currentIndex.value) currentIndex.value = next.index;
+	queue.value = insertAfter(queue.value, currentIndex.value, song);
+	if (currentIndex.value < 0) currentIndex.value = 0;
 	persistQueue();
 
 	void AudioCache.preload(song);
@@ -271,7 +266,7 @@ function scheduleSkip(i: number) {
 export async function nextSong() {
 	const q = queue.value;
 	if (q.length === 0) return;
-	const next = pick(q, currentIndex.value, repeat.value, shuffle.value, 1);
+	const next = pick(q, currentIndex.value, repeat.value, 1);
 	if (next == null) return;
 	scheduleSkip(next);
 }
@@ -279,7 +274,7 @@ export async function nextSong() {
 export async function prevSong() {
 	const q = queue.value;
 	if (q.length === 0) return;
-	const prev = pick(q, currentIndex.value, repeat.value, shuffle.value, -1);
+	const prev = pick(q, currentIndex.value, repeat.value, -1);
 	if (prev == null) return;
 	scheduleSkip(prev);
 }
@@ -287,7 +282,7 @@ export async function prevSong() {
 setOnTrackEnded(() => {
 	const q = queue.value;
 	if (q.length === 0) return;
-	const next = pick(q, currentIndex.value, repeat.value, shuffle.value, 1);
+	const next = pick(q, currentIndex.value, repeat.value, 1);
 	if (next == null) return;
 	void playAtIndex(next);
 });

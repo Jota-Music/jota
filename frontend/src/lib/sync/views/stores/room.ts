@@ -1,6 +1,6 @@
 import { SetYouTubeId } from "@bindings/app";
 import { effect } from "@preact/signals";
-import type { ControlAction, QueueSong, Song } from "@/lib/music/model";
+import type { ControlAction, Song } from "@/lib/music/model";
 import {
 	currentSong,
 	dragSeeking,
@@ -18,15 +18,14 @@ import {
 } from "@/lib/music/views/stores/audio";
 import { preloadUpcomingSongs } from "@/lib/music/views/stores/player";
 import {
+	applyShuffle,
 	currentIndex,
 	cycleRepeat,
 	persistQueue,
 	queue,
 	repeat,
 	setRepeat,
-	setShuffle,
 	shuffle,
-	toggleShuffle,
 } from "@/lib/music/views/stores/queue";
 import { control, playGate } from "@/lib/music/views/stores/remote";
 import { binaryColor, dominantColor } from "@/lib/music/views/stores/theme";
@@ -193,7 +192,7 @@ async function handlePrepare(
 ): Promise<void> {
 	if (!live()) return;
 	currentIndex.value = m.index;
-	if (m.shuffle !== undefined) setShuffle(m.shuffle);
+	if (m.shuffle !== undefined) applyShuffle(m.shuffle);
 	if (m.repeat !== undefined) setRepeat(m.repeat);
 	applyColor(m.color, m.binary);
 	preloadUpcomingSongs(queue.value, m.index);
@@ -227,7 +226,7 @@ async function applySnapshot(
 		return;
 	}
 	applyColor(p.color, p.binary);
-	if (p.shuffle !== undefined) setShuffle(p.shuffle);
+	if (p.shuffle !== undefined) applyShuffle(p.shuffle);
 	if (p.repeat !== undefined) setRepeat(p.repeat);
 	if (p.youtubeId && p.songId) {
 		try {
@@ -292,7 +291,7 @@ function applyQueue(input: string | Song[]): void {
 	}
 	if (!Array.isArray(parsed)) return;
 	suppressQueue = true;
-	queue.value = parsed as QueueSong[];
+	queue.value = parsed as Song[];
 	persistQueue();
 }
 
@@ -317,7 +316,7 @@ function applyControl(a: ControlAction): void {
 			seek(a.positionMs / 1000);
 			break;
 		case "shuffle":
-			toggleShuffle();
+			applyShuffle(a.on ?? !shuffle.value, a.seed);
 			break;
 		case "repeat":
 			cycleRepeat();

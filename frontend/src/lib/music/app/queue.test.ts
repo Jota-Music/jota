@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
-import { pick } from "@/lib/music/app/playback";
-import { clearQueued, insertQueued, pinAfter } from "@/lib/music/app/queue";
-import type { QueueSong, Song } from "@/lib/music/model";
+import { insertAfter, pinAfter, sameQueue } from "@/lib/music/app/queue";
+import type { Song } from "@/lib/music/model";
 
 const base = {
 	url: "",
@@ -11,47 +10,34 @@ const base = {
 	artists: [],
 } satisfies Partial<Song>;
 
-function song(id: string, queued = false): QueueSong {
-	return { id, name: id, ...base, queued };
+function song(id: string): Song {
+	return { id, name: id, ...base };
 }
 
-test("insertQueued marks and places the song right after the current one", () => {
-	const { queue, index } = insertQueued(
-		[song("cur"), song("b"), song("c")],
-		0,
-		song("x"),
-	);
-	expect(queue.map((s) => s.id)).toEqual(["cur", "x", "b", "c"]);
-	expect(queue[1].queued).toBe(true);
-	expect(index).toBe(0);
+function ids(queue: Song[]): string[] {
+	return queue.map((s) => s.id);
+}
+
+test("insertAfter places the song right after the current one", () => {
+	const out = insertAfter([song("a"), song("b"), song("c")], 0, song("x"));
+	expect(ids(out)).toEqual(["a", "x", "b", "c"]);
 });
 
-test("insertQueued appends to an empty queue without marking it", () => {
-	const { queue, index } = insertQueued([], -1, song("x"));
-	expect(queue.map((s) => s.id)).toEqual(["x"]);
-	expect(queue[0].queued).toBeFalsy();
-	expect(index).toBe(0);
+test("insertAfter appends to an empty queue", () => {
+	expect(ids(insertAfter([], -1, song("x")))).toEqual(["x"]);
 });
 
-test("insertQueued appends when the current index is out of range", () => {
-	const { queue } = insertQueued([song("a"), song("b")], 5, song("x"));
-	expect(queue.map((s) => s.id)).toEqual(["a", "b", "x"]);
-	expect(queue[2].queued).toBe(true);
+test("insertAfter appends when the current index is out of range", () => {
+	expect(ids(insertAfter([song("a"), song("b")], 5, song("x")))).toEqual([
+		"a",
+		"b",
+		"x",
+	]);
 });
 
-test("an inserted song wins the next shuffle pick", () => {
-	const { queue } = insertQueued(
-		[song("cur"), song("b"), song("c")],
-		0,
-		song("x"),
-	);
-	expect(pick(queue, 0, "off", true, 1)).toBe(1);
-});
-
-test("pinAfter moves a song next to the current one and marks it queued", () => {
+test("pinAfter moves a song next to the current one", () => {
 	const state = pinAfter([song("cur"), song("b"), song("c")], 0, 2);
 	expect(state?.queue.map((s) => s.id)).toEqual(["cur", "c", "b"]);
-	expect(state?.queue[1].queued).toBe(true);
 	expect(state?.index).toBe(0);
 });
 
@@ -60,14 +46,21 @@ test("pinAfter is a no-op right after the current one or out of range", () => {
 	expect(pinAfter([song("a")], 0, 3)).toBeNull();
 });
 
-test("clearQueued only unpins the played index", () => {
-	const queue = [song("a", true), song("b", true)];
-	const next = clearQueued(queue, 0);
-	expect(next[0].queued).toBe(false);
-	expect(next[1].queued).toBe(true);
+test("sameQueue matches by membership, not order", () => {
+	expect(
+		sameQueue(
+			[song("a"), song("b"), song("c")],
+			[song("c"), song("a"), song("b")],
+		),
+	).toBe(true);
 });
 
-test("clearQueued leaves an unqueued queue untouched", () => {
-	const queue = [song("a")];
-	expect(clearQueued(queue, 0)).toBe(queue);
+test("sameQueue respects duplicates", () => {
+	expect(sameQueue([song("a"), song("a")], [song("a"), song("b")])).toBe(false);
+	expect(sameQueue([song("a"), song("a")], [song("a"), song("a")])).toBe(true);
+});
+
+test("sameQueue rejects different lengths and ids", () => {
+	expect(sameQueue([song("a")], [song("a"), song("b")])).toBe(false);
+	expect(sameQueue([song("a")], [song("b")])).toBe(false);
 });

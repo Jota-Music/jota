@@ -1,26 +1,37 @@
-import type { QueueSong, Song } from "@/lib/music/model";
+import type { Song } from "@/lib/music/model";
 
-export function insertQueued(
-	queue: QueueSong[],
-	index: number,
-	song: Song,
-): { queue: QueueSong[]; index: number } {
+export function insertAfter(queue: Song[], index: number, song: Song): Song[] {
 	const next = [...queue];
 	if (next.length === 0) {
 		next.push(song);
-		return { queue: next, index: 0 };
+		return next;
 	}
 
 	const at = index >= 0 && index < next.length ? index + 1 : next.length;
-	next.splice(at, 0, { ...song, queued: true });
-	return { queue: next, index };
+	next.splice(at, 0, song);
+	return next;
+}
+
+// Shuffle permutes the queue, so a source list matches the queue by membership,
+// not by order. Counts each id so duplicates are compared correctly.
+export function sameQueue(a: Song[], b: Song[]): boolean {
+	if (a.length !== b.length) return false;
+
+	const count = new Map<string, number>();
+	for (const song of a) count.set(song.id, (count.get(song.id) ?? 0) + 1);
+	for (const song of b) {
+		const n = count.get(song.id);
+		if (!n) return false;
+		count.set(song.id, n - 1);
+	}
+	return true;
 }
 
 export function pinAfter(
-	queue: QueueSong[],
+	queue: Song[],
 	index: number,
 	from: number,
-): { queue: QueueSong[]; index: number } | null {
+): { queue: Song[]; index: number } | null {
 	const n = queue.length;
 	if (from < 0 || from >= n) return null;
 	if (index < 0 || index >= n) return null;
@@ -33,18 +44,6 @@ export function pinAfter(
 	const current = next.findIndex((song) => song.id === playingId);
 	if (current === -1) return null;
 
-	next.splice(Math.min(current + 1, next.length), 0, {
-		...item,
-		queued: true,
-	});
+	next.splice(Math.min(current + 1, next.length), 0, item);
 	return { queue: next, index: current };
-}
-
-export function clearQueued(queue: QueueSong[], index: number): QueueSong[] {
-	const item = queue[index];
-	if (!item?.queued) return queue;
-
-	const next = queue.slice();
-	next[index] = { ...item, queued: false };
-	return next;
 }
