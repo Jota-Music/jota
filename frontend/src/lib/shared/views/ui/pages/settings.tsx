@@ -3,6 +3,7 @@ import { AccountSettings } from "@/lib/auth/views/ui/account-settings";
 import { t } from "@/lib/shared/i18n";
 import { open } from "@/lib/shared/utils/open";
 import { LanguageSettings } from "@/lib/shared/views/ui/components/language-settings";
+import { LogsSettings } from "@/lib/shared/views/ui/components/logs-settings";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { RelaySettings } from "@/lib/sync/views/ui/relay-settings";
@@ -35,6 +36,7 @@ function SettingsPage() {
 					<LanguageSettings />
 					<RelaySettings />
 					<AboutSettings />
+					<LogsSettings />
 
 					<footer class="mt-auto pt-6 text-center text-xs text-zinc-600">
 						{t("settings.developedBy")}{" "}

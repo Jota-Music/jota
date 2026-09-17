@@ -55,6 +55,11 @@
 			"title": "Idioma",
 			"description": "Idioma de la interfaz.",
 			"label": "Idioma"
+		},
+		"logs": {
+			"title": "Registros",
+			"description": "Comparte el registro de la app al reportar un problema.",
+			"download": "Guardar registros"
 		}
 	},
 	"pages": {

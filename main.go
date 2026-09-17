@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/Jota-Music/jota/internal/app"
@@ -68,16 +69,11 @@ func (w *rotatingWriter) rotate() {
 // app's storage, because stderr is lost when the app is launched from a
 // desktop entry or an AppImage. Best-effort: no writable dir means stderr only.
 func setupLogging() func() {
-	dir, err := os.UserConfigDir()
-	if err != nil || dir == "" {
-		dir = os.TempDir()
-	}
-	dir = filepath.Join(dir, "jota")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	path := app.LogPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return func() {}
 	}
 
-	path := filepath.Join(dir, "jota.log")
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		return func() {}
@@ -90,7 +86,20 @@ func setupLogging() func() {
 
 	log.SetOutput(io.MultiWriter(os.Stderr, w))
 	_ = debug.SetCrashOutput(f, debug.CrashOptions{})
-	return func() { _ = f.Close() }
+
+	// A native crash (a WebKit abort, for one) kills the process before the
+	// deferred cleanup runs, so the marker is what survives to tell the next
+	// launch that the previous session died instead of exiting cleanly.
+	marker := filepath.Join(filepath.Dir(path), "jota.running")
+	if _, err := os.Stat(marker); err == nil {
+		log.Printf("previous session ended unexpectedly (crash or forced kill)")
+	}
+	_ = os.WriteFile(marker, []byte(strconv.Itoa(os.Getpid())), 0o644)
+
+	return func() {
+		_ = os.Remove(marker)
+		_ = f.Close()
+	}
 }
 
 func loadWindowState() windowState {
@@ -243,4 +252,5 @@ func main() {
 	if err := wailsApp.Run(); err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("jota shutting down")
 }

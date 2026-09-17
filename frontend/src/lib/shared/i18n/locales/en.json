@@ -55,6 +55,11 @@
 			"title": "Language",
 			"description": "Interface language.",
 			"label": "Language"
+		},
+		"logs": {
+			"title": "Logs",
+			"description": "Share the app log when reporting a problem.",
+			"download": "Save logs"
 		}
 	},
 	"pages": {

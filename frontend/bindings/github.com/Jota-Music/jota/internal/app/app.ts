@@ -143,6 +143,15 @@ export function RevalidateUserPlaylists(user: string): $CancellablePromise<void>
     return $Call.ByID(771735787, user);
 }
 
+/**
+ * SaveLogs asks the user where to save a copy of the log, so a crash report can
+ * be shared. It returns the chosen path, or an empty string when the dialog is
+ * dismissed.
+ */
+export function SaveLogs(): $CancellablePromise<string> {
+    return $Call.ByID(2876203262);
+}
+
 export function SaveRoom(room: rooms$0.Room): $CancellablePromise<rooms$0.Room[] | null> {
     return $Call.ByID(944735522, room);
 }
