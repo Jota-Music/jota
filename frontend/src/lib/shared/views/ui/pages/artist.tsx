@@ -172,6 +172,7 @@ export function ArtistPage() {
 							}),
 						)}
 						to={(id) => `/album/${id}`}
+						viewKey="artist_view"
 						isLoading={discoLoading}
 						emptyMessage={`No ${groupLabel(activeTab).toLowerCase()} found.`}
 					/>

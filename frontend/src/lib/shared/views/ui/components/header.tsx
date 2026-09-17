@@ -52,7 +52,7 @@ export function Header() {
 	const [searchType, setSearchType] = useState<SpotifyType>(loadType);
 
 	const liveSource: Source = spotifyConnected.value ? source : "youtube";
-	const jams = role.value !== "off";
+	const inRoom = role.value !== "off";
 	const connected = status.value === "open";
 
 	useEffect(() => {
@@ -161,7 +161,7 @@ export function Header() {
 					<button
 						onClick={() => (showSync.value = !showSync.value)}
 						type="button"
-						title="Jams"
+						title="Rooms"
 						class="flex size-8 items-center justify-center cursor-pointer"
 					>
 						<Turntable
@@ -169,7 +169,7 @@ export function Header() {
 								"size-5 md:size-4",
 								connected
 									? "text-green-400"
-									: jams
+									: inRoom
 										? "text-yellow-400"
 										: "text-zinc-400 hover:text-zinc-100",
 							)}

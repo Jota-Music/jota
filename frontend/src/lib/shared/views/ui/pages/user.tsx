@@ -59,6 +59,7 @@ export function UserPage() {
 						}),
 					)}
 					to={(id) => `/playlist/${id}`}
+					viewKey="user_view"
 					isLoading={isLoading}
 					emptyMessage="No playlists found."
 				/>

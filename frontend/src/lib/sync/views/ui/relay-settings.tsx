@@ -43,11 +43,11 @@ export function RelaySettings() {
 		<section class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
 			<div class="flex items-center gap-2">
 				<Turntable size={18} class="text-zinc-400" />
-				<h2 class="text-sm font-semibold text-zinc-200">Jams</h2>
+				<h2 class="text-sm font-semibold text-zinc-200">Rooms</h2>
 			</div>
 			<p class="text-xs text-zinc-500">
-				Relay server that syncs playback between devices. Jams and their
-				passwords are set from the Jams panel.
+				Relay server that syncs playback between devices. Rooms and their
+				passwords are set from the Rooms panel.
 			</p>
 
 			<div class="space-y-1.5">

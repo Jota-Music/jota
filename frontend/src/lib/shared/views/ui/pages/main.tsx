@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { ListMusic, Users } from "lucide-preact";
+import { ListMusic, Turntable, Users } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
@@ -16,15 +16,15 @@ import {
 import { FollowingShelf } from "@/lib/music/views/ui/user/following";
 import { cn } from "@/lib/shared/utils/tw";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
+import { RoomsShelf } from "@/lib/sync/views/ui/rooms";
 
-type Tab = "playlists" | "following";
+type Tab = "playlists" | "following" | "rooms";
 
 const tabKey = "main_tab";
 
 function loadTab(): Tab {
-	return localStorage.getItem(tabKey) === "following"
-		? "following"
-		: "playlists";
+	const saved = localStorage.getItem(tabKey);
+	return saved === "following" || saved === "rooms" ? saved : "playlists";
 }
 
 export function MainPage() {
@@ -82,6 +82,7 @@ export function MainPage() {
 		...(spotifyConnected.value
 			? [{ id: "following" as Tab, label: "Following", icon: Users }]
 			: []),
+		{ id: "rooms", label: "Rooms", icon: Turntable },
 	];
 
 	return (
@@ -109,10 +110,13 @@ export function MainPage() {
 
 				{activeTab === "following" ? (
 					<FollowingShelf account={spotifyHandle} />
+				) : activeTab === "rooms" ? (
+					<RoomsShelf />
 				) : (
 					<Shelf
 						items={items}
 						to={(id) => `/playlist/${id}`}
+						viewKey="cover_grid_view"
 						isLoading={spotifyQuery.isLoading || youtubeQuery.isLoading}
 						emptyMessage={<YouTubeHint />}
 						onRemove={(id) => remove.mutate(id)}

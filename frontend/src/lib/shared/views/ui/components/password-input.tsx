@@ -8,6 +8,7 @@ interface PasswordInputProps {
 	placeholder?: string;
 	value: string;
 	onValue: (value: string) => void;
+	onBlur?: () => void;
 	label?: string;
 }
 
@@ -17,6 +18,7 @@ export function PasswordInput({
 	placeholder,
 	value,
 	onValue,
+	onBlur,
 	label,
 }: PasswordInputProps) {
 	const [visible, setVisible] = useState(false);
@@ -31,6 +33,7 @@ export function PasswordInput({
 				aria-label={label}
 				value={value}
 				onInput={(e) => onValue(e.currentTarget.value)}
+				onBlur={onBlur}
 			/>
 			<button
 				type="button"

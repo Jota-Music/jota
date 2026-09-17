@@ -108,6 +108,7 @@ export function FollowingShelf({ account }: { account: string }) {
 		<Shelf
 			items={items}
 			to={link}
+			viewKey="following_view"
 			isLoading={followedLoading || friends.isLoading || following.isLoading}
 			emptyMessage="No friends or followed accounts yet. Open a user profile and tap the heart to follow it."
 			onRemove={(id) => {
