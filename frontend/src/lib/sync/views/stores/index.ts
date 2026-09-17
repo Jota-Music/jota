@@ -11,6 +11,9 @@ export const joined = signal(false);
 export const room = signal(localStorage.getItem("sync:room") ?? "");
 export const relayUrl = signal(localStorage.getItem("sync:relay") ?? "");
 export const token = signal(localStorage.getItem("sync:token") ?? "");
+// True when RELAY_API_URL pins the relay from the environment: the value wins
+// over the saved one and is not persisted.
+export const relayLocked = signal(false);
 export const tokenRequired = signal(false);
 export const password = signal(localStorage.getItem("sync:password") ?? "");
 export const error = signal("");

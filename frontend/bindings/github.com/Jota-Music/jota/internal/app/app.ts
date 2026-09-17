@@ -10,6 +10,12 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as music$0 from "../music/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as rooms$0 from "../services/rooms/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as sync$0 from "../services/sync/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as update$0 from "../services/update/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -83,6 +89,10 @@ export function InstallUpdate(): $CancellablePromise<void> {
     return $Call.ByID(668692034);
 }
 
+export function ListRooms(): $CancellablePromise<rooms$0.Room[] | null> {
+    return $Call.ByID(384387320);
+}
+
 /**
  * LogError persists a frontend-reported error to the app log so failures that
  * only surface in the UI stay diagnosable after the fact.
@@ -104,6 +114,19 @@ export function ReadClipboard(): $CancellablePromise<string> {
     return $Call.ByID(4227429682);
 }
 
+/**
+ * RelayOverride reports the relay pinned through RELAY_API_URL/RELAY_API_TOKEN,
+ * if any. The frontend applies it over the user's saved relay so a dev build can
+ * point at a local relay.
+ */
+export function RelayOverride(): $CancellablePromise<$models.RelayOverride> {
+    return $Call.ByID(577785897);
+}
+
+export function RemoveRoom(id: string): $CancellablePromise<rooms$0.Room[] | null> {
+    return $Call.ByID(1937239451, id);
+}
+
 export function RemoveYouTubePlaylist(id: string): $CancellablePromise<void> {
     return $Call.ByID(2138005495, id);
 }
@@ -118,6 +141,10 @@ export function RevalidateFullPlaylist(id: string): $CancellablePromise<void> {
 
 export function RevalidateUserPlaylists(user: string): $CancellablePromise<void> {
     return $Call.ByID(771735787, user);
+}
+
+export function SaveRoom(room: rooms$0.Room): $CancellablePromise<rooms$0.Room[] | null> {
+    return $Call.ByID(944735522, room);
 }
 
 export function Search(query: string, searchType: string): $CancellablePromise<music$0.SearchResult[] | null> {
@@ -175,6 +202,14 @@ export function SyncCheck(relayURL: string): $CancellablePromise<boolean> {
 
 export function SyncConnect(relayURL: string, room: string, role: string, token: string, password: string): $CancellablePromise<void> {
     return $Call.ByID(799230255, relayURL, room, role, token, password);
+}
+
+/**
+ * SyncRoomStatus reports whether a saved room is live and how many members it
+ * has, without joining it.
+ */
+export function SyncRoomStatus(relayURL: string, room: string, token: string): $CancellablePromise<sync$0.RoomStatus> {
+    return $Call.ByID(1137831878, relayURL, room, token);
 }
 
 export function SyncSend(payload: string): $CancellablePromise<void> {

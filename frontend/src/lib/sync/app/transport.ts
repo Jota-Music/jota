@@ -1,5 +1,12 @@
-import { SyncCheck, SyncConnect, SyncSend, SyncStop } from "@bindings/app";
+import {
+	RelayOverride,
+	SyncCheck,
+	SyncConnect,
+	SyncSend,
+	SyncStop,
+} from "@bindings/app";
 import { Events } from "@wailsio/runtime";
+import { addError } from "@/lib/shared/views/stores/errors";
 import type { ClientMessage, ServerMessage } from "@/lib/sync/model";
 import * as store from "@/lib/sync/views/stores";
 
@@ -64,14 +71,17 @@ Events.On("sync:connected", () => {
 });
 
 Events.On("sync:closed", () => {
-	store.status.value = "closed";
+	// A close we asked for (leaving, or a fatal room error) is terminal: going
+	// back to "idle" clears the connecting UI instead of leaving it spinning.
+	// An unexpected close keeps "closed" and is retried.
+	store.status.value = intentional ? "idle" : "closed";
 	// Remember the role we had so a reconnect reclaims it instead of being
 	// demoted (a host that comes back as guest can no longer answer joins).
 	lastRole = store.role.value === "off" ? "" : store.role.value;
 	store.role.value = "off";
 	store.peers.value = 0;
 	for (const fn of closeHandlers) fn();
-	scheduleReconnect();
+	if (!intentional) scheduleReconnect();
 });
 
 Events.On("sync:message", (ev) => {
@@ -87,6 +97,17 @@ Events.On("sync:message", (ev) => {
 
 export async function check(url: string): Promise<boolean> {
 	return await SyncCheck(url);
+}
+
+// applyRelayOverride points the app at the relay pinned by RELAY_API_URL, so a
+// dev build can test against a local relay instead of the saved one.
+export async function applyRelayOverride(): Promise<void> {
+	const override = await RelayOverride();
+	const url = override.url?.trim();
+	if (!url) return;
+	store.relayUrl.value = url;
+	store.token.value = override.token?.trim() ?? "";
+	store.relayLocked.value = true;
 }
 
 async function dial(code: string, role: "host" | "guest" | ""): Promise<void> {
@@ -109,8 +130,10 @@ export async function connect(code: string): Promise<void> {
 	clearReconnect();
 	reconnectDelay = 0;
 	reset();
-	localStorage.setItem("sync:relay", store.relayUrl.value.trim());
-	localStorage.setItem("sync:token", store.token.value.trim());
+	if (!store.relayLocked.value) {
+		localStorage.setItem("sync:relay", store.relayUrl.value.trim());
+		localStorage.setItem("sync:token", store.token.value.trim());
+	}
 	localStorage.setItem("sync:room", code);
 	localStorage.setItem("sync:password", store.password.value.trim());
 	joinedRoom = code;
@@ -126,6 +149,7 @@ export async function connect(code: string): Promise<void> {
 		} else {
 			store.error.value = msg;
 		}
+		addError(store.error.value, "room");
 	}
 }
 

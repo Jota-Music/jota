@@ -6,6 +6,7 @@ import { syncSpotifyStatus } from "@/lib/auth/views/stores/session";
 import { syncYouTubeStatus } from "@/lib/auth/views/stores/youtube";
 import { RequireSpotify } from "@/lib/auth/views/ui/spotify-connect";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
+import { applyRelayOverride } from "@/lib/sync/app/transport";
 import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
 
 const PlaylistPage = lazy(() =>
@@ -59,6 +60,7 @@ function Router() {
 		void syncYouTubeStatus();
 		void loadVersion();
 		void checkUpdate();
+		void applyRelayOverride();
 	}, []);
 
 	return (

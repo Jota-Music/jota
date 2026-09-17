@@ -99,7 +99,7 @@ function waitForPlay(gen: string): Promise<{ at: number }> {
 				if (playWait !== wait) return;
 				playWait = null;
 				pendingStart.value = false;
-				addError(new Error("consensus timeout"), "jam");
+				addError(new Error("consensus timeout"), "room");
 				resolve({ at: clock.serverNow() });
 			}, 20000),
 		};
@@ -308,6 +308,7 @@ function handleMessage(msg: ServerMessage): void {
 			return;
 		case "error":
 			store.error.value = msg.reason;
+			addError(msg.reason, "room");
 			transport.abandon();
 			return;
 		case "pong":

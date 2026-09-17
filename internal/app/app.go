@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"runtime"
+	"strings"
 	stdsync "sync"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/services/follows"
+	"github.com/Jota-Music/jota/internal/services/rooms"
 	"github.com/Jota-Music/jota/internal/services/spotify"
 	"github.com/Jota-Music/jota/internal/services/sync"
 	"github.com/Jota-Music/jota/internal/services/update"
@@ -28,11 +30,20 @@ import (
 type App struct {
 	ctx     context.Context
 	version string
+	relay   RelayOverride
 	Spotify *spotify.SpotifyService
 	Catalog *music.Catalog
 	YouTube *youtube.Service
 	Sync    *sync.Service
 	Follows *follows.Service
+	Rooms   *rooms.Service
+}
+
+// RelayOverride pins a relay for local testing. An empty URL means the user's
+// saved relay is used.
+type RelayOverride struct {
+	URL   string `json:"url"`
+	Token string `json:"token"`
 }
 
 var installMu stdsync.Mutex
@@ -43,11 +54,16 @@ func New(version string) *App {
 	youTubeSvc := youtube.NewService()
 	return &App{
 		version: version,
+		relay: RelayOverride{
+			URL:   strings.TrimSpace(cfg.RelayAPIURL),
+			Token: strings.TrimSpace(cfg.RelayAPIToken),
+		},
 		Spotify: spotifySvc,
 		Catalog: music.NewCatalog(spotifySvc, youTubeSvc),
 		YouTube: youTubeSvc,
 		Sync:    sync.New(),
 		Follows: follows.New(),
+		Rooms:   rooms.New(),
 	}
 }
 
@@ -388,6 +404,33 @@ func (a *App) SyncStop() {
 
 func (a *App) SyncSend(payload string) error {
 	return a.Sync.Send(payload)
+}
+
+// ----- Rooms bindings -----
+
+// SyncRoomStatus reports whether a saved room is live and how many members it
+// has, without joining it.
+func (a *App) SyncRoomStatus(relayURL string, room string, token string) (sync.RoomStatus, error) {
+	return a.Sync.RoomStatus(relayURL, room, token)
+}
+
+func (a *App) ListRooms() ([]rooms.Room, error) {
+	return a.Rooms.List()
+}
+
+func (a *App) SaveRoom(room rooms.Room) ([]rooms.Room, error) {
+	return a.Rooms.Save(room)
+}
+
+func (a *App) RemoveRoom(id string) ([]rooms.Room, error) {
+	return a.Rooms.Remove(id)
+}
+
+// RelayOverride reports the relay pinned through RELAY_API_URL/RELAY_API_TOKEN,
+// if any. The frontend applies it over the user's saved relay so a dev build can
+// point at a local relay.
+func (a *App) RelayOverride() RelayOverride {
+	return a.relay
 }
 
 func (a *App) ReadClipboard() string {

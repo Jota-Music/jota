@@ -9,6 +9,10 @@ import (
 
 type Config struct {
 	SpotifyClientID string
+	// RelayAPIURL and RelayAPIToken pin the relay a developer tests against,
+	// overriding whatever relay the user saved. Meant for local/dev runs.
+	RelayAPIURL   string
+	RelayAPIToken string
 }
 
 func Load() Config {
@@ -18,5 +22,7 @@ func Load() Config {
 
 	return Config{
 		SpotifyClientID: os.Getenv("SPOTIFY_CLIENT_ID"),
+		RelayAPIURL:     os.Getenv("RELAY_API_URL"),
+		RelayAPIToken:   os.Getenv("RELAY_API_TOKEN"),
 	}
 }

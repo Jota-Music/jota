@@ -214,6 +214,65 @@ func healthURL(raw string) (string, error) {
 	return u.String(), nil
 }
 
+func roomStatusURL(raw string, room string) (string, error) {
+	room = strings.TrimSpace(room)
+	if room == "" {
+		return "", errors.New("room code is empty")
+	}
+	u, err := relayURL(raw)
+	if err != nil {
+		return "", err
+	}
+	if u.Scheme == "wss" {
+		u.Scheme = "https"
+	} else {
+		u.Scheme = "http"
+	}
+	u.Path = "/rooms/" + url.PathEscape(room)
+	u.RawQuery = ""
+	return u.String(), nil
+}
+
+// RoomStatus is a saved room's live state as reported by the relay.
+type RoomStatus struct {
+	Active  bool `json:"active"`
+	Members int  `json:"members"`
+	HasHost bool `json:"hasHost"`
+	Locked  bool `json:"locked"`
+}
+
+// RoomStatus asks whether a room is live and how many members it has. It never
+// joins: only the codes the user saved are queried, so it cannot disturb a room.
+// A relay without this endpoint answers 404, which callers show as "unknown".
+func (s *Service) RoomStatus(rawURL string, room string, token string) (RoomStatus, error) {
+	target, err := roomStatusURL(rawURL, room)
+	if err != nil {
+		return RoomStatus{}, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	if err != nil {
+		return RoomStatus{}, err
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return RoomStatus{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return RoomStatus{}, fmt.Errorf("relay returned %s", resp.Status)
+	}
+	var out RoomStatus
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return RoomStatus{}, err
+	}
+	return out, nil
+}
+
 func relayURL(raw string) (*url.URL, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

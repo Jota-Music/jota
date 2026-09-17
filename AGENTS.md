@@ -63,6 +63,8 @@ cd frontend && bun run typecheck && bun run lint
 |----------|---------|-------------|
 | `SPOTIFY_CLIENT_ID` | librespot default | Custom Spotify OAuth client ID. |
 | `YOUTUBE_API_KEY` | public InnerTube key | Override the YouTube InnerTube API key. |
+| `RELAY_API_URL` | _(empty)_ | Dev-only: pin the relay URL, overriding the one saved in the UI. |
+| `RELAY_API_TOKEN` | _(empty)_ | Dev-only: relay auth token to pair with `RELAY_API_URL`. |
 | `WEBKIT_DISABLE_DMABUF_RENDERER` | `1` | Wayland/DMA-BUF workaround (set in `main.go`). |
 
 ## Layout
