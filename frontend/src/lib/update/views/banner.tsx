@@ -63,8 +63,8 @@ export function UpdateBanner() {
 			{p != null && (
 				<div class="absolute inset-x-0 bottom-0 h-0.5 bg-zinc-800">
 					<div
-						class="h-full bg-(--dominant-color) transition-[width] duration-150 ease-out"
-						style={{ width: `${p}%` }}
+						class="h-full origin-left bg-(--dominant-color) transition-[scale] duration-150 ease-out"
+						style={{ scale: p / 100 }}
 					/>
 				</div>
 			)}
