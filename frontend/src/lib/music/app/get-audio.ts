@@ -1,4 +1,4 @@
-import { ResolveAudio, SetYouTubeId } from "@bindings/app";
+import { GetYouTubeId, ResolveAudio, SetYouTubeId } from "@bindings/app";
 import type { Audio, Song } from "@/lib/music/model";
 
 function toAudio(data: Audio, fallback: string): Audio & { youtube: string } {
@@ -23,4 +23,8 @@ export async function updateYoutubeId(
 	youtubeId: string,
 ): Promise<void> {
 	await SetYouTubeId(songId, youtubeId);
+}
+
+export async function getYouTubeId(songId: string): Promise<string> {
+	return (await GetYouTubeId(songId)) ?? "";
 }

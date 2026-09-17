@@ -81,6 +81,10 @@ export function GetUserProfile(username: string): $CancellablePromise<music$0.Us
     return $Call.ByID(3889322832, username);
 }
 
+export function GetYouTubeId(cacheKey: string): $CancellablePromise<string> {
+    return $Call.ByID(3943685640, cacheKey);
+}
+
 export function GetYouTubePlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
     return $Call.ByID(4268478320);
 }

@@ -28,6 +28,10 @@ func (a *App) SetYouTubeId(cacheKey string, youtubeId string) error {
 	return a.YouTube.SetYoutubeId(cacheKey, youtubeId)
 }
 
+func (a *App) GetYouTubeId(cacheKey string) string {
+	return a.YouTube.YoutubeId(cacheKey)
+}
+
 func (a *App) SearchYouTube(query string) ([]youtube.Video, error) {
 	return a.YouTube.Search(query)
 }

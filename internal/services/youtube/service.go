@@ -83,6 +83,14 @@ func (s *Service) searchAudio(cacheKey, search string) (music.Audio, error) {
 	return music.Audio{}, lastErr
 }
 
+// YoutubeId returns the YouTube video linked to a song, or "" when none.
+func (s *Service) YoutubeId(cacheKey string) string {
+	if v, err := youtubeSourceBucket.GetString(cacheKey); err == nil {
+		return v
+	}
+	return ""
+}
+
 func (s *Service) SetYoutubeId(cacheKey, youtubeId string) error {
 	// Invalidate cached audio so the new video is resolved on the next request.
 	if old, err := youtubeSourceBucket.GetString(cacheKey); err == nil && old != "" && old != youtubeId {

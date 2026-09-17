@@ -26,6 +26,19 @@ func TestSetYoutubeIdInvalidatesAudioCache(t *testing.T) {
 	}
 }
 
+func TestYoutubeIdLookup(t *testing.T) {
+	const song = "test-youtube-id-lookup"
+	_ = youtubeSourceBucket.SetString(song, "video1")
+
+	svc := NewService()
+	if got := svc.YoutubeId(song); got != "video1" {
+		t.Fatalf("YoutubeId = %q, want %q", got, "video1")
+	}
+	if got := svc.YoutubeId("unknown-song"); got != "" {
+		t.Fatalf("YoutubeId = %q, want empty", got)
+	}
+}
+
 func TestGetAudioURL(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test: reaches YouTube")
