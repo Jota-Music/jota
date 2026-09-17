@@ -205,7 +205,7 @@ function FullPlayerContent(props: FullPlayerProps) {
 							class={cn(
 								"rounded-md p-1 transition cursor-pointer",
 								shuffle.value
-									? "bg-(--dominant-color)/20 text-(--dominant-color)"
+									? "text-(--dominant-color)"
 									: "text-white/60 hover:bg-white/10 hover:text-white",
 							)}
 						>
@@ -227,7 +227,7 @@ function FullPlayerContent(props: FullPlayerProps) {
 							class={cn(
 								"rounded-md p-1 transition cursor-pointer",
 								repeat.value !== "off"
-									? "bg-(--dominant-color)/20 text-(--dominant-color)"
+									? "text-(--dominant-color)"
 									: "text-white/60 hover:bg-white/10 hover:text-white",
 							)}
 						>
