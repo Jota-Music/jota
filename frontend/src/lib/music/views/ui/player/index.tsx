@@ -79,7 +79,10 @@ const DiscCenter = memo(function DiscCenter({
 				src={cover}
 				alt={song.name}
 				draggable={false}
-				class="absolute inset-0 h-full w-full object-cover rounded-2xl shadow-lg opacity-40 animate-[spin_120s_linear_infinite] select-none"
+				class={cn(
+					"absolute inset-0 h-full w-full object-cover rounded-2xl shadow-lg opacity-40 animate-[spin_120s_linear_infinite] select-none",
+					!isPlaying && "[animation-play-state:paused]",
+				)}
 				style="-webkit-user-drag: none"
 			/>
 
