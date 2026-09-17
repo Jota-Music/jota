@@ -1,9 +1,8 @@
 import { computed } from "@preact/signals";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { ListPlus, Loader, Music, Pause } from "lucide-preact";
 import { memo } from "preact/compat";
-import { useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
+import { useWindow } from "@/lib/music/views/hooks/use-window";
 import {
 	currentSong,
 	isLoading,
@@ -114,20 +113,15 @@ function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
 const PlaylistRowMemo = memo(PlaylistRow);
 
 export function Virtualization({ songs }: Props) {
-	const parentRef = useRef<HTMLDivElement>(null);
-
-	const rowVirtualizer = useVirtualizer({
-		count: songs.length,
-		getScrollElement: () => parentRef.current,
-		estimateSize: () => ROW_PX,
-		overscan: 5,
-		getItemKey: (index) => songs[index]?.id ?? index,
-	});
+	const { ref, totalSize, items } = useWindow<HTMLDivElement>(
+		songs.length,
+		ROW_PX,
+	);
 
 	return (
 		<div className="relative min-h-0 flex-1">
 			<div
-				ref={parentRef}
+				ref={ref}
 				className="h-full overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950"
 			>
 				{songs.length === 0 ? (
@@ -138,10 +132,10 @@ export function Virtualization({ songs }: Props) {
 					<div
 						className="relative w-full pb-3"
 						style={{
-							height: `${rowVirtualizer.getTotalSize()}px`,
+							height: `${totalSize}px`,
 						}}
 					>
-						{rowVirtualizer.getVirtualItems().map((virtualRow) => {
+						{items.map((virtualRow) => {
 							const song = songs[virtualRow.index];
 
 							return (
@@ -161,7 +155,7 @@ export function Virtualization({ songs }: Props) {
 				)}
 			</div>
 
-			<Scrollbar target={parentRef} />
+			<Scrollbar target={ref} />
 		</div>
 	);
 }

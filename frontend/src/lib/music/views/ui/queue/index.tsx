@@ -1,5 +1,4 @@
 import { signal } from "@preact/signals";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import {
 	ArrowUpFromLine,
 	ChevronDown,
@@ -13,9 +12,10 @@ import {
 	Trash2,
 } from "lucide-preact";
 import { memo } from "preact/compat";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { useQueuePanel } from "@/lib/music/views/hooks/use-queue";
+import { useWindow } from "@/lib/music/views/hooks/use-window";
 import {
 	failedSongs,
 	isLoading,
@@ -226,19 +226,23 @@ const QueueRow = memo(function QueueRow({
 
 function Queue() {
 	const panel = useQueuePanel();
-	const parentRef = useRef<HTMLUListElement>(null);
 
 	const songs = panel.songs;
 	const idx = panel.currentIndex;
 	const viewStart = idx >= 0 ? Math.max(0, idx - QUEUE_VIEW_LOOKBACK) : 0;
 	const viewCount = songs.length === 0 ? 0 : songs.length - viewStart;
 
+	const { ref, totalSize, items } = useWindow<HTMLUListElement>(
+		viewCount,
+		ROW_PX,
+	);
+
 	const closeQueue = () => {
 		showQueue.value = false;
 	};
 
 	const indexFromClientY = (clientY: number) => {
-		const el = parentRef.current;
+		const el = ref.current;
 		if (!el || viewCount === 0) return viewStart;
 		const r = el.getBoundingClientRect();
 		const rel = el.scrollTop + (clientY - r.top);
@@ -277,17 +281,6 @@ function Queue() {
 		}
 	};
 
-	const rowVirtualizer = useVirtualizer({
-		count: viewCount,
-		getScrollElement: () => parentRef.current,
-		estimateSize: () => ROW_PX,
-		overscan: 5,
-		getItemKey: (localIndex) => {
-			const g = viewStart + localIndex;
-			return `${songs[g]?.id ?? "x"}-${g}`;
-		},
-	});
-
 	useEffect(() => {
 		if (!panel.open) return;
 		const onKey = (e: KeyboardEvent) => {
@@ -324,7 +317,7 @@ function Queue() {
 
 			<div class="relative flex min-h-0 flex-1 flex-col">
 				<ul
-					ref={parentRef}
+					ref={ref}
 					class={cn(
 						"min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1",
 						dragFrom.value != null && "[&_button]:pointer-events-none",
@@ -345,17 +338,17 @@ function Queue() {
 						<div
 							class="relative w-full"
 							style={{
-								height: `${rowVirtualizer.getTotalSize()}px`,
+								height: `${totalSize}px`,
 							}}
 						>
-							{rowVirtualizer.getVirtualItems().map((virtualRow) => {
+							{items.map((virtualRow) => {
 								const globalIndex = viewStart + virtualRow.index;
 								const song = songs[globalIndex];
 								const isCurrent = globalIndex === idx;
 
 								return (
 									<div
-										key={virtualRow.key}
+										key={`${song.id}-${globalIndex}`}
 										class="absolute left-0 w-full"
 										style={{
 											height: `${virtualRow.size}px`,
@@ -389,7 +382,7 @@ function Queue() {
 						</div>
 					)}
 				</ul>
-				<Scrollbar target={parentRef} />
+				<Scrollbar target={ref} />
 			</div>
 		</Modal>
 	);
