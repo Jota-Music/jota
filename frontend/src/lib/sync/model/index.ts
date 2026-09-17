@@ -29,6 +29,7 @@ export type ClientMessage =
 	| ({ t: "control" } & ControlAction)
 	| { t: "queue"; data: string }
 	| ({ t: "state" } & Playback)
+	| ({ t: "sync" } & Playback)
 	| ({ t: "prepare"; gen: string; epoch: string } & Track)
 	| { t: "ready"; gen: string; ok: boolean }
 	| { t: "snapshot"; to: string; state: Playback };
@@ -38,6 +39,7 @@ export type ServerMessage =
 	| { t: "members"; count: number; epoch: string }
 	| { t: "pong"; id: number; at: number; echo: number }
 	| { t: "play"; gen: string; epoch: string; at: number; positionMs: number }
+	| ({ t: "sync" } & Playback)
 	| {
 			t: "snapshot";
 			// Relay-clock stamps of the join exchange (t1 receive, t2 send).

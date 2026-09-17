@@ -3,8 +3,11 @@ import { effect } from "@preact/signals";
 import type { ControlAction, Song } from "@/lib/music/model";
 import {
 	currentSong,
+	dragSeeking,
 	getPlaybackSeconds,
+	isLoading,
 	isPlaying,
+	pause,
 	pendingStart,
 	prepareSong,
 	resume,
@@ -38,6 +41,9 @@ import * as clock from "@/lib/sync/views/stores/clock";
 // `ready`, and the relay releases a shared `play` instant. Both the member that
 // pressed the track and the ones receiving the prepare run the same path.
 let consensusGen: string | null = null;
+// Bumped whenever a round starts, so a join snapshot can tell it was superseded
+// by a track change and must not override the track the room is switching to.
+let roundSeq = 0;
 let playWait: {
 	gen: string;
 	resolve: (play: { at: number }) => void;
@@ -52,6 +58,16 @@ let roomEpoch = "";
 let joined = false;
 let suppressQueue = false;
 let joinAt = 0;
+
+// The seat holder publishes its playback as the drift reference. The seat is
+// inherited, so the sender follows whoever holds it at the time. A peer pulls
+// back onto it, but only once its own last control has settled, so the passive
+// heartbeat never fights a fresh control or a round.
+const SYNC_PERIOD = 5000;
+const SYNC_DRIFT = 0.3;
+const CONTROL_SETTLE = 3000;
+let lastSync = 0;
+let lastControl = 0;
 
 function live(): boolean {
 	return store.status.value === "open" && store.role.value !== "off";
@@ -119,6 +135,7 @@ function resolvePlay(gen: string, at: number): void {
 async function settle(gen: string, song: Song): Promise<void> {
 	// A newer round supersedes the one in flight: release its wait so it stops
 	// owning the spinner and playback.
+	roundSeq++;
 	cancelWait();
 	consensusGen = gen;
 	pendingStart.value = true;
@@ -192,6 +209,7 @@ async function applySnapshot(
 	clock.sync(joinAt, m.echo, m.at);
 	joined = true;
 	store.joined.value = true;
+	const seq = roundSeq;
 
 	if (m.queue) {
 		applyQueue(m.queue);
@@ -225,12 +243,17 @@ async function applySnapshot(
 		return;
 	}
 
-	consensusGen = null;
+	// A round owns playback once it starts: a join snapshot must not override
+	// the track the room is switching to, or abort the round mid-load. The
+	// round's own settle plays the new track.
+	if (pendingStart.value || roundSeq !== seq) return;
+
 	pendingStart.value = true;
 	currentIndex.value = p.index ?? 0;
 	preloadUpcomingSongs(queue.value, currentIndex.value);
 
 	const loaded = await prepareSong(song);
+	if (roundSeq !== seq) return;
 	if (!loaded) {
 		pendingStart.value = false;
 		return;
@@ -279,9 +302,16 @@ function broadcastQueue(): void {
 }
 
 function applyControl(a: ControlAction): void {
+	lastControl = Date.now();
 	switch (a.action) {
 		case "toggle":
 			void togglePlayPause();
+			break;
+		case "play":
+			void resume();
+			break;
+		case "pause":
+			pause();
 			break;
 		case "seek":
 			seek(a.positionMs / 1000);
@@ -299,7 +329,33 @@ function applyControl(a: ControlAction): void {
 // the other members apply the same one.
 function publish(a: ControlAction): void {
 	if (!live()) return;
+	lastControl = Date.now();
 	transport.send({ t: "control", ...a });
+}
+
+// The seat holder's heartbeat: every other member pulls back onto it. A peer
+// stuck on another track rejoins outright; one that drifted seeks onto the
+// reference; one that missed a play/pause follows it too. A control applied
+// within the settle window is left alone, so a fresh local change is never
+// fought, and a load or seek in flight is skipped.
+function applySync(m: Extract<ServerMessage, { t: "sync" }>): void {
+	if (!live() || !joined) return;
+	if (pendingStart.value || isLoading.value || dragSeeking.value) return;
+	if (Date.now() - lastControl < CONTROL_SETTLE) return;
+	if ((currentSong.value?.id ?? "") !== (m.songId ?? "")) {
+		if (Date.now() - joinAt > CONTROL_SETTLE) requestJoin();
+		return;
+	}
+	if (m.playing !== isPlaying.value) {
+		if (m.playing) void resume();
+		else pause();
+	}
+	const target = clock.projected(
+		m.positionMs,
+		m.at ?? clock.serverNow(),
+		m.playing,
+	);
+	if (Math.abs(target - getPlaybackSeconds()) > SYNC_DRIFT) seek(target);
 }
 
 function handleMessage(msg: ServerMessage): void {
@@ -333,6 +389,9 @@ function handleMessage(msg: ServerMessage): void {
 	switch (msg.t) {
 		case "prepare":
 			void handlePrepare(msg);
+			break;
+		case "sync":
+			applySync(msg);
 			break;
 		case "control":
 			applyControl(msg);
@@ -393,8 +452,14 @@ effect(() => {
 
 // Every member feeds the relay cache, so the room snapshot tracks the pause,
 // seek and track changes even while the host is away. The live host answer is
-// still the primary join path; the cache is the fallback.
+// still the primary join path; the cache is the fallback. The seat holder also
+// publishes a slower heartbeat so peers can pull back onto its position.
 setInterval(() => {
 	if (!live()) return;
 	transport.send({ t: "state", ...currentPlayback() });
+	const now = Date.now();
+	if (store.role.value !== "host" || pendingStart.value) return;
+	if (now - lastSync < SYNC_PERIOD) return;
+	lastSync = now;
+	transport.send({ t: "sync", ...currentPlayback(), at: clock.serverNow() });
 }, 2000);
