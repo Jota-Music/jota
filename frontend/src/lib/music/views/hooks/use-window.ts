@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
-export interface WindowItem {
+interface WindowItem {
 	index: number;
 	start: number;
 	size: number;

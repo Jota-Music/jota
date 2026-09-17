@@ -107,7 +107,6 @@ export const pendingStart = signal(false);
 export const isPlaying = signal(false);
 export const progress = signal(0);
 export const dragSeeking = signal(false);
-export const seekCount = signal(0);
 export const audioDuration = signal(0);
 export const volume = signal(getInitialVolume());
 export const muted = signal(getInitialMuted());
@@ -127,8 +126,8 @@ function markFailed(id: string, failed: boolean): void {
 	failedSongs.value = next;
 }
 
-// Apply a resolved YouTube ID to the song on screen and to its queued copy, so
-// queue edits and replays keep it visible.
+// Apply a resolved YouTube ID to the song on screen and to its copy in the
+// queue, so queue edits and replays keep it visible.
 export function setYoutube(song: Song, youtube: string) {
 	const current = currentSong.value;
 	if (current && current.id === song.id && current.youtubeId !== youtube) {
@@ -544,7 +543,7 @@ export function getPlaybackSeconds(): number {
 	return 0;
 }
 
-export function hasLoadedAudio(): boolean {
+function hasLoadedAudio(): boolean {
 	return !!audio && !audio.error && endedElement !== audio;
 }
 
@@ -580,7 +579,6 @@ export function seek(time: number) {
 		audio.currentTime = time;
 	}
 	progress.value = time;
-	seekCount.value++;
 }
 
 // Seek and wait for the element to actually land, so a caller never starts
@@ -612,10 +610,6 @@ export function seekTo(time: number, timeoutMs = 2000): Promise<void> {
 		el.addEventListener("error", done);
 		seek(target);
 	});
-}
-
-export function setPlaybackRate(rate: number) {
-	if (audio) audio.playbackRate = rate;
 }
 
 export function setVolume(value: number) {

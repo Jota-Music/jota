@@ -1,4 +1,4 @@
-export type YouTubeRef = {
+type YouTubeRef = {
 	type: "video" | "playlist";
 	id: string;
 };

@@ -2,7 +2,7 @@ import { LogError } from "@bindings/app";
 import { signal } from "@preact/signals";
 import { translateError } from "@/lib/shared/i18n/errors";
 
-export type RoomError = {
+type RoomError = {
 	id: string;
 	message: string;
 	timestamp: number;
