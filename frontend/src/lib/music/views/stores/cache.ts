@@ -21,6 +21,29 @@ export class AudioCache {
 
 	private static expiryMarginSeconds = 30;
 
+	// Bound a stuck resolve: a promise that never settles must not wedge every
+	// later track behind it (the remote playback tail awaits this).
+	private static resolveTimeoutMs = 15000;
+
+	private static withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+		return new Promise<T>((resolve, reject) => {
+			const timer = setTimeout(
+				() => reject(new Error("audio resolve timed out")),
+				ms,
+			);
+			promise.then(
+				(value) => {
+					clearTimeout(timer);
+					resolve(value);
+				},
+				(error) => {
+					clearTimeout(timer);
+					reject(error);
+				},
+			);
+		});
+	}
+
 	private static player: HTMLAudioElement | null = null;
 	private static playerUrl: string | null = null;
 
@@ -71,7 +94,10 @@ export class AudioCache {
 		const existing = AudioCache.pending.get(song.id);
 		if (existing) return existing;
 
-		const request = getAudio(song)
+		const request = AudioCache.withTimeout(
+			getAudio(song),
+			AudioCache.resolveTimeoutMs,
+		)
 			.then((data) => {
 				const value: CachedAudio = {
 					url: data.url,
@@ -114,7 +140,7 @@ export class AudioCache {
 		}
 		const player = AudioCache.player;
 
-		if (AudioCache.playerUrl !== cached.url) {
+		if (AudioCache.playerUrl !== cached.url || player.error) {
 			AudioCache.playerUrl = cached.url;
 			player.src = cached.url;
 			player.load();
