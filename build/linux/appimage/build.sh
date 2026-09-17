@@ -81,6 +81,23 @@ if command -v ldd >/dev/null 2>&1; then
   fi
 fi
 
+# WebKit decodes audio through GStreamer, so a host missing the good/libav
+# plugin sets aborts the web process (taking the app down) on the first track
+# instead of reporting a media error. Catch it here with an install hint.
+if command -v gst-inspect-1.0 >/dev/null 2>&1; then
+  for element in appsrc appsink autoaudiosink; do
+    if ! gst-inspect-1.0 "\$element" >/dev/null 2>&1; then
+      printf '%s\n' "${APP_NAME}: missing GStreamer element \${element}, needed to play audio." >&2
+      printf '%s\n' "${APP_NAME}: install the GStreamer plugins with:" >&2
+      printf '%s\n' "  Debian/Ubuntu:  sudo apt install gstreamer1.0-plugins-good gstreamer1.0-libav" >&2
+      printf '%s\n' "  Fedora:         sudo dnf install gstreamer1-plugins-good gstreamer1-libav" >&2
+      printf '%s\n' "  Arch:           sudo pacman -S gst-plugins-good gst-libav" >&2
+      printf '%s\n' "  openSUSE:       sudo zypper install gstreamer-plugins-good gstreamer-plugins-libav" >&2
+      exit 1
+    fi
+  done
+fi
+
 exec "\$APP" "\$@"
 APPRUN
 chmod +x "$appdir/AppRun"

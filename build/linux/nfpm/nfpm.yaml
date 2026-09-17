@@ -27,9 +27,15 @@ contents:
     dst: "/usr/share/metainfo/io.github.jota_music.jota.appdata.xml"
 
 # The Linux build uses the GTK3 / WebKit2GTK 4.1 stack (-tags gtk3).
+# WebKit decodes audio in its own web process through GStreamer, and the
+# good/libav plugin sets are only weak dependencies of webkit2gtk, so a host
+# without them aborts the web process (killing the app) on the first track
+# instead of failing gracefully. Depend on them explicitly.
 depends:
   - libgtk-3-0
   - libwebkit2gtk-4.1-0
+  - gstreamer1.0-plugins-good
+  - gstreamer1.0-libav
 
 # Distribution-specific overrides for different package formats
 overrides:
@@ -38,12 +44,16 @@ overrides:
     depends:
       - gtk3
       - webkit2gtk4.1
+      - gstreamer1-plugins-good
+      - gstreamer1-libav
 
   # Arch Linux packages
   archlinux:
     depends:
       - gtk3
       - webkit2gtk-4.1
+      - gst-plugins-good
+      - gst-libav
 
 # scripts section to ensure desktop database is updated after install
 scripts:
