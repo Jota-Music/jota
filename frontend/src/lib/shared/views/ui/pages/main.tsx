@@ -3,6 +3,7 @@ import { ListMusic, Turntable, Users } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
+import { isLiked, likedCover } from "@/lib/music/app/liked";
 import { getOrder, saveOrder } from "@/lib/music/app/order";
 import {
 	getYouTubePlaylists,
@@ -16,6 +17,7 @@ import {
 	YouTubeHint,
 } from "@/lib/music/views/ui/shelf";
 import { FollowingShelf } from "@/lib/music/views/ui/user/following";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 import { RoomsShelf } from "@/lib/sync/views/ui/rooms";
@@ -67,8 +69,8 @@ export function MainPage() {
 		...(spotifyQuery.data ?? []).map(
 			(p): Item => ({
 				id: p.id,
-				name: p.name,
-				cover: p.cover ?? p.mosaic,
+				name: isLiked(p.id) ? t("music.likedSongs") : p.name,
+				cover: isLiked(p.id) ? likedCover : (p.cover ?? p.mosaic),
 				source: "spotify",
 			}),
 		),

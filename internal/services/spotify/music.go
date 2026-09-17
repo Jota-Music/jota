@@ -78,7 +78,10 @@ func (s *SpotifyService) userPlaylists(user string) ([]music.PlaylistSummary, er
 		return nil, fmt.Errorf("get playlists: %w", err)
 	}
 
-	out := make([]music.PlaylistSummary, 0, len(pls))
+	out := make([]music.PlaylistSummary, 0, len(pls)+1)
+	if strings.EqualFold(user, sess.Username()) {
+		out = append(out, likedSummary(user))
+	}
 	for _, p := range pls {
 		id := strings.TrimPrefix(p.URI, URIPlaylistPrefix)
 		if id == "" {
@@ -92,6 +95,13 @@ func (s *SpotifyService) userPlaylists(user string) ([]music.PlaylistSummary, er
 		})
 	}
 	return out, nil
+}
+
+// Liked Songs is a user-scoped context, not a playlist, so it never shows up in
+// the rootlist. It gets a synthetic summary whose id doubles as the context URI
+// the player resolves.
+func likedSummary(user string) music.PlaylistSummary {
+	return music.PlaylistSummary{Id: "spotify:user:" + user + URICollectionSuffix}
 }
 
 func (s *SpotifyService) Search(query string, searchType string) ([]music.SearchResult, error) {

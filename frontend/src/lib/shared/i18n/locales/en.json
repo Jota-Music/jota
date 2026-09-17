@@ -150,6 +150,7 @@
 		}
 	},
 	"music": {
+		"likedSongs": "Liked Songs",
 		"trackCount": {
 			"one": "{count} track",
 			"other": "{count} tracks"

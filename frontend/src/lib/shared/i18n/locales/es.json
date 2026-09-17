@@ -150,6 +150,7 @@
 		}
 	},
 	"music": {
+		"likedSongs": "Canciones que te gustan",
 		"trackCount": {
 			"one": "{count} canción",
 			"other": "{count} canciones"

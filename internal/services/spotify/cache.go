@@ -21,11 +21,11 @@ func revalidateFullPlaylist(playlistID string) error {
 }
 
 func cachedUserPlaylists(user string, fetch func() ([]music.PlaylistSummary, error)) ([]music.PlaylistSummary, error) {
-	return kv.Cached(musicBucket, "playlists:v2:"+user, musicCacheTTL, fetch)
+	return kv.Cached(musicBucket, "playlists:v3:"+user, musicCacheTTL, fetch)
 }
 
 func revalidateUserPlaylists(user string) error {
-	return musicBucket.Delete("playlists:v2:" + user)
+	return musicBucket.Delete("playlists:v3:" + user)
 }
 
 func cachedUserProfile(username string, fetch func() (music.UserProfile, error)) (music.UserProfile, error) {

@@ -9,6 +9,8 @@ const (
 	URILocalPrefix    = "spotify:local:"
 	URIMosaicPrefix   = "spotify:mosaic:"
 
+	URICollectionSuffix = ":collection"
+
 	DefaultEnrichConcurrency = 10
 	AlbumEnrichConcurrency   = 6
 )

@@ -35,3 +35,13 @@ func TestSpotifyIDInvalidURI(t *testing.T) {
 		t.Fatal("want error for invalid URI")
 	}
 }
+
+func TestLikedSummaryIsResolvableContext(t *testing.T) {
+	summary := likedSummary("bob")
+	if summary.Id != "spotify:user:bob:collection" {
+		t.Fatalf("Id = %q", summary.Id)
+	}
+	if got := normalizeID(summary.Id, "playlist"); got != summary.Id {
+		t.Fatalf("normalizeID = %q, want %q", got, summary.Id)
+	}
+}

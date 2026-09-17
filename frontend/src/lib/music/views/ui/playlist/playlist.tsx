@@ -6,6 +6,7 @@ import {
 	getFullPlaylist,
 	revalidateFullPlaylist,
 } from "@/lib/music/app/get-playlist";
+import { isLiked, likedCover } from "@/lib/music/app/liked";
 import type { Playlist, Song } from "@/lib/music/model";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { t } from "@/lib/shared/i18n";
@@ -122,9 +123,14 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		setRefreshing(false);
 	}
 
+	const liked = isLiked(id);
 	const songs = data?.songs ?? [];
-	const cover = data?.cover ?? songs[0]?.album?.covers?.[0];
-	const name = data?.name || t("music.playlist.defaultName");
+	const cover = liked
+		? likedCover
+		: (data?.cover ?? songs[0]?.album?.covers?.[0]);
+	const name = liked
+		? t("music.likedSongs")
+		: data?.name || t("music.playlist.defaultName");
 
 	const query = search.value.trim().toLowerCase();
 	const base =
