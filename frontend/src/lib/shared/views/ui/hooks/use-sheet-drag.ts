@@ -4,13 +4,37 @@ import { useEffect, useRef, useState } from "preact/hooks";
 const CLOSE_PX = 96;
 const FLING_PX_PER_MS = 0.5;
 const DRAG_START_PX = 6;
-const MOBILE_QUERY = "(max-width: 639px)";
 const INTERACTIVE =
 	"button, a, input, select, textarea, label, [role='slider'], [contenteditable='true']";
 
-// Touch drag-to-dismiss for a bottom sheet. Ignores gestures that start on an
-// interactive control or on a scroll container that is not at the top, so
-// native scrolling keeps working.
+function clientYOf(e: MouseEvent | TouchEvent): number {
+	if ("touches" in e) {
+		const touch = e.touches[0] ?? e.changedTouches[0];
+		return touch ? touch.clientY : 0;
+	}
+	return e.clientY;
+}
+
+function isDraggableTarget(e: MouseEvent, panel: HTMLElement): boolean {
+	const target = e.target as HTMLElement;
+	if (target.closest(INTERACTIVE)) return false;
+	let el: HTMLElement | null = target;
+	while (el && el !== panel) {
+		const overflowY = getComputedStyle(el).overflowY;
+		if (
+			(overflowY === "auto" || overflowY === "scroll") &&
+			el.scrollHeight > el.clientHeight + 1
+		) {
+			return el.scrollTop <= 0;
+		}
+		el = el.parentElement;
+	}
+	return true;
+}
+
+// Drag-to-dismiss for a bottom sheet. Works with mouse and touch on all screen sizes.
+// Ignores gestures that start on an interactive control or on a scroll container
+// that is not at the top, so native scrolling keeps working.
 export function useSheetDrag(
 	panelRef: RefObject<HTMLDivElement>,
 	backdropRef: RefObject<HTMLButtonElement>,
@@ -18,6 +42,8 @@ export function useSheetDrag(
 	mounted: boolean,
 ): boolean {
 	const [dragging, setDragging] = useState(false);
+	const [pressed, setPressed] = useState(false);
+	const [canDrag, setCanDrag] = useState(false);
 	const closeRef = useRef(close);
 	closeRef.current = close;
 	const drag = useRef({
@@ -52,6 +78,7 @@ export function useSheetDrag(
 		};
 
 		const finish = () => {
+			setPressed(false);
 			if (!g.active) {
 				g.possible = false;
 				return;
@@ -77,13 +104,14 @@ export function useSheetDrag(
 			g.offset = 0;
 		};
 
-		const onStart = (e: TouchEvent) => {
-			if (!window.matchMedia(MOBILE_QUERY).matches) return;
-			const touch = e.touches[0];
-			if (!touch) return;
-			if ((e.target as HTMLElement).closest(INTERACTIVE)) return;
-			const scroll = scrollableWithin(e.target as HTMLElement);
-			g.startY = touch.clientY;
+		const onStart = (e: Event) => {
+			const me = e as MouseEvent | TouchEvent;
+			if ((me.target as HTMLElement).closest(INTERACTIVE)) return;
+			const scroll = scrollableWithin(me.target as HTMLElement);
+			if (!scroll || scroll.scrollTop <= 0) {
+				setPressed(true);
+			}
+			g.startY = clientYOf(me);
 			g.startTime = performance.now();
 			g.offset = 0;
 			g.scroll = scroll;
@@ -91,14 +119,14 @@ export function useSheetDrag(
 			g.possible = !scroll || scroll.scrollTop <= 0;
 		};
 
-		const onMove = (e: TouchEvent) => {
+		const onMove = (e: Event) => {
 			if (!g.possible && !g.active) return;
-			const touch = e.touches[0];
-			if (!touch) return;
-			const delta = touch.clientY - g.startY;
+			const me = e as MouseEvent | TouchEvent;
+			const delta = clientYOf(me) - g.startY;
 			if (!g.active) {
 				if (delta < -DRAG_START_PX || (g.scroll && g.scroll.scrollTop > 0)) {
 					g.possible = false;
+					setPressed(false);
 					return;
 				}
 				if (delta < DRAG_START_PX) return;
@@ -116,17 +144,61 @@ export function useSheetDrag(
 			}
 		};
 
-		panel.addEventListener("touchstart", onStart, { passive: true });
-		panel.addEventListener("touchmove", onMove, { passive: false });
-		panel.addEventListener("touchend", finish);
-		panel.addEventListener("touchcancel", finish);
+		const onMouseMoveHover = (e: Event) => {
+			setCanDrag(isDraggableTarget(e as MouseEvent, panel));
+		};
+
+		const onMouseLeave = () => setCanDrag(false);
+
+		const panelListeners: Array<
+			[string, EventListener, boolean | AddEventListenerOptions]
+		> = [
+			["touchstart", onStart, { passive: true }],
+			["mousedown", onStart, false],
+			["mousemove", onMouseMoveHover, false],
+			["mouseleave", onMouseLeave, false],
+		];
+
+		const windowListeners: Array<
+			[string, EventListener, boolean | AddEventListenerOptions]
+		> = [
+			["touchmove", onMove, { passive: false }],
+			["touchend", finish, false],
+			["touchcancel", finish, false],
+			["mousemove", onMove, false],
+			["mouseup", finish, false],
+		];
+
+		for (const [type, handler, options] of panelListeners) {
+			panel.addEventListener(type, handler, options);
+		}
+		for (const [type, handler, options] of windowListeners) {
+			window.addEventListener(type, handler, options);
+		}
+
 		return () => {
-			panel.removeEventListener("touchstart", onStart);
-			panel.removeEventListener("touchmove", onMove);
-			panel.removeEventListener("touchend", finish);
-			panel.removeEventListener("touchcancel", finish);
+			for (const [type, handler, options] of panelListeners) {
+				panel.removeEventListener(type, handler, options);
+			}
+			for (const [type, handler, options] of windowListeners) {
+				window.removeEventListener(type, handler, options);
+			}
 		};
 	}, [mounted, panelRef, backdropRef]);
+
+	useEffect(() => {
+		if (dragging || pressed) {
+			document.body.style.cursor = "grabbing";
+		} else if (canDrag) {
+			document.body.style.cursor = "grab";
+		} else {
+			document.body.style.cursor = "";
+		}
+
+		return () => {
+			document.body.style.cursor = "";
+		};
+	}, [dragging, pressed, canDrag]);
 
 	return dragging;
 }
