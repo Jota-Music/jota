@@ -1,3 +1,4 @@
+import { signal } from "@preact/signals";
 import { Disc3, LayoutGrid, List, X } from "lucide-preact";
 import type { ComponentChildren, ComponentType } from "preact";
 import { useRef, useState } from "preact/hooks";
@@ -12,6 +13,9 @@ import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 const defaultViewKey = "cover_grid_view";
 const filterKey = "playlist_source_filter";
+
+const dragFrom = signal<string | null>(null);
+const dragOver = signal<string | null>(null);
 
 type Variant = "grid" | "compact";
 type SourceFilter = "all" | "spotify" | "youtube";
@@ -124,6 +128,7 @@ interface Props {
 	isLoading?: boolean;
 	emptyMessage?: ComponentChildren;
 	onRemove?: (id: string) => void;
+	onReorder?: (fromId: string, toId: string) => void;
 }
 
 export function Shelf({
@@ -135,10 +140,62 @@ export function Shelf({
 	isLoading = false,
 	emptyMessage = t("music.shelf.empty"),
 	onRemove,
+	onReorder,
 }: Props) {
 	const [variant, setVariant] = useState<Variant>(() => loadVariant(viewKey));
 	const [sourceFilter, setSourceFilter] = useState<SourceFilter>(loadFilter);
 	const listRef = useRef<HTMLDivElement>(null);
+	const reorderable = !!onReorder && items.length > 1;
+
+	const endDrag = () => {
+		dragFrom.value = null;
+		dragOver.value = null;
+	};
+
+	const startDrag = (id: string, e: DragEvent) => {
+		if ((e.target as Element | null)?.closest("button")) {
+			e.preventDefault();
+			return;
+		}
+		dragFrom.value = id;
+		const dt = e.dataTransfer;
+		if (!dt) return;
+		try {
+			dt.setData("text/plain", id);
+			dt.effectAllowed = "move";
+		} catch {
+			/* noop */
+		}
+	};
+
+	const overItem = (id: string, e: DragEvent) => {
+		if (dragFrom.value == null) return;
+		e.preventDefault();
+		const dt = e.dataTransfer;
+		if (dt) {
+			try {
+				dt.dropEffect = "move";
+			} catch {
+				/* noop */
+			}
+		}
+		if (dragOver.value !== id) dragOver.value = id;
+	};
+
+	const dropItem = (id: string, e: DragEvent) => {
+		const from = dragFrom.value;
+		if (from == null) return;
+		e.preventDefault();
+		endDrag();
+		if (from !== id) onReorder?.(from, id);
+	};
+
+	// A touch long-press starts the drag, but the browser would rather open the
+	// link menu. Suppress it on coarse pointers; keep the desktop context menu.
+	const preventMenu = (e: MouseEvent) => {
+		if (reorderable && window.matchMedia("(pointer: coarse)").matches)
+			e.preventDefault();
+	};
 
 	const renderActions = (item: Item) => {
 		const extra = actions?.(item.id);
@@ -163,6 +220,12 @@ export function Shelf({
 				)}
 			</>
 		);
+	};
+
+	const select = (item: Item, e: MouseEvent) => {
+		if (!onSelect) return;
+		e.preventDefault();
+		onSelect(item.id);
 	};
 
 	const toggle = (next: Variant) => {
@@ -289,21 +352,29 @@ export function Shelf({
 										<Link
 											key={item.id}
 											href={to(item.id)}
-											onClick={
-												onSelect
-													? (e: MouseEvent) => {
-															e.preventDefault();
-															onSelect(item.id);
-														}
-													: undefined
-											}
+											draggable={reorderable}
+											onClick={(e) => select(item, e)}
+											onContextMenu={preventMenu}
+											onDragStart={(e) => startDrag(item.id, e)}
+											onDragOver={(e) => overItem(item.id, e)}
+											onDrop={(e) => dropItem(item.id, e)}
+											onDragEnd={endDrag}
 										>
-											<div class="group flex cursor-pointer flex-col gap-2 overflow-hidden rounded-md [contain-intrinsic-size:auto_220px] [content-visibility:auto]">
+											<div
+												class={cn(
+													"group flex cursor-pointer select-none flex-col gap-2 overflow-hidden rounded-md p-1.5 transition-shadow duration-150 [-webkit-touch-callout:none] [contain-intrinsic-size:auto_220px] [content-visibility:auto]",
+													dragFrom.value === item.id && "opacity-40",
+													dragOver.value === item.id &&
+														dragFrom.value !== item.id &&
+														"bg-(--dominant-color)/10 ring-2 ring-(--dominant-color) ring-inset",
+												)}
+											>
 												<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
 													{item.cover ? (
 														<img
 															src={item.cover}
 															alt={item.name}
+															draggable={false}
 															loading="lazy"
 															decoding="async"
 															class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
@@ -345,21 +416,29 @@ export function Shelf({
 										>
 											<Link
 												href={to(item.id)}
-												onClick={
-													onSelect
-														? (e: MouseEvent) => {
-																e.preventDefault();
-																onSelect(item.id);
-															}
-														: undefined
-												}
+												draggable={reorderable}
+												onClick={(e) => select(item, e)}
+												onContextMenu={preventMenu}
+												onDragStart={(e) => startDrag(item.id, e)}
+												onDragOver={(e) => overItem(item.id, e)}
+												onDrop={(e) => dropItem(item.id, e)}
+												onDragEnd={endDrag}
 											>
-												<div class="group relative flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-zinc-900">
+												<div
+													class={cn(
+														"group relative flex cursor-pointer select-none items-center gap-3 rounded-md px-2 py-1.5 transition-shadow duration-150 [-webkit-touch-callout:none] hover:bg-zinc-900",
+														dragFrom.value === item.id && "opacity-40",
+														dragOver.value === item.id &&
+															dragFrom.value !== item.id &&
+															"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/50 ring-inset",
+													)}
+												>
 													<div class="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-900">
 														{item.cover ? (
 															<img
 																src={item.cover}
 																alt={item.name}
+																draggable={false}
 																loading="lazy"
 																decoding="async"
 																class="h-full w-full object-cover transition-opacity group-hover:opacity-80"

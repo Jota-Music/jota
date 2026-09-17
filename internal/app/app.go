@@ -17,6 +17,7 @@ import (
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/services/follows"
+	"github.com/Jota-Music/jota/internal/services/ordering"
 	"github.com/Jota-Music/jota/internal/services/rooms"
 	"github.com/Jota-Music/jota/internal/services/spotify"
 	"github.com/Jota-Music/jota/internal/services/sync"
@@ -37,6 +38,7 @@ type App struct {
 	Sync    *sync.Service
 	Follows *follows.Service
 	Rooms   *rooms.Service
+	Order   *ordering.Service
 }
 
 // RelayOverride pins a relay for local testing. An empty URL means the user's
@@ -64,6 +66,7 @@ func New(version string) *App {
 		Sync:    sync.New(),
 		Follows: follows.New(),
 		Rooms:   rooms.New(),
+		Order:   ordering.New(),
 	}
 }
 
@@ -200,6 +203,14 @@ func (a *App) FollowUser(account string, user string) error {
 
 func (a *App) UnfollowUser(account string, user string) error {
 	return a.Follows.Unfollow(account, user)
+}
+
+func (a *App) GetPlaylistOrder(account string) ([]string, error) {
+	return a.Order.List(account)
+}
+
+func (a *App) SavePlaylistOrder(account string, ids []string) error {
+	return a.Order.Save(account, ids)
 }
 
 func (a *App) Search(query string, searchType string) ([]music.SearchResult, error) {

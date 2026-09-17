@@ -3,10 +3,12 @@ import { ListMusic, Turntable, Users } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
+import { getOrder, saveOrder } from "@/lib/music/app/order";
 import {
 	getYouTubePlaylists,
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
+import { applyOrder, move } from "@/lib/music/model/order";
 import {
 	type IconType,
 	type Item,
@@ -50,6 +52,11 @@ export function MainPage() {
 		queryFn: getYouTubePlaylists,
 	});
 
+	const orderQuery = useQuery({
+		queryKey: ["playlist-order", spotifyHandle],
+		queryFn: () => getOrder(spotifyHandle),
+	});
+
 	const remove = useMutation({
 		mutationFn: removeYouTubePlaylist,
 		onSuccess: () =>
@@ -76,6 +83,18 @@ export function MainPage() {
 			}),
 		),
 	];
+
+	const ordered = applyOrder(items, orderQuery.data ?? []);
+
+	const reorder = (fromId: string, toId: string) => {
+		const next = move(
+			ordered.map((item) => item.id),
+			fromId,
+			toId,
+		);
+		queryClient.setQueryData(["playlist-order", spotifyHandle], next);
+		void saveOrder(spotifyHandle, next);
+	};
 
 	const tabs: { id: Tab; label: string; icon: IconType }[] = [
 		{ id: "playlists", label: "Playlists", icon: ListMusic },
@@ -114,12 +133,13 @@ export function MainPage() {
 					<RoomsShelf />
 				) : (
 					<Shelf
-						items={items}
+						items={ordered}
 						to={(id) => `/playlist/${id}`}
 						viewKey="cover_grid_view"
 						isLoading={spotifyQuery.isLoading || youtubeQuery.isLoading}
 						emptyMessage={<YouTubeHint />}
 						onRemove={(id) => remove.mutate(id)}
+						onReorder={reorder}
 					/>
 				)}
 			</div>

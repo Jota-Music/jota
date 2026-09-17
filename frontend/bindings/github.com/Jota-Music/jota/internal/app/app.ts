@@ -69,6 +69,10 @@ export function GetFullPlaylist(id: string): $CancellablePromise<music$0.Playlis
     return $Call.ByID(3017102079, id);
 }
 
+export function GetPlaylistOrder(account: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(104727978, account);
+}
+
 export function GetUserPlaylists(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
     return $Call.ByID(1067966734, user);
 }
@@ -150,6 +154,10 @@ export function RevalidateUserPlaylists(user: string): $CancellablePromise<void>
  */
 export function SaveLogs(): $CancellablePromise<string> {
     return $Call.ByID(2876203262);
+}
+
+export function SavePlaylistOrder(account: string, ids: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(1174849349, account, ids);
 }
 
 export function SaveRoom(room: rooms$0.Room): $CancellablePromise<rooms$0.Room[] | null> {
