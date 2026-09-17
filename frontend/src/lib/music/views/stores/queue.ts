@@ -114,4 +114,5 @@ export function setSongYoutubeId(id: string, youtubeId: string) {
 	const next = items.slice();
 	next[idx] = { ...next[idx], youtubeId };
 	queue.value = next;
+	persistQueue();
 }
