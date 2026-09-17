@@ -1,7 +1,7 @@
 import { useSignal } from "@preact/signals";
 import { Check, Edit2 } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { updateYoutubeId } from "@/lib/music/app/get-audio";
+import { getYouTubeId, updateYoutubeId } from "@/lib/music/app/get-audio";
 import type { Song } from "@/lib/music/model";
 import {
 	currentSong,
@@ -27,8 +27,8 @@ export default function SaveYoutubeId({
 	const youtubeId = useSignal(song.youtubeId ?? "");
 	const $input = useRef<HTMLInputElement>(null);
 
-	const start = () => {
-		youtubeId.value = song.youtubeId ?? "";
+	const start = async () => {
+		youtubeId.value = song.youtubeId ?? (await getYouTubeId(song.id));
 		setOpen(true);
 	};
 
@@ -119,6 +119,9 @@ export default function SaveYoutubeId({
 							{t("music.youtubeId.title")}
 						</h2>
 						<p class="truncate text-xs text-zinc-500">{song.name}</p>
+						<p class="text-balance text-xs text-zinc-500">
+							{t("music.youtubeId.hint")}
+						</p>
 					</div>
 
 					<input

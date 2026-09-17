@@ -220,7 +220,8 @@
 		},
 		"youtubeId": {
 			"title": "ID de YouTube",
-			"placeholder": "ID de YouTube",
+			"hint": "Jota busca automáticamente el audio de esta canción en YouTube. Si eligió el video equivocado, pega aquí el ID del video correcto: 11 caracteres, lo que aparece tras \"v=\" en su URL.",
+			"placeholder": "p. ej. dQw4w9WgXcQ",
 			"add": "Añadir ID de YouTube",
 			"edit": "Editar ID de YouTube",
 			"editWithId": "Editar ID de YouTube ({id})",
