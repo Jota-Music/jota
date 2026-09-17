@@ -347,7 +347,7 @@ export function Shelf({
 									)}
 								</div>
 							) : variant === "grid" ? (
-								<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+								<div class="grid grid-cols-3 gap-0.5 md:gap-4">
 									{filteredItems.map((item) => (
 										<Link
 											key={item.id}
