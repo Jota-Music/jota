@@ -26,6 +26,15 @@ export interface Song {
 	youtubeId?: string;
 }
 
+// A control is applied locally and broadcast to the room. Track changes and
+// queue edits are not controls: they go through the load round and the shared
+// queue respectively.
+export type ControlAction =
+	| { action: "toggle" }
+	| { action: "seek"; positionMs: number }
+	| { action: "shuffle" }
+	| { action: "repeat" };
+
 export interface Playlist {
 	name?: string;
 	cover?: string;

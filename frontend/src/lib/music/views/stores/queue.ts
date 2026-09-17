@@ -1,6 +1,5 @@
 import { signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
-import { forward } from "@/lib/music/views/stores/remote";
 
 const QUEUE_STORAGE_KEY = "music-queue";
 const INDEX_STORAGE_KEY = "music-queue-index";
@@ -85,7 +84,6 @@ export function persistQueue() {
 
 export function toggleShuffle() {
 	const next = !shuffle.value;
-	forward({ action: "shuffle" });
 	shuffle.value = next;
 	saveShuffle(next);
 }
@@ -94,7 +92,6 @@ export function cycleRepeat() {
 	const modes: RepeatMode[] = ["off", "all", "one"];
 	const current = repeat.value;
 	const next = modes[(modes.indexOf(current) + 1) % modes.length];
-	forward({ action: "repeat" });
 	repeat.value = next;
 	saveRepeat(next);
 }

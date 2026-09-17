@@ -4,6 +4,7 @@ import {
 	currentSong,
 	isLoading,
 	isPlaying,
+	pendingStart,
 } from "@/lib/music/views/stores/audio";
 import {
 	nextSong,
@@ -59,7 +60,7 @@ export function usePlayer() {
 		cover,
 
 		// state
-		isLoading: isLoading.value,
+		isLoading: isLoading.value || pendingStart.value,
 		isPlaying: isPlaying.value,
 
 		// controls

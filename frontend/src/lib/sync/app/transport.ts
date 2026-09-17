@@ -1,66 +1,122 @@
 import { SyncCheck, SyncConnect, SyncSend, SyncStop } from "@bindings/app";
 import { Events } from "@wailsio/runtime";
-import type { PeerMessage } from "@/lib/sync/model";
+import type { ClientMessage, ServerMessage } from "@/lib/sync/model";
 import * as store from "@/lib/sync/views/stores";
+
+type Handler = (msg: ServerMessage) => void;
+type VoidHandler = () => void;
+
+const messageHandlers = new Set<Handler>();
+const openHandlers = new Set<VoidHandler>();
+const closeHandlers = new Set<VoidHandler>();
+
+// Auto-reconnect state. A room that closes unexpectedly is retried with
+// backoff; a room we left on purpose is not.
+let joinedRoom = "";
+let lastRole: "host" | "guest" | "" = "";
+let intentional = false;
+let reconnectTimer: number | null = null;
+let reconnectDelay = 0;
+
+function clearReconnect(): void {
+	if (reconnectTimer != null) {
+		clearTimeout(reconnectTimer);
+		reconnectTimer = null;
+	}
+}
+
+function scheduleReconnect(): void {
+	if (intentional || joinedRoom === "" || reconnectTimer != null) return;
+	reconnectDelay =
+		reconnectDelay === 0 ? 1000 : Math.min(reconnectDelay * 2, 15000);
+	const delay = reconnectDelay + Math.random() * 500;
+	reconnectTimer = window.setTimeout(async () => {
+		reconnectTimer = null;
+		try {
+			store.status.value = "connecting";
+			await dial(joinedRoom, lastRole);
+			reconnectDelay = 0;
+		} catch {
+			scheduleReconnect();
+		}
+	}, delay);
+}
+
+// Deliver every frame in order. Routing them through a single signal (as the old
+// code did) silently dropped any frame that arrived in the same tick as another.
+export function onMessage(fn: Handler): void {
+	messageHandlers.add(fn);
+}
+
+// onOpen runs once per successful connection, so the room can ask for the
+// snapshot again after a reconnect.
+export function onOpen(fn: VoidHandler): void {
+	openHandlers.add(fn);
+}
+
+export function onClosed(fn: VoidHandler): void {
+	closeHandlers.add(fn);
+}
 
 Events.On("sync:connected", () => {
 	store.status.value = "open";
+	for (const fn of openHandlers) fn();
 });
 
 Events.On("sync:closed", () => {
 	store.status.value = "closed";
+	// Remember the role we had so a reconnect reclaims it instead of being
+	// demoted (a host that comes back as guest can no longer answer joins).
+	lastRole = store.role.value === "off" ? "" : store.role.value;
 	store.role.value = "off";
 	store.peers.value = 0;
+	for (const fn of closeHandlers) fn();
+	scheduleReconnect();
 });
-
-let pendingSnapshot: string | null = null;
-let snapshotScheduled = false;
 
 Events.On("sync:message", (ev) => {
-	const raw = String(ev.data ?? "");
-	let type = "";
+	let msg: ServerMessage;
 	try {
-		type = (JSON.parse(raw) as { t?: string }).t ?? "";
+		msg = JSON.parse(String(ev.data ?? "")) as ServerMessage;
 	} catch {
-		// not JSON, forward as-is
-	}
-	if (type === "state" || type === "heartbeat") {
-		pendingSnapshot = raw;
-		if (!snapshotScheduled) {
-			snapshotScheduled = true;
-			window.setTimeout(flushSnapshot, 50);
-		}
+		console.error("sync: invalid message");
 		return;
 	}
-	store.lastMessage.value = raw;
+	for (const fn of messageHandlers) fn(msg);
 });
-
-function flushSnapshot(): void {
-	snapshotScheduled = false;
-	const raw = pendingSnapshot;
-	pendingSnapshot = null;
-	if (raw != null && raw !== store.lastMessage.value) {
-		store.lastMessage.value = raw;
-	}
-}
 
 export async function check(url: string): Promise<boolean> {
 	return await SyncCheck(url);
 }
 
-export async function connect(code: string): Promise<void> {
-	reset();
-	const url = store.relayUrl.value.trim();
-	const token = store.token.value.trim();
-	const password = store.password.value.trim();
-	localStorage.setItem("sync:relay", url);
-	localStorage.setItem("sync:token", token);
-	localStorage.setItem("sync:room", code);
-	localStorage.setItem("sync:password", password);
+async function dial(code: string, role: "host" | "guest" | ""): Promise<void> {
 	store.room.value = code;
 	store.status.value = "connecting";
+	// The relay only announces a role when it assigns one, so a reconnect that
+	// asks for an explicit role must restore it locally to keep handling frames.
+	if (role !== "") store.role.value = role;
+	await SyncConnect(
+		store.relayUrl.value.trim(),
+		code,
+		role,
+		store.token.value.trim(),
+		store.password.value.trim(),
+	);
+}
+
+export async function connect(code: string): Promise<void> {
+	intentional = false;
+	clearReconnect();
+	reconnectDelay = 0;
+	reset();
+	localStorage.setItem("sync:relay", store.relayUrl.value.trim());
+	localStorage.setItem("sync:token", store.token.value.trim());
+	localStorage.setItem("sync:room", code);
+	localStorage.setItem("sync:password", store.password.value.trim());
+	joinedRoom = code;
+	lastRole = "";
 	try {
-		await SyncConnect(url, code, "", token, password);
+		await dial(code, "");
 	} catch (err) {
 		stop();
 		const msg = String(err);
@@ -74,11 +130,25 @@ export async function connect(code: string): Promise<void> {
 }
 
 export function stop(): void {
+	intentional = true;
+	clearReconnect();
+	joinedRoom = "";
+	lastRole = "";
 	SyncStop();
 	reset();
 }
 
-export function send(msg: PeerMessage): void {
+// abandon gives up on the room without wiping the reported error: a fatal room
+// error (host left, room full, bad password) must not trigger a reconnect that
+// would silently recreate the room.
+export function abandon(): void {
+	intentional = true;
+	clearReconnect();
+	joinedRoom = "";
+	lastRole = "";
+}
+
+export function send(msg: ClientMessage): void {
 	SyncSend(JSON.stringify(msg)).catch(() => {});
 }
 
@@ -87,7 +157,6 @@ function reset(): void {
 	store.status.value = "idle";
 	store.room.value = "";
 	store.error.value = "";
-	store.lastMessage.value = "";
 	store.offsetMs.value = 0;
 	store.peers.value = 0;
 }

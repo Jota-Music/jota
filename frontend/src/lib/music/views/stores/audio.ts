@@ -97,6 +97,9 @@ function watchEnd(a: HTMLAudioElement) {
 }
 
 export const isLoading = signal(false);
+// True from a track change until playback actually starts. A room keeps it set
+// while it agrees on the new track; local playback never sets it.
+export const pendingStart = signal(false);
 export const isPlaying = signal(false);
 export const progress = signal(0);
 export const dragSeeking = signal(false);
@@ -399,6 +402,32 @@ export async function play(
 		return true;
 	};
 
+	// A consensus round already prepared this exact stream (the host waits for the
+	// room, the guest warms it): resume it instead of rebuilding the pipeline and
+	// re-buffering the same track.
+	if (
+		startSeconds == null &&
+		loadedSongId === song.id &&
+		audio &&
+		!audio.error &&
+		endedElement !== audio
+	) {
+		try {
+			await audio.play();
+			if (loadedSongId !== song.id) return false;
+			isPlaying.value = true;
+			return success();
+		} catch (err) {
+			if (isNotAllowedError(err)) {
+				blockedByPolicy = true;
+				return blocked(song);
+			}
+			if (!isAbortError(err)) {
+				logError(err, `resume ${songLabel(song)} | ${mediaState(audio)}`);
+			}
+		}
+	}
+
 	recovering = true;
 	try {
 		if (await loadSongIntoPlayer(song, true, startSeconds)) return success();
@@ -429,6 +458,9 @@ export async function play(
 // must not be flagged or skipped; the caller stops and waits for an interaction.
 function blocked(song: Song): false {
 	markFailed(song.id, false);
+	// Not a broken track but a blocked one: release the room spinner so a host
+	// keeps publishing state instead of freezing the whole jam.
+	pendingStart.value = false;
 	armRecovery(song);
 	addError(
 		new Error("the browser needs a click to allow playback"),
@@ -479,15 +511,6 @@ export async function prepareSong(
 	return await loadSongIntoPlayer(song, false, startSeconds);
 }
 
-export async function warm(song: Song): Promise<boolean> {
-	try {
-		await AudioCache.get(song);
-		return true;
-	} catch {
-		return false;
-	}
-}
-
 export function getPlaybackSeconds(): number {
 	if (
 		audio &&
@@ -505,7 +528,7 @@ export function hasLoadedAudio(): boolean {
 
 // Recover playback after a failed stream: reload the current song from a
 // freshly resolved URL instead of reusing the dead element/URL.
-async function resume(): Promise<boolean> {
+export async function resume(): Promise<boolean> {
 	if (audio && !audio.error && endedElement !== audio) {
 		try {
 			await audio.play();
@@ -530,6 +553,37 @@ export function seek(time: number) {
 	}
 	progress.value = time;
 	seekCount.value++;
+}
+
+// Seek and wait for the element to actually land, so a caller never starts
+// playback from the old position while the seek is still in flight. Resolves on
+// the `seeked` event, right away when already there, and on a timeout so a
+// stream that never fires it cannot stall the caller.
+export function seekTo(time: number, timeoutMs = 2000): Promise<void> {
+	const el = audio;
+	if (!el || !Number.isFinite(time)) return Promise.resolve();
+
+	const target = clampSeconds(time, knownDurationOr(el.duration));
+	if (Math.abs(el.currentTime - target) < 0.05) {
+		seek(target);
+		return Promise.resolve();
+	}
+
+	return new Promise<void>((resolve) => {
+		let settled = false;
+		const done = () => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timer);
+			el.removeEventListener("seeked", done);
+			el.removeEventListener("error", done);
+			resolve();
+		};
+		const timer = setTimeout(done, timeoutMs);
+		el.addEventListener("seeked", done);
+		el.addEventListener("error", done);
+		seek(target);
+	});
 }
 
 export function setPlaybackRate(rate: number) {
@@ -584,6 +638,7 @@ export function stopPlayer() {
 	progress.value = 0;
 	audioDuration.value = 0;
 	isPlaying.value = false;
+	pendingStart.value = false;
 }
 
 function bindEvents(a: HTMLAudioElement) {
@@ -600,6 +655,7 @@ function bindEvents(a: HTMLAudioElement) {
 		if (audio !== a) return;
 		endedElement = null;
 		isPlaying.value = true;
+		pendingStart.value = false;
 		media.update(currentSong.value, true);
 		watchEnd(a);
 	};
@@ -629,6 +685,7 @@ function bindEvents(a: HTMLAudioElement) {
 		stopEndWatch();
 		isPlaying.value = false;
 		isLoading.value = false;
+		pendingStart.value = false;
 		knownDuration = 0;
 		if (loadedSongId) AudioCache.remove(loadedSongId);
 		audio = null;

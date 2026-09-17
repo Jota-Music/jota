@@ -1,48 +1,54 @@
-import type { Song } from "@/lib/music/model";
+import type { ControlAction, Song } from "@/lib/music/model";
 
-export type ControlAction =
-	| { action: "toggle" }
-	| { action: "seek"; positionMs: number }
-	| { action: "next" }
-	| { action: "prev" }
-	| { action: "shuffle" }
-	| { action: "repeat" }
-	| { action: "play"; index: number }
-	| { action: "enqueue"; song: Song }
-	| { action: "playSelection"; songId: string; songs: Song[] }
-	| { action: "remove"; index: number }
-	| { action: "move"; from: number; to: number }
-	| { action: "moveAfter"; index: number };
+export type Seat = "off" | "host" | "guest";
 
-export type PeerMessage =
-	| {
-			t: "state";
-			at: number;
-			playing: boolean;
-			positionMs: number;
-			songId: string;
-			youtubeId?: string;
-			index: number;
-			shuffle?: boolean;
-			repeat?: "off" | "all" | "one";
-			color?: string | null;
-			binary?: string | null;
-	  }
-	| { t: "queue"; data: string }
-	| {
-			t: "heartbeat";
-			at: number;
-			playing: boolean;
-			positionMs: number;
-			songId: string;
-			color?: string | null;
-			binary?: string | null;
-	  }
+// What identifies a track in the shared queue, plus the room cosmetics. Sent by
+// the member that announces the next track.
+export interface Track {
+	songId: string;
+	song?: Song;
+	youtubeId?: string;
+	index: number;
+	shuffle?: boolean;
+	repeat?: "off" | "all" | "one";
+	color?: string | null;
+	binary?: string | null;
+}
+
+// A track plus its playback. `at` is stamped by the relay, never by the member,
+// so every clock comparison uses the relay clock.
+export interface Playback extends Track {
+	playing: boolean;
+	positionMs: number;
+	at?: number;
+}
+
+export type ClientMessage =
+	| { t: "join"; at: number }
 	| { t: "ping"; id: number; at: number }
-	| { t: "pong"; id: number; at: number; echo: number }
-	| { t: "members"; count: number }
-	| { t: "role"; role: "host" | "guest" }
-	| { t: "prepare"; songId: string; youtubeId?: string }
-	| { t: "ready"; songId: string }
 	| ({ t: "control" } & ControlAction)
+	| { t: "queue"; data: string }
+	| ({ t: "state" } & Playback)
+	| ({ t: "prepare"; gen: string; epoch: string } & Track)
+	| { t: "ready"; gen: string; ok: boolean }
+	| { t: "snapshot"; to: string; state: Playback };
+
+export type ServerMessage =
+	| { t: "role"; role: "host" | "guest" }
+	| { t: "members"; count: number; epoch: string }
+	| { t: "pong"; id: number; at: number; echo: number }
+	| { t: "play"; gen: string; epoch: string; at: number; positionMs: number }
+	| {
+			t: "snapshot";
+			// Relay-clock stamps of the join exchange (t1 receive, t2 send).
+			echo: number;
+			at: number;
+			queue?: Song[];
+			// The host's live playback, or the relay's cached state on fallback.
+			state?: Playback;
+	  }
+	| { t: "join"; at: number; t1: number; from: string }
+	| { t: "queue"; data: string }
+	| ({ t: "control" } & ControlAction)
+	| ({ t: "prepare"; gen: string; epoch: string } & Track)
 	| { t: "error"; reason: string };
