@@ -7,6 +7,7 @@ import {
 	searchYouTubePlaylists,
 	youtubeVideoToSong,
 } from "@/lib/music/app/search";
+import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import {
 	addYouTubePlaylist,
 	getYouTubePlaylists,
@@ -24,46 +25,16 @@ import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type Tab = "videos" | "playlists";
 
-const videoIdPattern = /^[A-Za-z0-9_-]{11}$/;
-const playlistIdPattern = /^(PL|LL|FL|RD|UU|OL|PU)[A-Za-z0-9_-]{10,}$/;
-
-// A pasted YouTube link/ID decides which category it points to. A video (song)
-// wins over a playlist, so a "song inside a playlist" link opens the song.
+// A pasted YouTube link/ID decides which category it points to.
 function queryTarget(query: string): Tab {
-	const trimmed = query.trim();
-
-	try {
-		const u = new URL(trimmed);
-		const host = u.hostname.replace(/^(www|music|m)\./, "");
-		const v = u.searchParams.get("v");
-		if (v && videoIdPattern.test(v)) return "videos";
-		if (host === "youtu.be" && videoIdPattern.test(u.pathname.slice(1))) {
-			return "videos";
-		}
-		const [, kind, id] = u.pathname.split("/");
-		if (
-			(kind === "shorts" || kind === "embed" || kind === "live") &&
-			videoIdPattern.test(id ?? "")
-		) {
-			return "videos";
-		}
-		if (u.searchParams.get("list")) return "playlists";
-	} catch {
-		// not a URL
-	}
-
-	if (videoIdPattern.test(trimmed)) return "videos";
-	if (playlistIdPattern.test(trimmed)) return "playlists";
-	return "videos";
+	return parseYoutubeLink(query)?.type === "playlist" ? "playlists" : "videos";
 }
 
 // A direct query is a YouTube URL or a bare video/playlist ID: it resolves to a
 // single known category, so there is nothing to switch between.
 function isDirectQuery(query: string): boolean {
 	const trimmed = query.trim();
-	if (videoIdPattern.test(trimmed) || playlistIdPattern.test(trimmed)) {
-		return true;
-	}
+	if (parseYoutubeLink(trimmed)) return true;
 	try {
 		const protocol = new URL(trimmed).protocol;
 		return protocol === "http:" || protocol === "https:";
