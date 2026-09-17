@@ -149,6 +149,20 @@ export async function playFromQueueSelection(
 	await playAtIndex(i);
 }
 
+export async function playAll(songs: Song[]) {
+	if (songs.length === 0) return;
+	const i = shuffle.value ? Math.floor(Math.random() * songs.length) : 0;
+	await setQueueState(songs.slice(), i);
+	await playAtIndex(i);
+}
+
+export function isQueue(songs: Song[]) {
+	return (
+		songs.length === queue.value.length &&
+		songs.every((s, i) => s.id === queue.value[i]?.id)
+	);
+}
+
 export function enqueue(song: Song) {
 	const newQueue = [...queue.value];
 	const newIndex = currentIndex.value;

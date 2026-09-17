@@ -5,6 +5,8 @@ import { Loader } from "lucide-preact";
 import { useParams } from "wouter-preact";
 import { getAlbumTracks } from "@/lib/music/app/get-album";
 import type { Song } from "@/lib/music/model";
+import { isPlaying } from "@/lib/music/views/stores/audio";
+import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { t } from "@/lib/shared/i18n";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
@@ -36,6 +38,12 @@ export function AlbumPage() {
 					title={albumName}
 					subtitle={t("music.trackCount", { count: tracks.length })}
 					link={link}
+					onPlay={
+						tracks.length > 0
+							? () => void (isQueue(tracks) ? toggleSong() : playAll(tracks))
+							: undefined
+					}
+					playing={isQueue(tracks) && isPlaying.value}
 				/>
 
 				{isError ? (

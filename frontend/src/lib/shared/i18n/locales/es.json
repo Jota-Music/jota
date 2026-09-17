@@ -151,6 +151,7 @@
 	},
 	"music": {
 		"likedSongs": "Canciones que te gustan",
+		"playAll": "Reproducir todo",
 		"trackCount": {
 			"one": "{count} canción",
 			"other": "{count} canciones"

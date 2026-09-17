@@ -7,6 +7,8 @@ import { useEffect } from "preact/hooks";
 import { useParams } from "wouter-preact";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import type { AlbumSummary, Song } from "@/lib/music/model";
+import { isPlaying } from "@/lib/music/views/stores/audio";
+import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { t } from "@/lib/shared/i18n";
@@ -105,6 +107,12 @@ export function ArtistPage() {
 				<PageHeader
 					cover={data?.imageUrl}
 					title={data?.name ?? t("pages.artist.defaultName")}
+					onPlay={
+						activeTab === "tracks" && tracks.length > 0
+							? () => void (isQueue(tracks) ? toggleSong() : playAll(tracks))
+							: undefined
+					}
+					playing={activeTab === "tracks" && isQueue(tracks) && isPlaying.value}
 				/>
 
 				<div class="flex flex-wrap items-center gap-2 shrink-0">

@@ -1,5 +1,6 @@
-import { Disc3 } from "lucide-preact";
+import { Disc3, Pause, Play } from "lucide-preact";
 import { Link } from "wouter-preact";
+import { t } from "@/lib/shared/i18n";
 
 function LinkLine({ link }: { link: { to: string; label: string } }) {
 	return (
@@ -17,11 +18,15 @@ export function PageHeader({
 	title,
 	subtitle,
 	link,
+	onPlay,
+	playing,
 }: {
 	cover?: string;
 	title: string;
 	subtitle?: string;
 	link?: { to: string; label: string };
+	onPlay?: () => void;
+	playing?: boolean;
 }) {
 	return (
 		<header class="flex shrink-0 items-center gap-4">
@@ -41,6 +46,21 @@ export function PageHeader({
 				{subtitle && <p class="text-sm opacity-70 mt-1">{subtitle}</p>}
 				{link && <LinkLine link={link} />}
 			</div>
+			{onPlay && (
+				<button
+					type="button"
+					title={t("music.playAll")}
+					aria-label={t("music.playAll")}
+					onClick={onPlay}
+					class="ml-auto flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition"
+				>
+					{playing ? (
+						<Pause class="size-5 fill-current" />
+					) : (
+						<Play class="size-5 fill-current" />
+					)}
+				</button>
+			)}
 		</header>
 	);
 }

@@ -8,6 +8,8 @@ import {
 } from "@/lib/music/app/get-playlist";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import type { Playlist, Song } from "@/lib/music/model";
+import { isPlaying } from "@/lib/music/views/stores/audio";
+import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { t } from "@/lib/shared/i18n";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
@@ -171,6 +173,15 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				link={
 					data?.owner ? { to: `/${data.owner}`, label: data.owner } : undefined
 				}
+				onPlay={
+					filteredSongs.length > 0
+						? () =>
+								void (isQueue(filteredSongs)
+									? toggleSong()
+									: playAll(filteredSongs))
+						: undefined
+				}
+				playing={isQueue(filteredSongs) && isPlaying.value}
 			/>
 
 			<div className="grid grid-cols-[1fr_auto_auto] gap-2">
