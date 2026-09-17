@@ -3,6 +3,7 @@ import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
 import { setSongYoutubeId } from "@/lib/music/views/stores/queue";
+import { publish } from "@/lib/music/views/stores/remote";
 import { addError, logError } from "@/lib/shared/views/stores/errors";
 
 const VOLUME_STORAGE_KEY = "audio-volume";
@@ -642,6 +643,14 @@ function setMuted(value: boolean) {
 	}
 }
 
+export function pause(): boolean {
+	if (audio && !audio.error && endedElement !== audio && !audio.paused) {
+		audio.pause();
+		return true;
+	}
+	return false;
+}
+
 export async function togglePlayPause(): Promise<boolean> {
 	if (audio && !audio.error && endedElement !== audio && !audio.paused) {
 		audio.pause();
@@ -751,9 +760,18 @@ if (typeof window !== "undefined") {
 }
 
 media.setup({
-	play: () => void resume(),
-	pause: () => audio?.pause(),
+	play: () => {
+		publish({ action: "play" });
+		void resume();
+	},
+	pause: () => {
+		publish({ action: "pause" });
+		pause();
+	},
 	stop: stopPlayer,
-	seek,
+	seek: (seconds) => {
+		publish({ action: "seek", positionMs: Math.round(seconds * 1000) });
+		seek(seconds);
+	},
 	position: getPlaybackSeconds,
 });

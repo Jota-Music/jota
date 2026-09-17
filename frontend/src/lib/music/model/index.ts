@@ -43,6 +43,8 @@ export type ArtistDiscography = Omit<GeneratedArtistDiscography, "albums"> & {
 // queue respectively.
 export type ControlAction =
 	| { action: "toggle" }
+	| { action: "play" }
+	| { action: "pause" }
 	| { action: "seek"; positionMs: number }
 	| { action: "shuffle" }
 	| { action: "repeat" };
