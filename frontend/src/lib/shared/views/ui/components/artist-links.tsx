@@ -1,6 +1,7 @@
 import type { JSX } from "preact";
 import { Link } from "wouter-preact";
 import type { Artist } from "@/lib/music/model";
+import { cn } from "@/lib/shared/utils/tw";
 
 type Props = {
 	artists: Artist[];
@@ -20,7 +21,7 @@ function ArtistLink({
 	return (
 		<Link
 			href={`/artist/${artist.id}`}
-			class={`${className ?? ""} hover:underline`}
+			class={cn(className, "hover:underline")}
 			onClick={(e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
 				e.stopPropagation();
 			}}
