@@ -16,7 +16,7 @@ import {
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 
 export function PlaylistPicker() {
 	const pending = pickerSongs.value;
@@ -86,19 +86,26 @@ export function PlaylistPicker() {
 		(name.trim() !== "" || targets.size > 0) && songs.length > 0;
 
 	return (
-		<Modal open={open} close={close} labelledBy="playlist-picker-title">
+		<Modal
+			open={open}
+			close={close}
+			labelledBy="playlist-picker-title"
+			hideClose
+		>
 			<div class="flex min-h-0 flex-col">
-				<header class="shrink-0 border-b border-zinc-800 px-4 py-3">
-					<h2
-						id="playlist-picker-title"
-						class="text-sm font-semibold text-white"
-					>
-						{t("music.custom.pickerTitle")}
-					</h2>
-					<p class="mt-0.5 text-xs text-zinc-500">
-						{t("music.custom.selected", { count: songs.length })}
-					</p>
-				</header>
+				<ModalHeader close={close}>
+					<div class="flex flex-col">
+						<h2
+							id="playlist-picker-title"
+							class="text-sm font-semibold text-white"
+						>
+							{t("music.custom.pickerTitle")}
+						</h2>
+						<p class="mt-0.5 text-xs text-zinc-500">
+							{t("music.custom.selected", { count: songs.length })}
+						</p>
+					</div>
+				</ModalHeader>
 
 				<div class="min-h-0 flex-1 overflow-y-auto p-2">
 					{playlists.length === 0 ? (

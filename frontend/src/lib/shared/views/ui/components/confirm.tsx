@@ -2,7 +2,7 @@ import { Check, X } from "lucide-preact";
 import { useRef } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 
 export function ConfirmModal({
 	open,
@@ -23,8 +23,9 @@ export function ConfirmModal({
 	if (open) look.current = { danger, pending };
 
 	return (
-		<Modal open={open} close={close} labelledBy="confirm-title">
-			<div class="flex flex-col items-center gap-5 p-6 pt-10 sm:pt-6">
+		<Modal open={open} close={close} labelledBy="confirm-title" hideClose>
+			<ModalHeader close={close} bordered={false} />
+			<div class="flex flex-col items-center gap-5 px-6 pb-6">
 				<p id="confirm-title" class="text-center text-sm text-zinc-200">
 					{t("common.confirm")}
 				</p>

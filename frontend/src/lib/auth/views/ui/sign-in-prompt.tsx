@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth/views/stores/youtube";
 import { t } from "@/lib/shared/i18n";
 import { translateError } from "@/lib/shared/i18n/errors";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 export function SignInPrompt() {
@@ -31,8 +31,13 @@ export function SignInPrompt() {
 			open={youtubeSignInSuggested.value}
 			close={() => dismissYouTubeSignInSuggestion()}
 			labelledBy="youtube-signin-title"
+			hideClose
 		>
-			<div class="flex flex-col items-center gap-4 p-6 text-center">
+			<ModalHeader
+				close={() => dismissYouTubeSignInSuggestion()}
+				bordered={false}
+			/>
+			<div class="flex flex-col items-center gap-4 px-6 pb-6 text-center">
 				<YoutubeIcon width={36} height={36} class="text-[#FF0000]" />
 				<div class="space-y-1">
 					<h2 id="youtube-signin-title" class="text-lg font-bold text-zinc-100">

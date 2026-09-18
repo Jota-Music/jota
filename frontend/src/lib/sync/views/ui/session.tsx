@@ -15,7 +15,7 @@ import { pendingStart } from "@/lib/music/views/stores/audio";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { useRoomForm } from "@/lib/sync/views/hooks/use-room-form";
@@ -34,39 +34,39 @@ export function SyncPanel() {
 			close={() => (showSync.value = false)}
 			labelledBy="sync-panel-title"
 			closeLabel={t("sync.session.close")}
+			hideClose
 		>
-			<header class="flex shrink-0 flex-col gap-1 border-b border-zinc-800 px-4 py-3">
-				<div class="flex items-center justify-between gap-2 text-white">
-					<div class="flex items-center gap-2">
-						<Turntable
-							size={22}
-							class={cn(
-								active
-									? connected
-										? "text-green-400"
-										: "text-yellow-400"
-									: "text-zinc-400",
-							)}
-						/>
-						<h2 id="sync-panel-title" class="text-sm font-medium">
-							{t("sync.session.title")}
-						</h2>
-						<span class="text-xs text-zinc-500 tabular-nums">
-							{active
-								? connected
-									? store.joined.value
-										? t("sync.session.connected", {
-												count: store.peers.value,
-											})
-										: t("sync.session.joining")
-									: t("sync.session.connecting")
-								: store.status.value === "connecting"
-									? t("sync.session.connecting")
-									: t("sync.session.offline")}
-						</span>
-					</div>
-				</div>
-			</header>
+			<ModalHeader
+				close={() => (showSync.value = false)}
+				closeLabel={t("sync.session.close")}
+			>
+				<Turntable
+					size={22}
+					class={cn(
+						active
+							? connected
+								? "text-green-400"
+								: "text-yellow-400"
+							: "text-zinc-400",
+					)}
+				/>
+				<h2 id="sync-panel-title" class="text-sm font-medium text-white">
+					{t("sync.session.title")}
+				</h2>
+				<span class="text-xs text-zinc-500 tabular-nums">
+					{active
+						? connected
+							? store.joined.value
+								? t("sync.session.connected", {
+										count: store.peers.value,
+									})
+								: t("sync.session.joining")
+							: t("sync.session.connecting")
+						: store.status.value === "connecting"
+							? t("sync.session.connecting")
+							: t("sync.session.offline")}
+				</span>
+			</ModalHeader>
 
 			<div class="relative h-[min(70dvh,26rem)]">
 				<div ref={listRef} class="h-full overflow-y-auto px-4 py-4">

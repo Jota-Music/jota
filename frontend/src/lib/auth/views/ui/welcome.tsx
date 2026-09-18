@@ -12,7 +12,7 @@ import {
 } from "@/lib/auth/views/stores/welcome";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 
 export function Welcome() {
@@ -39,8 +39,10 @@ export function Welcome() {
 			open={welcomeOpen.value}
 			close={() => dismissWelcome(mute)}
 			labelledBy="welcome-title"
+			hideClose
 		>
-			<div class="flex flex-col items-center gap-4 p-6 text-center">
+			<ModalHeader close={() => dismissWelcome(mute)} bordered={false} />
+			<div class="flex flex-col items-center gap-4 px-6 pb-6 text-center">
 				<SpotifyIcon size={32} class="text-green-500" />
 				<div class="space-y-1">
 					<h2 id="welcome-title" class="text-lg font-bold text-zinc-100">

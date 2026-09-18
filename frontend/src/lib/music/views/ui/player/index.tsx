@@ -30,7 +30,7 @@ import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import Progress from "@/lib/shared/views/ui/components/progress";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
@@ -473,11 +473,19 @@ export function Player() {
 				}}
 				mobileOnly
 				closeLabel={t("music.player.close")}
+				hideClose
 			>
+				<ModalHeader
+					close={() => {
+						playerModalOpen.value = false;
+					}}
+					closeLabel={t("music.player.close")}
+					bordered={false}
+				/>
 				<div class="relative flex min-h-0 flex-1 flex-col">
 					<div
 						ref={modalListRef}
-						class="min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-4"
+						class="min-h-0 flex-1 overflow-y-auto px-6 pb-4"
 					>
 						<FullPlayerContent {...player} />
 					</div>

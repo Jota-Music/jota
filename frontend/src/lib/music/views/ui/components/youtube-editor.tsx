@@ -10,7 +10,7 @@ import {
 	editingSong,
 } from "@/lib/music/views/stores/youtube-editor";
 import { t } from "@/lib/shared/i18n";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 export default function YoutubeEditor() {
@@ -67,47 +67,53 @@ export default function YoutubeEditor() {
 			close={closeYoutubeEditor}
 			labelledBy="youtube-id-title"
 			closeLabel={t("music.youtubeId.close")}
+			hideClose
 		>
 			{song && (
-				<form class="flex flex-col gap-4 p-5" onSubmit={handleSubmit}>
-					<div class="flex flex-col gap-1">
+				<div class="flex flex-col">
+					<ModalHeader
+						close={closeYoutubeEditor}
+						closeLabel={t("music.youtubeId.close")}
+					>
 						<h2 id="youtube-id-title" class="text-sm font-semibold text-white">
 							{t("music.youtubeId.title")}
 						</h2>
+					</ModalHeader>
+					<form class="flex flex-col gap-4 p-5" onSubmit={handleSubmit}>
 						<p class="truncate text-xs text-zinc-500">{song.name}</p>
 						<p class="text-balance text-xs text-zinc-500">
 							{t("music.youtubeId.hint")}
 						</p>
-					</div>
 
-					<div class="flex items-center gap-2">
-						<YoutubeIcon class="size-4 shrink-0 text-white/30" />
-						<input
-							ref={$input}
-							type="text"
-							value={youtubeId.value}
-							name="youtube"
-							placeholder={t("music.youtubeId.placeholder")}
-							class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
-							onInput={(e) => {
-								youtubeId.value = (e.target as HTMLInputElement).value;
-							}}
-							onKeyDown={(e) => {
-								if (e.key === "Escape") {
-									closeYoutubeEditor();
-								}
-							}}
-						/>
-						<button
-							type="submit"
-							title={t("music.youtubeId.save")}
-							aria-label={t("music.youtubeId.save")}
-							class="cursor-pointer self-center rounded-md p-2 text-white transition hover:bg-zinc-700"
-						>
-							<Check class="size-4" />
-						</button>
-					</div>
-				</form>
+						<div class="flex items-center gap-2">
+							<YoutubeIcon class="size-4 shrink-0 text-white/30" />
+							<input
+								ref={$input}
+								type="text"
+								value={youtubeId.value}
+								name="youtube"
+								placeholder={t("music.youtubeId.placeholder")}
+								class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
+								onInput={(e) => {
+									youtubeId.value = (e.target as HTMLInputElement).value;
+								}}
+								onKeyDown={(e) => {
+									if (e.key === "Escape") {
+										closeYoutubeEditor();
+									}
+								}}
+							/>
+							<button
+								type="submit"
+								title={t("music.youtubeId.save")}
+								aria-label={t("music.youtubeId.save")}
+								class="cursor-pointer self-center rounded-md p-2 text-white transition hover:bg-zinc-700"
+							>
+								<Check class="size-4" />
+							</button>
+						</div>
+					</form>
+				</div>
 			)}
 		</Modal>
 	);

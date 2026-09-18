@@ -3,7 +3,7 @@ import { createPlaylist } from "@/lib/music/app/playlists";
 import type { PlaylistSummary } from "@/lib/music/model";
 import { t } from "@/lib/shared/i18n";
 import { addError } from "@/lib/shared/views/stores/errors";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 
 export function CreatePlaylistModal({
 	open,
@@ -37,20 +37,27 @@ export function CreatePlaylistModal({
 	};
 
 	return (
-		<Modal open={open} close={closeAndReset} labelledBy="create-playlist-title">
-			<div class="flex flex-col p-4 pt-8 sm:pt-4">
-				<h2
-					id="create-playlist-title"
-					class="mb-3 text-sm font-semibold text-white"
-				>
-					{t("music.custom.create")}
-				</h2>
+		<Modal
+			open={open}
+			close={closeAndReset}
+			labelledBy="create-playlist-title"
+			hideClose
+		>
+			<div class="flex flex-col">
+				<ModalHeader close={closeAndReset}>
+					<h2
+						id="create-playlist-title"
+						class="text-sm font-semibold text-white"
+					>
+						{t("music.custom.create")}
+					</h2>
+				</ModalHeader>
 				<form
 					onSubmit={(e) => {
 						e.preventDefault();
 						void submit();
 					}}
-					class="flex items-center gap-2"
+					class="flex items-center gap-2 p-4"
 				>
 					<input
 						type="text"

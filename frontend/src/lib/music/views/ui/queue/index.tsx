@@ -34,7 +34,7 @@ import {
 	type Action,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 
@@ -345,22 +345,19 @@ function Queue() {
 			close={closeQueue}
 			labelledBy="queue-panel-title"
 			closeLabel={t("music.queue.close")}
+			hideClose
 		>
-			<header class="flex shrink-0 flex-col gap-1 border-b border-zinc-800 px-4 py-3">
-				<div class="flex items-center justify-between gap-2 text-white">
-					<div class="flex items-center gap-2">
-						<ListMusic size={22} class="text-(--dominant-color)" />
-						<h2 id="queue-panel-title" class="sr-only">
-							{t("music.queue.title")}
-						</h2>
-						<span class="text-xs text-zinc-500 tabular-nums">
-							{songs.length === 0
-								? t("music.queue.emptyShort")
-								: t("music.trackCount", { count: songs.length })}
-						</span>
-					</div>
-				</div>
-			</header>
+			<ModalHeader close={closeQueue} closeLabel={t("music.queue.close")}>
+				<ListMusic size={22} class="shrink-0 text-(--dominant-color)" />
+				<h2 id="queue-panel-title" class="sr-only">
+					{t("music.queue.title")}
+				</h2>
+				<span class="text-xs text-zinc-500 tabular-nums">
+					{songs.length === 0
+						? t("music.queue.emptyShort")
+						: t("music.trackCount", { count: songs.length })}
+				</span>
+			</ModalHeader>
 
 			<div class="relative flex min-h-0 flex-1 flex-col">
 				<ul

@@ -16,7 +16,56 @@ interface ModalProps {
 	labelledBy?: string;
 	closeLabel?: string;
 	mobileOnly?: boolean;
+	hideClose?: boolean;
 	children: ComponentChildren;
+}
+
+export function CloseButton({
+	close,
+	label = t("common.close"),
+	class: className,
+}: {
+	close: () => void;
+	label?: string;
+	class?: string;
+}) {
+	return (
+		<button
+			type="button"
+			class={cn(
+				"rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white cursor-pointer",
+				className,
+			)}
+			aria-label={label}
+			onClick={close}
+		>
+			<X size={20} />
+		</button>
+	);
+}
+
+export function ModalHeader({
+	children,
+	close,
+	closeLabel,
+	bordered = true,
+}: {
+	children?: ComponentChildren;
+	close: () => void;
+	closeLabel?: string;
+	bordered?: boolean;
+}) {
+	return (
+		<header
+			class={cn(
+				"flex shrink-0 items-center justify-between gap-3 px-4 py-3",
+				bordered && "border-b border-zinc-800",
+			)}
+		>
+			<div class="flex min-w-0 items-center gap-2 pl-1.5">{children}</div>
+			<CloseButton close={close} label={closeLabel} />
+		</header>
+	);
 }
 
 const EXIT_MS = 300;
@@ -27,6 +76,7 @@ export function Modal({
 	labelledBy,
 	closeLabel = t("common.close"),
 	mobileOnly = false,
+	hideClose = false,
 	children,
 }: ModalProps) {
 	const [mounted, setMounted] = useState(open);
@@ -106,14 +156,13 @@ export function Modal({
 					/>
 				</div>
 
-				<button
-					type="button"
-					class="absolute right-2 top-2 z-20 rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-800 hover:text-white cursor-pointer"
-					aria-label={closeLabel}
-					onClick={close}
-				>
-					<X size={20} />
-				</button>
+				{!hideClose && (
+					<CloseButton
+						close={close}
+						label={closeLabel}
+						class="absolute right-2 top-1.5 z-20"
+					/>
+				)}
 
 				{children}
 			</div>
