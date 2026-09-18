@@ -19,6 +19,7 @@ import { useEffect } from "preact/hooks";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import type { Action } from "@/lib/shared/views/ui/components/context-menu";
 import {
 	listRooms,
 	type Room,
@@ -187,6 +188,17 @@ export function RoomsShelf() {
 		onSuccess: (next) => queryClient.setQueryData(["rooms"], next),
 	});
 
+	const persist = (room: Room) =>
+		save.mutate({
+			id: "",
+			code: room.code,
+			relayUrl: room.relayUrl,
+			token: room.token,
+			password: room.password,
+			name: room.code,
+			savedAt: 0,
+		});
+
 	const activeSaved = list.find((room) => room.code === activeCode);
 	const ephemeral: Room | null =
 		activeCode && !activeSaved
@@ -248,19 +260,52 @@ export function RoomsShelf() {
 					: "idle";
 		const members =
 			live === "connected" ? store.peers.value : (query?.data?.members ?? 0);
+		const needsPassword = !!query?.data?.locked && !room.password;
+		const renderStatus = (size: number) => (
+			<Status
+				status={query?.data}
+				pending={query?.isLoading}
+				size={size}
+				live={live}
+				members={members}
+				needsPassword={needsPassword}
+			/>
+		);
+		// The relay caches the room's playback, so a live room can show what it
+		// is playing before we join. The status stays overlaid on the cover.
+		const song = query?.data?.active ? query.data.state?.song : undefined;
+		const cover = song?.album?.covers?.[0];
+		const artist = song?.artists?.[0]?.name;
+		const connected = live === "connected";
+		const menu: Action[] = [
+			connected
+				? { icon: LogOut, label: t("sync.rooms.leave"), run: leave }
+				: {
+						icon: LogIn,
+						label: t("sync.rooms.connect"),
+						run: () => join(room),
+					},
+		];
+		if (room.id === ACTIVE_ID) {
+			menu.push({
+				icon: BookmarkPlus,
+				label: t("sync.rooms.save"),
+				run: () => persist(room),
+			});
+		}
 		return {
 			id: room.id,
 			name: room.name || room.code,
-			placeholder: (size) => (
-				<Status
-					status={query?.data}
-					pending={query?.isLoading}
-					size={size}
-					live={live}
-					members={members}
-					needsPassword={!!query?.data?.locked && !room.password}
-				/>
-			),
+			cover,
+			subtitle: song ? (
+				<span class="flex flex-col">
+					<span class="truncate">{song.name}</span>
+					{artist && <span class="truncate">{artist}</span>}
+				</span>
+			) : undefined,
+			placeholder: renderStatus,
+			overlay: cover ? renderStatus : undefined,
+			menu,
 			removable: room.id !== ACTIVE_ID,
 		};
 	});
@@ -325,15 +370,7 @@ export function RoomsShelf() {
 								onClick={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
-									save.mutate({
-										id: "",
-										code: room.code,
-										relayUrl: room.relayUrl,
-										token: room.token,
-										password: room.password,
-										name: room.code,
-										savedAt: 0,
-									});
+									persist(room);
 								}}
 								class={cn(buttonClass, "hover:text-amber-300")}
 							>

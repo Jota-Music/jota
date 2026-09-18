@@ -129,6 +129,11 @@ export interface Item {
 	// placeholder fills the cover slot when there is no cover, taking over from
 	// `icon`. It receives the size the slot expects.
 	placeholder?: (size: number) => ComponentChildren;
+	// overlay renders on top of the cover slot, cover or not. It receives the
+	// size the slot expects.
+	overlay?: (size: number) => ComponentChildren;
+	// menu adds item-specific actions to the context menu, before Remove.
+	menu?: Action[];
 }
 
 interface Props {
@@ -244,7 +249,7 @@ export function Shelf({
 	// A right-click (or touch long-press) opens the item's own actions instead
 	// of the browser context menu.
 	const openItemMenu = (item: Item) => (e: MouseEvent) => {
-		const actions: Action[] = [];
+		const actions: Action[] = [...(item.menu ?? [])];
 		if (onRemove && item.removable) {
 			actions.push({
 				icon: Trash2,
@@ -496,13 +501,18 @@ export function Shelf({
 															draggable={false}
 															loading="lazy"
 															decoding="async"
-															class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
+															class="h-full w-full object-cover opacity-80"
 														/>
 													) : (
 														<div class="flex h-full w-full items-center justify-center text-zinc-600">
 															{item.placeholder?.(48) ?? (
 																<Placeholder icon={item.icon} size={28} />
 															)}
+														</div>
+													)}
+													{item.overlay && (
+														<div class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/60">
+															{item.overlay(48)}
 														</div>
 													)}
 													<div class="pointer-coarse:opacity-100 absolute right-1 top-1 flex gap-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
@@ -515,7 +525,7 @@ export function Shelf({
 													)}
 												</div>
 												<div class="flex flex-col">
-													<h3 class="truncate text-sm font-medium text-zinc-300 transition-colors group-hover:text-white">
+													<h3 class="truncate text-sm font-medium text-white">
 														{item.name}
 													</h3>
 													{item.subtitle && (
@@ -554,7 +564,7 @@ export function Shelf({
 															"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/50 ring-inset",
 													)}
 												>
-													<div class="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-900">
+													<div class="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-900">
 														{item.covers?.length ? (
 															<Mosaic
 																covers={item.covers}
@@ -572,7 +582,7 @@ export function Shelf({
 																draggable={false}
 																loading="lazy"
 																decoding="async"
-																class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
+																class="h-full w-full object-cover opacity-80"
 															/>
 														) : (
 															<div class="flex h-full w-full items-center justify-center text-zinc-600">
@@ -581,9 +591,14 @@ export function Shelf({
 																)}
 															</div>
 														)}
+														{item.overlay && (
+															<div class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/60">
+																{item.overlay(22)}
+															</div>
+														)}
 													</div>
 													<div class="flex min-w-0 flex-1 flex-col">
-														<h3 class="truncate text-sm text-zinc-300 group-hover:text-white">
+														<h3 class="truncate text-sm text-white">
 															{item.name}
 														</h3>
 														{item.subtitle && (
