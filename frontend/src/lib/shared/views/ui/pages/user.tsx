@@ -4,6 +4,7 @@ import { useParams } from "wouter-preact";
 import getUserPlaylists, {
 	revalidateUserPlaylists,
 } from "@/lib/music/app/get-user-playlists";
+import { isLiked, likedCover } from "@/lib/music/app/liked";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
@@ -56,8 +57,8 @@ export function UserPage() {
 					items={playlists.map(
 						(p): Item => ({
 							id: p.id,
-							name: p.name,
-							cover: p.cover,
+							name: isLiked(p.id) ? t("music.likedSongs") : p.name,
+							cover: isLiked(p.id) ? likedCover : p.cover,
 							subtitle: p.owner,
 						}),
 					)}
