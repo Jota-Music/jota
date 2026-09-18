@@ -97,6 +97,17 @@ function answerJoin(from: string): void {
 	transport.send({ t: "snapshot", to: from, state: currentPlayback() });
 }
 
+// An empty room has no host, so the relay seats us as host. Our local session
+// then becomes the room's: broadcast our queue and immediate now-playing
+// instead of adopting a stale relay cache from a previous session.
+function inherit(): boolean {
+	if (store.role.value !== "host" || !currentSong.value) return false;
+	broadcastQueue();
+	transport.send({ t: "state", ...currentPlayback() });
+	pendingStart.value = false;
+	return true;
+}
+
 function cancelWait(): void {
 	if (!playWait) return;
 	clearTimeout(playWait.timer);
@@ -207,6 +218,8 @@ async function applySnapshot(
 	clock.sync(joinAt, m.echo, m.at);
 	joined = true;
 	store.joined.value = true;
+
+	if (inherit()) return;
 	const seq = roundSeq;
 
 	if (m.queue) {
