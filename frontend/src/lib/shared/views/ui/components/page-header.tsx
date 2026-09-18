@@ -1,4 +1,5 @@
 import { Disc3, Pause, Play } from "lucide-preact";
+import type { ComponentChildren } from "preact";
 import { Link } from "wouter-preact";
 import { t } from "@/lib/shared/i18n";
 
@@ -20,6 +21,7 @@ export function PageHeader({
 	link,
 	onPlay,
 	playing,
+	actions,
 }: {
 	cover?: string;
 	title: string;
@@ -27,7 +29,30 @@ export function PageHeader({
 	link?: { to: string; label: string };
 	onPlay?: () => void;
 	playing?: boolean;
+	actions?: ComponentChildren;
 }) {
+	const right =
+		onPlay || actions ? (
+			<div class="ml-auto flex shrink-0 items-center gap-2">
+				{onPlay && (
+					<button
+						type="button"
+						title={t("music.playAll")}
+						aria-label={t("music.playAll")}
+						onClick={onPlay}
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition"
+					>
+						{playing ? (
+							<Pause class="size-5 fill-current" />
+						) : (
+							<Play class="size-5 fill-current" />
+						)}
+					</button>
+				)}
+				{actions}
+			</div>
+		) : null;
+
 	return (
 		<header class="flex shrink-0 items-center gap-4">
 			{cover ? (
@@ -46,21 +71,7 @@ export function PageHeader({
 				{subtitle && <p class="text-sm opacity-70 mt-1">{subtitle}</p>}
 				{link && <LinkLine link={link} />}
 			</div>
-			{onPlay && (
-				<button
-					type="button"
-					title={t("music.playAll")}
-					aria-label={t("music.playAll")}
-					onClick={onPlay}
-					class="ml-auto flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition"
-				>
-					{playing ? (
-						<Pause class="size-5 fill-current" />
-					) : (
-						<Play class="size-5 fill-current" />
-					)}
-				</button>
-			)}
+			{right}
 		</header>
 	);
 }

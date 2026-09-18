@@ -1,10 +1,14 @@
 import type { ComponentChildren } from "preact";
-import { useRef } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
+import { useLocation } from "wouter-preact";
 import { SignInPrompt } from "@/lib/auth/views/ui/sign-in-prompt";
 import { Welcome } from "@/lib/auth/views/ui/welcome";
+import {
+	clearSelection,
+	selectionActive,
+} from "@/lib/music/views/stores/selection";
 import YoutubeEditor from "@/lib/music/views/ui/components/youtube-editor";
 import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
-import { SelectionBar } from "@/lib/music/views/ui/playlists/selection-bar";
 import Queue from "@/lib/music/views/ui/queue";
 import { cn } from "@/lib/shared/utils/tw";
 import { Header } from "@/lib/shared/views/ui/components/header";
@@ -25,6 +29,19 @@ export function AppShell({
 	mainClass?: string;
 }) {
 	const region = useRef<HTMLDivElement>(null);
+	const [location] = useLocation();
+
+	useEffect(() => {
+		clearSelection();
+	}, [location]);
+
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && selectionActive.value) clearSelection();
+		};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	}, []);
 
 	return (
 		<OverlayHost.Provider value={region}>
@@ -51,7 +68,6 @@ export function AppShell({
 					</main>
 
 					<Queue />
-					<SelectionBar />
 					<PlaylistPicker />
 					<YoutubeEditor />
 					<SyncPanel />

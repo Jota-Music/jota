@@ -9,6 +9,8 @@ import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import type { AlbumSummary, Song } from "@/lib/music/model";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
+import { clearSelection, selectAll } from "@/lib/music/views/stores/selection";
+import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { t } from "@/lib/shared/i18n";
@@ -84,6 +86,10 @@ export function ArtistPage() {
 	const counts = groupCounts(disco?.albums);
 	const tabs = ["tracks", ...groupKeysOf(disco?.albums)];
 	const activeTab = tabs.includes(view.value) ? view.value : "tracks";
+
+	useEffect(() => {
+		clearSelection();
+	}, [activeTab]);
 	const selectedAlbums =
 		activeTab === "tracks"
 			? []
@@ -113,6 +119,11 @@ export function ArtistPage() {
 							: undefined
 					}
 					playing={activeTab === "tracks" && isQueue(tracks) && isPlaying.value}
+					actions={
+						activeTab === "tracks" ? (
+							<TrackActions songs={tracks} onSelectAll={selectAll} />
+						) : undefined
+					}
 				/>
 
 				<div class="flex flex-wrap items-center gap-2 shrink-0">

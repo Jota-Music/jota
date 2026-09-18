@@ -1,15 +1,22 @@
 import {
 	EllipsisVertical,
+	ListChecks,
 	ListPlus,
 	type LucideIcon,
+	Square,
+	SquareCheck,
 	SquarePlus,
 	Trash2,
 } from "lucide-preact";
 import { createPortal } from "preact/compat";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
-import { enqueue } from "@/lib/music/views/stores/player";
-import { openPicker } from "@/lib/music/views/stores/selection";
+import { enqueueMany } from "@/lib/music/views/stores/player";
+import {
+	clearSelection,
+	openPicker,
+	selectedSongs,
+} from "@/lib/music/views/stores/selection";
 import { openYoutubeEditor } from "@/lib/music/views/stores/youtube-editor";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -31,20 +38,34 @@ type Action = {
 };
 
 type Props = {
-	song: Song;
+	songs: Song[];
 	removable?: boolean;
-	onRemove?: (song: Song) => void;
+	onRemove?: (songs: Song[]) => void;
+	onToggleSelect?: (song: Song) => void;
+	onSelectAll?: (songs: Song[]) => void;
+	onDone?: () => void;
 };
 
 const GAP = 6;
 
-export default function TrackActions({ song, removable, onRemove }: Props) {
+export default function TrackActions({
+	songs,
+	removable,
+	onRemove,
+	onToggleSelect,
+	onSelectAll,
+	onDone,
+}: Props) {
 	const [open, setOpen] = useState(false);
 	const [anchor, setAnchor] = useState<DOMRect | null>(null);
 	const button = useRef<HTMLButtonElement>(null);
 	const menu = useRef<HTMLDivElement>(null);
 
-	if (song.broken) return null;
+	const list = songs.filter((song) => !song.broken);
+	if (list.length === 0) return null;
+
+	const single = list.length === 1 ? list[0] : null;
+	const done = () => void onDone?.();
 
 	const close = () => {
 		setOpen(false);
@@ -55,31 +76,72 @@ export default function TrackActions({ song, removable, onRemove }: Props) {
 		{
 			icon: ListPlus,
 			label: t("music.track.addQueue"),
-			run: () => enqueue(song),
+			run: () => {
+				enqueueMany(list);
+				done();
+			},
 		},
 		{
 			icon: SquarePlus,
 			label: t("music.custom.addTo"),
-			run: () => openPicker([song]),
-		},
-		{
-			icon: YoutubeMenuIcon,
-			label: song.youtubeId
-				? t("music.youtubeId.edit")
-				: t("music.youtubeId.add"),
-			run: () => openYoutubeEditor(song),
+			run: () => {
+				openPicker(list);
+				done();
+			},
 		},
 	];
+	if (onSelectAll && list.length > 1) {
+		const allSelected = list.every((song) =>
+			selectedSongs.value.some((s) => s.id === song.id),
+		);
+		actions.push({
+			icon: allSelected ? Square : ListChecks,
+			label: allSelected
+				? t("music.custom.deselectAll")
+				: t("music.custom.selectAll"),
+			run: () => {
+				if (allSelected) clearSelection();
+				else onSelectAll(list);
+				done();
+			},
+		});
+	}
+	if (onToggleSelect && single) {
+		const isSelected = selectedSongs.value.some((s) => s.id === single.id);
+		actions.push({
+			icon: isSelected ? Square : SquareCheck,
+			label: isSelected ? t("music.custom.deselect") : t("music.custom.select"),
+			run: () => {
+				onToggleSelect(single);
+				done();
+			},
+		});
+	}
+	if (single) {
+		actions.push({
+			icon: YoutubeMenuIcon,
+			label: single.youtubeId
+				? t("music.youtubeId.edit")
+				: t("music.youtubeId.add"),
+			run: () => {
+				openYoutubeEditor(single);
+				done();
+			},
+		});
+	}
 	if (removable && onRemove) {
 		actions.push({
 			icon: Trash2,
 			label: t("music.custom.removeSong"),
 			danger: true,
-			run: () => onRemove(song),
+			run: () => {
+				onRemove(list);
+				done();
+			},
 		});
 	}
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		if (!open) return;
 		const el = menu.current;
 		if (!el || !anchor) return;
@@ -93,7 +155,7 @@ export default function TrackActions({ song, removable, onRemove }: Props) {
 
 		const onDown = (e: PointerEvent) => {
 			const target = e.target as Node;
-			if (!el.contains(target) && target !== button.current) close();
+			if (!el.contains(target) && !button.current?.contains(target)) close();
 		};
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key === "Escape") {

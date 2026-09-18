@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { Check, CirclePlay, Heart, ListVideo, Loader } from "lucide-preact";
+import { CirclePlay, Heart, ListVideo, Loader } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
@@ -14,12 +14,14 @@ import {
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
 import type { PlaylistSummary, Song } from "@/lib/music/model";
-import { useRowSelect } from "@/lib/music/views/hooks/use-row-select";
+import { rowSelect } from "@/lib/music/views/hooks/row-select";
 import { playFromQueueSelection } from "@/lib/music/views/stores/player";
 import {
+	clearSelection,
 	selectedSongs,
-	selectionActive,
+	toggleSelection,
 } from "@/lib/music/views/stores/selection";
+import SelectionBar from "@/lib/music/views/ui/components/selection-bar";
 import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -92,6 +94,10 @@ export function YouTubeSearchPage() {
 		: videosAvailable
 			? "videos"
 			: "playlists";
+
+	useEffect(() => {
+		clearSelection();
+	}, [activeTab]);
 
 	const savedQuery = useQuery({
 		queryKey: ["youtube-playlists"],
@@ -173,6 +179,8 @@ export function YouTubeSearchPage() {
 					)}
 				</header>
 
+				<SelectionBar />
+
 				{!hasResults && !loading ? (
 					<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
 				) : activeTab === "playlists" ? (
@@ -219,14 +227,22 @@ export function YouTubeSearchPage() {
 					<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
 				) : (
 					<div class="relative min-h-0 flex-1">
+						{/* biome-ignore lint/a11y/noStaticElementInteractions: empty area clears the selection */}
+						{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
 						<section
 							ref={listRef}
 							class="h-full flex flex-col overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950"
+							onClick={(e) => {
+								const target = e.target as Element;
+								if (!target.closest("[data-row]")) clearSelection();
+							}}
 						>
-							{songs.map((song) => (
+							{songs.map((song, index) => (
 								<YouTubeVideoItem
 									key={song.id}
 									song={song}
+									songs={songs}
+									index={index}
 									onClick={() => handleClick(song)}
 								/>
 							))}
@@ -294,38 +310,35 @@ function PlaylistCard({
 
 function YouTubeVideoItem({
 	song,
+	songs,
+	index,
 	onClick,
 }: {
 	song: Song;
+	songs: Song[];
+	index: number;
 	onClick: () => void;
 }) {
-	const selection = selectionActive.value;
 	const selected = selectedSongs.value.some((s) => s.id === song.id);
 
-	const { onClick: onRowClick, onPointerDown } = useRowSelect({
+	const { onClick: onRowClick } = rowSelect({
 		song,
+		songs,
+		index,
 		onActivate: onClick,
 	});
 
 	return (
-		<div class="flex w-full items-center gap-3 border-b border-zinc-900 px-3 py-2 transition hover:bg-zinc-900/40">
-			{selection && (
-				<span
-					class={cn(
-						"flex size-5 shrink-0 items-center justify-center rounded-full border",
-						selected
-							? "border-(--dominant-color) bg-(--dominant-color) text-(--binary-color)"
-							: "border-zinc-600",
-					)}
-				>
-					{selected && <Check size={13} strokeWidth={3} />}
-				</span>
+		<div
+			data-row={song.id}
+			class={cn(
+				"flex w-full select-none items-center gap-3 border-b border-zinc-900 px-3 py-2 transition hover:bg-zinc-800/60",
+				selected && "bg-zinc-800/60",
 			)}
-
+		>
 			<button
 				type="button"
 				onClick={onRowClick}
-				onPointerDown={onPointerDown}
 				class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
 			>
 				<PlaylistCover
@@ -341,7 +354,7 @@ function YouTubeVideoItem({
 				</div>
 			</button>
 
-			<TrackActions song={song} />
+			<TrackActions songs={[song]} onToggleSelect={toggleSelection} />
 		</div>
 	);
 }

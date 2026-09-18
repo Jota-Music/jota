@@ -16,9 +16,14 @@ import { move } from "@/lib/music/app/reorder";
 import type { Playlist, Song } from "@/lib/music/model";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
+import { selectAll, selectedSongs } from "@/lib/music/views/stores/selection";
+import SelectionBar from "@/lib/music/views/ui/components/selection-bar";
+import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { t } from "@/lib/shared/i18n";
+import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
+import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
 const storageKey = "playlist_filters";
@@ -129,6 +134,14 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		onError: (error) => addError(error, "playlist"),
 	});
 
+	const [removing, setRemoving] = useState<Song[] | null>(null);
+
+	const confirmRemove = () => {
+		if (!removing) return;
+		for (const song of removing) removeSong.mutate(song.id);
+		setRemoving(null);
+	};
+
 	const reorder = useMutation({
 		mutationFn: (refs: string[]) => reorderPlaylist(id, refs),
 		onSuccess: () =>
@@ -213,77 +226,92 @@ export default function PlaylistPlain({ id }: { id: string }) {
 						: undefined
 				}
 				playing={isQueue(playable) && isPlaying.value}
+				actions={<TrackActions songs={songs} onSelectAll={selectAll} />}
 			/>
 
-			<div className="grid grid-cols-[1fr_auto_auto] gap-2">
-				{/* search */}
-				<div className="relative flex-1">
-					<Search
-						size={16}
-						className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-					/>
-					<input
-						type="text"
-						placeholder={t("music.playlist.searchPlaceholder")}
-						value={search.value}
-						onInput={(e) => {
-							search.value = getInputValue(e);
-						}}
-						className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-9 text-sm text-white outline-none focus:border-zinc-600"
-					/>
-					{search.value && (
+			{selectedSongs.value.length > 1 ? (
+				<SelectionBar
+					removable={custom}
+					onRemove={custom ? setRemoving : undefined}
+				/>
+			) : (
+				<div
+					className={cn(
+						"grid gap-2",
+						custom ? "grid-cols-[1fr_auto]" : "grid-cols-[1fr_auto_auto]",
+					)}
+				>
+					{/* search */}
+					<div className="relative flex-1">
+						<Search
+							size={16}
+							className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+						/>
+						<input
+							type="text"
+							placeholder={t("music.playlist.searchPlaceholder")}
+							value={search.value}
+							onInput={(e) => {
+								search.value = getInputValue(e);
+							}}
+							className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-9 text-sm text-white outline-none focus:border-zinc-600"
+						/>
+						{search.value && (
+							<button
+								type="button"
+								onClick={() => {
+									search.value = "";
+								}}
+								className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
+								aria-label={t("music.playlist.clearSearch")}
+							>
+								<X size={14} />
+							</button>
+						)}
+					</div>
+
+					{/* order */}
+					<div className="relative w-full">
+						<ArrowUpDown
+							size={16}
+							className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+						/>
+						<select
+							value={order.value}
+							onInput={(e) => {
+								order.value = getSelectValue(e);
+							}}
+							aria-label={t("music.playlist.orderBy")}
+							className="h-10 w-max appearance-none rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
+						>
+							<option value="added">{t("music.playlist.order.added")}</option>
+							<option value="reverse">
+								{t("music.playlist.order.reverse")}
+							</option>
+							<option value="duration-asc">
+								{t("music.playlist.order.durationAsc")}
+							</option>
+							<option value="duration-desc">
+								{t("music.playlist.order.durationDesc")}
+							</option>
+						</select>
+					</div>
+
+					{/* refresh */}
+					{!custom && (
 						<button
 							type="button"
-							onClick={() => {
-								search.value = "";
-							}}
-							className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
-							aria-label={t("music.playlist.clearSearch")}
+							title={t("music.playlist.refresh")}
+							aria-label={t("music.playlist.refresh")}
+							onClick={handleRefresh}
+							disabled={refreshing}
+							className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
 						>
-							<X size={14} />
+							<RefreshCw size={16} class={refreshing ? "animate-spin" : ""} />
 						</button>
 					)}
 				</div>
-
-				{/* order */}
-				<div className="relative w-full">
-					<ArrowUpDown
-						size={16}
-						className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-					/>
-					<select
-						value={order.value}
-						onInput={(e) => {
-							order.value = getSelectValue(e);
-						}}
-						aria-label={t("music.playlist.orderBy")}
-						className="h-10 w-max appearance-none rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
-					>
-						<option value="added">{t("music.playlist.order.added")}</option>
-						<option value="reverse">{t("music.playlist.order.reverse")}</option>
-						<option value="duration-asc">
-							{t("music.playlist.order.durationAsc")}
-						</option>
-						<option value="duration-desc">
-							{t("music.playlist.order.durationDesc")}
-						</option>
-					</select>
-				</div>
-
-				{/* refresh */}
-				{!custom && (
-					<button
-						type="button"
-						title={t("music.playlist.refresh")}
-						aria-label={t("music.playlist.refresh")}
-						onClick={handleRefresh}
-						disabled={refreshing}
-						className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
-					>
-						<RefreshCw size={16} class={refreshing ? "animate-spin" : ""} />
-					</button>
-				)}
-			</div>
+			)}
 
 			{isLoading ? (
 				<div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
@@ -292,10 +320,18 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			) : (
 				<Virtualization
 					songs={filteredSongs}
-					onRemove={custom ? (song) => removeSong.mutate(song.id) : undefined}
+					onRemove={custom ? setRemoving : undefined}
 					onReorder={canReorder ? handleReorder : undefined}
 				/>
 			)}
+
+			<ConfirmModal
+				open={!!removing}
+				danger
+				pending={removeSong.isPending}
+				close={() => setRemoving(null)}
+				onConfirm={confirmRemove}
+			/>
 		</div>
 	);
 }

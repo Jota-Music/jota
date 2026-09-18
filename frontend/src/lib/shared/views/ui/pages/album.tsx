@@ -7,6 +7,8 @@ import { getAlbumTracks } from "@/lib/music/app/get-album";
 import type { Song } from "@/lib/music/model";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
+import { selectAll } from "@/lib/music/views/stores/selection";
+import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { t } from "@/lib/shared/i18n";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
@@ -44,6 +46,7 @@ export function AlbumPage() {
 							: undefined
 					}
 					playing={isQueue(tracks) && isPlaying.value}
+					actions={<TrackActions songs={tracks} onSelectAll={selectAll} />}
 				/>
 
 				{isError ? (

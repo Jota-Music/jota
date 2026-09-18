@@ -1,16 +1,12 @@
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 
-// Multi-select state for song rows. A double click/tap enters selection mode;
-// while active, a single click toggles a row instead of playing it.
-export const selectionActive = signal(false);
 export const selectedSongs = signal<Song[]>([]);
+export const selectionActive = computed(() => selectedSongs.value.length > 0);
+export const selectionAnchor = signal<number | null>(null);
 
-export function startSelection(song: Song) {
-	selectionActive.value = true;
-	if (!selectedSongs.value.some((s) => s.id === song.id)) {
-		selectedSongs.value = [...selectedSongs.value, song];
-	}
+export function setSelection(songs: Song[]) {
+	selectedSongs.value = songs;
 }
 
 export function toggleSelection(song: Song) {
@@ -19,12 +15,25 @@ export function toggleSelection(song: Song) {
 	selectedSongs.value = exists
 		? current.filter((s) => s.id !== song.id)
 		: [...current, song];
-	if (selectedSongs.value.length === 0) selectionActive.value = false;
+	if (selectedSongs.value.length === 0) selectionAnchor.value = null;
+}
+
+export function selectRange(songs: Song[], from: number, to: number) {
+	const lo = Math.min(from, to);
+	const hi = Math.max(from, to);
+	setSelection(songs.slice(lo, hi + 1));
 }
 
 export function clearSelection() {
-	selectionActive.value = false;
 	selectedSongs.value = [];
+	selectionAnchor.value = null;
+}
+
+export function selectAll(songs: Song[]) {
+	const ids = new Set(selectedSongs.value.map((s) => s.id));
+	const added = songs.filter((s) => !ids.has(s.id));
+	if (added.length > 0)
+		selectedSongs.value = [...selectedSongs.value, ...added];
 }
 
 // Songs queued for the "add to playlist" picker. A null value keeps it closed.

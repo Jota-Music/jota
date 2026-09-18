@@ -1,9 +1,9 @@
 import { computed, signal } from "@preact/signals";
-import { Check, GripVertical, TriangleAlert } from "lucide-preact";
+import { GripVertical, TriangleAlert } from "lucide-preact";
 import { memo } from "preact/compat";
 import { useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
-import { useRowSelect } from "@/lib/music/views/hooks/use-row-select";
+import { coarse, rowSelect } from "@/lib/music/views/hooks/row-select";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
 import {
 	currentSong,
@@ -12,8 +12,10 @@ import {
 } from "@/lib/music/views/stores/audio";
 import { playFromQueueSelection } from "@/lib/music/views/stores/player";
 import {
+	clearSelection,
 	selectedSongs,
 	selectionActive,
+	toggleSelection,
 } from "@/lib/music/views/stores/selection";
 import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import TrackArt from "@/lib/music/views/ui/components/track-art";
@@ -27,12 +29,11 @@ import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 
 type Props = {
 	songs: Song[];
-	onRemove?: (song: Song) => void;
+	onRemove?: (songs: Song[]) => void;
 	onReorder?: (from: number, to: number) => void;
 };
 
 const ROW_PX = 64;
-const COARSE = window.matchMedia("(pointer: coarse)").matches;
 
 const dragFrom = signal<number | null>(null);
 const dragOver = signal<number | null>(null);
@@ -63,14 +64,15 @@ function PlaylistRow({
 	isDragSource: boolean;
 	isDropTarget: boolean;
 	removable: boolean;
-	onRemove?: (song: Song) => void;
+	onRemove?: (songs: Song[]) => void;
 }) {
 	const isCurrent = song.id === currentId.value;
 	const broken = song.broken === true;
-	const selection = selectionActive.value;
 
-	const { onClick, onPointerDown } = useRowSelect({
+	const { onClick } = rowSelect({
 		song,
+		songs,
+		index,
 		disabled: broken,
 		onActivate: () => void playFromQueueSelection(songs, song),
 	});
@@ -82,10 +84,10 @@ function PlaylistRow({
 			role="none"
 			title={broken ? t("music.track.broken") : undefined}
 			onClick={onClick}
-			onPointerDown={onPointerDown}
 			class={cn(
-				"absolute left-0 flex h-full w-full items-center justify-between gap-2 border-b border-zinc-900 px-3 transition hover:cursor-pointer hover:bg-zinc-900/40",
+				"group absolute left-0 flex h-full w-full select-none items-center justify-between gap-2 border-b border-zinc-900 px-3 transition hover:cursor-pointer hover:bg-zinc-800/60",
 				isCurrent ? "font-medium text-(--dominant-color)!" : "",
+				selected && "bg-zinc-800/60",
 				isDragSource && "opacity-40",
 				isDropTarget &&
 					"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/50 ring-inset",
@@ -93,41 +95,34 @@ function PlaylistRow({
 			)}
 		>
 			<div class="grid grid-cols-[auto_1fr] gap-2">
-				{selection ? (
-					<span
-						class={cn(
-							"ml-1 mr-1 flex size-5 items-center justify-center self-center rounded-full border",
-							selected
-								? "border-(--dominant-color) bg-(--dominant-color) text-(--binary-color)"
-								: "border-zinc-600",
-						)}
-					>
-						{selected && <Check size={13} strokeWidth={3} />}
-					</span>
-				) : (
-					reorderable && (
+				<div class="relative shrink-0">
+					<TrackArt
+						song={song}
+						current={isCurrent}
+						loading={isLoading.value}
+						playing={isPlaying.value}
+						alt={song.name}
+						class={
+							isCurrent
+								? "rounded-md outline-2 outline-(--dominant-color)"
+								: undefined
+						}
+						imgClass="h-10 w-10 rounded-md"
+					/>
+					{reorderable && (
 						<span
-							class="flex w-4 shrink-0 touch-none items-center justify-center self-center text-zinc-600"
+							class={cn(
+								"pointer-events-none absolute top-1 left-1 flex size-5 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-zinc-300",
+								coarse
+									? "opacity-100"
+									: "opacity-0 transition-opacity group-hover:opacity-100",
+							)}
 							aria-hidden
 						>
-							<GripVertical size={16} />
+							<GripVertical size={13} />
 						</span>
-					)
-				)}
-
-				<TrackArt
-					song={song}
-					current={isCurrent}
-					loading={isLoading.value}
-					playing={isPlaying.value}
-					alt={song.name}
-					class={
-						isCurrent
-							? "rounded-md outline-2 outline-(--dominant-color)"
-							: undefined
-					}
-					imgClass="h-10 w-10 rounded-md"
-				/>
+					)}
+				</div>
 
 				<div class="flex min-w-0 flex-col text-start">
 					<span
@@ -162,7 +157,12 @@ function PlaylistRow({
 
 			<div class="flex shrink-0 items-center gap-2">
 				{!broken && (
-					<TrackActions song={song} removable={removable} onRemove={onRemove} />
+					<TrackActions
+						songs={[song]}
+						removable={removable}
+						onRemove={onRemove}
+						onToggleSelect={toggleSelection}
+					/>
 				)}
 				<div className="tabular-nums text-xs text-zinc-500">
 					{secondsToTime(song.duration)}
@@ -259,11 +259,16 @@ export function Virtualization({ songs, onRemove, onReorder }: Props) {
 	return (
 		<div className="relative min-h-0 flex-1">
 			{/* biome-ignore lint/a11y/noStaticElementInteractions: drag-to-reorder container */}
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
 			<div
 				ref={ref}
 				className="h-full overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950"
 				onPointerDown={handlePointerDown}
 				onClickCapture={captureClick}
+				onClick={(e) => {
+					const target = e.target as Element;
+					if (!target.closest("[data-playlist-index]")) clearSelection();
+				}}
 				onDragOverCapture={handleDragOverCapture}
 				onDrop={handleDrop}
 				onDragEnd={endDrag}
@@ -292,7 +297,7 @@ export function Virtualization({ songs, onRemove, onReorder }: Props) {
 										height: `${virtualRow.size}px`,
 										transform: `translateY(${virtualRow.start}px)`,
 									}}
-									draggable={reorderable && COARSE}
+									draggable={reorderable && coarse}
 									onDragStart={(e) => startDrag(e, virtualRow.index)}
 								>
 									<PlaylistRowMemo

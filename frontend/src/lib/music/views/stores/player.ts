@@ -1,5 +1,5 @@
 import { pick } from "@/lib/music/app/playback";
-import { insertAfter, pinAfter, sameQueue } from "@/lib/music/app/queue";
+import { pinAfter, sameQueue } from "@/lib/music/app/queue";
 import { permute, random, seed } from "@/lib/music/app/shuffle";
 import type { Song } from "@/lib/music/model";
 import {
@@ -170,13 +170,20 @@ export function isQueue(songs: Song[]) {
 	return sameQueue(queue.value, songs);
 }
 
-export function enqueue(song: Song) {
-	queue.value = insertAfter(queue.value, currentIndex.value, song);
+export function enqueueMany(songs: Song[]) {
+	if (songs.length === 0) return;
+
+	const q = [...queue.value];
+	const at =
+		currentIndex.value >= 0 && currentIndex.value < q.length
+			? currentIndex.value + 1
+			: q.length;
+	q.splice(at, 0, ...songs);
+	queue.value = q;
 	if (currentIndex.value < 0) currentIndex.value = 0;
 	persistQueue();
 	pingQueue();
-
-	void AudioCache.preload(song);
+	preloadUpcomingSongs(q, currentIndex.value);
 }
 
 export async function unqueue(removeIdx: number): Promise<void> {
