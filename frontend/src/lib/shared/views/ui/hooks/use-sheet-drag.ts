@@ -32,9 +32,10 @@ function isDraggableTarget(e: MouseEvent, panel: HTMLElement): boolean {
 	return true;
 }
 
-// Drag-to-dismiss for a bottom sheet. Works with mouse and touch on all screen sizes.
-// Ignores gestures that start on an interactive control or on a scroll container
-// that is not at the top, so native scrolling keeps working.
+// Drag-to-dismiss for a mobile bottom sheet. Ignored on screens >= 640px (sm),
+// where the modal is centered. Ignores gestures that start on an interactive
+// control or on a scroll container that is not at the top, so native scrolling
+// keeps working.
 export function useSheetDrag(
 	panelRef: RefObject<HTMLDivElement>,
 	backdropRef: RefObject<HTMLButtonElement>,
@@ -56,6 +57,7 @@ export function useSheetDrag(
 
 	useEffect(() => {
 		if (!mounted) return;
+		if (!window.matchMedia("(max-width: 639px)").matches) return;
 		const panel = panelRef.current;
 		const backdrop = backdropRef.current;
 		if (!panel) return;
