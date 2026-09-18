@@ -2,6 +2,7 @@ package playlists
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/Jota-Music/jota/internal/kv"
@@ -9,14 +10,23 @@ import (
 )
 
 type fakeResolver struct {
-	fail map[string]bool
+	fail   map[string]bool
+	covers map[string]string
 }
 
 func (f *fakeResolver) GetSong(id string) (music.Song, error) {
 	if f.fail[id] {
 		return music.Song{}, errors.New("unavailable")
 	}
-	return music.Song{Id: id, Name: "Song " + id}, nil
+	cover := f.covers[id]
+	if cover == "" {
+		cover = "cover-" + id
+	}
+	return music.Song{
+		Id:    id,
+		Name:  "Song " + id,
+		Album: music.Album{Covers: []string{cover}},
+	}, nil
 }
 
 func setup(t *testing.T) {
@@ -51,6 +61,11 @@ func TestPlaylistLifecycle(t *testing.T) {
 
 	if err := s.AddSongs(summary.Id, []string{"spotifyId", "youtube:vid", "spotifyId"}); err != nil {
 		t.Fatalf("add: %v", err)
+	}
+
+	list, _ = s.List()
+	if want := []string{"cover-spotifyId", "cover-youtube:vid"}; !slices.Equal(list[0].Covers, want) {
+		t.Fatalf("covers = %v, want %v", list[0].Covers, want)
 	}
 
 	pl, err := s.GetFullPlaylist(summary.Id)
@@ -105,5 +120,39 @@ func TestPlaylistLifecycle(t *testing.T) {
 	list, _ = s.List()
 	if len(list) != 0 {
 		t.Fatalf("after delete = %v", list)
+	}
+}
+
+func TestListCoversDedupAndCap(t *testing.T) {
+	setup(t)
+
+	resolver := &fakeResolver{
+		fail: map[string]bool{},
+		covers: map[string]string{
+			"a": "same",
+			"b": "same",
+			"c": "c",
+			"d": "d",
+			"e": "e",
+			"f": "f",
+		},
+	}
+	s := New(resolver)
+
+	summary, err := s.Create("Mix")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := s.AddSongs(summary.Id, []string{"a", "b", "c", "d", "e", "f"}); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	list, err := s.List()
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	// a and b share a cover, so the first four unique covers come from a, c, d, e.
+	if want := []string{"same", "c", "d", "e"}; !slices.Equal(list[0].Covers, want) {
+		t.Fatalf("covers = %v, want %v", list[0].Covers, want)
 	}
 }

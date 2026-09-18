@@ -60,6 +60,7 @@ export interface PlaylistSummary {
     "id": string;
     "name": string;
     "cover"?: string;
+    "covers"?: string[] | null;
     "subtitle"?: string;
     "owner"?: string;
 }

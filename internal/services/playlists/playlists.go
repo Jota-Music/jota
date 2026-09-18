@@ -20,6 +20,9 @@ var (
 
 const defaultName = "Playlist"
 
+// coverCount caps the mosaic a local playlist summary exposes.
+const coverCount = 4
+
 // Playlist is a user-created playlist. It only stores references to the source
 // tracks (a bare Spotify id or "youtube:<videoId>"); the metadata is resolved
 // from the owning source when the playlist is opened.
@@ -114,9 +117,40 @@ func (s *Service) List() ([]music.PlaylistSummary, error) {
 			}
 			return nil, err
 		}
-		out = append(out, music.PlaylistSummary{Id: pl.Id, Name: pl.Name})
+		out = append(out, music.PlaylistSummary{
+			Id:     pl.Id,
+			Name:   pl.Name,
+			Covers: s.covers(pl.Songs),
+		})
 	}
 	return out, nil
+}
+
+// covers collects the album covers of the first tracks, skipping unresolved
+// tracks and duplicate covers so the mosaic never repeats the same art.
+func (s *Service) covers(refs []string) []string {
+	if s.resolver == nil {
+		return nil
+	}
+
+	covers := make([]string, 0, coverCount)
+	seen := make(map[string]struct{}, coverCount)
+	for _, ref := range refs {
+		if len(covers) == coverCount {
+			break
+		}
+		song, err := s.resolver.GetSong(ref)
+		if err != nil || len(song.Album.Covers) == 0 {
+			continue
+		}
+		cover := song.Album.Covers[0]
+		if _, dup := seen[cover]; dup {
+			continue
+		}
+		seen[cover] = struct{}{}
+		covers = append(covers, cover)
+	}
+	return covers
 }
 
 func (s *Service) Create(name string) (music.PlaylistSummary, error) {

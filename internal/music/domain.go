@@ -51,11 +51,12 @@ type Audio struct {
 }
 
 type PlaylistSummary struct {
-	Id       string `json:"id"`
-	Name     string `json:"name"`
-	Cover    string `json:"cover,omitempty"`
-	Subtitle string `json:"subtitle,omitempty"`
-	Owner    string `json:"owner,omitempty"`
+	Id       string   `json:"id"`
+	Name     string   `json:"name"`
+	Cover    string   `json:"cover,omitempty"`
+	Covers   []string `json:"covers,omitempty"`
+	Subtitle string   `json:"subtitle,omitempty"`
+	Owner    string   `json:"owner,omitempty"`
 }
 
 type SearchResult struct {

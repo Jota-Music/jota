@@ -11,6 +11,7 @@ import {
 	type Action,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
+import { Mosaic } from "@/lib/shared/views/ui/components/mosaic";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
@@ -120,6 +121,7 @@ export interface Item {
 	id: string;
 	name: string;
 	cover?: string;
+	covers?: string[];
 	subtitle?: ComponentChildren;
 	source?: Source;
 	removable?: boolean;
@@ -477,7 +479,17 @@ export function Shelf({
 												)}
 											>
 												<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
-													{item.cover ? (
+													{item.covers?.length ? (
+														<Mosaic
+															covers={item.covers}
+															alt={item.name}
+															placeholder={
+																item.placeholder?.(48) ?? (
+																	<Placeholder icon={item.icon} size={28} />
+																)
+															}
+														/>
+													) : item.cover ? (
 														<img
 															src={item.cover}
 															alt={item.name}
@@ -543,7 +555,17 @@ export function Shelf({
 													)}
 												>
 													<div class="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-900">
-														{item.cover ? (
+														{item.covers?.length ? (
+															<Mosaic
+																covers={item.covers}
+																alt={item.name}
+																placeholder={
+																	item.placeholder?.(22) ?? (
+																		<Placeholder icon={item.icon} size={14} />
+																	)
+																}
+															/>
+														) : item.cover ? (
 															<img
 																src={item.cover}
 																alt={item.name}

@@ -129,8 +129,10 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	const removeSong = useMutation({
 		mutationFn: (ref: string) => removeSongFromPlaylist(id, ref),
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["playlist", id] }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["playlist", id] });
+			queryClient.invalidateQueries({ queryKey: ["playlists"] });
+		},
 		onError: (error) => addError(error, "playlist"),
 	});
 
@@ -161,6 +163,11 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	const cover = liked
 		? likedCover
 		: (data?.cover ?? songs[0]?.album?.covers?.[0]);
+	const covers = custom
+		? [...new Set(songs.map((song) => song.album?.covers?.[0]))]
+				.filter((value): value is string => !!value)
+				.slice(0, 4)
+		: [];
 	const name = liked
 		? t("music.likedSongs")
 		: data?.name || t("music.playlist.defaultName");
@@ -215,6 +222,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		<div className="flex min-h-0 flex-1 flex-col gap-4 pb-6">
 			<PageHeader
 				cover={cover}
+				covers={covers}
 				title={name}
 				subtitle={t("music.trackCount", { count: songs.length })}
 				link={

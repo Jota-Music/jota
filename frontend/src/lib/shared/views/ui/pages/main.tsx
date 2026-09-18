@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { Library, ListMusic, Turntable, Users } from "lucide-preact";
+import { Disc3, ListMusic, Turntable, Users } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
@@ -107,7 +107,8 @@ export function MainPage() {
 			(p): Item => ({
 				id: p.id,
 				name: p.name,
-				icon: Library,
+				covers: p.covers ?? [],
+				icon: Disc3,
 				source: "local",
 				removable: true,
 			}),
