@@ -335,7 +335,7 @@ export function Player() {
 				onPointerMove={onBarPointerMove}
 				onPointerUp={onBarPointerUp}
 			>
-				<div class="px-0 pt-1 text-(--dominant-color)">
+				<div class="px-0 text-(--dominant-color)">
 					<SeekBar class="h-0.75 w-full rounded-none border-0 bg-neutral-800" />
 				</div>
 
