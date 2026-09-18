@@ -34,13 +34,14 @@ the audio through YouTube, and start a room over a relay you own.
   smooth.
 - **Native media controls.** Media keys, lock-screen and notification controls
   work on desktop and mobile.
-- **Rooms.** Sync queue, play/pause, position, shuffle and repeat across
-  devices over your own WebSocket relay
+- **Rooms.** Save a room, see who is listening, and sync queue, play/pause,
+  position, shuffle and repeat across devices over your own WebSocket relay
   ([`Jota-Music/relay`](https://github.com/Jota-Music/relay)).
+- **English and Spanish.** Switch the interface language from settings.
 - **Cross-platform.** Built with Wails 3 — native desktop on Linux, Windows
   and macOS, plus Android, from one codebase.
 - **Private by default.** Data stays local. No accounts, no telemetry, no
-  third-party servers.
+  third-party servers — save the app log from settings when reporting a bug.
 
 ## Screenshots
 
