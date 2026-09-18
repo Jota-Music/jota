@@ -3,15 +3,9 @@ import { Check, Edit2 } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { getYouTubeId, updateYoutubeId } from "@/lib/music/app/get-audio";
 import type { Song } from "@/lib/music/model";
-import {
-	currentSong,
-	getPlaybackSeconds,
-	isPlaying,
-	play,
-	prepareSong,
-	setYoutube,
-} from "@/lib/music/views/stores/audio";
+import { currentSong, setYoutube } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
+import { reloadCurrent } from "@/lib/music/views/stores/player";
 import { t } from "@/lib/shared/i18n";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
@@ -55,12 +49,7 @@ export default function SaveYoutubeId({
 		AudioCache.remove(song.id);
 
 		if (currentSong.value?.id === song.id) {
-			const at = getPlaybackSeconds();
-			if (isPlaying.value) {
-				await play(song, at);
-			} else {
-				await prepareSong(song, at);
-			}
+			await reloadCurrent();
 		}
 
 		setOpen(false);

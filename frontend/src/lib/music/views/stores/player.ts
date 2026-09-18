@@ -7,9 +7,12 @@ import {
 	clampSeconds,
 	currentSong,
 	dragSeeking,
+	getPlaybackSeconds,
 	hasLoaded,
+	isPlaying,
 	play,
 	playbackBlocked,
+	prepareSong,
 	progress,
 	seek,
 	setOnTrackEnded,
@@ -247,6 +250,27 @@ export async function playAt(i: number): Promise<void> {
 export async function toggleSong() {
 	publish({ action: "toggle" });
 	await togglePlayPause();
+}
+
+// Reload the current track after its stream changed (a corrected YouTube id).
+// In a room it must go through the load round so every member re-resolves it;
+// locally it keeps the position and the play/pause state.
+export async function reloadCurrent(): Promise<void> {
+	const song = currentSong.value;
+	if (!song) return;
+
+	const gate = playGate.value;
+	if (gate) {
+		await gate(song);
+		return;
+	}
+
+	const at = getPlaybackSeconds();
+	if (isPlaying.value) {
+		await play(song, at);
+	} else {
+		await prepareSong(song, at);
+	}
 }
 
 // Pressing next/previous fast must not resolve a stream per press: move the
