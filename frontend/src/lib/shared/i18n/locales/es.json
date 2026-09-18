@@ -10,6 +10,9 @@
 		"saving": "Guardando…",
 		"remove": "Quitar",
 		"close": "Cerrar",
+		"cancel": "Cancelar",
+		"confirm": "¿Seguro que quieres eliminarlo?",
+		"confirmAction": "Confirmar",
 		"dismiss": "Descartar",
 		"optional": "Opcional",
 		"noResults": "Sin resultados."

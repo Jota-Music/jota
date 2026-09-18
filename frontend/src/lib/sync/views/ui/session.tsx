@@ -9,11 +9,12 @@ import {
 	Turntable,
 	Unplug,
 } from "lucide-preact";
-import { useRef } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { pendingStart } from "@/lib/music/views/stores/audio";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
@@ -101,6 +102,7 @@ function SessionForm() {
 		unsave,
 	} = useRoomForm();
 	const [, setLocation] = useLocation();
+	const [confirming, setConfirming] = useState(false);
 
 	const openSettings = () => {
 		showSync.value = false;
@@ -208,7 +210,7 @@ function SessionForm() {
 						title={t("sync.session.removeTitle")}
 						class="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-zinc-800 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-red-300 disabled:opacity-40"
 						disabled={removing}
-						onClick={() => unsave(savedRoom.id)}
+						onClick={() => setConfirming(true)}
 					>
 						<Trash2 size={16} />
 					</button>
@@ -240,6 +242,17 @@ function SessionForm() {
 					{t("sync.session.settings")}
 				</button>
 			</p>
+
+			<ConfirmModal
+				open={confirming}
+				danger
+				pending={removing}
+				close={() => setConfirming(false)}
+				onConfirm={() => {
+					if (savedRoom) unsave(savedRoom.id);
+					setConfirming(false);
+				}}
+			/>
 		</div>
 	);
 }

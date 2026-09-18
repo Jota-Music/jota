@@ -10,6 +10,9 @@
 		"saving": "Saving…",
 		"remove": "Remove",
 		"close": "Close",
+		"cancel": "Cancel",
+		"confirm": "Are you sure you want to delete it?",
+		"confirmAction": "Confirm",
 		"dismiss": "Dismiss",
 		"optional": "Optional",
 		"noResults": "No results found."

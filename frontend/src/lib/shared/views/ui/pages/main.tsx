@@ -23,6 +23,7 @@ import { FollowingShelf } from "@/lib/music/views/ui/user/following";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
+import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 import { RoomsShelf } from "@/lib/sync/views/ui/rooms";
 
@@ -41,6 +42,7 @@ export function MainPage() {
 	const spotifyHandle = spotifyUser.value ?? "default";
 	const [tab, setTab] = useState<Tab>(loadTab);
 	const [creating, setCreating] = useState(false);
+	const [confirming, setConfirming] = useState<string | null>(null);
 
 	useEffect(() => {
 		localStorage.setItem(tabKey, tab);
@@ -124,10 +126,16 @@ export function MainPage() {
 		void saveOrder(spotifyHandle, next);
 	};
 
-	const remove = (id: string) =>
-		id.startsWith("local:")
-			? removeCustom.mutate(id)
-			: removeYouTube.mutate(id);
+	const remove = (id: string) => setConfirming(id);
+
+	const removingLocal = confirming?.startsWith("local:") ?? false;
+
+	const confirmRemove = () => {
+		if (!confirming) return;
+		if (removingLocal) removeCustom.mutate(confirming);
+		else removeYouTube.mutate(confirming);
+		setConfirming(null);
+	};
 
 	const tabs: { id: Tab; label: string; icon: IconType }[] = [
 		{ id: "playlists", label: "Playlists", icon: ListMusic },
@@ -191,6 +199,14 @@ export function MainPage() {
 					queryClient.invalidateQueries({ queryKey: ["playlists"] });
 					setLocation(`/playlist/${playlist.id}`);
 				}}
+			/>
+
+			<ConfirmModal
+				open={!!confirming}
+				danger={removingLocal}
+				pending={removeCustom.isPending || removeYouTube.isPending}
+				close={() => setConfirming(null)}
+				onConfirm={confirmRemove}
 			/>
 		</DefaultLayout>
 	);
