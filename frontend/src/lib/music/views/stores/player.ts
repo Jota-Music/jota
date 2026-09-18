@@ -174,6 +174,14 @@ export function isQueue(songs: Song[]) {
 	return sameQueue(queue.value, songs);
 }
 
+// A header play control starts the whole list unless that exact queue is already
+// loaded. Membership alone would no-op on a cold start, when the queue is
+// restored from storage but no track is loaded.
+export function playList(songs: Song[]) {
+	if (isQueue(songs) && currentSong.value) return toggleSong();
+	return playAll(songs);
+}
+
 export function enqueueMany(songs: Song[]) {
 	if (songs.length === 0) return;
 

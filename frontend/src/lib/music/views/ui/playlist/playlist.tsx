@@ -15,7 +15,7 @@ import {
 import { move } from "@/lib/music/app/reorder";
 import type { Playlist, Song } from "@/lib/music/model";
 import { isPlaying } from "@/lib/music/views/stores/audio";
-import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
+import { isQueue, playList } from "@/lib/music/views/stores/player";
 import { expireRemoval, stageRemoval } from "@/lib/music/views/stores/removal";
 import {
 	clearSelection,
@@ -243,11 +243,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				link={
 					data?.owner ? { to: `/${data.owner}`, label: data.owner } : undefined
 				}
-				onPlay={
-					playable.length > 0
-						? () => void (isQueue(playable) ? toggleSong() : playAll(playable))
-						: undefined
-				}
+				onPlay={playable.length > 0 ? () => void playList(playable) : undefined}
 				playing={isQueue(playable) && isPlaying.value}
 				actions={
 					<TrackActions

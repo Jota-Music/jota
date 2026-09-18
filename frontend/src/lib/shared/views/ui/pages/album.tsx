@@ -6,7 +6,7 @@ import { useParams } from "wouter-preact";
 import { getAlbumTracks } from "@/lib/music/app/get-album";
 import type { Song } from "@/lib/music/model";
 import { isPlaying } from "@/lib/music/views/stores/audio";
-import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
+import { isQueue, playList } from "@/lib/music/views/stores/player";
 import { selectAll } from "@/lib/music/views/stores/selection";
 import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
@@ -40,11 +40,7 @@ export function AlbumPage() {
 					title={albumName}
 					subtitle={t("music.trackCount", { count: tracks.length })}
 					link={link}
-					onPlay={
-						tracks.length > 0
-							? () => void (isQueue(tracks) ? toggleSong() : playAll(tracks))
-							: undefined
-					}
+					onPlay={tracks.length > 0 ? () => void playList(tracks) : undefined}
 					playing={isQueue(tracks) && isPlaying.value}
 					actions={<TrackActions songs={tracks} onSelectAll={selectAll} />}
 				/>

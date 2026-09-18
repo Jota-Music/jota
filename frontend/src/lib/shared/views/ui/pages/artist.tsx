@@ -8,7 +8,7 @@ import { useParams } from "wouter-preact";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import type { AlbumSummary, Song } from "@/lib/music/model";
 import { isPlaying } from "@/lib/music/views/stores/audio";
-import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
+import { isQueue, playList } from "@/lib/music/views/stores/player";
 import { clearSelection, selectAll } from "@/lib/music/views/stores/selection";
 import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
@@ -115,7 +115,7 @@ export function ArtistPage() {
 					title={data?.name ?? t("pages.artist.defaultName")}
 					onPlay={
 						activeTab === "tracks" && tracks.length > 0
-							? () => void (isQueue(tracks) ? toggleSong() : playAll(tracks))
+							? () => void playList(tracks)
 							: undefined
 					}
 					playing={activeTab === "tracks" && isQueue(tracks) && isPlaying.value}
