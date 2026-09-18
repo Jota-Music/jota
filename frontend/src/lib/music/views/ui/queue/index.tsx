@@ -262,6 +262,7 @@ function Queue() {
 	const source = useRef<number | null>(null);
 
 	const { start, captureClick } = usePointerDrag({
+		scroll: ref,
 		begin: () => {
 			if (source.current == null) return;
 			dragFrom.value = source.current;

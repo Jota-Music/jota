@@ -205,6 +205,7 @@ export function Shelf({
 	const source = useRef<string | null>(null);
 
 	const { start, captureClick } = usePointerDrag({
+		scroll: listRef,
 		begin: () => {
 			if (source.current == null) return;
 			dragFrom.value = source.current;

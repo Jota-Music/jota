@@ -193,6 +193,7 @@ export function Virtualization({ songs, onRemove, onReorder }: Props) {
 	};
 
 	const { start, captureClick } = usePointerDrag({
+		scroll: ref,
 		begin: () => {
 			if (source.current == null) return;
 			dragFrom.value = source.current;
