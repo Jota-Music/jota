@@ -184,9 +184,15 @@ export function enqueueMany(songs: Song[]) {
 			: q.length;
 	q.splice(at, 0, ...songs);
 	queue.value = q;
-	if (currentIndex.value < 0) currentIndex.value = 0;
 	persistQueue();
 	pingQueue();
+
+	if (currentSong.value === null) {
+		void playAtIndex(at);
+		return;
+	}
+
+	if (currentIndex.value < 0) currentIndex.value = 0;
 	preloadUpcomingSongs(q, currentIndex.value);
 }
 
