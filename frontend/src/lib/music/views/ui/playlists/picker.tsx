@@ -7,6 +7,7 @@ import {
 	getPlaylists,
 } from "@/lib/music/app/playlists";
 import type { Song } from "@/lib/music/model";
+import { expireRemoval } from "@/lib/music/views/stores/removal";
 import {
 	clearSelection,
 	closePicker,
@@ -59,10 +60,13 @@ export function PlaylistPicker() {
 			for (const id of ids) {
 				await addSongsToPlaylist(id, refs);
 			}
+
+			return [...ids];
 		},
-		onSuccess: () => {
+		onSuccess: (ids) => {
 			queryClient.invalidateQueries({ queryKey: ["playlists"] });
 			queryClient.invalidateQueries({ queryKey: ["playlist"] });
+			ids.forEach(expireRemoval);
 			clearSelection();
 			close();
 		},

@@ -12,6 +12,7 @@ import {
 	getYouTubePlaylists,
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
+import { expireRemoval } from "@/lib/music/views/stores/removal";
 import { CreatePlaylistModal } from "@/lib/music/views/ui/playlists/create";
 import {
 	type IconType,
@@ -80,7 +81,10 @@ export function MainPage() {
 
 	const removeCustom = useMutation({
 		mutationFn: deletePlaylist,
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["playlists"] }),
+		onSuccess: (_data, id) => {
+			queryClient.invalidateQueries({ queryKey: ["playlists"] });
+			expireRemoval(id);
+		},
 		onError: (error) => addError(error, "playlist"),
 	});
 

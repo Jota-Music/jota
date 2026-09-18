@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/preact-query";
 import { System } from "@wailsio/runtime";
 import {
 	ArrowLeft,
@@ -6,12 +7,14 @@ import {
 	Search,
 	Settings,
 	Turntable,
+	Undo2,
 	X,
 } from "lucide-preact";
 import { useCallback, useEffect, useState } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
+import { removal, undoRemoval } from "@/lib/music/views/stores/removal";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
@@ -46,6 +49,7 @@ function loadType(): SpotifyType {
 
 export function Header() {
 	const [location, setLocation] = useLocation();
+	const queryClient = useQueryClient();
 	const desktop = System.IsDesktop();
 	const [openSearch, setOpenSearch] = useState(false);
 	const [searchDraft, setSearchDraft] = useState("");
@@ -150,6 +154,18 @@ export function Header() {
 					>
 						<Settings class="size-5 md:size-4" />
 					</Link>
+
+					{removal.value && (
+						<button
+							type="button"
+							title={t("music.custom.undo")}
+							aria-label={t("music.custom.undo")}
+							onClick={() => void undoRemoval(queryClient)}
+							class="flex aspect-square h-full items-center justify-center cursor-pointer text-zinc-400 transition-colors hover:text-zinc-100"
+						>
+							<Undo2 class="size-5 md:size-4" />
+						</button>
+					)}
 				</div>
 
 				<div class="flex items-center gap-3">

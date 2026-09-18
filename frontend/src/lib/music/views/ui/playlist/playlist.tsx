@@ -16,7 +16,12 @@ import { move } from "@/lib/music/app/reorder";
 import type { Playlist, Song } from "@/lib/music/model";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
-import { selectAll, selectedSongs } from "@/lib/music/views/stores/selection";
+import { expireRemoval, stageRemoval } from "@/lib/music/views/stores/removal";
+import {
+	clearSelection,
+	selectAll,
+	selectedSongs,
+} from "@/lib/music/views/stores/selection";
 import SelectionBar from "@/lib/music/views/ui/components/selection-bar";
 import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
@@ -140,14 +145,24 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	const confirmRemove = () => {
 		if (!removing) return;
+		const order = (data?.songs ?? []).map((song) => song.id);
 		for (const song of removing) removeSong.mutate(song.id);
+		clearSelection();
+		stageRemoval({
+			playlistId: id,
+			refs: removing.map((song) => song.id),
+			order,
+		});
 		setRemoving(null);
 	};
 
 	const reorder = useMutation({
 		mutationFn: (refs: string[]) => reorderPlaylist(id, refs),
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["playlist", id] }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["playlist", id] });
+			queryClient.invalidateQueries({ queryKey: ["playlists"] });
+			expireRemoval(id);
+		},
 		onError: (error) => addError(error, "playlist"),
 	});
 
@@ -234,7 +249,23 @@ export default function PlaylistPlain({ id }: { id: string }) {
 						: undefined
 				}
 				playing={isQueue(playable) && isPlaying.value}
-				actions={<TrackActions songs={songs} onSelectAll={selectAll} />}
+				actions={
+					<TrackActions
+						songs={songs}
+						onSelectAll={selectAll}
+						removable={custom}
+						onRemove={
+							custom
+								? () =>
+										setRemoving(
+											selectedSongs.value.length > 0
+												? selectedSongs.value
+												: songs,
+										)
+								: undefined
+						}
+					/>
+				}
 			/>
 
 			{selectedSongs.value.length > 1 ? (

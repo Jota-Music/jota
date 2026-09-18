@@ -256,7 +256,8 @@
 			"select": "Select",
 			"deselect": "Deselect",
 			"deselectAll": "Deselect all",
-			"noPlaylists": "No playlists yet. Create one below."
+			"noPlaylists": "No playlists yet. Create one below.",
+			"undo": "Undo"
 		}
 	},
 	"sync": {
