@@ -194,6 +194,7 @@
 			"searchPlaceholder": "Buscar canciones o artistas...",
 			"clearSearch": "Limpiar búsqueda",
 			"orderBy": "Ordenar por",
+			"refresh": "Actualizar",
 			"order": {
 				"added": "Más antiguas",
 				"reverse": "Más recientes",

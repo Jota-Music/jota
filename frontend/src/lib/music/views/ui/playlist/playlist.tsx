@@ -237,6 +237,8 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				{/* refresh */}
 				<button
 					type="button"
+					title={t("music.playlist.refresh")}
+					aria-label={t("music.playlist.refresh")}
 					onClick={handleRefresh}
 					disabled={refreshing}
 					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"

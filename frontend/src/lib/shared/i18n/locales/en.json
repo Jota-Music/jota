@@ -194,6 +194,7 @@
 			"searchPlaceholder": "Search songs or artists...",
 			"clearSearch": "Clear search",
 			"orderBy": "Order by",
+			"refresh": "Refresh",
 			"order": {
 				"added": "Oldest",
 				"reverse": "Newest",
