@@ -202,5 +202,3 @@ export function SearchPage() {
 		</DefaultLayout>
 	);
 }
-
-export default SearchPage;

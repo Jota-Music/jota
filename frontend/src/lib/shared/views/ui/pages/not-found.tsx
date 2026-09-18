@@ -17,5 +17,3 @@ export function NotFoundPage() {
 		</DefaultLayout>
 	);
 }
-
-export default NotFoundPage;

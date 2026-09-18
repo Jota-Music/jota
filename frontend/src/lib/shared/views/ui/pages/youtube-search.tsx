@@ -358,5 +358,3 @@ function YouTubeVideoItem({
 		</div>
 	);
 }
-
-export default YouTubeSearchPage;

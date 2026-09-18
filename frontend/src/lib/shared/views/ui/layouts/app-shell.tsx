@@ -79,5 +79,3 @@ export function AppShell({
 		</OverlayHost.Provider>
 	);
 }
-
-export default AppShell;

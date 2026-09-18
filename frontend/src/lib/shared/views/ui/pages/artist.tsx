@@ -208,5 +208,3 @@ export function ArtistPage() {
 		</DefaultLayout>
 	);
 }
-
-export default ArtistPage;

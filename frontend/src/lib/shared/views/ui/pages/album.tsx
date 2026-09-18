@@ -66,5 +66,3 @@ export function AlbumPage() {
 		</DefaultLayout>
 	);
 }
-
-export default AlbumPage;

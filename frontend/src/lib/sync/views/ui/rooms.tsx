@@ -349,5 +349,3 @@ export function RoomsShelf() {
 		/>
 	);
 }
-
-export default RoomsShelf;

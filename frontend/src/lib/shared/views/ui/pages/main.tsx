@@ -211,5 +211,3 @@ export function MainPage() {
 		</DefaultLayout>
 	);
 }
-
-export default MainPage;
