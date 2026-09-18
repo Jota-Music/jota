@@ -233,12 +233,15 @@ func roomStatusURL(raw string, room string) (string, error) {
 	return u.String(), nil
 }
 
-// RoomStatus is a saved room's live state as reported by the relay.
+// RoomStatus is a saved room's live state as reported by the relay. State is the
+// relay's cached now-playing playback (a Playback object), absent when the room
+// has none or the relay predates the field.
 type RoomStatus struct {
-	Active  bool `json:"active"`
-	Members int  `json:"members"`
-	HasHost bool `json:"hasHost"`
-	Locked  bool `json:"locked"`
+	Active  bool            `json:"active"`
+	Members int             `json:"members"`
+	HasHost bool            `json:"hasHost"`
+	Locked  bool            `json:"locked"`
+	State   json.RawMessage `json:"state,omitempty"`
 }
 
 // RoomStatus asks whether a room is live and how many members it has. It never

@@ -1,8 +1,15 @@
 import { ListRooms, RemoveRoom, SaveRoom, SyncRoomStatus } from "@bindings/app";
 import type { Room } from "@models/services/rooms/models";
-import type { RoomStatus } from "@models/services/sync/models";
+import type { RoomStatus as GeneratedRoomStatus } from "@models/services/sync/models";
+import type { Playback } from "@/lib/sync/model";
 
-export type { Room, RoomStatus };
+export type { Room };
+
+// The generated RoomStatus carries the relay's cached playback as a raw JSON
+// value; the app consumes it as a Playback.
+export type RoomStatus = Omit<GeneratedRoomStatus, "state"> & {
+	state?: Playback;
+};
 
 export async function listRooms(): Promise<Room[]> {
 	return (await ListRooms()) ?? [];
