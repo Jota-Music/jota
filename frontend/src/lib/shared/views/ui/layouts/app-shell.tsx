@@ -2,6 +2,7 @@ import type { ComponentChildren } from "preact";
 import { useRef } from "preact/hooks";
 import { SignInPrompt } from "@/lib/auth/views/ui/sign-in-prompt";
 import { Welcome } from "@/lib/auth/views/ui/welcome";
+import YoutubeEditor from "@/lib/music/views/ui/components/youtube-editor";
 import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
 import { SelectionBar } from "@/lib/music/views/ui/playlists/selection-bar";
 import Queue from "@/lib/music/views/ui/queue";
@@ -52,6 +53,7 @@ export function AppShell({
 					<Queue />
 					<SelectionBar />
 					<PlaylistPicker />
+					<YoutubeEditor />
 					<SyncPanel />
 					<Welcome />
 				</div>

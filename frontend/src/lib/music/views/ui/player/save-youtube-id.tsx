@@ -1,145 +1,30 @@
-import { useSignal } from "@preact/signals";
-import { Check, Edit2 } from "lucide-preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-import { getYouTubeId, updateYoutubeId } from "@/lib/music/app/get-audio";
+import { Edit2 } from "lucide-preact";
 import type { Song } from "@/lib/music/model";
-import { currentSong, setYoutube } from "@/lib/music/views/stores/audio";
-import { AudioCache } from "@/lib/music/views/stores/cache";
-import { reloadCurrent } from "@/lib/music/views/stores/player";
+import { openYoutubeEditor } from "@/lib/music/views/stores/youtube-editor";
 import { t } from "@/lib/shared/i18n";
-import { Modal } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
-export default function SaveYoutubeId({
-	song,
-	compact = false,
-}: {
-	song: Song;
-	compact?: boolean;
-}) {
-	const [open, setOpen] = useState(false);
-	const youtubeId = useSignal(song.youtubeId ?? "");
-	const $input = useRef<HTMLInputElement>(null);
-
-	const start = async () => {
-		youtubeId.value = song.youtubeId ?? (await getYouTubeId(song.id));
-		setOpen(true);
-	};
-
-	useEffect(() => {
-		if (open) {
-			$input.current?.focus({ preventScroll: true });
-			$input.current?.select();
-		}
-	}, [open]);
-
-	async function handlSubmit(e: Event) {
-		e.preventDefault();
-		const formData = new FormData(e.target as HTMLFormElement);
-		const youtube = formData.get("youtube") as string;
-
-		if (song.youtubeId === youtube) {
-			setOpen(false);
-			return;
-		}
-
-		await updateYoutubeId(song.id, youtube);
-		setYoutube(song, youtube);
-		youtubeId.value = youtube;
-		AudioCache.remove(song.id);
-
-		if (currentSong.value?.id === song.id) {
-			await reloadCurrent();
-		}
-
-		setOpen(false);
-	}
-
+export default function SaveYoutubeId({ song }: { song: Song }) {
 	return (
-		<>
-			{compact ? (
-				<button
-					type="button"
-					title={
-						song.youtubeId
-							? t("music.youtubeId.editWithId", { id: song.youtubeId })
-							: t("music.youtubeId.add")
-					}
-					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-amber-300"
-					onClick={(e) => {
-						e.stopPropagation();
-						start();
-					}}
+		<button
+			type="button"
+			class="group mt-2 flex h-8 items-center gap-2"
+			onClick={() => openYoutubeEditor(song)}
+		>
+			<YoutubeIcon class="size-4 text-white/20" />
+			<span class="flex flex-1 items-center gap-2 truncate text-xs text-white opacity-50">
+				<span class="rounded bg-white/10 px-1.5 py-0.5 font-mono">
+					{song.youtubeId || "..."}
+				</span>
+			</span>
+			{song.youtubeId && (
+				<span
+					class="cursor-pointer rounded p-1 opacity-0 transition hover:brightness-200 group-hover:opacity-100"
+					title={t("music.youtubeId.edit")}
 				>
-					<YoutubeIcon class="size-4" />
-				</button>
-			) : (
-				<button
-					type="button"
-					class="group mt-2 flex h-8 items-center gap-2"
-					onClick={start}
-				>
-					<YoutubeIcon class="size-4 text-white/20" />
-					<span class="flex flex-1 items-center gap-2 truncate text-xs text-white opacity-50">
-						<span class="rounded bg-white/10 px-1.5 py-0.5 font-mono">
-							{song.youtubeId || "..."}
-						</span>
-					</span>
-					{song.youtubeId && (
-						<span
-							class="cursor-pointer rounded p-1 opacity-0 transition hover:brightness-200 group-hover:opacity-100"
-							title={t("music.youtubeId.edit")}
-						>
-							<Edit2 class="size-4" />
-						</span>
-					)}
-				</button>
+					<Edit2 class="size-4" />
+				</span>
 			)}
-
-			<Modal
-				open={open}
-				close={() => setOpen(false)}
-				labelledBy="youtube-id-title"
-				closeLabel={t("music.youtubeId.close")}
-			>
-				<form class="flex flex-col gap-4 p-5" onSubmit={handlSubmit}>
-					<div class="flex flex-col gap-1">
-						<h2 id="youtube-id-title" class="text-sm font-semibold text-white">
-							{t("music.youtubeId.title")}
-						</h2>
-						<p class="truncate text-xs text-zinc-500">{song.name}</p>
-						<p class="text-balance text-xs text-zinc-500">
-							{t("music.youtubeId.hint")}
-						</p>
-					</div>
-
-					<input
-						ref={$input}
-						type="text"
-						value={youtubeId.value}
-						name="youtube"
-						placeholder={t("music.youtubeId.placeholder")}
-						class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
-						onInput={(e) => {
-							youtubeId.value = (e.target as HTMLInputElement).value;
-						}}
-						onKeyDown={(e) => {
-							if (e.key === "Escape") {
-								setOpen(false);
-							}
-						}}
-					/>
-
-					<button
-						type="submit"
-						title={t("music.youtubeId.save")}
-						aria-label={t("music.youtubeId.save")}
-						class="cursor-pointer self-end rounded-md p-2 text-white transition hover:bg-zinc-700"
-					>
-						<Check class="size-4" />
-					</button>
-				</form>
-			</Modal>
-		</>
+		</button>
 	);
 }

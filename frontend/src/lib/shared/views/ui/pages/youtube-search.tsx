@@ -20,8 +20,7 @@ import {
 	selectedSongs,
 	selectionActive,
 } from "@/lib/music/views/stores/selection";
-import Enqueue from "@/lib/music/views/ui/components/enqueue";
-import AddToPlaylist from "@/lib/music/views/ui/playlists/add-button";
+import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
@@ -342,8 +341,7 @@ function YouTubeVideoItem({
 				</div>
 			</button>
 
-			<AddToPlaylist song={song} />
-			<Enqueue song={song} title={t("pages.youtube.addQueue")} />
+			<TrackActions song={song} />
 		</div>
 	);
 }

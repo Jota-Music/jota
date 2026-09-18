@@ -203,6 +203,8 @@
 			}
 		},
 		"track": {
+			"actions": "More actions",
+			"addQueue": "Add to queue",
 			"enqueueAfter": "Enqueue after current track",
 			"noSongs": "No songs",
 			"broken": "This song is no longer available at its source.",

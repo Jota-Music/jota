@@ -1,5 +1,5 @@
 import { computed, signal } from "@preact/signals";
-import { Check, GripVertical, Trash2, TriangleAlert } from "lucide-preact";
+import { Check, GripVertical, TriangleAlert } from "lucide-preact";
 import { memo } from "preact/compat";
 import { useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
@@ -15,10 +15,8 @@ import {
 	selectedSongs,
 	selectionActive,
 } from "@/lib/music/views/stores/selection";
-import Enqueue from "@/lib/music/views/ui/components/enqueue";
+import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import TrackArt from "@/lib/music/views/ui/components/track-art";
-import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
-import AddToPlaylist from "@/lib/music/views/ui/playlists/add-button";
 import { t } from "@/lib/shared/i18n";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
@@ -163,24 +161,8 @@ function PlaylistRow({
 			</div>
 
 			<div class="flex shrink-0 items-center gap-2">
-				{!broken && <SaveYoutubeId song={song} compact />}
-				{!broken && <AddToPlaylist song={song} />}
 				{!broken && (
-					<Enqueue song={song} title={t("music.track.enqueueAfter")} />
-				)}
-				{removable && (
-					<button
-						type="button"
-						title={t("music.custom.removeSong")}
-						aria-label={t("music.custom.removeSong")}
-						onClick={(e) => {
-							e.stopPropagation();
-							onRemove?.(song);
-						}}
-						class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-500 transition hover:bg-red-950/50 hover:text-red-300"
-					>
-						<Trash2 size={17} />
-					</button>
+					<TrackActions song={song} removable={removable} onRemove={onRemove} />
 				)}
 				<div className="tabular-nums text-xs text-zinc-500">
 					{secondsToTime(song.duration)}

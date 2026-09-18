@@ -203,6 +203,8 @@
 			}
 		},
 		"track": {
+			"actions": "Más acciones",
+			"addQueue": "Añadir a la cola",
 			"enqueueAfter": "Encolar tras la canción actual",
 			"noSongs": "Sin canciones",
 			"broken": "Esta canción ya no está disponible en su origen.",
