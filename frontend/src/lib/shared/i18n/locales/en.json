@@ -103,8 +103,7 @@
 			"noResults": "No results found.",
 			"noPlaylists": "No playlists found.",
 			"addHome": "Add to home",
-			"removeHome": "Remove from home",
-			"addQueue": "Add to queue"
+			"removeHome": "Remove from home"
 		},
 		"notFound": {
 			"title": "404 — Page not found",
@@ -208,7 +207,6 @@
 		"track": {
 			"actions": "More actions",
 			"addQueue": "Add to queue",
-			"enqueueAfter": "Enqueue after current track",
 			"noSongs": "No songs",
 			"broken": "This song is no longer available at its source.",
 			"brokenLabel": "Unavailable"
@@ -232,7 +230,6 @@
 			"placeholder": "e.g. dQw4w9WgXcQ",
 			"add": "Add YouTube ID",
 			"edit": "Edit YouTube ID",
-			"editWithId": "Edit YouTube ID ({id})",
 			"save": "Save",
 			"close": "Close YouTube ID editor"
 		},
@@ -247,12 +244,10 @@
 			"tab": "My playlists",
 			"create": "New playlist",
 			"namePlaceholder": "Playlist name",
-			"delete": "Delete playlist",
 			"removeSong": "Remove from playlist",
 			"empty": "No playlists yet. Create one and add songs to it.",
 			"addTo": "Add to playlist",
 			"pickerTitle": "Add to playlist",
-			"newPlaylist": "New playlist",
 			"submit": "Create",
 			"add": "Add",
 			"selected": "{count} selected",
@@ -261,10 +256,7 @@
 			"select": "Select",
 			"deselect": "Deselect",
 			"deselectAll": "Deselect all",
-			"added": "Added to {count} playlist(s)",
-			"failed": "Could not add: {error}",
-			"noPlaylists": "No playlists yet. Create one below.",
-			"created": "Playlist created"
+			"noPlaylists": "No playlists yet. Create one below."
 		}
 	},
 	"sync": {

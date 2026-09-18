@@ -103,8 +103,7 @@
 			"noResults": "Sin resultados.",
 			"noPlaylists": "No se encontraron listas.",
 			"addHome": "Añadir a inicio",
-			"removeHome": "Quitar de inicio",
-			"addQueue": "Añadir a la cola"
+			"removeHome": "Quitar de inicio"
 		},
 		"notFound": {
 			"title": "404 — Página no encontrada",
@@ -208,7 +207,6 @@
 		"track": {
 			"actions": "Más acciones",
 			"addQueue": "Añadir a la cola",
-			"enqueueAfter": "Encolar tras la canción actual",
 			"noSongs": "Sin canciones",
 			"broken": "Esta canción ya no está disponible en su origen.",
 			"brokenLabel": "No disponible"
@@ -232,7 +230,6 @@
 			"placeholder": "p. ej. dQw4w9WgXcQ",
 			"add": "Añadir ID de YouTube",
 			"edit": "Editar ID de YouTube",
-			"editWithId": "Editar ID de YouTube ({id})",
 			"save": "Guardar",
 			"close": "Cerrar el editor de ID de YouTube"
 		},
@@ -247,12 +244,10 @@
 			"tab": "Mis playlists",
 			"create": "Nueva playlist",
 			"namePlaceholder": "Nombre de la playlist",
-			"delete": "Eliminar playlist",
 			"removeSong": "Quitar de la playlist",
 			"empty": "Aún no hay playlists. Crea una y añade canciones.",
 			"addTo": "Añadir a playlist",
 			"pickerTitle": "Añadir a playlist",
-			"newPlaylist": "Nueva playlist",
 			"submit": "Crear",
 			"add": "Añadir",
 			"selected": "{count} seleccionadas",
@@ -261,10 +256,7 @@
 			"select": "Seleccionar",
 			"deselect": "Deseleccionar",
 			"deselectAll": "Deseleccionar todo",
-			"added": "Añadida a {count} playlist(s)",
-			"failed": "No se pudo añadir: {error}",
-			"noPlaylists": "Aún no hay playlists. Crea una abajo.",
-			"created": "Playlist creada"
+			"noPlaylists": "Aún no hay playlists. Crea una abajo."
 		}
 	},
 	"sync": {
