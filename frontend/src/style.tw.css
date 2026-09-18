@@ -2,20 +2,6 @@
 @import "tailwindcss";
 
 @theme {
-	/* Primary scale */
-	--color-primary-50: #fff1f3;
-	--color-primary-100: #ffe4e8;
-	--color-primary-200: #ffc9d2;
-	--color-primary-300: #ff9fb0;
-	--color-primary-400: #ff5f7a;
-	--color-primary-500: #ff2d55;
-	--color-primary: var(--color-primary-500);
-	--color-primary-600: #e61f46;
-	--color-primary-700: #c2183a;
-	--color-primary-800: #9d1430;
-	--color-primary-900: #6e0e21;
-	--color-primary-950: #3b0711;
-
 	/* Player accent until cover analysis sets inline vars (brand pink, matches
 	   the app icon). Black text keeps contrast on this light accent. */
 	--dominant-color: #ff6dd6;
