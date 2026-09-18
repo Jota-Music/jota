@@ -204,7 +204,9 @@
 		},
 		"track": {
 			"enqueueAfter": "Enqueue after current track",
-			"noSongs": "No songs"
+			"noSongs": "No songs",
+			"broken": "This song is no longer available at its source.",
+			"brokenLabel": "Unavailable"
 		},
 		"player": {
 			"enableShuffle": "Enable shuffle",
@@ -235,6 +237,25 @@
 		},
 		"following": {
 			"empty": "No friends or followed accounts yet. Open a user profile and tap the heart to follow it."
+		},
+		"custom": {
+			"tab": "My playlists",
+			"create": "New playlist",
+			"namePlaceholder": "Playlist name",
+			"delete": "Delete playlist",
+			"removeSong": "Remove from playlist",
+			"empty": "No playlists yet. Create one and add songs to it.",
+			"addTo": "Add to playlist",
+			"pickerTitle": "Add to playlist",
+			"newPlaylist": "New playlist",
+			"submit": "Create",
+			"add": "Add",
+			"selected": "{count} selected",
+			"clear": "Clear selection",
+			"added": "Added to {count} playlist(s)",
+			"failed": "Could not add: {error}",
+			"noPlaylists": "No playlists yet. Create one below.",
+			"created": "Playlist created"
 		}
 	},
 	"sync": {

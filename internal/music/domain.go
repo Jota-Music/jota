@@ -1,6 +1,9 @@
 package music
 
-const YouTubePrefix = "youtube:"
+const (
+	YouTubePrefix = "youtube:"
+	LocalPrefix   = "local:"
+)
 
 type Song struct {
 	Id        string   `json:"id"`
@@ -11,6 +14,8 @@ type Song struct {
 	Album     Album    `json:"album"`
 	Artists   []Artist `json:"artists"`
 	YoutubeId string   `json:"youtubeId,omitempty"`
+	// Broken marks a stored reference that no longer resolves at its source.
+	Broken bool `json:"broken,omitempty"`
 }
 
 type Share struct {

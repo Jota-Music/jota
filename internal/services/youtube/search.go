@@ -94,6 +94,18 @@ func videoIdFromQuery(query string) (string, bool) {
 }
 
 func fetchVideo(id string) (Video, error) {
+	pr, err := fetchPlayer(id)
+	if err != nil {
+		return Video{}, err
+	}
+	if pr.VideoDetails.Title == "" {
+		return Video{}, errors.New("video unavailable")
+	}
+
+	return Video{ID: id, Title: pr.VideoDetails.Title}, nil
+}
+
+func fetchPlayer(id string) (playerResponse, error) {
 	payload := map[string]any{
 		"videoId":        id,
 		"context":        map[string]any{"client": clientContext(preferredClient)},
@@ -103,18 +115,14 @@ func fetchVideo(id string) (Video, error) {
 
 	data, err := retryRequest(preferredClient, "https://www.youtube.com/youtubei/v1/player", payload, 3)
 	if err != nil {
-		return Video{}, fmt.Errorf("player request failed: %w", err)
+		return playerResponse{}, fmt.Errorf("player request failed: %w", err)
 	}
 
 	var pr playerResponse
 	if err := json.Unmarshal(data, &pr); err != nil {
-		return Video{}, fmt.Errorf("invalid JSON: %w", err)
+		return playerResponse{}, fmt.Errorf("invalid JSON: %w", err)
 	}
-	if pr.VideoDetails.Title == "" {
-		return Video{}, errors.New("video unavailable")
-	}
-
-	return Video{ID: id, Title: pr.VideoDetails.Title}, nil
+	return pr, nil
 }
 
 // playlistFilter is the innertube search params that restricts results to playlists.

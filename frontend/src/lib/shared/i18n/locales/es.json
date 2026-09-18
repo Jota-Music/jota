@@ -204,7 +204,9 @@
 		},
 		"track": {
 			"enqueueAfter": "Encolar tras la canción actual",
-			"noSongs": "Sin canciones"
+			"noSongs": "Sin canciones",
+			"broken": "Esta canción ya no está disponible en su origen.",
+			"brokenLabel": "No disponible"
 		},
 		"player": {
 			"enableShuffle": "Activar aleatorio",
@@ -235,6 +237,25 @@
 		},
 		"following": {
 			"empty": "Aún no hay amigos ni cuentas seguidas. Abre el perfil de un usuario y toca el corazón para seguirlo."
+		},
+		"custom": {
+			"tab": "Mis playlists",
+			"create": "Nueva playlist",
+			"namePlaceholder": "Nombre de la playlist",
+			"delete": "Eliminar playlist",
+			"removeSong": "Quitar de la playlist",
+			"empty": "Aún no hay playlists. Crea una y añade canciones.",
+			"addTo": "Añadir a playlist",
+			"pickerTitle": "Añadir a playlist",
+			"newPlaylist": "Nueva playlist",
+			"submit": "Crear",
+			"add": "Añadir",
+			"selected": "{count} seleccionadas",
+			"clear": "Limpiar selección",
+			"added": "Añadida a {count} playlist(s)",
+			"failed": "No se pudo añadir: {error}",
+			"noPlaylists": "Aún no hay playlists. Crea una abajo.",
+			"created": "Playlist creada"
 		}
 	},
 	"sync": {

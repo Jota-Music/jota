@@ -25,6 +25,10 @@ import * as youtube$0 from "../services/youtube/models.js";
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
+export function AddSongsToPlaylist(id: string, refs: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(2712034592, id, refs);
+}
+
 export function AddYouTubePlaylist(id: string): $CancellablePromise<music$0.PlaylistSummary> {
     return $Call.ByID(2929125534, id);
 }
@@ -35,6 +39,14 @@ export function CheckUpdate(): $CancellablePromise<update$0.Info> {
 
 export function ClearYouTubeCookies(): $CancellablePromise<void> {
     return $Call.ByID(438744125);
+}
+
+export function CreatePlaylist(name: string): $CancellablePromise<music$0.PlaylistSummary> {
+    return $Call.ByID(3765195898, name);
+}
+
+export function DeletePlaylist(id: string): $CancellablePromise<void> {
+    return $Call.ByID(1312524061, id);
 }
 
 export function FollowUser(account: string, user: string): $CancellablePromise<void> {
@@ -71,6 +83,10 @@ export function GetFullPlaylist(id: string): $CancellablePromise<music$0.Playlis
 
 export function GetPlaylistOrder(account: string): $CancellablePromise<string[] | null> {
     return $Call.ByID(104727978, account);
+}
+
+export function GetPlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
+    return $Call.ByID(2776985747);
 }
 
 export function GetUserPlaylists(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
@@ -135,8 +151,16 @@ export function RemoveRoom(id: string): $CancellablePromise<rooms$0.Room[] | nul
     return $Call.ByID(1937239451, id);
 }
 
+export function RemoveSongFromPlaylist(id: string, ref: string): $CancellablePromise<void> {
+    return $Call.ByID(4016821159, id, ref);
+}
+
 export function RemoveYouTubePlaylist(id: string): $CancellablePromise<void> {
     return $Call.ByID(2138005495, id);
+}
+
+export function ReorderPlaylist(id: string, refs: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(793586653, id, refs);
 }
 
 export function ResolveAudio(song: music$0.Song): $CancellablePromise<music$0.Audio> {

@@ -1,5 +1,5 @@
 import { effect, signal } from "@preact/signals";
-import { useQuery } from "@tanstack/preact-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import {
@@ -7,11 +7,18 @@ import {
 	revalidateFullPlaylist,
 } from "@/lib/music/app/get-playlist";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
+import {
+	isCustom,
+	removeSongFromPlaylist,
+	reorderPlaylist,
+} from "@/lib/music/app/playlists";
+import { move } from "@/lib/music/app/reorder";
 import type { Playlist, Song } from "@/lib/music/model";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { isQueue, playAll, toggleSong } from "@/lib/music/views/stores/player";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { t } from "@/lib/shared/i18n";
+import { addError } from "@/lib/shared/views/stores/errors";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
 const storageKey = "playlist_filters";
@@ -103,6 +110,8 @@ effect(() => {
 
 export default function PlaylistPlain({ id }: { id: string }) {
 	const [refreshing, setRefreshing] = useState(false);
+	const queryClient = useQueryClient();
+	const custom = isCustom(id);
 
 	useEffect(() => {
 		search.value = "";
@@ -111,6 +120,20 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	const { data, isLoading, isError, refetch } = useQuery<Playlist>({
 		queryKey: ["playlist", id],
 		queryFn: () => getFullPlaylist(id),
+	});
+
+	const removeSong = useMutation({
+		mutationFn: (ref: string) => removeSongFromPlaylist(id, ref),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: ["playlist", id] }),
+		onError: (error) => addError(error, "playlist"),
+	});
+
+	const reorder = useMutation({
+		mutationFn: (refs: string[]) => reorderPlaylist(id, refs),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: ["playlist", id] }),
+		onError: (error) => addError(error, "playlist"),
 	});
 
 	async function handleRefresh() {
@@ -142,6 +165,22 @@ export default function PlaylistPlain({ id }: { id: string }) {
 					);
 				});
 	const filteredSongs = sortSongs(base, order.value);
+	const playable = filteredSongs.filter((song) => !song.broken);
+	const canReorder =
+		custom && query.length === 0 && order.value === "added" && songs.length > 1;
+
+	const handleReorder = (from: number, to: number) => {
+		const fromSong = songs[from];
+		const toSong = songs[to];
+		if (!fromSong || !toSong) return;
+		reorder.mutate(
+			move(
+				songs.map((song) => song.id),
+				fromSong.id,
+				toSong.id,
+			),
+		);
+	};
 
 	if (isError) {
 		return (
@@ -169,14 +208,11 @@ export default function PlaylistPlain({ id }: { id: string }) {
 					data?.owner ? { to: `/${data.owner}`, label: data.owner } : undefined
 				}
 				onPlay={
-					filteredSongs.length > 0
-						? () =>
-								void (isQueue(filteredSongs)
-									? toggleSong()
-									: playAll(filteredSongs))
+					playable.length > 0
+						? () => void (isQueue(playable) ? toggleSong() : playAll(playable))
 						: undefined
 				}
-				playing={isQueue(filteredSongs) && isPlaying.value}
+				playing={isQueue(playable) && isPlaying.value}
 			/>
 
 			<div className="grid grid-cols-[1fr_auto_auto] gap-2">
@@ -235,16 +271,18 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				</div>
 
 				{/* refresh */}
-				<button
-					type="button"
-					title={t("music.playlist.refresh")}
-					aria-label={t("music.playlist.refresh")}
-					onClick={handleRefresh}
-					disabled={refreshing}
-					className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
-				>
-					<RefreshCw size={16} class={refreshing ? "animate-spin" : ""} />
-				</button>
+				{!custom && (
+					<button
+						type="button"
+						title={t("music.playlist.refresh")}
+						aria-label={t("music.playlist.refresh")}
+						onClick={handleRefresh}
+						disabled={refreshing}
+						className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
+					>
+						<RefreshCw size={16} class={refreshing ? "animate-spin" : ""} />
+					</button>
+				)}
 			</div>
 
 			{isLoading ? (
@@ -252,7 +290,11 @@ export default function PlaylistPlain({ id }: { id: string }) {
 					<Loader size={40} class="animate-spin" />
 				</div>
 			) : (
-				<Virtualization songs={filteredSongs} />
+				<Virtualization
+					songs={filteredSongs}
+					onRemove={custom ? (song) => removeSong.mutate(song.id) : undefined}
+					onReorder={canReorder ? handleReorder : undefined}
+				/>
 			)}
 		</div>
 	);

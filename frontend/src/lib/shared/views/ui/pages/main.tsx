@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { ListMusic, Turntable, Users } from "lucide-preact";
+import { Library, ListMusic, Turntable, Users } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
+import { useLocation } from "wouter-preact";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import { getOrder, saveOrder } from "@/lib/music/app/order";
+import { deletePlaylist, getPlaylists } from "@/lib/music/app/playlists";
 import { applyOrder, move } from "@/lib/music/app/reorder";
 import {
 	getYouTubePlaylists,
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
+import { CreatePlaylistModal } from "@/lib/music/views/ui/playlists/create";
 import {
 	type IconType,
 	type Item,
@@ -19,6 +22,7 @@ import {
 import { FollowingShelf } from "@/lib/music/views/ui/user/following";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import { addError } from "@/lib/shared/views/stores/errors";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 import { RoomsShelf } from "@/lib/sync/views/ui/rooms";
 
@@ -33,8 +37,10 @@ function loadTab(): Tab {
 
 export function MainPage() {
 	const queryClient = useQueryClient();
+	const [, setLocation] = useLocation();
 	const spotifyHandle = spotifyUser.value ?? "default";
 	const [tab, setTab] = useState<Tab>(loadTab);
+	const [creating, setCreating] = useState(false);
 
 	useEffect(() => {
 		localStorage.setItem(tabKey, tab);
@@ -54,15 +60,26 @@ export function MainPage() {
 		queryFn: getYouTubePlaylists,
 	});
 
+	const customQuery = useQuery({
+		queryKey: ["playlists"],
+		queryFn: getPlaylists,
+	});
+
 	const orderQuery = useQuery({
 		queryKey: ["playlist-order", spotifyHandle],
 		queryFn: () => getOrder(spotifyHandle),
 	});
 
-	const remove = useMutation({
+	const removeYouTube = useMutation({
 		mutationFn: removeYouTubePlaylist,
 		onSuccess: () =>
 			queryClient.invalidateQueries({ queryKey: ["youtube-playlists"] }),
+	});
+
+	const removeCustom = useMutation({
+		mutationFn: deletePlaylist,
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["playlists"] }),
+		onError: (error) => addError(error, "playlist"),
 	});
 
 	const items: Item[] = [
@@ -84,6 +101,15 @@ export function MainPage() {
 				removable: true,
 			}),
 		),
+		...(customQuery.data ?? []).map(
+			(p): Item => ({
+				id: p.id,
+				name: p.name,
+				icon: Library,
+				source: "local",
+				removable: true,
+			}),
+		),
 	];
 
 	const ordered = applyOrder(items, orderQuery.data ?? []);
@@ -98,6 +124,11 @@ export function MainPage() {
 		void saveOrder(spotifyHandle, next);
 	};
 
+	const remove = (id: string) =>
+		id.startsWith("local:")
+			? removeCustom.mutate(id)
+			: removeYouTube.mutate(id);
+
 	const tabs: { id: Tab; label: string; icon: IconType }[] = [
 		{ id: "playlists", label: "Playlists", icon: ListMusic },
 		...(spotifyConnected.value
@@ -109,24 +140,26 @@ export function MainPage() {
 	return (
 		<DefaultLayout class="gap-6">
 			<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
-				<div class="flex shrink-0 items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-					{tabs.map(({ id, label, icon: Icon }) => (
-						<button
-							key={id}
-							type="button"
-							title={label}
-							aria-label={label}
-							onClick={() => setTab(id)}
-							class={cn(
-								"flex h-8 cursor-pointer items-center rounded-md px-3 transition-colors",
-								activeTab === id
-									? "bg-zinc-800 text-white"
-									: "text-zinc-500 hover:text-zinc-300",
-							)}
-						>
-							<Icon size={16} />
-						</button>
-					))}
+				<div class="flex shrink-0 items-center gap-2 self-start">
+					<div class="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+						{tabs.map(({ id, label, icon: Icon }) => (
+							<button
+								key={id}
+								type="button"
+								title={label}
+								aria-label={label}
+								onClick={() => setTab(id)}
+								class={cn(
+									"flex h-8 cursor-pointer items-center rounded-md px-3 transition-colors",
+									activeTab === id
+										? "bg-zinc-800 text-white"
+										: "text-zinc-500 hover:text-zinc-300",
+								)}
+							>
+								<Icon size={16} />
+							</button>
+						))}
+					</div>
 				</div>
 
 				{activeTab === "following" ? (
@@ -138,13 +171,27 @@ export function MainPage() {
 						items={ordered}
 						to={(id) => `/playlist/${id}`}
 						viewKey="cover_grid_view"
-						isLoading={spotifyQuery.isLoading || youtubeQuery.isLoading}
+						isLoading={
+							spotifyQuery.isLoading ||
+							youtubeQuery.isLoading ||
+							customQuery.isLoading
+						}
 						emptyMessage={<YouTubeHint />}
-						onRemove={(id) => remove.mutate(id)}
+						onRemove={(id) => remove(id)}
 						onReorder={reorder}
+						onCreate={() => setCreating(true)}
 					/>
 				)}
 			</div>
+
+			<CreatePlaylistModal
+				open={creating}
+				close={() => setCreating(false)}
+				onCreated={(playlist) => {
+					queryClient.invalidateQueries({ queryKey: ["playlists"] });
+					setLocation(`/playlist/${playlist.id}`);
+				}}
+			/>
 		</DefaultLayout>
 	);
 }

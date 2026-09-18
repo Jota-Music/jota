@@ -88,6 +88,11 @@ export interface Song {
     "album": Album;
     "artists": Artist[] | null;
     "youtubeId"?: string;
+
+    /**
+     * Broken marks a stored reference that no longer resolves at its source.
+     */
+    "broken"?: boolean;
 }
 
 export interface UserProfile {

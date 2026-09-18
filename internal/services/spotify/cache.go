@@ -79,3 +79,7 @@ func cachedArtistDiscography(uri string, fetch func() (music.ArtistDiscography, 
 func cachedAlbumTracks(uri string, fetch func() ([]music.Song, error)) ([]music.Song, error) {
 	return kv.Cached(musicBucket, "album:"+uri, musicCacheTTL, fetch)
 }
+
+func cachedTrack(uri string, fetch func() (music.Song, error)) (music.Song, error) {
+	return kv.Cached(musicBucket, "track:"+uri, musicCacheTTL, fetch)
+}

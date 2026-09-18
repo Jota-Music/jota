@@ -2,6 +2,8 @@ import type { ComponentChildren } from "preact";
 import { useRef } from "preact/hooks";
 import { SignInPrompt } from "@/lib/auth/views/ui/sign-in-prompt";
 import { Welcome } from "@/lib/auth/views/ui/welcome";
+import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
+import { SelectionBar } from "@/lib/music/views/ui/playlists/selection-bar";
 import Queue from "@/lib/music/views/ui/queue";
 import { cn } from "@/lib/shared/utils/tw";
 import { Header } from "@/lib/shared/views/ui/components/header";
@@ -48,6 +50,8 @@ export function AppShell({
 					</main>
 
 					<Queue />
+					<SelectionBar />
+					<PlaylistPicker />
 					<SyncPanel />
 					<Welcome />
 				</div>

@@ -1,6 +1,9 @@
-import { computed } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
+import { Check, GripVertical, Trash2, TriangleAlert } from "lucide-preact";
 import { memo } from "preact/compat";
+import { useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
+import { useRowSelect } from "@/lib/music/views/hooks/use-row-select";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
 import {
 	currentSong,
@@ -8,38 +11,112 @@ import {
 	isPlaying,
 } from "@/lib/music/views/stores/audio";
 import { playFromQueueSelection } from "@/lib/music/views/stores/player";
+import {
+	selectedSongs,
+	selectionActive,
+} from "@/lib/music/views/stores/selection";
 import Enqueue from "@/lib/music/views/ui/components/enqueue";
 import TrackArt from "@/lib/music/views/ui/components/track-art";
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
+import AddToPlaylist from "@/lib/music/views/ui/playlists/add-button";
 import { t } from "@/lib/shared/i18n";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
+import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 
 type Props = {
 	songs: Song[];
+	onRemove?: (song: Song) => void;
+	onReorder?: (from: number, to: number) => void;
 };
 
 const ROW_PX = 64;
+const COARSE = window.matchMedia("(pointer: coarse)").matches;
+
+const dragFrom = signal<number | null>(null);
+const dragOver = signal<number | null>(null);
 
 const currentId = computed(() => currentSong.value?.id);
 
-function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
+function endDrag() {
+	dragFrom.value = null;
+	dragOver.value = null;
+}
+
+function PlaylistRow({
+	song,
+	songs,
+	index,
+	selected,
+	reorderable,
+	isDragSource,
+	isDropTarget,
+	removable,
+	onRemove,
+}: {
+	song: Song;
+	songs: Song[];
+	index: number;
+	selected: boolean;
+	reorderable: boolean;
+	isDragSource: boolean;
+	isDropTarget: boolean;
+	removable: boolean;
+	onRemove?: (song: Song) => void;
+}) {
 	const isCurrent = song.id === currentId.value;
+	const broken = song.broken === true;
+	const selection = selectionActive.value;
+
+	const { onClick, onPointerDown } = useRowSelect({
+		song,
+		disabled: broken,
+		onActivate: () => void playFromQueueSelection(songs, song),
+	});
 
 	return (
 		<div
 			data-id={song.id}
+			data-playlist-index={index}
 			role="none"
-			onClick={() => void playFromQueueSelection(songs, song)}
-			className={cn(
+			title={broken ? t("music.track.broken") : undefined}
+			onClick={onClick}
+			onPointerDown={onPointerDown}
+			class={cn(
 				"absolute left-0 flex h-full w-full items-center justify-between gap-2 border-b border-zinc-900 px-3 transition hover:cursor-pointer hover:bg-zinc-900/40",
 				isCurrent ? "font-medium text-(--dominant-color)!" : "",
+				isDragSource && "opacity-40",
+				isDropTarget &&
+					"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/50 ring-inset",
+				broken && "text-zinc-500",
 			)}
 		>
 			<div class="grid grid-cols-[auto_1fr] gap-2">
+				{selection ? (
+					<span
+						class={cn(
+							"ml-1 mr-1 flex size-5 items-center justify-center self-center rounded-full border",
+							selected
+								? "border-(--dominant-color) bg-(--dominant-color) text-(--binary-color)"
+								: "border-zinc-600",
+						)}
+					>
+						{selected && <Check size={13} strokeWidth={3} />}
+					</span>
+				) : (
+					reorderable && (
+						<span
+							class="flex w-4 shrink-0 touch-none items-center justify-center self-center text-zinc-600"
+							aria-hidden
+						>
+							<GripVertical size={16} />
+						</span>
+					)
+				)}
+
 				<TrackArt
 					song={song}
 					current={isCurrent}
@@ -55,14 +132,30 @@ function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
 				/>
 
 				<div class="flex min-w-0 flex-col text-start">
-					<span className="truncate text-sm text-white">{song.name}</span>
+					<span
+						class={cn(
+							"truncate text-sm",
+							broken ? "text-zinc-500" : "text-white",
+						)}
+					>
+						{song.name}
+					</span>
 
-					<span className="truncate text-xs text-zinc-400">
-						<ArtistLinks artists={song.artists} />
-						{song.album?.title && (
+					<span class="truncate text-xs text-zinc-400">
+						{broken ? (
+							<span class="inline-flex items-center gap-1 text-red-400/80">
+								<TriangleAlert size={12} />
+								{t("music.track.brokenLabel")}
+							</span>
+						) : (
 							<>
-								{" • "}
-								<AlbumLink album={song.album} />
+								<ArtistLinks artists={song.artists} />
+								{song.album?.title && (
+									<>
+										{" • "}
+										<AlbumLink album={song.album} />
+									</>
+								)}
 							</>
 						)}
 					</span>
@@ -70,8 +163,25 @@ function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
 			</div>
 
 			<div class="flex shrink-0 items-center gap-2">
-				<SaveYoutubeId song={song} compact />
-				<Enqueue song={song} title={t("music.track.enqueueAfter")} />
+				{!broken && <SaveYoutubeId song={song} compact />}
+				{!broken && <AddToPlaylist song={song} />}
+				{!broken && (
+					<Enqueue song={song} title={t("music.track.enqueueAfter")} />
+				)}
+				{removable && (
+					<button
+						type="button"
+						title={t("music.custom.removeSong")}
+						aria-label={t("music.custom.removeSong")}
+						onClick={(e) => {
+							e.stopPropagation();
+							onRemove?.(song);
+						}}
+						class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-500 transition hover:bg-red-950/50 hover:text-red-300"
+					>
+						<Trash2 size={17} />
+					</button>
+				)}
 				<div className="tabular-nums text-xs text-zinc-500">
 					{secondsToTime(song.duration)}
 				</div>
@@ -82,17 +192,99 @@ function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
 
 const PlaylistRowMemo = memo(PlaylistRow);
 
-export function Virtualization({ songs }: Props) {
+export function Virtualization({ songs, onRemove, onReorder }: Props) {
 	const { ref, totalSize, items } = useWindow<HTMLDivElement>(
 		songs.length,
 		ROW_PX,
 	);
+	const reorderable = !!onReorder && songs.length > 1;
+	const selection = selectionActive.value;
+	const selected = new Set(selectedSongs.value.map((s) => s.id));
+	const source = useRef<number | null>(null);
+
+	const indexFromClientY = (clientY: number) => {
+		const el = ref.current;
+		if (!el || songs.length === 0) return 0;
+		const rect = el.getBoundingClientRect();
+		const rel = el.scrollTop + (clientY - rect.top);
+		return Math.max(0, Math.min(songs.length - 1, Math.floor(rel / ROW_PX)));
+	};
+
+	const { start, captureClick } = usePointerDrag({
+		begin: () => {
+			if (source.current == null) return;
+			dragFrom.value = source.current;
+			dragOver.value = source.current;
+		},
+		move: (e) => {
+			const next = indexFromClientY(e.clientY);
+			if (dragOver.value !== next) dragOver.value = next;
+		},
+		end: (dragged) => {
+			const from = dragFrom.value;
+			const to = dragOver.value;
+			endDrag();
+			if (dragged && from != null && to != null && from !== to) {
+				onReorder?.(from, to);
+			}
+		},
+	});
+
+	const handlePointerDown = (e: PointerEvent) => {
+		if (!reorderable || selection) return;
+		const target = e.target as Element;
+		if (target.closest("button")) return;
+		const row = target.closest("[data-playlist-index]");
+		if (!row) return;
+		const index = Number(row.getAttribute("data-playlist-index"));
+		if (!Number.isInteger(index)) return;
+		if (!start(e)) return;
+		source.current = index;
+	};
+
+	const handleDragOverCapture = (e: DragEvent) => {
+		if (dragFrom.value == null) return;
+		e.preventDefault();
+		const next = indexFromClientY(e.clientY);
+		if (dragOver.value !== next) dragOver.value = next;
+	};
+
+	const handleDrop = (e: DragEvent) => {
+		if (dragFrom.value == null) return;
+		e.preventDefault();
+		const from = dragFrom.value;
+		const to = indexFromClientY(e.clientY);
+		endDrag();
+		if (from !== to) onReorder?.(from, to);
+	};
+
+	const startDrag = (e: DragEvent, index: number) => {
+		if (!reorderable || selection) {
+			e.preventDefault();
+			return;
+		}
+		dragFrom.value = index;
+		const dt = e.dataTransfer;
+		if (!dt) return;
+		try {
+			dt.setData("text/plain", String(index));
+			dt.effectAllowed = "move";
+		} catch {
+			/* noop */
+		}
+	};
 
 	return (
 		<div className="relative min-h-0 flex-1">
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: drag-to-reorder container */}
 			<div
 				ref={ref}
 				className="h-full overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950"
+				onPointerDown={handlePointerDown}
+				onClickCapture={captureClick}
+				onDragOverCapture={handleDragOverCapture}
+				onDrop={handleDrop}
+				onDragEnd={endDrag}
 			>
 				{songs.length === 0 ? (
 					<div className="flex min-h-32 flex-1 items-center justify-center px-4 py-8 text-sm text-zinc-500">
@@ -109,15 +301,33 @@ export function Virtualization({ songs }: Props) {
 							const song = songs[virtualRow.index];
 
 							return (
+								// biome-ignore lint/a11y/noStaticElementInteractions: draggable row wrapper
 								<div
 									key={`${song.id}-${virtualRow.index}`}
+									data-playlist-index={virtualRow.index}
 									class="absolute left-0 w-full"
 									style={{
 										height: `${virtualRow.size}px`,
 										transform: `translateY(${virtualRow.start}px)`,
 									}}
+									draggable={reorderable && COARSE}
+									onDragStart={(e) => startDrag(e, virtualRow.index)}
 								>
-									<PlaylistRowMemo song={song} songs={songs} />
+									<PlaylistRowMemo
+										song={song}
+										songs={songs}
+										index={virtualRow.index}
+										selected={selected.has(song.id)}
+										reorderable={reorderable}
+										isDragSource={dragFrom.value === virtualRow.index}
+										isDropTarget={
+											dragFrom.value != null &&
+											dragOver.value === virtualRow.index &&
+											dragFrom.value !== virtualRow.index
+										}
+										removable={!!onRemove}
+										onRemove={onRemove}
+									/>
 								</div>
 							);
 						})}

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { CirclePlay, Heart, ListVideo, Loader } from "lucide-preact";
+import { Check, CirclePlay, Heart, ListVideo, Loader } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
@@ -14,8 +14,14 @@ import {
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
 import type { PlaylistSummary, Song } from "@/lib/music/model";
+import { useRowSelect } from "@/lib/music/views/hooks/use-row-select";
 import { playFromQueueSelection } from "@/lib/music/views/stores/player";
+import {
+	selectedSongs,
+	selectionActive,
+} from "@/lib/music/views/stores/selection";
 import Enqueue from "@/lib/music/views/ui/components/enqueue";
+import AddToPlaylist from "@/lib/music/views/ui/playlists/add-button";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
@@ -294,26 +300,51 @@ function YouTubeVideoItem({
 	song: Song;
 	onClick: () => void;
 }) {
+	const selection = selectionActive.value;
+	const selected = selectedSongs.value.some((s) => s.id === song.id);
+
+	const { onClick: onRowClick, onPointerDown } = useRowSelect({
+		song,
+		onActivate: onClick,
+	});
+
 	return (
-		<button
-			type="button"
-			onClick={onClick}
-			class="flex w-full items-center gap-3 border-b border-zinc-900 px-3 py-2 transition hover:cursor-pointer hover:bg-zinc-900/40"
-		>
-			<PlaylistCover
-				src={song.album?.covers?.[0]}
-				alt={song.name}
-				imgClass="size-10 shrink-0 rounded-md object-cover"
-			/>
+		<div class="flex w-full items-center gap-3 border-b border-zinc-900 px-3 py-2 transition hover:bg-zinc-900/40">
+			{selection && (
+				<span
+					class={cn(
+						"flex size-5 shrink-0 items-center justify-center rounded-full border",
+						selected
+							? "border-(--dominant-color) bg-(--dominant-color) text-(--binary-color)"
+							: "border-zinc-600",
+					)}
+				>
+					{selected && <Check size={13} strokeWidth={3} />}
+				</span>
+			)}
 
-			<div class="min-w-0 flex-1 text-left">
-				<p class="wrap-break-word text-balance text-sm text-white leading-snug">
-					{song.name}
-				</p>
-			</div>
+			<button
+				type="button"
+				onClick={onRowClick}
+				onPointerDown={onPointerDown}
+				class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+			>
+				<PlaylistCover
+					src={song.album?.covers?.[0]}
+					alt={song.name}
+					imgClass="size-10 shrink-0 rounded-md object-cover"
+				/>
 
+				<div class="min-w-0 flex-1">
+					<p class="wrap-break-word text-balance text-sm text-white leading-snug">
+						{song.name}
+					</p>
+				</div>
+			</button>
+
+			<AddToPlaylist song={song} />
 			<Enqueue song={song} title={t("pages.youtube.addQueue")} />
-		</button>
+		</div>
 	);
 }
 

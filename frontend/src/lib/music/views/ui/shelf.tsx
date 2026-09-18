@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { Disc3, LayoutGrid, List, X } from "lucide-preact";
+import { Disc3, LayoutGrid, Library, List, Plus, X } from "lucide-preact";
 import type { ComponentChildren, ComponentType } from "preact";
 import { useRef, useState } from "preact/hooks";
 import { Link } from "wouter-preact";
@@ -20,16 +20,19 @@ const dragFrom = signal<string | null>(null);
 const dragOver = signal<string | null>(null);
 
 type Variant = "grid" | "compact";
-type SourceFilter = "all" | "spotify" | "youtube";
+type SourceFilter = "all" | "spotify" | "youtube" | "local";
 
-export type Source = "spotify" | "youtube";
+export type Source = "spotify" | "youtube" | "local";
 
 function loadVariant(key: string): Variant {
 	return localStorage.getItem(key) === "compact" ? "compact" : "grid";
 }
 
 function loadFilter(): SourceFilter {
-	return (localStorage.getItem(filterKey) as SourceFilter) ?? "all";
+	const saved = localStorage.getItem(filterKey);
+	return saved === "spotify" || saved === "youtube" || saved === "local"
+		? saved
+		: "all";
 }
 
 export type IconType = ComponentType<{ size?: number | string }>;
@@ -46,19 +49,23 @@ function Placeholder({
 
 function SourceBadge({ source }: { source?: Source }) {
 	if (!source) return null;
+	const title =
+		source === "spotify"
+			? t("music.shelf.source.spotify")
+			: source === "youtube"
+				? t("music.shelf.source.youtube")
+				: t("music.custom.tab");
 	return (
 		<span
 			class="flex size-5 items-center justify-center text-zinc-400"
-			title={
-				source === "spotify"
-					? t("music.shelf.source.spotify")
-					: t("music.shelf.source.youtube")
-			}
+			title={title}
 		>
 			{source === "spotify" ? (
 				<SpotifyIcon size={14} />
-			) : (
+			) : source === "youtube" ? (
 				<YoutubeIcon class="size-4" />
+			) : (
+				<Library size={14} />
 			)}
 		</span>
 	);
@@ -131,6 +138,8 @@ interface Props {
 	emptyMessage?: ComponentChildren;
 	onRemove?: (id: string) => void;
 	onReorder?: (fromId: string, toId: string) => void;
+	// onCreate renders a "new playlist" button next to the source filters.
+	onCreate?: () => void;
 }
 
 export function Shelf({
@@ -143,6 +152,7 @@ export function Shelf({
 	emptyMessage = t("music.shelf.empty"),
 	onRemove,
 	onReorder,
+	onCreate,
 }: Props) {
 	const [variant, setVariant] = useState<Variant>(() => loadVariant(viewKey));
 	const [sourceFilter, setSourceFilter] = useState<SourceFilter>(loadFilter);
@@ -285,56 +295,97 @@ export function Shelf({
 					{t("common.loading")}
 				</div>
 			) : items.length === 0 ? (
-				<div class="flex flex-1 items-center justify-center p-8 text-sm text-zinc-500">
+				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
 					{emptyMessage}
+					{onCreate && (
+						<button
+							type="button"
+							onClick={onCreate}
+							title={t("music.custom.create")}
+							aria-label={t("music.custom.create")}
+							class="flex h-10 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 px-4 text-zinc-400 transition-colors hover:text-white"
+						>
+							<Plus size={18} />
+							{t("music.custom.create")}
+						</button>
+					)}
 				</div>
 			) : (
 				<>
 					<div class="flex shrink-0 items-center justify-end px-3 py-2 gap-2">
-						{filterable && (
-							<div class="mr-auto flex overflow-hidden rounded-md border border-zinc-800">
+						<div class="mr-auto flex items-center gap-2">
+							{filterable && (
+								<div class="flex overflow-hidden rounded-md border border-zinc-800">
+									<button
+										type="button"
+										onClick={() => setFilter("all")}
+										aria-label={t("music.shelf.all")}
+										class={cn(
+											"h-10 md:h-8 px-3 cursor-pointer flex items-center justify-center transition-colors text-xs font-medium",
+											sourceFilter === "all"
+												? "bg-zinc-800 text-white"
+												: "text-zinc-500 hover:text-white",
+										)}
+									>
+										All
+									</button>
+									<button
+										type="button"
+										onClick={() => setFilter("youtube")}
+										aria-label={t("music.shelf.source.youtube")}
+										class={cn(
+											"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
+											sourceFilter === "youtube"
+												? "bg-zinc-800 text-white"
+												: "text-zinc-500 hover:text-white",
+										)}
+									>
+										<YoutubeIcon class="size-5 md:size-4" />
+									</button>
+									<button
+										type="button"
+										onClick={() => setFilter("spotify")}
+										aria-label={t("music.shelf.source.spotify")}
+										class={cn(
+											"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
+											sourceFilter === "spotify"
+												? "bg-zinc-800 text-white"
+												: "text-zinc-500 hover:text-white",
+										)}
+									>
+										<SpotifyIcon size={18} class="md:hidden" />
+										<SpotifyIcon size={14} class="hidden md:block" />
+									</button>
+									<button
+										type="button"
+										onClick={() => setFilter("local")}
+										aria-label={t("music.custom.tab")}
+										class={cn(
+											"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
+											sourceFilter === "local"
+												? "bg-zinc-800 text-white"
+												: "text-zinc-500 hover:text-white",
+										)}
+									>
+										<Library size={18} class="md:hidden" />
+										<Library size={14} class="hidden md:block" />
+									</button>
+								</div>
+							)}
+
+							{onCreate && sourceFilter === "local" && (
 								<button
 									type="button"
-									onClick={() => setFilter("all")}
-									aria-label={t("music.shelf.all")}
-									class={cn(
-										"h-10 md:h-8 px-3 cursor-pointer flex items-center justify-center transition-colors text-xs font-medium",
-										sourceFilter === "all"
-											? "bg-zinc-800 text-white"
-											: "text-zinc-500 hover:text-white",
-									)}
+									onClick={onCreate}
+									title={t("music.custom.create")}
+									aria-label={t("music.custom.create")}
+									class="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md border border-zinc-800 text-zinc-400 transition-colors hover:text-white md:size-8"
 								>
-									All
+									<Plus size={18} class="md:hidden" />
+									<Plus size={14} class="hidden md:block" />
 								</button>
-								<button
-									type="button"
-									onClick={() => setFilter("youtube")}
-									aria-label={t("music.shelf.source.youtube")}
-									class={cn(
-										"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
-										sourceFilter === "youtube"
-											? "bg-zinc-800 text-white"
-											: "text-zinc-500 hover:text-white",
-									)}
-								>
-									<YoutubeIcon class="size-5 md:size-4" />
-								</button>
-								<button
-									type="button"
-									onClick={() => setFilter("spotify")}
-									aria-label={t("music.shelf.source.spotify")}
-									class={cn(
-										"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
-										sourceFilter === "spotify"
-											? "bg-zinc-800 text-white"
-											: "text-zinc-500 hover:text-white",
-									)}
-								>
-									<SpotifyIcon size={18} class="md:hidden" />
-									<SpotifyIcon size={14} class="hidden md:block" />
-								</button>
-							</div>
-						)}
+							)}
+						</div>
 						<div class="flex overflow-hidden rounded-md border border-zinc-800">
 							<button
 								type="button"
@@ -379,6 +430,8 @@ export function Shelf({
 										<SpotifyConnect />
 									) : sourceFilter === "spotify" ? (
 										t("music.shelf.noSpotify")
+									) : sourceFilter === "local" ? (
+										t("music.custom.empty")
 									) : (
 										<YouTubeHint />
 									)}

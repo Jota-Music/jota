@@ -13,6 +13,7 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/services/follows"
 	"github.com/Jota-Music/jota/internal/services/ordering"
+	"github.com/Jota-Music/jota/internal/services/playlists"
 	"github.com/Jota-Music/jota/internal/services/rooms"
 	"github.com/Jota-Music/jota/internal/services/spotify"
 	"github.com/Jota-Music/jota/internal/services/sync"
@@ -23,16 +24,17 @@ import (
 )
 
 type App struct {
-	ctx     context.Context
-	version string
-	relay   RelayOverride
-	Spotify *spotify.SpotifyService
-	Catalog *music.Catalog
-	YouTube *youtube.Service
-	Sync    *sync.Service
-	Follows *follows.Service
-	Rooms   *rooms.Service
-	Order   *ordering.Service
+	ctx       context.Context
+	version   string
+	relay     RelayOverride
+	Spotify   *spotify.SpotifyService
+	Catalog   *music.Catalog
+	YouTube   *youtube.Service
+	Sync      *sync.Service
+	Follows   *follows.Service
+	Rooms     *rooms.Service
+	Order     *ordering.Service
+	Playlists *playlists.Service
 }
 
 // RelayOverride pins a relay for local testing. An empty URL means the user's
@@ -48,19 +50,23 @@ func New(version string) *App {
 	cfg := env.Load()
 	spotifySvc := spotify.NewSpotifyService(cfg.SpotifyClientID)
 	youTubeSvc := youtube.NewService()
+	playlistsSvc := playlists.New(nil)
+	catalog := music.NewCatalog(spotifySvc, youTubeSvc, playlistsSvc)
+	playlistsSvc.SetResolver(catalog)
 	return &App{
 		version: version,
 		relay: RelayOverride{
 			URL:   strings.TrimSpace(cfg.RelayAPIURL),
 			Token: strings.TrimSpace(cfg.RelayAPIToken),
 		},
-		Spotify: spotifySvc,
-		Catalog: music.NewCatalog(spotifySvc, youTubeSvc),
-		YouTube: youTubeSvc,
-		Sync:    sync.New(),
-		Follows: follows.New(),
-		Rooms:   rooms.New(),
-		Order:   ordering.New(),
+		Spotify:   spotifySvc,
+		Catalog:   catalog,
+		YouTube:   youTubeSvc,
+		Sync:      sync.New(),
+		Follows:   follows.New(),
+		Rooms:     rooms.New(),
+		Order:     ordering.New(),
+		Playlists: playlistsSvc,
 	}
 }
 
