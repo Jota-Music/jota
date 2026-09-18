@@ -248,7 +248,7 @@ export async function playAt(i: number): Promise<void> {
 }
 
 export async function toggleSong() {
-	publish({ action: "toggle" });
+	publish({ action: isPlaying.value ? "pause" : "play" });
 	await togglePlayPause();
 }
 

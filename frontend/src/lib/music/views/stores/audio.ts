@@ -762,7 +762,10 @@ media.setup({
 		publish({ action: "pause" });
 		pause();
 	},
-	stop: stopPlayer,
+	stop: () => {
+		publish({ action: "stop" });
+		stopPlayer();
+	},
 	seek: (seconds) => {
 		publish({ action: "seek", positionMs: Math.round(seconds * 1000) });
 		seek(seconds);

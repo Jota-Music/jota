@@ -14,7 +14,6 @@ import {
 	seek,
 	seekTo,
 	stopPlayer,
-	togglePlayPause,
 } from "@/lib/music/views/stores/audio";
 import { preloadUpcomingSongs } from "@/lib/music/views/stores/player";
 import {
@@ -303,14 +302,14 @@ function broadcastQueue(): void {
 function applyControl(a: ControlAction): void {
 	lastControl = Date.now();
 	switch (a.action) {
-		case "toggle":
-			void togglePlayPause();
-			break;
 		case "play":
 			void resume();
 			break;
 		case "pause":
 			pause();
+			break;
+		case "stop":
+			stopPlayer();
 			break;
 		case "seek":
 			seek(a.positionMs / 1000);

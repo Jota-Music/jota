@@ -44,9 +44,9 @@ export type ArtistDiscography = Omit<GeneratedArtistDiscography, "albums"> & {
 export type RepeatMode = "off" | "all" | "one";
 
 export type ControlAction =
-	| { action: "toggle" }
 	| { action: "play" }
 	| { action: "pause" }
+	| { action: "stop" }
 	| { action: "seek"; positionMs: number }
 	| { action: "shuffle"; on: boolean; seed?: number }
 	| { action: "repeat"; mode: RepeatMode };
