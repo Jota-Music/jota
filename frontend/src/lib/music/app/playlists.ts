@@ -8,7 +8,7 @@ import {
 } from "@bindings/app";
 import type { PlaylistSummary } from "@/lib/music/model";
 
-export const localPrefix = "local:";
+const localPrefix = "local:";
 
 export function isCustom(id: string): boolean {
 	return id.startsWith(localPrefix);

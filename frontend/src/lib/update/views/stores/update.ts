@@ -3,7 +3,7 @@ import { signal } from "@preact/signals";
 import { Events } from "@wailsio/runtime";
 import { addError } from "@/lib/shared/views/stores/errors";
 
-export type Update = Awaited<ReturnType<typeof CheckUpdate>>;
+type Update = Awaited<ReturnType<typeof CheckUpdate>>;
 
 export const version = signal("");
 export const update = signal<Update | null>(null);
