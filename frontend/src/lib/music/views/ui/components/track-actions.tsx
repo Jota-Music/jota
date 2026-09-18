@@ -20,6 +20,7 @@ import {
 import { openYoutubeEditor } from "@/lib/music/views/stores/youtube-editor";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import type { Action } from "@/lib/shared/views/ui/components/context-menu";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 const YoutubeMenuIcon: LucideIcon = ({ class: cls, size }) => (
@@ -30,15 +31,9 @@ const YoutubeMenuIcon: LucideIcon = ({ class: cls, size }) => (
 	/>
 );
 
-type Action = {
-	icon: LucideIcon | typeof YoutubeMenuIcon;
-	label: string;
-	danger?: boolean;
-	run: () => void;
-};
-
 type Props = {
 	songs: Song[];
+	selection?: boolean;
 	removable?: boolean;
 	onRemove?: (songs: Song[]) => void;
 	onToggleSelect?: (song: Song) => void;
@@ -48,29 +43,24 @@ type Props = {
 
 const GAP = 6;
 
-export default function TrackActions({
+export function buildActions({
 	songs,
+	selection,
 	removable,
 	onRemove,
 	onToggleSelect,
 	onSelectAll,
 	onDone,
-}: Props) {
-	const [open, setOpen] = useState(false);
-	const [anchor, setAnchor] = useState<DOMRect | null>(null);
-	const button = useRef<HTMLButtonElement>(null);
-	const menu = useRef<HTMLDivElement>(null);
-
-	const list = songs.filter((song) => !song.broken);
-	if (list.length === 0) return null;
+}: Props): { actions: Action[]; count: number } {
+	const batch =
+		selection && selectedSongs.value.length > 1 && songs.length === 1;
+	const list = (batch ? selectedSongs.value : songs).filter(
+		(song) => !song.broken,
+	);
+	if (list.length === 0) return { actions: [], count: 0 };
 
 	const single = list.length === 1 ? list[0] : null;
 	const done = () => void onDone?.();
-
-	const close = () => {
-		setOpen(false);
-		setAnchor(null);
-	};
 
 	const actions: Action[] = [
 		{
@@ -90,7 +80,7 @@ export default function TrackActions({
 			},
 		},
 	];
-	if (onSelectAll && list.length > 1) {
+	if ((onSelectAll || batch) && list.length > 1) {
 		const allSelected = list.every((song) =>
 			selectedSongs.value.some((s) => s.id === song.id),
 		);
@@ -101,7 +91,7 @@ export default function TrackActions({
 				: t("music.custom.selectAll"),
 			run: () => {
 				if (allSelected) clearSelection();
-				else onSelectAll(list);
+				else onSelectAll?.(list);
 				done();
 			},
 		});
@@ -141,6 +131,38 @@ export default function TrackActions({
 		});
 	}
 
+	return { actions, count: batch && list.length > 1 ? list.length : 0 };
+}
+
+export default function TrackActions({
+	songs,
+	selection,
+	removable,
+	onRemove,
+	onToggleSelect,
+	onSelectAll,
+	onDone,
+}: Props) {
+	const [open, setOpen] = useState(false);
+	const [anchor, setAnchor] = useState<DOMRect | null>(null);
+	const button = useRef<HTMLButtonElement>(null);
+	const menu = useRef<HTMLDivElement>(null);
+
+	const { actions, count } = buildActions({
+		songs,
+		selection,
+		removable,
+		onRemove,
+		onToggleSelect,
+		onSelectAll,
+		onDone,
+	});
+
+	const close = () => {
+		setOpen(false);
+		setAnchor(null);
+	};
+
 	useLayoutEffect(() => {
 		if (!open) return;
 		const el = menu.current;
@@ -176,6 +198,8 @@ export default function TrackActions({
 			window.removeEventListener("resize", onResize);
 		};
 	}, [open, anchor]);
+
+	if (actions.length === 0) return null;
 
 	const toggle = (e: MouseEvent) => {
 		e.preventDefault();
@@ -218,6 +242,14 @@ export default function TrackActions({
 						class="fixed z-50 w-56 rounded-lg border border-zinc-800 bg-zinc-950 py-1 shadow-xl"
 						style={{ top: 0, left: 0 }}
 					>
+						{count > 0 && (
+							<>
+								<div class="px-4 pt-2 pb-1 text-left text-balance text-xs font-medium text-zinc-500">
+									{t("music.custom.selected", { count })}
+								</div>
+								<div class="mx-2 mb-1 border-t border-zinc-800" />
+							</>
+						)}
 						{actions.map((action) => (
 							<button
 								key={action.label}
@@ -228,7 +260,7 @@ export default function TrackActions({
 									action.run();
 								}}
 								class={cn(
-									"flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm transition-colors",
+									"flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-balance text-sm transition-colors",
 									action.danger
 										? "text-red-400 hover:bg-red-950/40"
 										: "text-zinc-300 hover:bg-zinc-800/80 hover:text-white",

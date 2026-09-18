@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { Disc3, LayoutGrid, Library, List, Plus, X } from "lucide-preact";
+import { Disc3, LayoutGrid, Library, List, Plus, Trash2 } from "lucide-preact";
 import type { ComponentChildren, ComponentType } from "preact";
 import { useRef, useState } from "preact/hooks";
 import { Link } from "wouter-preact";
@@ -7,6 +7,10 @@ import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import {
+	type Action,
+	openContextMenu,
+} from "@/lib/shared/views/ui/components/context-menu";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
@@ -235,10 +239,19 @@ export function Shelf({
 		source.current = id;
 	};
 
-	// A touch long-press starts the drag, but the browser would rather open the
-	// link menu. Suppress it on coarse pointers; keep the desktop context menu.
-	const preventMenu = (e: MouseEvent) => {
-		if (reorderable && COARSE) e.preventDefault();
+	// A right-click (or touch long-press) opens the item's own actions instead
+	// of the browser context menu.
+	const openItemMenu = (item: Item) => (e: MouseEvent) => {
+		const actions: Action[] = [];
+		if (onRemove && item.removable) {
+			actions.push({
+				icon: Trash2,
+				label: t("common.remove"),
+				danger: true,
+				run: () => onRemove(item.id),
+			});
+		}
+		openContextMenu(actions, e);
 	};
 
 	const renderActions = (item: Item) => {
@@ -259,7 +272,7 @@ export function Shelf({
 						}}
 						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md bg-black/70 text-zinc-300 hover:text-white"
 					>
-						<X size={16} />
+						<Trash2 size={16} />
 					</button>
 				)}
 			</>
@@ -448,7 +461,7 @@ export function Shelf({
 											draggable={reorderable && COARSE}
 											onPointerDown={handlePointerDown(item.id)}
 											onClick={(e) => select(item, e)}
-											onContextMenu={preventMenu}
+											onContextMenu={openItemMenu(item)}
 											onDragStart={(e) => startDrag(item.id, e)}
 											onDragOver={(e) => overItem(item.id, e)}
 											onDrop={(e) => dropItem(item.id, e)}
@@ -514,7 +527,7 @@ export function Shelf({
 												draggable={reorderable && COARSE}
 												onPointerDown={handlePointerDown(item.id)}
 												onClick={(e) => select(item, e)}
-												onContextMenu={preventMenu}
+												onContextMenu={openItemMenu(item)}
 												onDragStart={(e) => startDrag(item.id, e)}
 												onDragOver={(e) => overItem(item.id, e)}
 												onDrop={(e) => dropItem(item.id, e)}

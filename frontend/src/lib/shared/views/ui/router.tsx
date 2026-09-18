@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter-preact";
 import { syncSpotifyStatus } from "@/lib/auth/views/stores/session";
 import { syncYouTubeStatus } from "@/lib/auth/views/stores/youtube";
 import { RequireSpotify } from "@/lib/auth/views/ui/spotify-connect";
+import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
 import SettingsPage from "@/lib/shared/views/ui/pages/settings";
 import { applyRelayOverride } from "@/lib/sync/app/transport";
@@ -94,6 +95,7 @@ function Router() {
 					<Route component={NotFoundPage} />
 				</Switch>
 			</Suspense>
+			<ContextMenu />
 		</QueryClientProvider>
 	);
 }

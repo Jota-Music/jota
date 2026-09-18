@@ -30,6 +30,10 @@ import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
+import {
+	type Action,
+	openContextMenu,
+} from "@/lib/shared/views/ui/components/context-menu";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
@@ -112,6 +116,36 @@ const QueueRow = memo(function QueueRow({
 			)}
 			onDragStart={(e) => startDrag(e, globalIndex)}
 			onDragEnd={endDrag}
+			onContextMenu={(e) => {
+				const actions: Action[] = [
+					{
+						icon: Play,
+						label: t("music.queue.playNow"),
+						run: () => void playAt(globalIndex),
+					},
+				];
+				if (canMoveDown) {
+					actions.push({
+						icon: ChevronDown,
+						label: t("music.queue.moveDown"),
+						run: () => void moveQueue(globalIndex, globalIndex + 1),
+					});
+				}
+				if (canSnapBelow) {
+					actions.push({
+						icon: ArrowUpFromLine,
+						label: t("music.queue.snapBelow"),
+						run: () => void moveAfterCurrent(globalIndex),
+					});
+				}
+				actions.push({
+					icon: Trash2,
+					label: t("music.queue.remove"),
+					danger: true,
+					run: () => void unqueue(globalIndex),
+				});
+				openContextMenu(actions, e);
+			}}
 		>
 			<div
 				class={cn(

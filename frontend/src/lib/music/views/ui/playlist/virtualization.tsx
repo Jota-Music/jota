@@ -17,13 +17,16 @@ import {
 	selectionActive,
 	toggleSelection,
 } from "@/lib/music/views/stores/selection";
-import TrackActions from "@/lib/music/views/ui/components/track-actions";
+import TrackActions, {
+	buildActions,
+} from "@/lib/music/views/ui/components/track-actions";
 import TrackArt from "@/lib/music/views/ui/components/track-art";
 import { t } from "@/lib/shared/i18n";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
+import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 
@@ -84,6 +87,16 @@ function PlaylistRow({
 			role="none"
 			title={broken ? t("music.track.broken") : undefined}
 			onClick={onClick}
+			onContextMenu={(e) => {
+				const { actions } = buildActions({
+					songs: [song],
+					selection: selected,
+					removable,
+					onRemove,
+					onToggleSelect: toggleSelection,
+				});
+				openContextMenu(actions, e);
+			}}
 			class={cn(
 				"group absolute left-0 flex h-full w-full select-none items-center justify-between gap-2 border-b border-zinc-900 px-3 transition hover:cursor-pointer hover:bg-zinc-800/60",
 				isCurrent ? "font-medium text-(--dominant-color)!" : "",
@@ -159,6 +172,7 @@ function PlaylistRow({
 				{!broken && (
 					<TrackActions
 						songs={[song]}
+						selection={selected}
 						removable={removable}
 						onRemove={onRemove}
 						onToggleSelect={toggleSelection}

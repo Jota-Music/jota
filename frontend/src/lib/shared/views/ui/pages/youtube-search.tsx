@@ -22,9 +22,12 @@ import {
 	toggleSelection,
 } from "@/lib/music/views/stores/selection";
 import SelectionBar from "@/lib/music/views/ui/components/selection-bar";
-import TrackActions from "@/lib/music/views/ui/components/track-actions";
+import TrackActions, {
+	buildActions,
+} from "@/lib/music/views/ui/components/track-actions";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
@@ -331,10 +334,18 @@ function YouTubeVideoItem({
 	return (
 		<div
 			data-row={song.id}
+			role="none"
 			class={cn(
 				"flex w-full select-none items-center gap-3 border-b border-zinc-900 px-3 py-2 transition hover:bg-zinc-800/60",
 				selected && "bg-zinc-800/60",
 			)}
+			onContextMenu={(e) => {
+				const { actions } = buildActions({
+					songs: [song],
+					onToggleSelect: toggleSelection,
+				});
+				openContextMenu(actions, e);
+			}}
 		>
 			<button
 				type="button"
@@ -354,7 +365,11 @@ function YouTubeVideoItem({
 				</div>
 			</button>
 
-			<TrackActions songs={[song]} onToggleSelect={toggleSelection} />
+			<TrackActions
+				songs={[song]}
+				selection={selected}
+				onToggleSelect={toggleSelection}
+			/>
 		</div>
 	);
 }
