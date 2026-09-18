@@ -6,6 +6,7 @@ import { syncSpotifyStatus } from "@/lib/auth/views/stores/session";
 import { syncYouTubeStatus } from "@/lib/auth/views/stores/youtube";
 import { RequireSpotify } from "@/lib/auth/views/ui/spotify-connect";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
+import SettingsPage from "@/lib/shared/views/ui/pages/settings";
 import { applyRelayOverride } from "@/lib/sync/app/transport";
 import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
 
@@ -34,7 +35,6 @@ const SearchPage = lazy(() =>
 		default: m.SearchPage,
 	})),
 );
-const SettingsPage = lazy(() => import("@/lib/shared/views/ui/pages/settings"));
 const UserPage = lazy(() =>
 	import("@/lib/shared/views/ui/pages/user").then((m) => ({
 		default: m.UserPage,
