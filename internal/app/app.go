@@ -133,12 +133,3 @@ func (a *App) OpenURL(url string) error {
 func (a *App) RelayOverride() RelayOverride {
 	return a.relay
 }
-
-func (a *App) ReadClipboard() string {
-	app := application.Get()
-	if app == nil {
-		return ""
-	}
-	text, _ := app.Clipboard.Text()
-	return text
-}

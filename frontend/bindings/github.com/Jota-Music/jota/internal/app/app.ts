@@ -134,10 +134,6 @@ export function OpenURL(url: string): $CancellablePromise<void> {
     return $Call.ByID(3973583225, url);
 }
 
-export function ReadClipboard(): $CancellablePromise<string> {
-    return $Call.ByID(4227429682);
-}
-
 /**
  * RelayOverride reports the relay pinned through RELAY_API_URL/RELAY_API_TOKEN,
  * if any. The frontend applies it over the user's saved relay so a dev build can
