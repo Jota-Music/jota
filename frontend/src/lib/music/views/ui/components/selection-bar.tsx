@@ -2,6 +2,7 @@ import { Check, X } from "lucide-preact";
 import type { Song } from "@/lib/music/model";
 import {
 	clearSelection,
+	selectAll,
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
 import TrackActions from "@/lib/music/views/ui/components/track-actions";
@@ -28,9 +29,9 @@ export default function SelectionBar({
 			<div class="ml-auto flex items-center gap-1">
 				<TrackActions
 					songs={selected}
+					onSelectAll={selectAll}
 					removable={removable}
 					onRemove={onRemove}
-					onDone={clearSelection}
 				/>
 				<button
 					type="button"
