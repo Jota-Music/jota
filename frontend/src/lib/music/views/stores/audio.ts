@@ -2,7 +2,11 @@ import { effect, signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
-import { setSongYoutubeId } from "@/lib/music/views/stores/queue";
+import {
+	currentIndex,
+	queue,
+	setSongYoutubeId,
+} from "@/lib/music/views/stores/queue";
 import { publish } from "@/lib/music/views/stores/remote";
 import { addError, logError } from "@/lib/shared/views/stores/errors";
 
@@ -572,7 +576,9 @@ export async function resume(): Promise<boolean> {
 			);
 		}
 	}
-	const song = currentSong.value;
+	// The queue is restored on startup but the element is not, so fall back to the
+	// queued current track instead of leaving a fresh session's play control mute.
+	const song = currentSong.value ?? queue.value[currentIndex.value] ?? null;
 	if (!song) return false;
 	return (await play(song)) === "ok";
 }
