@@ -42,6 +42,16 @@ the audio through YouTube, and start a room over a relay you own.
   and macOS, plus Android, from one codebase.
 - **Private by default.** Data stays local. No accounts, no telemetry, no
   third-party servers — save the app log from settings when reporting a bug.
+- **Custom playlists.** Create your own local playlists and mix Spotify and
+  YouTube tracks in them. Reorder by drag, see a mosaic cover, and broken
+  tracks are flagged instead of breaking the list.
+- **Following.** A shelf merged from your Spotify follows and local friends,
+  shown alongside Playlists and Rooms on the home tab. Follow artists or
+  profiles to jump back easily.
+- **Liked Songs** surfaced in the home shelf when browsing Spotify.
+- **Auto-update.** Jota checks GitHub releases on launch and installs itself
+  in place (AppImage, macOS `.app`, Windows per-user) with SHA256SUMS
+  verification and progress; other channels fall back to the release page.
 
 ## Screenshots
 
@@ -79,14 +89,16 @@ Tagged releases ship:
 | Windows | NSIS `.exe` |
 | macOS | universal `.dmg` |
 
+On AppImage, macOS `.app` and Windows per-user, Jota checks for
+updates on launch and installs them in place; the download above is
+also where those channels fetch their next version.
+
 > [!WARNING]
 > The Windows `.exe` and macOS `.dmg` are unsigned and may be flagged or blocked
 > by SmartScreen and Gatekeeper.
 
 ## Roadmap
 
-- **Internal playlists** — search and create local playlists without depending
-  on Spotify or YouTube.
 - **More sources** beyond Spotify and YouTube.
 
 ## Disclaimer
