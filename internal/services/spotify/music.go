@@ -5,13 +5,57 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/devgianlu/go-librespot/session"
+
 	"github.com/Jota-Music/jota/internal/music"
 )
 
 func (s *SpotifyService) GetFullPlaylist(playlistID string) (music.Playlist, error) {
-	return cachedFullPlaylist(playlistID, func() (music.Playlist, error) {
+	uri := normalizeID(playlistID, "playlist")
+
+	// Liked Songs and other user contexts aren't playlists: no revision to
+	// compare, so they keep the plain TTL cache.
+	if !strings.HasPrefix(uri, URIPlaylistPrefix) {
+		return cachedFullPlaylist(playlistID, func() (music.Playlist, error) {
+			return s.fullPlaylist(playlistID)
+		})
+	}
+
+	cached, hasCached := loadCachedPlaylist(playlistID)
+
+	sess := s.Session()
+	if sess == nil {
+		// No session to check the revision: a cached copy still loads.
+		if hasCached {
+			return cached.Playlist, nil
+		}
+		return music.Playlist{}, ErrNotConnected
+	}
+
+	meta, err := getPlaylistMetadata(context.Background(), sess, uri)
+	if err != nil {
+		// Can't detect changes without metadata: serve the cache when present,
+		// otherwise resolve from scratch.
+		if hasCached {
+			return cached.Playlist, nil
+		}
 		return s.fullPlaylist(playlistID)
-	})
+	}
+
+	if hasCached && !needsRevalidate(cached.Revision, meta.revision) {
+		return cached.Playlist, nil
+	}
+
+	playlist, err := s.playlistTracks(context.Background(), sess, uri, meta)
+	if err != nil {
+		if hasCached {
+			return cached.Playlist, nil
+		}
+		return music.Playlist{}, err
+	}
+
+	storeCachedPlaylist(playlistID, cachedPlaylist{Revision: meta.revision, Playlist: playlist})
+	return playlist, nil
 }
 
 func (s *SpotifyService) RevalidateFullPlaylist(playlistID string) error {
@@ -27,12 +71,11 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 		return music.Playlist{}, ErrNotConnected
 	}
 
-	metaCh := make(chan playlistMeta, 1)
-	go func() {
-		meta, _ := getPlaylistMetadata(ctx, sess, uri)
-		metaCh <- meta
-	}()
+	meta, _ := getPlaylistMetadata(ctx, sess, uri)
+	return s.playlistTracks(ctx, sess, uri, meta)
+}
 
+func (s *SpotifyService) playlistTracks(ctx context.Context, sess *session.Session, uri string, meta playlistMeta) (music.Playlist, error) {
 	ctxTracks, err := resolveContextTracks(ctx, sess, uri)
 	if err != nil {
 		return music.Playlist{}, fmt.Errorf("resolve playlist: %w", err)
@@ -45,8 +88,6 @@ func (s *SpotifyService) fullPlaylist(playlistID string) (music.Playlist, error)
 	for _, t := range tracks {
 		allSongs = append(allSongs, trackToSong(t))
 	}
-
-	meta := <-metaCh
 
 	return music.Playlist{
 		Name:  meta.name,

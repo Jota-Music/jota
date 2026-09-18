@@ -10,14 +10,50 @@ import (
 
 var musicBucket = kv.UseBucket("spotify-music")
 
-const musicCacheTTL = 12 * time.Hour
+const musicCacheTTL = 6 * time.Hour
+
+// cachedPlaylist pairs a playlist with the Spotify revision it was fetched at,
+// so a later load can tell whether the playlist changed.
+type cachedPlaylist struct {
+	Revision string         `json:"revision"`
+	Playlist music.Playlist `json:"playlist"`
+}
 
 func cachedFullPlaylist(playlistID string, fetch func() (music.Playlist, error)) (music.Playlist, error) {
 	return kv.Cached(musicBucket, "playlist:v2:"+playlistID, musicCacheTTL, fetch)
 }
 
+func loadCachedPlaylist(playlistID string) (cachedPlaylist, bool) {
+	if err := kv.EnsureStarted(); err != nil {
+		return cachedPlaylist{}, false
+	}
+	var cached cachedPlaylist
+	if err := musicBucket.GetObject("playlist:v3:"+playlistID, &cached); err != nil {
+		return cachedPlaylist{}, false
+	}
+	return cached, true
+}
+
+func storeCachedPlaylist(playlistID string, cached cachedPlaylist) {
+	if err := kv.EnsureStarted(); err != nil {
+		return
+	}
+	_ = musicBucket.SetObject("playlist:v3:"+playlistID, cached, musicCacheTTL)
+}
+
+// needsRevalidate reports whether the cached playlist is stale against the
+// current revision. An unknown current revision can't be compared, so the cache
+// wins; an empty cached revision means the entry predates revision tracking.
+func needsRevalidate(cachedRevision, currentRevision string) bool {
+	if currentRevision == "" {
+		return false
+	}
+	return cachedRevision != currentRevision
+}
+
 func revalidateFullPlaylist(playlistID string) error {
-	return musicBucket.Delete("playlist:v2:" + playlistID)
+	_ = musicBucket.Delete("playlist:v2:" + playlistID)
+	return musicBucket.Delete("playlist:v3:" + playlistID)
 }
 
 func cachedUserPlaylists(user string, fetch func() ([]music.PlaylistSummary, error)) ([]music.PlaylistSummary, error) {

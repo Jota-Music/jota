@@ -130,6 +130,7 @@ type playlistMeta struct {
 	cover      string
 	owner      string
 	trackCount int32
+	revision   string
 }
 
 func getPlaylistMetadata(ctx context.Context, sess *session.Session, uri string) (playlistMeta, error) {
@@ -163,6 +164,7 @@ func getPlaylistMetadata(ctx context.Context, sess *session.Session, uri string)
 	}
 	m.owner = pl.GetOwnerUsername()
 	m.trackCount = pl.GetLength()
+	m.revision = hex.EncodeToString(pl.GetRevision())
 	if m.name == "" {
 		return m, fmt.Errorf("sin nombre")
 	}
