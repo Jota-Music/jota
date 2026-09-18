@@ -247,6 +247,10 @@ function isNotAllowedError(err: unknown): boolean {
 // must not run the recovery ladder nor mark the song as failed.
 type LoadStatus = "ok" | "failed" | "aborted";
 
+// Same distinction for play(): a superseded call must not make the caller sweep
+// to the next track as if the song had genuinely failed.
+export type PlayResult = "ok" | "failed" | "aborted";
+
 async function loadSongIntoPlayer(
 	song: Song,
 	autostart: boolean,
@@ -401,18 +405,18 @@ async function retryElement(song: Song): Promise<boolean> {
 export async function play(
 	song: Song,
 	startSeconds?: number | (() => number),
-): Promise<boolean> {
+): Promise<PlayResult> {
 	const seq = ++playSeq;
 	const superseded = () => seq !== playSeq;
 
 	blockedByPolicy = false;
 
-	const success = () => {
+	const success = (): PlayResult => {
 		markFailed(song.id, false);
-		return true;
+		return "ok";
 	};
 
-	if (superseded()) return false;
+	if (superseded()) return "aborted";
 
 	// A consensus round already prepared this exact stream (the host waits for the
 	// room, the guest warms it): resume it instead of rebuilding the pipeline and
@@ -426,7 +430,7 @@ export async function play(
 	) {
 		try {
 			await audio.play();
-			if (loadedSongId !== song.id) return false;
+			if (loadedSongId !== song.id) return "aborted";
 			isPlaying.value = true;
 			return success();
 		} catch (err) {
@@ -443,41 +447,41 @@ export async function play(
 	recovering++;
 	try {
 		const first = await loadSongIntoPlayer(song, true, startSeconds);
-		if (first === "aborted" || superseded()) return false;
+		if (first === "aborted" || superseded()) return "aborted";
 		if (first === "ok") return success();
 		if (blockedByPolicy) return blocked(song);
 
 		if (await retryElement(song)) return success();
-		if (superseded()) return false;
+		if (superseded()) return "aborted";
 		if (blockedByPolicy) return blocked(song);
 
 		AudioCache.releaseElement(song.id);
 		const second = await loadSongIntoPlayer(song, true, startSeconds);
-		if (second === "aborted" || superseded()) return false;
+		if (second === "aborted" || superseded()) return "aborted";
 		if (second === "ok") return success();
 		if (blockedByPolicy) return blocked(song);
 
 		AudioCache.remove(song.id);
 		const third = await loadSongIntoPlayer(song, true, startSeconds);
-		if (third === "aborted" || superseded()) return false;
+		if (third === "aborted" || superseded()) return "aborted";
 		if (third === "ok") return success();
 	} finally {
 		recovering--;
 	}
 
-	if (superseded()) return false;
+	if (superseded()) return "aborted";
 
 	markFailed(song.id, true);
 	addError(
 		new Error("every recovery attempt failed"),
 		`play "${song.name}" (${song.id})`,
 	);
-	return false;
+	return "failed";
 }
 
 // WebKit rejected play() for lack of user activation. The track is fine, so it
 // must not be flagged or skipped; the caller stops and waits for an interaction.
-function blocked(song: Song): false {
+function blocked(song: Song): "failed" {
 	markFailed(song.id, false);
 	// Not a broken track but a blocked one: release the room spinner so a host
 	// keeps publishing state instead of freezing the whole room.
@@ -487,7 +491,7 @@ function blocked(song: Song): false {
 		new Error("the browser needs a click to allow playback"),
 		`play "${song.name}"`,
 	);
-	return false;
+	return "failed";
 }
 
 // Retry on the next user gesture. The retry runs synchronously inside the
@@ -570,7 +574,7 @@ export async function resume(): Promise<boolean> {
 	}
 	const song = currentSong.value;
 	if (!song) return false;
-	return await play(song);
+	return (await play(song)) === "ok";
 }
 
 export function seek(time: number) {

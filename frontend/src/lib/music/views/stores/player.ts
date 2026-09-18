@@ -119,11 +119,15 @@ async function playAtIndex(
 		return;
 	}
 
-	// play() exhausts this track's recovery ladder before returning false.
-	const ok = await play(song);
+	// play() exhausts this track's recovery ladder before returning "failed".
+	const result = await play(song);
 	if (queue.value[currentIndex.value]?.id !== song.id) return;
 
-	if (!ok) {
+	// A newer play() superseded this one right after the track switched: nothing
+	// failed, so do not sweep to the next song and let the newer load own it.
+	if (result === "aborted") return;
+
+	if (result === "failed") {
 		// WebKit blocked playback for lack of user activation: the track is fine,
 		// so keep the queue here and let the user interact instead of sweeping
 		// every song through the recovery ladder.
