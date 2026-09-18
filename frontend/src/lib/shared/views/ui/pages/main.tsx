@@ -158,7 +158,7 @@ export function MainPage() {
 								aria-label={label}
 								onClick={() => setTab(id)}
 								class={cn(
-									"flex h-8 cursor-pointer items-center rounded-md px-3 transition-colors",
+									"flex h-10 md:h-8 cursor-pointer items-center rounded-md px-3 transition-colors",
 									activeTab === id
 										? "bg-zinc-800 text-white"
 										: "text-zinc-500 hover:text-zinc-300",

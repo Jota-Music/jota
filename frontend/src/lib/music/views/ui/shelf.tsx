@@ -303,16 +303,17 @@ export function Shelf({
 							onClick={onCreate}
 							title={t("music.custom.create")}
 							aria-label={t("music.custom.create")}
-							class="flex h-10 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 px-4 text-zinc-400 transition-colors hover:text-white"
+							class="flex h-10 md:h-8 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 px-4 text-zinc-400 transition-colors hover:text-white"
 						>
-							<Plus size={18} />
+							<Plus size={18} class="md:hidden" />
+							<Plus size={14} class="hidden md:block" />
 							{t("music.custom.create")}
 						</button>
 					)}
 				</div>
 			) : (
 				<>
-					<div class="flex shrink-0 items-center justify-end px-3 py-2 gap-2">
+					<div class="flex shrink-0 items-center justify-end px-1 pt-1 pb-2 gap-2">
 						<div class="mr-auto flex items-center gap-2">
 							{filterable && (
 								<div class="flex overflow-hidden rounded-md border border-zinc-800">
@@ -381,8 +382,8 @@ export function Shelf({
 									aria-label={t("music.custom.create")}
 									class="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md border border-zinc-800 text-zinc-400 transition-colors hover:text-white md:size-8"
 								>
-									<Plus size={18} class="md:hidden" />
-									<Plus size={14} class="hidden md:block" />
+									<Plus size={20} class="md:hidden" />
+									<Plus size={16} class="hidden md:block" />
 								</button>
 							)}
 						</div>
@@ -421,7 +422,7 @@ export function Shelf({
 					<div class="relative min-h-0 flex-1">
 						<div
 							ref={listRef}
-							class="h-full overflow-y-auto px-3 pb-3"
+							class="h-full overflow-y-auto px-1 pb-3"
 							onClickCapture={captureClick}
 						>
 							{filteredItems.length === 0 ? (
