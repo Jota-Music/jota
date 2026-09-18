@@ -1,5 +1,5 @@
 import { effect, signal } from "@preact/signals";
-import { useQuery, useQueryClient } from "@tanstack/preact-query";
+import { useQuery } from "@tanstack/preact-query";
 import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import {
@@ -102,14 +102,13 @@ effect(() => {
 /* ------------------ Component ------------------ */
 
 export default function PlaylistPlain({ id }: { id: string }) {
-	const queryClient = useQueryClient();
 	const [refreshing, setRefreshing] = useState(false);
 
 	useEffect(() => {
 		search.value = "";
 	}, [id]);
 
-	const { data, isLoading, isError } = useQuery<Playlist>({
+	const { data, isLoading, isError, refetch } = useQuery<Playlist>({
 		queryKey: ["playlist", id],
 		queryFn: () => getFullPlaylist(id),
 	});
@@ -117,11 +116,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	async function handleRefresh() {
 		setRefreshing(true);
 		await revalidateFullPlaylist(id).catch(() => {});
-		queryClient.removeQueries({ queryKey: ["playlist", id] });
-		await queryClient.fetchQuery({
-			queryKey: ["playlist", id],
-			queryFn: () => getFullPlaylist(id),
-		});
+		await refetch();
 		setRefreshing(false);
 	}
 
