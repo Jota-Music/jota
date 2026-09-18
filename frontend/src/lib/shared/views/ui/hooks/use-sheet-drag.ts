@@ -5,7 +5,7 @@ const CLOSE_PX = 96;
 const FLING_PX_PER_MS = 0.5;
 const DRAG_START_PX = 6;
 const INTERACTIVE =
-	"button, a, input, select, textarea, label, [role='slider'], [contenteditable='true']";
+	"button, a, input, select, textarea, label, [role='slider'], [contenteditable='true'], [data-drag-self]";
 
 function clientYOf(e: MouseEvent | TouchEvent): number {
 	if ("touches" in e) {

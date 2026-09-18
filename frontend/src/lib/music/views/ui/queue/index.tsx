@@ -99,6 +99,7 @@ const QueueRow = memo(function QueueRow({
 	return (
 		<div
 			draggable={reorderable && COARSE}
+			data-drag-self={reorderable || undefined}
 			title={reorderable ? t("music.queue.drag") : undefined}
 			role="none"
 			class={cn(
