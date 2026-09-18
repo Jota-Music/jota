@@ -31,7 +31,11 @@ type windowState struct {
 
 var windowBucket = kv.UseBucket("window")
 
-const logMaxBytes = 2 << 20
+const (
+	windowMinWidth  = 500
+	windowMinHeight = 480
+	logMaxBytes     = 2 << 20
+)
 
 // rotatingWriter appends to a file and, once it grows past max, moves it aside
 // to "<path>.1" (overwriting the previous backup) and starts fresh, so the log
@@ -122,6 +126,17 @@ func saveWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
 	})
 }
 
+// ponytail: workaround for Wails v3 macOS clearing the native min size on
+// maximise/fullscreen; drop once fixed upstream (still present in beta.23).
+func enforceMinSize(w *application.WebviewWindow) {
+	if runtime.GOOS != "darwin" || w.IsFullscreen() || w.IsMaximised() {
+		return
+	}
+	if width, height := w.Size(); width < windowMinWidth || height < windowMinHeight {
+		w.SetMinSize(windowMinWidth, windowMinHeight)
+	}
+}
+
 func main() {
 	defer setupLogging()()
 
@@ -186,8 +201,8 @@ func main() {
 		Title:            "Jota",
 		Width:            1100,
 		Height:           720,
-		MinWidth:         500,
-		MinHeight:        480,
+		MinWidth:         windowMinWidth,
+		MinHeight:        windowMinHeight,
 		Frameless:        true,
 		AlwaysOnTop:      state.AlwaysOnTop,
 		BackgroundType:   application.BackgroundTypeSolid,
@@ -222,7 +237,7 @@ func main() {
 			return
 		}
 		window.SetPosition(state.X, state.Y)
-		window.SetSize(state.Width, state.Height)
+		window.SetSize(max(state.Width, windowMinWidth), max(state.Height, windowMinHeight))
 	})
 	window.OnWindowEvent(events.Common.WindowDidMove, func(*application.WindowEvent) {
 		if !restored.Load() {
@@ -234,6 +249,7 @@ func main() {
 		if !restored.Load() {
 			return
 		}
+		enforceMinSize(window)
 		saveWindowState(window, state.AlwaysOnTop)
 	})
 	window.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
