@@ -84,7 +84,8 @@ export function Modal({
 				}}
 				class={cn(
 					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-b-0 border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)] shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out sm:rounded-2xl sm:border-b",
-					host ? "max-h-full" : "max-h-[85dvh]",
+					"max-h-[70dvh]",
+					host ? "sm:max-h-full" : "sm:max-h-[85dvh]",
 					shown
 						? "translate-y-0 opacity-100 sm:scale-100"
 						: "translate-y-full opacity-0 sm:translate-y-0 sm:scale-95",
