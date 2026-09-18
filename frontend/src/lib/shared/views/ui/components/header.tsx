@@ -108,7 +108,7 @@ export function Header() {
 			style="--wails-draggable: drag"
 			class="sticky top-0 z-40 md:z-100 border-b border-zinc-800 bg-zinc-950"
 		>
-			<div class="mx-auto flex items-center justify-between text-sm text-zinc-300 h-10 px-4">
+			<div class="mx-auto flex items-center justify-between text-sm text-zinc-300 h-10 pr-4">
 				<div class="flex h-full items-center gap-1 pl-1">
 					<button
 						type="button"
