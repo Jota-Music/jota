@@ -1,7 +1,6 @@
 import { signal } from "@preact/signals";
 import {
 	ChevronUp,
-	ListMusic,
 	Minimize2,
 	Repeat,
 	Repeat1,
@@ -18,10 +17,10 @@ import { commitSeek, previewSeek } from "@/lib/music/views/stores/player";
 import {
 	cycleRepeat,
 	repeat,
-	showQueue,
 	shuffle,
 	toggleShuffle,
 } from "@/lib/music/views/stores/queue";
+import QueueButton from "@/lib/music/views/ui/player/queue-button";
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
 import Toggle from "@/lib/music/views/ui/player/toggle";
 import VolumeControl from "@/lib/music/views/ui/volume";
@@ -249,17 +248,7 @@ function FullPlayerContent(props: FullPlayerProps) {
 
 					<VolumeControl />
 
-					<button
-						type="button"
-						title={t("music.player.queue")}
-						aria-expanded={showQueue.value}
-						onClick={() => {
-							showQueue.value = !showQueue.value;
-						}}
-						class="rounded-md p-1 transition hover:bg-white/10 cursor-pointer"
-					>
-						<ListMusic class="size-6 fill-current" />
-					</button>
+					<QueueButton class="hover:bg-white/10" />
 
 					<button
 						type="button"
@@ -459,17 +448,7 @@ export function Player() {
 						</div>
 
 						<div class="flex items-center gap-0.5">
-							<button
-								type="button"
-								title={t("music.player.queue")}
-								aria-expanded={showQueue.value}
-								onClick={() => {
-									showQueue.value = !showQueue.value;
-								}}
-								class="max-md:hidden rounded-md p-1.5 transition text-white/60 hover:text-white cursor-pointer"
-							>
-								<ListMusic class="size-5 fill-current" />
-							</button>
+							<QueueButton class="max-md:hidden" />
 
 							<button
 								type="button"

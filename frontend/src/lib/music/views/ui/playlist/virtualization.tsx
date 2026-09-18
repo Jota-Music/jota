@@ -1,5 +1,4 @@
 import { computed } from "@preact/signals";
-import { ListPlus } from "lucide-preact";
 import { memo } from "preact/compat";
 import type { Song } from "@/lib/music/model";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
@@ -8,10 +7,8 @@ import {
 	isLoading,
 	isPlaying,
 } from "@/lib/music/views/stores/audio";
-import {
-	enqueue,
-	playFromQueueSelection,
-} from "@/lib/music/views/stores/player";
+import { playFromQueueSelection } from "@/lib/music/views/stores/player";
+import Enqueue from "@/lib/music/views/ui/components/enqueue";
 import TrackArt from "@/lib/music/views/ui/components/track-art";
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
 import { t } from "@/lib/shared/i18n";
@@ -74,17 +71,7 @@ function PlaylistRow({ song, songs }: { song: Song; songs: Song[] }) {
 
 			<div class="flex shrink-0 items-center gap-2">
 				<SaveYoutubeId song={song} compact />
-				<button
-					type="button"
-					title={t("music.track.enqueueAfter")}
-					onClick={(e) => {
-						e.stopPropagation();
-						enqueue(song);
-					}}
-					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-amber-300"
-				>
-					<ListPlus size={18} strokeWidth={2} />
-				</button>
+				<Enqueue song={song} title={t("music.track.enqueueAfter")} />
 				<div className="tabular-nums text-xs text-zinc-500">
 					{secondsToTime(song.duration)}
 				</div>

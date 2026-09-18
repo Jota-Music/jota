@@ -77,6 +77,12 @@ export const repeat = signal<RepeatMode>(loadRepeat());
 
 export const showQueue = signal<boolean>(false);
 
+export const queuePulse = signal(0);
+
+export function pingQueue() {
+	queuePulse.value++;
+}
+
 export function persistQueue() {
 	saveQueue(queue.value);
 	saveIndex(currentIndex.value);

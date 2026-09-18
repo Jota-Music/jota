@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { CirclePlay, Heart, ListPlus, ListVideo, Loader } from "lucide-preact";
+import { CirclePlay, Heart, ListVideo, Loader } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
@@ -14,10 +14,8 @@ import {
 	removeYouTubePlaylist,
 } from "@/lib/music/app/youtube-playlist";
 import type { PlaylistSummary, Song } from "@/lib/music/model";
-import {
-	enqueue,
-	playFromQueueSelection,
-} from "@/lib/music/views/stores/player";
+import { playFromQueueSelection } from "@/lib/music/views/stores/player";
+import Enqueue from "@/lib/music/views/ui/components/enqueue";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
@@ -314,17 +312,7 @@ function YouTubeVideoItem({
 				</p>
 			</div>
 
-			<button
-				type="button"
-				title={t("pages.youtube.addQueue")}
-				onClick={(e) => {
-					e.stopPropagation();
-					enqueue(song);
-				}}
-				class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-amber-300"
-			>
-				<ListPlus size={18} strokeWidth={2} />
-			</button>
+			<Enqueue song={song} title={t("pages.youtube.addQueue")} />
 		</button>
 	);
 }

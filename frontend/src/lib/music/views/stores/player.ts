@@ -21,6 +21,7 @@ import * as media from "@/lib/music/views/stores/media-session";
 import {
 	currentIndex,
 	persistQueue,
+	pingQueue,
 	queue,
 	repeat,
 	shuffle,
@@ -170,6 +171,7 @@ export function enqueue(song: Song) {
 	queue.value = insertAfter(queue.value, currentIndex.value, song);
 	if (currentIndex.value < 0) currentIndex.value = 0;
 	persistQueue();
+	pingQueue();
 
 	void AudioCache.preload(song);
 }
