@@ -40,6 +40,7 @@ export function AlbumPage() {
 					title={albumName}
 					subtitle={t("music.trackCount", { count: tracks.length })}
 					link={link}
+					linkReserve
 					onPlay={tracks.length > 0 ? () => void playList(tracks) : undefined}
 					playing={isQueue(tracks) && isPlaying.value}
 					actions={<TrackActions songs={tracks} onSelectAll={selectAll} />}

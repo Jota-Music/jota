@@ -243,6 +243,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				link={
 					data?.owner ? { to: `/${data.owner}`, label: data.owner } : undefined
 				}
+				linkReserve
 				onPlay={playable.length > 0 ? () => void playList(playable) : undefined}
 				playing={isQueue(playable) && isPlaying.value}
 				actions={

@@ -21,6 +21,7 @@ export function PageHeader({
 	title,
 	subtitle,
 	link,
+	linkReserve = false,
 	onPlay,
 	playing,
 	actions,
@@ -30,6 +31,7 @@ export function PageHeader({
 	title: string;
 	subtitle?: string;
 	link?: { to: string; label: string };
+	linkReserve?: boolean;
 	onPlay?: () => void;
 	playing?: boolean;
 	actions?: ComponentChildren;
@@ -76,7 +78,13 @@ export function PageHeader({
 			<div class="min-w-0">
 				<h2 class="truncate text-xl font-semibold leading-tight">{title}</h2>
 				{subtitle && <p class="text-sm opacity-70 mt-1">{subtitle}</p>}
-				{link && <LinkLine link={link} />}
+				{link ? (
+					<LinkLine link={link} />
+				) : linkReserve ? (
+					<span class="mt-1 block truncate text-sm" aria-hidden>
+						&nbsp;
+					</span>
+				) : null}
 			</div>
 			{right}
 		</header>
