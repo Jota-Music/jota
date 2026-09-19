@@ -15,6 +15,7 @@ import (
 	"github.com/Jota-Music/jota/internal/ordering"
 	"github.com/Jota-Music/jota/internal/playlists"
 	"github.com/Jota-Music/jota/internal/rooms"
+	"github.com/Jota-Music/jota/internal/saved"
 	"github.com/Jota-Music/jota/internal/services/discord"
 	"github.com/Jota-Music/jota/internal/services/spotify"
 	"github.com/Jota-Music/jota/internal/services/youtube"
@@ -35,6 +36,7 @@ type App struct {
 	Rooms     *rooms.Store
 	Order     *ordering.Service
 	Playlists *playlists.Service
+	Saved     *saved.Service
 	Discord   *discord.Service
 
 	discordMu  sync.Mutex
@@ -78,6 +80,7 @@ func New(version string) *App {
 		Rooms:     rooms.NewStore(),
 		Order:     ordering.New(),
 		Playlists: playlistsSvc,
+		Saved:     saved.New(),
 		Discord:   discord.New(cfg.DiscordClientID),
 	}
 }
