@@ -1,4 +1,5 @@
 import { effect, signal } from "@preact/signals";
+import { shouldEnd } from "@/lib/music/app/end";
 import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
@@ -86,7 +87,6 @@ function watchEnd(a: HTMLAudioElement) {
 			return;
 		}
 		const elementDuration = a.duration;
-		const fromElement = Number.isFinite(elementDuration) && elementDuration > 0;
 		const time = a.currentTime;
 		if (time === last) {
 			still += 250;
@@ -94,13 +94,7 @@ function watchEnd(a: HTMLAudioElement) {
 			still = 0;
 			last = time;
 		}
-		// `knownDuration` is truncated from the URL, so only use it as a
-		// near-end gate; the element duration triggers the end itself.
-		const gate = knownDuration > 0 ? knownDuration : elementDuration;
-		const reached = fromElement && time >= elementDuration - 0.25;
-		const stalled =
-			Number.isFinite(gate) && time > 0 && time >= gate - 2 && still >= 1000;
-		if (reached || stalled) endPlayback(a);
+		if (shouldEnd(time, elementDuration, knownDuration, still)) endPlayback(a);
 	}, 250);
 }
 
