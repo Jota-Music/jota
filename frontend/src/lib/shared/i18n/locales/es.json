@@ -163,6 +163,8 @@
 	"music": {
 		"likedSongs": "Canciones que te gustan",
 		"playAll": "Reproducir todo",
+		"play": "Reproducir",
+		"pause": "Pausar",
 		"trackCount": {
 			"one": "{count} canción",
 			"other": "{count} canciones"

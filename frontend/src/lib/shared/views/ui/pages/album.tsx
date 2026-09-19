@@ -41,7 +41,11 @@ export function AlbumPage() {
 					subtitle={t("music.trackCount", { count: tracks.length })}
 					link={link}
 					linkReserve
-					onPlay={tracks.length > 0 ? () => void playList(tracks) : undefined}
+					onPlay={
+						tracks.length > 0
+							? () => void playList(tracks, id ?? null)
+							: undefined
+					}
 					playing={isQueue(tracks) && isPlaying.value}
 					actions={<TrackActions songs={tracks} onSelectAll={selectAll} />}
 				/>
@@ -57,7 +61,7 @@ export function AlbumPage() {
 				) : tracks.length === 0 ? (
 					<p class="text-sm text-zinc-500">{t("pages.album.noTracks")}</p>
 				) : (
-					<Virtualization songs={tracks} />
+					<Virtualization songs={tracks} sourceId={id} />
 				)}
 			</div>
 		</DefaultLayout>

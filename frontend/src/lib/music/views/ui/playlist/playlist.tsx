@@ -374,6 +374,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			) : (
 				<Virtualization
 					songs={filteredSongs}
+					sourceId={id}
 					onRemove={
 						custom
 							? (next) => {

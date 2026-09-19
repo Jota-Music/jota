@@ -26,6 +26,7 @@ import {
 	persistQueue,
 	pingQueue,
 	queue,
+	queueSource,
 	repeat,
 	shuffle,
 } from "@/lib/music/views/stores/queue";
@@ -61,7 +62,15 @@ export function commitSeek(seconds: number) {
 	seek(clamped);
 }
 
-function setQueueState(nextQueue: Song[], nextIndex: number) {
+// setQueueState replaces the queue. source identifies the playlist/album it came
+// from; undefined preserves the current source (reorders), null clears it.
+function setQueueState(
+	nextQueue: Song[],
+	nextIndex: number,
+	source: string | null | undefined = undefined,
+) {
+	if (source !== undefined) queueSource.value = source;
+
 	const song =
 		nextIndex >= 0 && nextIndex < nextQueue.length
 			? nextQueue[nextIndex]
@@ -149,7 +158,15 @@ async function playAtIndex(
 export async function playFromQueueSelection(
 	fullOrderedSongs: Song[],
 	clicked: Song,
+	source: string | null = null,
 ) {
+	// Pressing play on the track that is already playing toggles it instead of
+	// restarting the same queue.
+	if (isQueue(fullOrderedSongs) && currentSong.value?.id === clicked.id) {
+		if (source !== null) queueSource.value = source;
+		return toggleSong();
+	}
+
 	const i = fullOrderedSongs.findIndex((s) => s.id === clicked.id);
 	if (i === -1) return;
 
@@ -157,16 +174,16 @@ export async function playFromQueueSelection(
 		? permute(fullOrderedSongs, random(seed()))
 		: fullOrderedSongs.slice();
 	const index = ordered.findIndex((s) => s.id === clicked.id);
-	await setQueueState(ordered, index);
+	await setQueueState(ordered, index, source);
 	await playAtIndex(index);
 }
 
-export async function playAll(songs: Song[]) {
+export async function playAll(songs: Song[], source: string | null = null) {
 	if (songs.length === 0) return;
 	const ordered = shuffle.value
 		? permute(songs, random(seed()))
 		: songs.slice();
-	await setQueueState(ordered, 0);
+	await setQueueState(ordered, 0, source);
 	await playAtIndex(0);
 }
 
@@ -177,9 +194,12 @@ export function isQueue(songs: Song[]) {
 // A header play control starts the whole list unless that exact queue is already
 // loaded. Membership alone would no-op on a cold start, when the queue is
 // restored from storage but no track is loaded.
-export function playList(songs: Song[]) {
-	if (isQueue(songs) && currentSong.value) return toggleSong();
-	return playAll(songs);
+export function playList(songs: Song[], source: string | null = null) {
+	if (isQueue(songs) && currentSong.value) {
+		if (source !== null) queueSource.value = source;
+		return toggleSong();
+	}
+	return playAll(songs, source);
 }
 
 export function enqueueMany(songs: Song[]) {

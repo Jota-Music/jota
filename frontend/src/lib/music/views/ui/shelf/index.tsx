@@ -1,7 +1,9 @@
-import { Plus, Trash2 } from "lucide-preact";
+import { Pause, Play, Plus, Trash2 } from "lucide-preact";
 import { useRef } from "preact/hooks";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
+import { isPlaying } from "@/lib/music/views/stores/audio";
+import { queueSource } from "@/lib/music/views/stores/queue";
 import { t } from "@/lib/shared/i18n";
 import {
 	type Action,
@@ -24,6 +26,7 @@ export function Shelf({
 	to,
 	viewKey = defaultViewKey,
 	onSelect,
+	onPlay,
 	actions,
 	isLoading = false,
 	emptyMessage = t("music.shelf.empty"),
@@ -47,7 +50,16 @@ export function Shelf({
 	// A right-click (or touch long-press) opens the item's own actions instead
 	// of the browser context menu.
 	const openItemMenu = (item: Item) => (e: MouseEvent) => {
-		const actions: Action[] = [...(item.menu ?? [])];
+		const actions: Action[] = [];
+		if (onPlay) {
+			const playing = queueSource.value === item.id && isPlaying.value;
+			actions.push({
+				icon: playing ? Pause : Play,
+				label: playing ? t("music.pause") : t("music.play"),
+				run: () => onPlay(item.id),
+			});
+		}
+		actions.push(...(item.menu ?? []));
 		if (onRemove && item.removable) {
 			actions.push({
 				icon: Trash2,

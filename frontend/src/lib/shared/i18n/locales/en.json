@@ -163,6 +163,8 @@
 	"music": {
 		"likedSongs": "Liked Songs",
 		"playAll": "Play all",
+		"play": "Play",
+		"pause": "Pause",
 		"trackCount": {
 			"one": "{count} track",
 			"other": "{count} tracks"

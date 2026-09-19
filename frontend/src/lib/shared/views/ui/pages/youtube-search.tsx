@@ -1,6 +1,6 @@
 import { useSignal } from "@preact/signals";
 import { useQuery } from "@tanstack/preact-query";
-import { CirclePlay, ListVideo, Loader } from "lucide-preact";
+import { CirclePlay, ListVideo, Loader, Pause, Play } from "lucide-preact";
 import { useEffect, useRef } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
@@ -10,13 +10,17 @@ import {
 } from "@/lib/music/app/search";
 import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import type { PlaylistSummary, Song } from "@/lib/music/model";
+import { playPlaylist } from "@/lib/music/views/play";
+import { isPlaying } from "@/lib/music/views/stores/audio";
 import { playFromQueueSelection } from "@/lib/music/views/stores/player";
+import { queueSource } from "@/lib/music/views/stores/queue";
 import { clearSelection } from "@/lib/music/views/stores/selection";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
@@ -207,8 +211,24 @@ export function YouTubeSearchPage() {
 }
 
 function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
+	const playing = queueSource.value === playlist.id && isPlaying.value;
 	return (
-		<div class="group flex flex-col gap-2">
+		// biome-ignore lint/a11y/noStaticElementInteractions: right-click opens the playlist actions
+		<div
+			class="group flex flex-col gap-2"
+			onContextMenu={(e) => {
+				openContextMenu(
+					[
+						{
+							icon: playing ? Pause : Play,
+							label: playing ? t("music.pause") : t("music.play"),
+							run: () => void playPlaylist(playlist.id),
+						},
+					],
+					e,
+				);
+			}}
+		>
 			<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
 				<Link href={`/playlist/${playlist.id}`}>
 					<PlaylistCover

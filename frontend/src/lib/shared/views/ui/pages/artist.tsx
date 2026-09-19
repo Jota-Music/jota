@@ -7,6 +7,7 @@ import { useEffect } from "preact/hooks";
 import { useParams } from "wouter-preact";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import type { AlbumSummary, Song } from "@/lib/music/model";
+import { playAlbum } from "@/lib/music/views/play";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { isQueue, playList } from "@/lib/music/views/stores/player";
 import { clearSelection, selectAll } from "@/lib/music/views/stores/selection";
@@ -197,6 +198,7 @@ export function ArtistPage() {
 							}),
 						)}
 						to={(id) => `/album/${id}`}
+						onPlay={playAlbum}
 						viewKey="artist_view"
 						isLoading={discoLoading}
 						emptyMessage={t("pages.artist.noGroup", {

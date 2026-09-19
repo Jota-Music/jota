@@ -71,6 +71,10 @@ export const queue = signal<Song[]>(loadQueue());
 
 export const currentIndex = signal<number>(loadIndex());
 
+// The playlist or album the current queue was started from, when known. Lets a
+// card's play button reflect (and toggle) its own playback.
+export const queueSource = signal<string | null>(null);
+
 export const shuffle = signal<boolean>(loadShuffle());
 
 export const repeat = signal<RepeatMode>(loadRepeat());

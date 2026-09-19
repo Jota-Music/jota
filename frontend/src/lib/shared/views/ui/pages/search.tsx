@@ -1,13 +1,20 @@
 import { useQuery } from "@tanstack/preact-query";
-import { Loader } from "lucide-preact";
+import { Loader, Pause, Play } from "lucide-preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { Link, useLocation, useParams } from "wouter-preact";
 import { type SearchResult, searchSpotify } from "@/lib/music/app/search";
 import type { Song } from "@/lib/music/model";
+import { playAlbum, playPlaylist } from "@/lib/music/views/play";
+import { isPlaying } from "@/lib/music/views/stores/audio";
+import { queueSource } from "@/lib/music/views/stores/queue";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
+import {
+	type Action,
+	openContextMenu,
+} from "@/lib/shared/views/ui/components/context-menu";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
@@ -28,10 +35,33 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 	const coverUrl = item.coverUrl ?? "";
 	const artists = (item.artists ?? []).join(", ");
 	const isPlaylist = item.uri.startsWith("spotify:playlist:");
+	const isAlbum = item.uri.startsWith("spotify:album:");
 	const playlistId = stripUriPrefix(item.uri, "playlist");
 
+	function openMenu(e: MouseEvent) {
+		const actions: Action[] = [];
+		const id = isPlaylist ? playlistId : stripUriPrefix(item.uri, "album");
+		const playing = queueSource.value === id && isPlaying.value;
+		const play = {
+			icon: playing ? Pause : Play,
+			label: playing ? t("music.pause") : t("music.play"),
+		};
+		if (isPlaylist) {
+			actions.push({
+				...play,
+				run: () => void playPlaylist(playlistId),
+			});
+		} else if (isAlbum) {
+			actions.push({
+				...play,
+				run: () => void playAlbum(stripUriPrefix(item.uri, "album")),
+			});
+		}
+		if (actions.length > 0) openContextMenu(actions, e);
+	}
+
 	return (
-		<Link href={`/playlist/${playlistId}`}>
+		<Link href={`/playlist/${playlistId}`} onContextMenu={openMenu}>
 			<div class="group cursor-pointer overflow-hidden rounded-md">
 				<div class="flex flex-col gap-2">
 					<div class="relative aspect-square w-full overflow-hidden rounded-md">

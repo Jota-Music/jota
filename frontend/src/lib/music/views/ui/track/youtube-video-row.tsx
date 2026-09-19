@@ -47,6 +47,7 @@ export function YouTubeVideoRow({
 			onContextMenu={(e) => {
 				const { actions } = buildActions({
 					songs: [song],
+					onPlay: onClick,
 					onToggleSelect: toggleSelection,
 				});
 				openContextMenu(actions, e);

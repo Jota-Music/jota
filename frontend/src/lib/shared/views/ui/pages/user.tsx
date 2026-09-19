@@ -10,6 +10,7 @@ import {
 } from "@/lib/music/app/get-user-playlists";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import type { PlaylistSummary } from "@/lib/music/model";
+import { playPlaylist } from "@/lib/music/views/play";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
@@ -105,6 +106,7 @@ export function UserPage() {
 				items={playlists.map(toItem)}
 				to={(id) => `/playlist/${id}`}
 				actions={(id) => <PlaylistPlayButton id={id} />}
+				onPlay={playPlaylist}
 				viewKey="user_view"
 				isLoading={playlistsQuery.isLoading}
 				emptyMessage={t("pages.user.noPlaylists")}

@@ -13,6 +13,7 @@ import {
 	getSavedPlaylists,
 	removeSavedPlaylist,
 } from "@/lib/music/app/saved-playlist";
+import { playPlaylist } from "@/lib/music/views/play";
 import { expireRemoval } from "@/lib/music/views/stores/removal";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { CreatePlaylistModal } from "@/lib/music/views/ui/playlists/create";
@@ -201,6 +202,7 @@ export function MainPage() {
 							customQuery.isLoading
 						}
 						emptyMessage={<YouTubeHint />}
+						onPlay={playPlaylist}
 						onRemove={(id) => remove(id)}
 						onReorder={reorder}
 						onCreate={() => {

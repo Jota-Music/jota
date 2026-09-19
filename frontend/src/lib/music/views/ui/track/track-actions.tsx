@@ -4,6 +4,8 @@ import {
 	ListChecks,
 	ListPlus,
 	type LucideIcon,
+	Pause,
+	Play,
 	Square,
 	SquareCheck,
 	SquarePlus,
@@ -12,7 +14,8 @@ import {
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
-import { enqueueMany } from "@/lib/music/views/stores/player";
+import { currentSong, isPlaying } from "@/lib/music/views/stores/audio";
+import { enqueueMany, playList } from "@/lib/music/views/stores/player";
 import {
 	clearSelection,
 	openPicker,
@@ -36,6 +39,7 @@ type Props = {
 	songs: Song[];
 	selection?: boolean;
 	removable?: boolean;
+	onPlay?: () => void;
 	onRemove?: (songs: Song[]) => void;
 	onToggleSelect?: (song: Song) => void;
 	onSelectAll?: (songs: Song[]) => void;
@@ -48,6 +52,7 @@ export function buildActions({
 	songs,
 	selection,
 	removable,
+	onPlay,
 	onRemove,
 	onToggleSelect,
 	onSelectAll,
@@ -63,7 +68,20 @@ export function buildActions({
 	const single = list.length === 1 ? list[0] : null;
 	const done = () => void onDone?.();
 
+	// The track that is already playing toggles instead of restarting.
+	const playing =
+		!!single && currentSong.value?.id === single.id && isPlaying.value;
+
 	const actions: Action[] = [
+		{
+			icon: playing ? Pause : Play,
+			label: playing ? t("music.pause") : t("music.play"),
+			run: () => {
+				if (onPlay) onPlay();
+				else void playList(list);
+				done();
+			},
+		},
 		{
 			icon: ListPlus,
 			label: t("music.track.addQueue"),
@@ -139,6 +157,7 @@ export default function TrackActions({
 	songs,
 	selection,
 	removable,
+	onPlay,
 	onRemove,
 	onToggleSelect,
 	onSelectAll,
@@ -153,6 +172,7 @@ export default function TrackActions({
 		songs,
 		selection,
 		removable,
+		onPlay,
 		onRemove,
 		onToggleSelect,
 		onSelectAll,

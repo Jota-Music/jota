@@ -33,6 +33,8 @@ export interface Props {
 	// own layout.
 	viewKey?: string;
 	onSelect?: (id: string) => void;
+	// onPlay adds a "Play" action to each item's context menu when set.
+	onPlay?: (id: string) => void;
 	// actions renders hover buttons for an item, next to the remove button.
 	actions?: (id: string) => ComponentChildren;
 	isLoading?: boolean;

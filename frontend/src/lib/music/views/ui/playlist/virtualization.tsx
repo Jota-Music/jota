@@ -32,6 +32,9 @@ import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 type Props = {
 	songs: Song[];
+	// sourceId identifies the playlist/album these songs belong to, so playback
+	// can be tied back to its card.
+	sourceId?: string;
 	onRemove?: (songs: Song[]) => void;
 	onReorder?: (from: number, to: number) => void;
 };
@@ -52,6 +55,7 @@ function PlaylistRow({
 	song,
 	songs,
 	index,
+	sourceId,
 	selected,
 	reorderable,
 	isDragSource,
@@ -62,6 +66,7 @@ function PlaylistRow({
 	song: Song;
 	songs: Song[];
 	index: number;
+	sourceId?: string;
 	selected: boolean;
 	reorderable: boolean;
 	isDragSource: boolean;
@@ -77,7 +82,7 @@ function PlaylistRow({
 		songs,
 		index,
 		disabled: broken,
-		onActivate: () => void playFromQueueSelection(songs, song),
+		onActivate: () => void playFromQueueSelection(songs, song, sourceId),
 	});
 
 	return (
@@ -93,6 +98,7 @@ function PlaylistRow({
 					songs: [song],
 					selection: selected,
 					removable,
+					onPlay: () => void playFromQueueSelection(songs, song, sourceId),
 					onRemove,
 					onToggleSelect: toggleSelection,
 				});
@@ -191,7 +197,12 @@ function PlaylistRow({
 
 const PlaylistRowMemo = memo(PlaylistRow);
 
-export function Virtualization({ songs, onRemove, onReorder }: Props) {
+export function Virtualization({
+	songs,
+	sourceId,
+	onRemove,
+	onReorder,
+}: Props) {
 	const { ref, totalSize, items } = useWindow<HTMLDivElement>(
 		songs.length,
 		ROW_PX,
@@ -199,7 +210,7 @@ export function Virtualization({ songs, onRemove, onReorder }: Props) {
 	const reorderable = !!onReorder && songs.length > 1;
 	const selection = selectionActive.value;
 	const selected = new Set(selectedSongs.value.map((s) => s.id));
-	const source = useRef<number | null>(null);
+	const dragOrigin = useRef<number | null>(null);
 
 	const indexFromClientY = (clientY: number) => {
 		const el = ref.current;
@@ -212,9 +223,9 @@ export function Virtualization({ songs, onRemove, onReorder }: Props) {
 	const { start, captureClick } = usePointerDrag({
 		scroll: ref,
 		begin: () => {
-			if (source.current == null) return;
-			dragFrom.value = source.current;
-			dragOver.value = source.current;
+			if (dragOrigin.current == null) return;
+			dragFrom.value = dragOrigin.current;
+			dragOver.value = dragOrigin.current;
 		},
 		move: (e) => {
 			const next = indexFromClientY(e.clientY);
@@ -239,7 +250,7 @@ export function Virtualization({ songs, onRemove, onReorder }: Props) {
 		const index = Number(row.getAttribute("data-playlist-index"));
 		if (!Number.isInteger(index)) return;
 		if (!start(e)) return;
-		source.current = index;
+		dragOrigin.current = index;
 	};
 
 	const handleDragOverCapture = (e: DragEvent) => {
@@ -322,6 +333,7 @@ export function Virtualization({ songs, onRemove, onReorder }: Props) {
 										song={song}
 										songs={songs}
 										index={virtualRow.index}
+										sourceId={sourceId}
 										selected={selected.has(song.id)}
 										reorderable={reorderable}
 										isDragSource={dragFrom.value === virtualRow.index}
