@@ -5,10 +5,14 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.AudioManager;
 import android.media.MediaMetadata;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
@@ -56,6 +60,17 @@ public class MediaPlaybackService extends Service {
     public static void setListener(Listener value) {
         listener = value;
     }
+
+    // Pause instead of blasting the speaker (and wedging the WebView's element)
+    // when a headset/A2DP sink disconnects and audio reroutes to the device.
+    private final BroadcastReceiver noisyReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
+                forward("pause", null);
+            }
+        }
+    };
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private MediaSession session;
@@ -107,6 +122,7 @@ public class MediaPlaybackService extends Service {
                     }
                 });
         createChannel();
+        registerReceiver(noisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
     }
 
     @Override
@@ -308,6 +324,10 @@ public class MediaPlaybackService extends Service {
 
     @Override
     public void onDestroy() {
+        try {
+            unregisterReceiver(noisyReceiver);
+        } catch (Exception ignored) {
+        }
         stopForeground(true);
         if (session != null) {
             session.setActive(false);
