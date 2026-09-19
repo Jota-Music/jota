@@ -105,7 +105,7 @@ func (a *App) needsDiscordSet(st *discordState, fingerprint string, m Media) boo
 		return true
 	}
 	if !m.Playing {
-		return false
+		return math.Abs(m.Position-st.position) > 1
 	}
 	if m.Duration > 0 && !st.timed {
 		return true
@@ -135,11 +135,11 @@ func (a *App) activity(m Media) discord.Activity {
 	if m.Artwork != "" {
 		activity.Assets.LargeImage = m.Artwork
 	}
-	if m.Playing && m.Duration > 0 && m.Position >= 0 && m.Position < m.Duration {
+	if m.Duration > 0 && m.Position >= 0 && m.Position < m.Duration {
 		now := time.Now().UnixMilli()
-		activity.Timestamps = &discord.Timestamps{
-			Start: now - int64(m.Position*1000),
-			End:   now + int64((m.Duration-m.Position)*1000),
+		activity.Timestamps = &discord.Timestamps{Start: now - int64(m.Position*1000)}
+		if m.Playing {
+			activity.Timestamps.End = now + int64((m.Duration-m.Position)*1000)
 		}
 	}
 	return activity

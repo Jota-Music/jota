@@ -51,6 +51,18 @@ func TestNeedsDiscordSet(t *testing.T) {
 			Media{Title: "song", Artist: "artist", Album: "album", Artwork: "art", Playing: false, Duration: 200, Position: 60},
 			"song\x00artist\x00album\x00art\x00false", true,
 		},
+		{
+			"paused, same position",
+			&discordState{fingerprint: "song\x00artist\x00album\x00art\x00false", position: 60, setAt: time.Now()},
+			Media{Title: "song", Artist: "artist", Album: "album", Artwork: "art", Playing: false, Duration: 200, Position: 60},
+			"song\x00artist\x00album\x00art\x00false", false,
+		},
+		{
+			"paused, seek",
+			&discordState{fingerprint: "song\x00artist\x00album\x00art\x00false", position: 60, setAt: time.Now()},
+			Media{Title: "song", Artist: "artist", Album: "album", Artwork: "art", Playing: false, Duration: 200, Position: 120},
+			"song\x00artist\x00album\x00art\x00false", true,
+		},
 	}
 
 	for _, tc := range cases {
@@ -82,8 +94,13 @@ func TestActivityTimestamps(t *testing.T) {
 		t.Fatal("no timestamps when duration unknown")
 	}
 
+	after := time.Now().UnixMilli()
 	act = a.activity(Media{Title: "song", Playing: false, Duration: 100, Position: 50})
-	if act.Timestamps != nil {
-		t.Fatal("no timestamps when paused")
+	if act.Timestamps == nil {
+		t.Fatal("expected timestamps when paused")
 	}
+	if act.Timestamps.End != 0 {
+		t.Fatalf("end = %d, want 0 when paused", act.Timestamps.End)
+	}
+	within("paused start", act.Timestamps.Start, after-50000)
 }
