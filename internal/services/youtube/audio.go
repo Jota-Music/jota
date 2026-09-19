@@ -8,6 +8,7 @@ import (
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -76,9 +77,11 @@ func getExpireAndDurationFromURL(raw string) (*expireAndDuration, bool) {
 		return nil, false
 	}
 
+	// Round up so the reported duration never falls below the real track: the
+	// player uses it as the authoritative end boundary.
 	return &expireAndDuration{
 		ExpireAt: expireInt,
-		Duration: int(durFloat),
+		Duration: int(math.Ceil(durFloat)),
 	}, true
 }
 
