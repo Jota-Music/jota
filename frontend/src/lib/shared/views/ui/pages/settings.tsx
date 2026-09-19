@@ -2,6 +2,7 @@ import { useRef } from "preact/hooks";
 import { AccountSettings } from "@/lib/auth/views/ui/account-settings";
 import { t } from "@/lib/shared/i18n";
 import { open } from "@/lib/shared/utils/open";
+import { DiscordSettings } from "@/lib/shared/views/ui/components/discord-settings";
 import { LanguageSettings } from "@/lib/shared/views/ui/components/language-settings";
 import { LogsSettings } from "@/lib/shared/views/ui/components/logs-settings";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
@@ -10,6 +11,9 @@ import { RelaySettings } from "@/lib/sync/views/ui/relay-settings";
 import { AboutSettings } from "@/lib/update/views/about-settings";
 
 const GITHUB_URL = "https://github.com/salvadorsru";
+
+const isAndroid =
+	typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
 
 function openDeveloper(): void {
 	void open(GITHUB_URL);
@@ -34,6 +38,7 @@ function SettingsPage() {
 
 					<AccountSettings />
 					<LanguageSettings />
+					{!isAndroid && <DiscordSettings />}
 					<RelaySettings />
 					<AboutSettings />
 					<LogsSettings />

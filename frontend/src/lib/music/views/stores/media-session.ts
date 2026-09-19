@@ -1,3 +1,4 @@
+import { ClearDiscordPresence, UpdateDiscordPresence } from "@bindings/app";
 import { Events } from "@wailsio/runtime";
 import type { Song } from "@/lib/music/model";
 
@@ -37,22 +38,29 @@ function native(): NativeBridge | null {
 }
 
 function pushNative(force = false) {
-	const bridge = native();
-	if (!bridge?.mediaUpdate || !current) return;
+	if (!current) return;
 	const now = Date.now();
 	if (!force && now - lastPush < 2000) return;
 	lastPush = now;
-	bridge.mediaUpdate(
-		JSON.stringify({
-			title: current.name,
-			artist: (current.artists ?? []).map((artist) => artist.name).join(", "),
-			album: current.album.title,
-			artwork: current.album.covers?.[0] ?? "",
-			playing,
-			duration: storedDuration,
-			position: storedPosition,
-		}),
-	);
+	const payload = JSON.stringify({
+		title: current.name,
+		artist: (current.artists ?? []).map((artist) => artist.name).join(", "),
+		album: current.album.title,
+		artwork: current.album.covers?.[0] ?? "",
+		playing,
+		duration: storedDuration,
+		position: storedPosition,
+	});
+
+	const bridge = native();
+	if (bridge?.mediaUpdate) {
+		bridge.mediaUpdate(payload);
+	}
+	void UpdateDiscordPresence(payload).catch(() => {});
+}
+
+export function refresh() {
+	pushNative(true);
 }
 
 export function setup(controls: Controls) {
@@ -149,6 +157,7 @@ export function update(song: Song | null, isPlaying: boolean) {
 		pushNative(true);
 	} else {
 		native()?.mediaClear?.();
+		void ClearDiscordPresence().catch(() => {});
 	}
 }
 
@@ -184,4 +193,5 @@ export function clear() {
 	current = null;
 	playing = false;
 	native()?.mediaClear?.();
+	void ClearDiscordPresence().catch(() => {});
 }

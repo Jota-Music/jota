@@ -59,6 +59,11 @@
 			"description": "Idioma de la interfaz.",
 			"label": "Idioma"
 		},
+		"discord": {
+			"title": "Discord",
+			"description": "Muestra lo que escuchas en tu estado de Discord.",
+			"label": "Discord rich presence"
+		},
 		"logs": {
 			"title": "Registros",
 			"description": "Comparte el registro de la app al reportar un problema.",

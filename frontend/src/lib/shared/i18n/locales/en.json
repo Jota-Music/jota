@@ -59,6 +59,11 @@
 			"description": "Interface language.",
 			"label": "Language"
 		},
+		"discord": {
+			"title": "Discord",
+			"description": "Show what you're listening to in your Discord status.",
+			"label": "Discord rich presence"
+		},
 		"logs": {
 			"title": "Logs",
 			"description": "Share the app log when reporting a problem.",
