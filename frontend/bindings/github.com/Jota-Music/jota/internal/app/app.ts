@@ -37,6 +37,10 @@ export function CheckUpdate(): $CancellablePromise<update$0.Info> {
     return $Call.ByID(1914456057);
 }
 
+export function ClearDiscordPresence(): $CancellablePromise<void> {
+    return $Call.ByID(345571046);
+}
+
 export function ClearYouTubeCookies(): $CancellablePromise<void> {
     return $Call.ByID(438744125);
 }
@@ -47,6 +51,10 @@ export function CreatePlaylist(name: string): $CancellablePromise<music$0.Playli
 
 export function DeletePlaylist(id: string): $CancellablePromise<void> {
     return $Call.ByID(1312524061, id);
+}
+
+export function DiscordEnabled(): $CancellablePromise<boolean> {
+    return $Call.ByID(1914947745);
 }
 
 export function FollowUser(account: string, user: string): $CancellablePromise<void> {
@@ -200,6 +208,10 @@ export function SearchYouTubePlaylists(query: string): $CancellablePromise<music
     return $Call.ByID(4089111504, query);
 }
 
+export function SetDiscordEnabled(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2965467793, enabled);
+}
+
 /**
  * SetYouTubeCookies stores the Google account cookies used to sign innertube
  * requests. Playing age-restricted videos and avoiding the bot check requires
@@ -263,6 +275,10 @@ export function SyncStop(): $CancellablePromise<void> {
 
 export function UnfollowUser(account: string, user: string): $CancellablePromise<void> {
     return $Call.ByID(2753135609, account, user);
+}
+
+export function UpdateDiscordPresence(payload: string): $CancellablePromise<void> {
+    return $Call.ByID(2665186794, payload);
 }
 
 export function Version(): $CancellablePromise<string> {

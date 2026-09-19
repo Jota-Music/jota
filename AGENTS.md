@@ -62,6 +62,7 @@ cd frontend && bun run typecheck && bun run lint
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SPOTIFY_CLIENT_ID` | librespot default | Custom Spotify OAuth client ID. |
+| `DISCORD_CLIENT_ID` | Jota's app | Discord application for rich presence. Forks set their own app ID. |
 | `YOUTUBE_API_KEY` | public InnerTube key | Override the YouTube InnerTube API key. |
 | `RELAY_API_URL` | _(empty)_ | Dev-only: pin the relay URL, overriding the one saved in the UI. |
 | `RELAY_API_TOKEN` | _(empty)_ | Dev-only: relay auth token to pair with `RELAY_API_URL`. |

@@ -11,6 +11,7 @@ import (
 	"github.com/Jota-Music/jota/internal/env"
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/services/discord"
 	"github.com/Jota-Music/jota/internal/services/follows"
 	"github.com/Jota-Music/jota/internal/services/ordering"
 	"github.com/Jota-Music/jota/internal/services/playlists"
@@ -35,6 +36,11 @@ type App struct {
 	Rooms     *rooms.Service
 	Order     *ordering.Service
 	Playlists *playlists.Service
+	Discord   *discord.Service
+
+	discordMu  stdsync.Mutex
+	discord    *discordState
+	discordErr string
 }
 
 // RelayOverride pins a relay for local testing. An empty URL means the user's
@@ -67,6 +73,7 @@ func New(version string) *App {
 		Rooms:     rooms.New(),
 		Order:     ordering.New(),
 		Playlists: playlistsSvc,
+		Discord:   discord.New(cfg.DiscordClientID),
 	}
 }
 
@@ -82,6 +89,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 }
 
 func (a *App) ServiceShutdown() error {
+	a.Discord.Close()
 	kv.Close()
 	return nil
 }
