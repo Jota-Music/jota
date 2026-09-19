@@ -129,6 +129,26 @@ func TestBrowseParsing(t *testing.T) {
 	}
 }
 
+func TestVideoToSongDropsUnavailable(t *testing.T) {
+	unplayable := false
+	if _, ok := videoToSong(playlistVideoRenderer{VideoId: "dQw4w9WgXcQ", IsPlayable: &unplayable}, "Mix"); ok {
+		t.Fatal("an unplayable video should be dropped")
+	}
+
+	if _, ok := videoToSong(playlistVideoRenderer{}, "Mix"); ok {
+		t.Fatal("a video without id should be dropped")
+	}
+
+	var deleted playlistVideoRenderer
+	fixture := `{"videoId":"del12345678","title":{"runs":[{"text":"[Deleted video]"}]}}`
+	if err := json.Unmarshal([]byte(fixture), &deleted); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, ok := videoToSong(deleted, "Mix"); ok {
+		t.Fatal("a deleted video should be dropped")
+	}
+}
+
 func TestContinuationParsing(t *testing.T) {
 	var res playlistContinuationResponse
 	if err := json.Unmarshal([]byte(continuationFixture), &res); err != nil {

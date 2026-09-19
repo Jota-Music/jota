@@ -52,14 +52,11 @@ func extractVideos(sr searchResponse) []Video {
 			if v.VideoID == "" {
 				continue
 			}
-			title := ""
-			if len(v.Title.Runs) > 0 {
-				title = v.Title.Runs[0].Text
-			}
 			videos = append(videos, Video{
-				ID:     v.VideoID,
-				Title:  title,
-				Author: v.ByLine.first(),
+				ID:        v.VideoID,
+				Title:     v.Title.first(),
+				Author:    v.ByLine.first(),
+				ChannelId: v.ByLine.browseID(),
 			})
 		}
 	}
@@ -109,7 +106,7 @@ func fetchVideo(id string) (Video, error) {
 		return Video{}, errors.New("video unavailable")
 	}
 
-	return Video{ID: id, Title: pr.VideoDetails.Title, Author: pr.VideoDetails.Author}, nil
+	return Video{ID: id, Title: pr.VideoDetails.Title, Author: pr.VideoDetails.Author, ChannelId: pr.VideoDetails.ChannelID}, nil
 }
 
 func fetchPlayer(id string) (playerResponse, error) {
@@ -190,16 +187,9 @@ func extractPlaylists(res playlistSearchResponse) []music.PlaylistSummary {
 	out := make([]music.PlaylistSummary, 0)
 	for _, section := range res.Contents.SectionListRenderer.Contents {
 		for _, item := range section.ItemSectionRenderer.Contents {
-			p := item.CompactPlaylistRenderer
-			if p.PlaylistId == "" {
-				continue
+			if summary, ok := item.CompactPlaylistRenderer.summary(); ok {
+				out = append(out, summary)
 			}
-			out = append(out, music.PlaylistSummary{
-				Id:       music.YouTubePrefix + p.PlaylistId,
-				Name:     p.Title.first(),
-				Cover:    p.Thumbnail.url(),
-				Subtitle: p.ByLine.first(),
-			})
 		}
 	}
 	return out

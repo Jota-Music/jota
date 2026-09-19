@@ -40,16 +40,20 @@ func (a *App) SearchYouTubePlaylists(query string) ([]music.PlaylistSummary, err
 	return a.YouTube.SearchPlaylists(query)
 }
 
-func (a *App) GetYouTubePlaylists() ([]music.PlaylistSummary, error) {
-	return a.YouTube.Playlists()
+func (a *App) GetYouTubeChannelPlaylists(channel string) ([]music.PlaylistSummary, error) {
+	return a.YouTube.GetChannelPlaylists(channel)
 }
 
-func (a *App) AddYouTubePlaylist(id string) (music.PlaylistSummary, error) {
-	return a.YouTube.AddPlaylist(id)
+func (a *App) RevalidateYouTubeChannel(channel string) error {
+	return a.YouTube.RevalidateChannel(channel)
 }
 
-func (a *App) RemoveYouTubePlaylist(id string) error {
-	return a.YouTube.RemovePlaylist(id)
+func (a *App) GetYouTubeChannelVideos(channel string) ([]music.Song, error) {
+	return a.YouTube.GetChannelVideos(channel)
+}
+
+func (a *App) GetYouTubeChannelInfo(channel string) (music.ChannelInfo, error) {
+	return a.YouTube.GetChannelInfo(channel)
 }
 
 // SetYouTubeCookies stores the Google account cookies used to sign innertube

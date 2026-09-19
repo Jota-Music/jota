@@ -31,15 +31,17 @@ type Album struct {
 }
 
 type Artist struct {
-	Id   string `json:"id,omitempty"`
-	Name string `json:"name"`
+	Id     string `json:"id,omitempty"`
+	Name   string `json:"name"`
+	Source string `json:"source,omitempty"`
 }
 
 type Playlist struct {
-	Name  string `json:"name,omitempty"`
-	Cover string `json:"cover,omitempty"`
-	Owner string `json:"owner,omitempty"`
-	Songs []Song `json:"songs"`
+	Name    string `json:"name,omitempty"`
+	Cover   string `json:"cover,omitempty"`
+	Owner   string `json:"owner,omitempty"`
+	OwnerId string `json:"ownerId,omitempty"`
+	Songs   []Song `json:"songs"`
 }
 
 type Audio struct {
@@ -73,6 +75,12 @@ type UserProfile struct {
 	Username    string `json:"username"`
 	DisplayName string `json:"displayName"`
 	ImageURL    string `json:"imageUrl,omitempty"`
+}
+
+type ChannelInfo struct {
+	Id     string `json:"id"`
+	Name   string `json:"name"`
+	Avatar string `json:"avatar,omitempty"`
 }
 
 type Follow struct {

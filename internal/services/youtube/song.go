@@ -47,7 +47,7 @@ func fetchSong(id string) (music.Song, error) {
 		Duration:  int(duration),
 		Share:     music.Share{Id: music.YouTubePrefix + id, Url: watchURL},
 		Album:     music.Album{Title: "YouTube", Covers: []string{pr.VideoDetails.Thumbnail.url()}},
-		Artists:   []music.Artist{{Name: author}},
+		Artists:   []music.Artist{{Id: pr.VideoDetails.ChannelID, Name: author, Source: "youtube"}},
 		YoutubeId: id,
 	}, nil
 }
