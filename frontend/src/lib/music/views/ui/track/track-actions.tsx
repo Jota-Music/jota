@@ -1,3 +1,4 @@
+import { useSignal, useSignalEffect } from "@preact/signals";
 import {
 	EllipsisVertical,
 	ListChecks,
@@ -9,7 +10,7 @@ import {
 	Trash2,
 } from "lucide-preact";
 import { createPortal } from "preact/compat";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { enqueueMany } from "@/lib/music/views/stores/player";
 import {
@@ -143,8 +144,8 @@ export default function TrackActions({
 	onSelectAll,
 	onDone,
 }: Props) {
-	const [open, setOpen] = useState(false);
-	const [anchor, setAnchor] = useState<DOMRect | null>(null);
+	const open = useSignal(false);
+	const anchor = useSignal<DOMRect | null>(null);
 	const button = useRef<HTMLButtonElement>(null);
 	const menu = useRef<HTMLDivElement>(null);
 
@@ -159,20 +160,20 @@ export default function TrackActions({
 	});
 
 	const close = () => {
-		setOpen(false);
-		setAnchor(null);
+		open.value = false;
+		anchor.value = null;
 	};
 
-	useLayoutEffect(() => {
-		if (!open) return;
+	useSignalEffect(() => {
+		if (!open.value) return;
 		const el = menu.current;
-		if (!el || !anchor) return;
+		if (!el || !anchor.value) return;
 
 		const width = el.offsetWidth;
-		const below = anchor.bottom + GAP;
+		const below = anchor.value.bottom + GAP;
 		const fits = below + el.offsetHeight <= window.innerHeight - GAP;
-		el.style.left = `${anchor.right - width}px`;
-		el.style.top = `${fits ? below : Math.max(GAP, anchor.top - el.offsetHeight - GAP)}px`;
+		el.style.left = `${anchor.value.right - width}px`;
+		el.style.top = `${fits ? below : Math.max(GAP, anchor.value.top - el.offsetHeight - GAP)}px`;
 		el.querySelector("button")?.focus();
 
 		const onDown = (e: PointerEvent) => {
@@ -197,7 +198,7 @@ export default function TrackActions({
 			window.removeEventListener("scroll", onScroll, true);
 			window.removeEventListener("resize", onResize);
 		};
-	}, [open, anchor]);
+	});
 
 	if (actions.length === 0) return null;
 
@@ -206,10 +207,10 @@ export default function TrackActions({
 		e.stopPropagation();
 		const rect = button.current?.getBoundingClientRect();
 		if (!rect) return;
-		if (open) close();
+		if (open.value) close();
 		else {
-			setAnchor(rect);
-			setOpen(true);
+			anchor.value = rect;
+			open.value = true;
 		}
 	};
 
@@ -221,7 +222,7 @@ export default function TrackActions({
 				title={t("music.track.actions")}
 				aria-label={t("music.track.actions")}
 				aria-haspopup="menu"
-				aria-expanded={open}
+				aria-expanded={open.value}
 				onPointerDown={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
@@ -232,8 +233,8 @@ export default function TrackActions({
 				<EllipsisVertical size={18} />
 			</button>
 
-			{open &&
-				anchor &&
+			{open.value &&
+				anchor.value &&
 				createPortal(
 					<div
 						ref={menu}

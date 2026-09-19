@@ -1,5 +1,5 @@
+import { useSignal, useSignalEffect } from "@preact/signals";
 import { TriangleAlert, Turntable } from "lucide-preact";
-import { useEffect, useState } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
@@ -11,34 +11,34 @@ const inputClass =
 
 export function RelaySettings() {
 	const url = store.relayUrl.value;
-	const [relay, setRelay] = useState<"idle" | "checking" | "ok" | "error">(
-		"idle",
-	);
+	const relay = useSignal<"idle" | "checking" | "ok" | "error">("idle");
 
-	useEffect(() => {
-		const trimmed = url.trim();
+	useSignalEffect(() => {
+		const trimmed = store.relayUrl.value.trim();
 		if (trimmed === "") {
-			setRelay("idle");
+			relay.value = "idle";
 			store.tokenRequired.value = false;
 			return;
 		}
 		let alive = true;
-		setRelay("checking");
+		relay.value = "checking";
 		const timer = setTimeout(() => {
 			transport
 				.check(trimmed)
 				.then((required) => {
 					if (!alive) return;
-					setRelay("ok");
+					relay.value = "ok";
 					store.tokenRequired.value = required;
 				})
-				.catch(() => alive && setRelay("error"));
+				.catch(() => {
+					if (alive) relay.value = "error";
+				});
 		}, 500);
 		return () => {
 			alive = false;
 			clearTimeout(timer);
 		};
-	}, [url]);
+	});
 
 	return (
 		<section class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
@@ -55,7 +55,7 @@ export function RelaySettings() {
 					<label for="sync-relay" class="text-xs font-medium text-zinc-400">
 						{t("sync.relay.label")}
 					</label>
-					<RelayStatus state={relay} />
+					<RelayStatus state={relay.value} />
 				</div>
 				<input
 					id="sync-relay"

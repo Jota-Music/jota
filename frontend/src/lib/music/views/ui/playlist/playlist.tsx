@@ -1,7 +1,7 @@
-import { effect, signal } from "@preact/signals";
+import { effect, signal, useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect } from "preact/hooks";
 import {
 	getFullPlaylist,
 	revalidateFullPlaylist,
@@ -22,9 +22,9 @@ import {
 	selectAll,
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
-import SelectionBar from "@/lib/music/views/ui/components/selection-bar";
-import TrackActions from "@/lib/music/views/ui/components/track-actions";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
+import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
@@ -119,7 +119,7 @@ effect(() => {
 /* ------------------ Component ------------------ */
 
 export default function PlaylistPlain({ id }: { id: string }) {
-	const [refreshing, setRefreshing] = useState(false);
+	const refreshing = useSignal(false);
 	const queryClient = useQueryClient();
 	const custom = isCustom(id);
 
@@ -141,19 +141,19 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		onError: (error) => addError(error, "playlist"),
 	});
 
-	const [removing, setRemoving] = useState<Song[] | null>(null);
+	const removing = useSignal<Song[] | null>(null);
 
 	const confirmRemove = () => {
-		if (!removing) return;
+		if (!removing.value) return;
 		const order = (data?.songs ?? []).map((song) => song.id);
-		for (const song of removing) removeSong.mutate(song.id);
+		for (const song of removing.value) removeSong.mutate(song.id);
 		clearSelection();
 		stageRemoval({
 			playlistId: id,
-			refs: removing.map((song) => song.id),
+			refs: removing.value.map((song) => song.id),
 			order,
 		});
-		setRemoving(null);
+		removing.value = null;
 	};
 
 	const reorder = useMutation({
@@ -167,10 +167,10 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	});
 
 	async function handleRefresh() {
-		setRefreshing(true);
+		refreshing.value = true;
 		await revalidateFullPlaylist(id).catch(() => {});
 		await refetch();
-		setRefreshing(false);
+		refreshing.value = false;
 	}
 
 	const liked = isLiked(id);
@@ -224,7 +224,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				<button
 					type="button"
 					onClick={handleRefresh}
-					disabled={refreshing}
+					disabled={refreshing.value}
 					className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50 transition-colors cursor-pointer"
 				>
 					{t("common.retry")}
@@ -252,12 +252,12 @@ export default function PlaylistPlain({ id }: { id: string }) {
 						removable={custom}
 						onRemove={
 							custom
-								? () =>
-										setRemoving(
+								? () => {
+										removing.value =
 											selectedSongs.value.length > 0
 												? selectedSongs.value
-												: songs,
-										)
+												: songs;
+									}
 								: undefined
 						}
 					/>
@@ -267,7 +267,13 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			{selectedSongs.value.length > 1 ? (
 				<SelectionBar
 					removable={custom}
-					onRemove={custom ? setRemoving : undefined}
+					onRemove={
+						custom
+							? (next) => {
+									removing.value = next;
+								}
+							: undefined
+					}
 				/>
 			) : (
 				<div
@@ -339,10 +345,13 @@ export default function PlaylistPlain({ id }: { id: string }) {
 							title={t("music.playlist.refresh")}
 							aria-label={t("music.playlist.refresh")}
 							onClick={handleRefresh}
-							disabled={refreshing}
+							disabled={refreshing.value}
 							className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
 						>
-							<RefreshCw size={16} class={refreshing ? "animate-spin" : ""} />
+							<RefreshCw
+								size={16}
+								class={refreshing.value ? "animate-spin" : ""}
+							/>
 						</button>
 					)}
 				</div>
@@ -355,16 +364,24 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			) : (
 				<Virtualization
 					songs={filteredSongs}
-					onRemove={custom ? setRemoving : undefined}
+					onRemove={
+						custom
+							? (next) => {
+									removing.value = next;
+								}
+							: undefined
+					}
 					onReorder={canReorder ? handleReorder : undefined}
 				/>
 			)}
 
 			<ConfirmModal
-				open={!!removing}
+				open={!!removing.value}
 				danger
 				pending={removeSong.isPending}
-				close={() => setRemoving(null)}
+				close={() => {
+					removing.value = null;
+				}}
 				onConfirm={confirmRemove}
 			/>
 		</div>

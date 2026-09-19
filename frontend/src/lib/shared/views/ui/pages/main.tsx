@@ -1,6 +1,6 @@
+import { useSignal, useSignalEffect } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Disc3, ListMusic, Turntable, Users } from "lucide-preact";
-import { useEffect, useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import getUserPlaylists from "@/lib/music/app/get-user-playlists";
@@ -41,16 +41,18 @@ export function MainPage() {
 	const queryClient = useQueryClient();
 	const [, setLocation] = useLocation();
 	const spotifyHandle = spotifyUser.value ?? "default";
-	const [tab, setTab] = useState<Tab>(loadTab);
-	const [creating, setCreating] = useState(false);
-	const [confirming, setConfirming] = useState<string | null>(null);
+	const tab = useSignal<Tab>(loadTab());
+	const creating = useSignal(false);
+	const confirming = useSignal<string | null>(null);
 
-	useEffect(() => {
-		localStorage.setItem(tabKey, tab);
-	}, [tab]);
+	useSignalEffect(() => {
+		localStorage.setItem(tabKey, tab.value);
+	});
 
 	const activeTab: Tab =
-		tab === "following" && !spotifyConnected.value ? "playlists" : tab;
+		tab.value === "following" && !spotifyConnected.value
+			? "playlists"
+			: tab.value;
 
 	const spotifyQuery = useQuery({
 		queryKey: ["user-playlists", spotifyHandle],
@@ -131,15 +133,17 @@ export function MainPage() {
 		void saveOrder(spotifyHandle, next);
 	};
 
-	const remove = (id: string) => setConfirming(id);
+	const remove = (id: string) => {
+		confirming.value = id;
+	};
 
-	const removingLocal = confirming?.startsWith("local:") ?? false;
+	const removingLocal = confirming.value?.startsWith("local:") ?? false;
 
 	const confirmRemove = () => {
-		if (!confirming) return;
-		if (removingLocal) removeCustom.mutate(confirming);
-		else removeYouTube.mutate(confirming);
-		setConfirming(null);
+		if (!confirming.value) return;
+		if (removingLocal) removeCustom.mutate(confirming.value);
+		else removeYouTube.mutate(confirming.value);
+		confirming.value = null;
 	};
 
 	const tabs: { id: Tab; label: string; icon: IconType }[] = [
@@ -161,7 +165,9 @@ export function MainPage() {
 								type="button"
 								title={label}
 								aria-label={label}
-								onClick={() => setTab(id)}
+								onClick={() => {
+									tab.value = id;
+								}}
 								class={cn(
 									"flex h-10 md:h-8 cursor-pointer items-center rounded-md px-3 transition-colors",
 									activeTab === id
@@ -192,14 +198,18 @@ export function MainPage() {
 						emptyMessage={<YouTubeHint />}
 						onRemove={(id) => remove(id)}
 						onReorder={reorder}
-						onCreate={() => setCreating(true)}
+						onCreate={() => {
+							creating.value = true;
+						}}
 					/>
 				)}
 			</div>
 
 			<CreatePlaylistModal
-				open={creating}
-				close={() => setCreating(false)}
+				open={creating.value}
+				close={() => {
+					creating.value = false;
+				}}
 				onCreated={(playlist) => {
 					queryClient.invalidateQueries({ queryKey: ["playlists"] });
 					setLocation(`/playlist/${playlist.id}`);
@@ -207,10 +217,12 @@ export function MainPage() {
 			/>
 
 			<ConfirmModal
-				open={!!confirming}
+				open={!!confirming.value}
 				danger={removingLocal}
 				pending={removeCustom.isPending || removeYouTube.isPending}
-				close={() => setConfirming(null)}
+				close={() => {
+					confirming.value = null;
+				}}
 				onConfirm={confirmRemove}
 			/>
 		</DefaultLayout>

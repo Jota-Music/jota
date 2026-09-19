@@ -1,14 +1,15 @@
+import { useSignal } from "@preact/signals";
 import { Application, Events, System, Window } from "@wailsio/runtime";
 import { Copy, Minus, Pin, X } from "lucide-preact";
 import { createPortal } from "preact/compat";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 
 export function WindowControlsBar() {
 	const isDesktop = System.IsDesktop();
-	const [isMaximised, setIsMaximised] = useState(false);
-	const [isOnTop, setIsOnTop] = useState(false);
+	const isMaximised = useSignal(false);
+	const isOnTop = useSignal(false);
 
 	const buttonClass =
 		"flex aspect-square h-full items-center justify-center text-zinc-400 transition-colors cursor-pointer";
@@ -16,10 +17,12 @@ export function WindowControlsBar() {
 
 	useEffect(() => {
 		if (!isDesktop) return;
-		void Window.IsMaximised().then(setIsMaximised);
-		const off = Events.On("window:always-on-top", (ev) =>
-			setIsOnTop(Boolean(ev.data)),
-		);
+		void Window.IsMaximised().then((v) => {
+			isMaximised.value = v;
+		});
+		const off = Events.On("window:always-on-top", (ev) => {
+			isOnTop.value = Boolean(ev.data);
+		});
 		return off;
 	}, [isDesktop]);
 
@@ -32,7 +35,7 @@ export function WindowControlsBar() {
 		} else {
 			await Window.Maximise();
 		}
-		setIsMaximised(await Window.IsMaximised());
+		isMaximised.value = await Window.IsMaximised();
 	};
 
 	const onQuit = async () => {
@@ -48,12 +51,12 @@ export function WindowControlsBar() {
 				type="button"
 				onClick={() => void Events.Emit("window:always-on-top:toggle")}
 				class={cn(buttonClass, hoverClass)}
-				title={isOnTop ? t("window.unpin") : t("window.pin")}
+				title={isOnTop.value ? t("window.unpin") : t("window.pin")}
 			>
 				<Pin
 					class={cn(
 						"size-3.5 transition-transform duration-150 ease-out",
-						isOnTop ? "translate-y-0.5 text-zinc-100" : "rotate-25",
+						isOnTop.value ? "translate-y-0.5 text-zinc-100" : "rotate-25",
 					)}
 				/>
 			</button>
@@ -69,7 +72,7 @@ export function WindowControlsBar() {
 				type="button"
 				onClick={() => void onMaximize()}
 				class={cn(buttonClass, hoverClass)}
-				title={isMaximised ? t("window.restore") : t("window.maximise")}
+				title={isMaximised.value ? t("window.restore") : t("window.maximise")}
 			>
 				<Copy class="size-3.5" />
 			</button>

@@ -1,5 +1,5 @@
+import { useSignal } from "@preact/signals";
 import { Eye, EyeOff } from "lucide-preact";
-import { useState } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 
@@ -22,13 +22,13 @@ export function PasswordInput({
 	onBlur,
 	label,
 }: PasswordInputProps) {
-	const [visible, setVisible] = useState(false);
+	const visible = useSignal(false);
 
 	return (
 		<div class="relative">
 			<input
 				id={id}
-				type={visible ? "text" : "password"}
+				type={visible.value ? "text" : "password"}
 				class={cn(className, "pr-11")}
 				placeholder={placeholder}
 				aria-label={label}
@@ -39,11 +39,13 @@ export function PasswordInput({
 			<button
 				type="button"
 				tabIndex={-1}
-				aria-label={visible ? t("password.hide") : t("password.show")}
-				onClick={() => setVisible((v) => !v)}
+				aria-label={visible.value ? t("password.hide") : t("password.show")}
+				onClick={() => {
+					visible.value = !visible.value;
+				}}
 				class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-zinc-500 transition-colors hover:text-zinc-200 cursor-pointer"
 			>
-				{visible ? <EyeOff size={16} /> : <Eye size={16} />}
+				{visible.value ? <EyeOff size={16} /> : <Eye size={16} />}
 			</button>
 		</div>
 	);

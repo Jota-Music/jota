@@ -7,9 +7,9 @@ import {
 	clearSelection,
 	selectionActive,
 } from "@/lib/music/views/stores/selection";
-import YoutubeEditor from "@/lib/music/views/ui/components/youtube-editor";
 import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
 import Queue from "@/lib/music/views/ui/queue";
+import YoutubeEditor from "@/lib/music/views/ui/track/youtube-editor";
 import { cn } from "@/lib/shared/utils/tw";
 import { Header } from "@/lib/shared/views/ui/components/header";
 import { OverlayHost } from "@/lib/shared/views/ui/components/modal";

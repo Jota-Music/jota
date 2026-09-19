@@ -1,12 +1,11 @@
+import { useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Check, Loader, Plus } from "lucide-preact";
-import { useEffect, useState } from "preact/hooks";
 import {
 	addSongsToPlaylist,
 	createPlaylist,
 	getPlaylists,
 } from "@/lib/music/app/playlists";
-import type { Song } from "@/lib/music/model";
 import { expireRemoval } from "@/lib/music/views/stores/removal";
 import {
 	clearSelection,
@@ -20,17 +19,11 @@ import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 
 export function PlaylistPicker() {
 	const pending = pickerSongs.value;
+	const open = pending != null;
+	const songs = pending ?? [];
 	const queryClient = useQueryClient();
-	const [open, setOpen] = useState(false);
-	const [songs, setSongs] = useState<Song[]>([]);
-	const [name, setName] = useState("");
-	const [targets, setTargets] = useState<Set<string>>(new Set());
-
-	useEffect(() => {
-		if (!pending) return;
-		setSongs(pending);
-		setOpen(true);
-	}, [pending]);
+	const name = useSignal("");
+	const targets = useSignal<Set<string>>(new Set());
 
 	const { data: playlists = [] } = useQuery({
 		queryKey: ["playlists"],
@@ -38,10 +31,9 @@ export function PlaylistPicker() {
 	});
 
 	const close = () => {
-		setOpen(false);
 		closePicker();
-		setName("");
-		setTargets(new Set());
+		name.value = "";
+		targets.value = new Set();
 	};
 
 	const submit = useMutation({
@@ -49,8 +41,8 @@ export function PlaylistPicker() {
 			const refs = songs.filter((s) => !s.broken).map((s) => s.id);
 			if (refs.length === 0) throw new Error("no songs selected");
 
-			const ids = new Set(targets);
-			const trimmed = name.trim();
+			const ids = new Set(targets.value);
+			const trimmed = name.value.trim();
 			if (trimmed) {
 				const created = await createPlaylist(trimmed);
 				ids.add(created.id);
@@ -74,16 +66,14 @@ export function PlaylistPicker() {
 	});
 
 	const toggleTarget = (id: string) => {
-		setTargets((current) => {
-			const next = new Set(current);
-			if (next.has(id)) next.delete(id);
-			else next.add(id);
-			return next;
-		});
+		const next = new Set(targets.value);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		targets.value = next;
 	};
 
 	const canSubmit =
-		(name.trim() !== "" || targets.size > 0) && songs.length > 0;
+		(name.value.trim() !== "" || targets.value.size > 0) && songs.length > 0;
 
 	return (
 		<Modal
@@ -115,7 +105,7 @@ export function PlaylistPicker() {
 					) : (
 						<ul class="flex flex-col">
 							{playlists.map((playlist) => {
-								const selected = targets.has(playlist.id);
+								const selected = targets.value.has(playlist.id);
 								return (
 									<li key={playlist.id}>
 										<button
@@ -152,8 +142,10 @@ export function PlaylistPicker() {
 						<Plus size={16} class="shrink-0 text-zinc-500" />
 						<input
 							type="text"
-							value={name}
-							onInput={(e) => setName((e.target as HTMLInputElement).value)}
+							value={name.value}
+							onInput={(e) => {
+								name.value = (e.target as HTMLInputElement).value;
+							}}
 							placeholder={t("music.custom.namePlaceholder")}
 							class="h-10 min-w-0 flex-1 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-zinc-600"
 						/>

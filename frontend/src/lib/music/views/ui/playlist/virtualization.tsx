@@ -19,16 +19,16 @@ import {
 } from "@/lib/music/views/stores/selection";
 import TrackActions, {
 	buildActions,
-} from "@/lib/music/views/ui/components/track-actions";
-import TrackArt from "@/lib/music/views/ui/components/track-art";
+} from "@/lib/music/views/ui/track/track-actions";
+import TrackArt from "@/lib/music/views/ui/track/track-art";
 import { t } from "@/lib/shared/i18n";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
+import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
-import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 
 type Props = {
 	songs: Song[];

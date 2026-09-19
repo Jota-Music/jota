@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useSignal } from "@preact/signals";
 import {
 	loginYouTubeWithBrowser,
 	saveYouTubeCookies,
@@ -12,33 +12,33 @@ function message(err: unknown): string {
 }
 
 export function YouTubeSignIn() {
-	const [cookies, setCookies] = useState("");
-	const [busy, setBusy] = useState(false);
-	const [browserBusy, setBrowserBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const cookies = useSignal("");
+	const busy = useSignal(false);
+	const browserBusy = useSignal(false);
+	const error = useSignal<string | null>(null);
 
 	async function signInWithBrowser() {
-		setBrowserBusy(true);
-		setError(null);
+		browserBusy.value = true;
+		error.value = null;
 		try {
 			await loginYouTubeWithBrowser();
 		} catch (err) {
-			setError(message(err));
+			error.value = message(err);
 		} finally {
-			setBrowserBusy(false);
+			browserBusy.value = false;
 		}
 	}
 
 	async function save(value: string) {
-		setBusy(true);
-		setError(null);
+		busy.value = true;
+		error.value = null;
 		try {
 			await saveYouTubeCookies(value.trim());
-			setCookies("");
+			cookies.value = "";
 		} catch (err) {
-			setError(message(err));
+			error.value = message(err);
 		} finally {
-			setBusy(false);
+			busy.value = false;
 		}
 	}
 
@@ -61,10 +61,10 @@ export function YouTubeSignIn() {
 					<button
 						type="button"
 						onClick={() => void signInWithBrowser()}
-						disabled={browserBusy}
+						disabled={browserBusy.value}
 						class="w-full rounded-lg bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-100 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 					>
-						{browserBusy
+						{browserBusy.value
 							? t("auth.youtube.waiting")
 							: t("auth.youtube.signInBrowser")}
 					</button>
@@ -84,7 +84,7 @@ export function YouTubeSignIn() {
 			<form
 				onSubmit={(e) => {
 					e.preventDefault();
-					void save(cookies);
+					void save(cookies.value);
 				}}
 				class="space-y-3"
 			>
@@ -93,8 +93,10 @@ export function YouTubeSignIn() {
 				</p>
 
 				<textarea
-					value={cookies}
-					onInput={(e) => setCookies((e.target as HTMLTextAreaElement).value)}
+					value={cookies.value}
+					onInput={(e) => {
+						cookies.value = (e.target as HTMLTextAreaElement).value;
+					}}
 					rows={3}
 					spellcheck={false}
 					placeholder={t("auth.youtube.pastePlaceholder")}
@@ -104,10 +106,10 @@ export function YouTubeSignIn() {
 				<div class="flex items-center gap-2">
 					<button
 						type="submit"
-						disabled={busy || !cookies.trim()}
+						disabled={busy.value || !cookies.value.trim()}
 						class="rounded-lg bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-100 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 					>
-						{busy ? t("common.saving") : t("common.save")}
+						{busy.value ? t("common.saving") : t("common.save")}
 					</button>
 					<label class="cursor-pointer rounded-lg px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition-colors">
 						{t("auth.youtube.importFile")}
@@ -115,14 +117,14 @@ export function YouTubeSignIn() {
 							type="file"
 							accept=".txt,text/plain"
 							onChange={importFile}
-							disabled={busy}
+							disabled={busy.value}
 							class="hidden"
 						/>
 					</label>
 				</div>
 			</form>
 
-			{error && <p class="text-xs text-red-400">{error}</p>}
+			{error.value && <p class="text-xs text-red-400">{error.value}</p>}
 		</div>
 	);
 }

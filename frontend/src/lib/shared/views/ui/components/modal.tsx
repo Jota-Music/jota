@@ -1,10 +1,11 @@
+import { useSignal } from "@preact/signals";
 import { X } from "lucide-preact";
 import { type ComponentChildren, createContext, type RefObject } from "preact";
 import { createPortal } from "preact/compat";
-import { useContext, useEffect, useRef, useState } from "preact/hooks";
+import { useContext, useEffect, useRef } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
-import { useSheetDrag } from "@/lib/shared/views/ui/hooks/use-sheet-drag";
+import { useSheetDrag } from "@/lib/shared/views/hooks/use-sheet-drag";
 
 export const OverlayHost = createContext<RefObject<HTMLDivElement> | null>(
 	null,
@@ -79,12 +80,12 @@ export function Modal({
 	hideClose = false,
 	children,
 }: ModalProps) {
-	const [mounted, setMounted] = useState(open);
-	const [shown, setShown] = useState(false);
+	const mounted = useSignal(open);
+	const shown = useSignal(false);
 	const panelRef = useRef<HTMLDivElement>(null);
 	const backdropRef = useRef<HTMLButtonElement>(null);
 	const host = useContext(OverlayHost)?.current ?? null;
-	const dragging = useSheetDrag(panelRef, backdropRef, close, mounted);
+	const dragging = useSheetDrag(panelRef, backdropRef, close, mounted.value);
 
 	const clearInline = () => {
 		const el = panelRef.current;
@@ -95,17 +96,21 @@ export function Modal({
 
 	useEffect(() => {
 		if (open) {
-			setMounted(true);
+			mounted.value = true;
 			clearInline();
-			const id = requestAnimationFrame(() => setShown(true));
+			const id = requestAnimationFrame(() => {
+				shown.value = true;
+			});
 			return () => cancelAnimationFrame(id);
 		}
-		setShown(false);
-		const id = setTimeout(() => setMounted(false), EXIT_MS);
+		shown.value = false;
+		const id = setTimeout(() => {
+			mounted.value = false;
+		}, EXIT_MS);
 		return () => clearTimeout(id);
 	}, [open]);
 
-	if (!open && !mounted) return null;
+	if (!open && !mounted.value) return null;
 
 	return createPortal(
 		<div
@@ -121,7 +126,7 @@ export function Modal({
 				type="button"
 				class={cn(
 					"absolute inset-0 bg-black/70 transition-opacity duration-300",
-					shown ? "opacity-100" : "opacity-0",
+					shown.value ? "opacity-100" : "opacity-0",
 				)}
 				aria-label={closeLabel}
 				onClick={close}
@@ -136,7 +141,7 @@ export function Modal({
 					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-b-0 border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)] shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out sm:rounded-2xl sm:border-b",
 					"max-h-[70dvh]",
 					host ? "sm:max-h-full" : "sm:max-h-[85dvh]",
-					shown
+					shown.value
 						? "translate-y-0 opacity-100 sm:scale-100"
 						: "translate-y-full opacity-0 sm:translate-y-0 sm:scale-95",
 				)}

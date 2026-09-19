@@ -25,9 +25,10 @@ import {
 	unqueue,
 } from "@/lib/music/views/stores/player";
 import { queue, showQueue } from "@/lib/music/views/stores/queue";
-import TrackArt from "@/lib/music/views/ui/components/track-art";
+import TrackArt from "@/lib/music/views/ui/track/track-art";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import {
@@ -36,7 +37,6 @@ import {
 } from "@/lib/shared/views/ui/components/context-menu";
 import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
-import { usePointerDrag } from "@/lib/shared/views/ui/hooks/use-pointer-drag";
 
 const ROW_PX = 64;
 const QUEUE_VIEW_LOOKBACK = 1;

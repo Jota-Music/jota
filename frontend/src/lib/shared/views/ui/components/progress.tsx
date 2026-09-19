@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useSignal } from "@preact/signals";
+import { useEffect, useRef } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 
@@ -28,9 +29,8 @@ function Progress({
 	class: className,
 }: ProgressProps) {
 	const trackRef = useRef<HTMLDivElement>(null);
-	const draggingRef = useRef(false);
+	const dragging = useSignal(false);
 	const lastValue = useRef(0);
-	const [dragging, setDragging] = useState(false);
 	const propsRef = useRef({ onChange, onCommit, min, max });
 	propsRef.current = { onChange, onCommit, min, max };
 
@@ -50,14 +50,13 @@ function Progress({
 	// leave the bar stuck.
 	useEffect(() => {
 		function move(e: MouseEvent | TouchEvent) {
-			if (!draggingRef.current) return;
+			if (!dragging.value) return;
 			if ("touches" in e) e.preventDefault();
 			preview(clientXOf(e));
 		}
 		function finish() {
-			if (!draggingRef.current) return;
-			draggingRef.current = false;
-			setDragging(false);
+			if (!dragging.value) return;
+			dragging.value = false;
 			propsRef.current.onCommit?.(lastValue.current);
 		}
 
@@ -77,8 +76,7 @@ function Progress({
 	}, []);
 
 	function start(e: MouseEvent | TouchEvent) {
-		draggingRef.current = true;
-		setDragging(true);
+		dragging.value = true;
 		preview(clientXOf(e));
 	}
 
@@ -128,7 +126,7 @@ function Progress({
 			<div
 				class={cn(
 					"absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-current transition-transform",
-					dragging ? "scale-110 cursor-grabbing" : "cursor-grab",
+					dragging.value ? "scale-110 cursor-grabbing" : "cursor-grab",
 				)}
 				style={{
 					left: `${percent}%`,

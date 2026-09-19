@@ -1,6 +1,7 @@
+import { useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { CirclePlay, Heart, ListVideo, Loader } from "lucide-preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
 	searchYouTube,
@@ -21,10 +22,10 @@ import {
 	selectedSongs,
 	toggleSelection,
 } from "@/lib/music/views/stores/selection";
-import SelectionBar from "@/lib/music/views/ui/components/selection-bar";
+import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import TrackActions, {
 	buildActions,
-} from "@/lib/music/views/ui/components/track-actions";
+} from "@/lib/music/views/ui/track/track-actions";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
@@ -59,13 +60,9 @@ export function YouTubeSearchPage() {
 
 	const target = queryTarget(query);
 	const direct = isDirectQuery(query);
-	const [tab, setTab] = useState<Tab>(target);
+	const picked = useSignal<{ query: string; tab: Tab } | null>(null);
 	const queryClient = useQueryClient();
 	const listRef = useRef<HTMLElement>(null);
-
-	useEffect(() => {
-		setTab(target);
-	}, [target]);
 
 	const wantVideos = !!query && (!direct || target === "videos");
 	const wantPlaylists = !!query && (!direct || target === "playlists");
@@ -93,7 +90,9 @@ export function YouTubeSearchPage() {
 	// Only offer the switcher when both categories actually have content.
 	const bothAvailable = videosAvailable && playlistsAvailable;
 	const activeTab: Tab = bothAvailable
-		? tab
+		? picked.value?.query === query
+			? picked.value.tab
+			: target
 		: videosAvailable
 			? "videos"
 			: "playlists";
@@ -109,10 +108,10 @@ export function YouTubeSearchPage() {
 	});
 
 	const saved = new Set((savedQuery.data ?? []).map((p) => p.id));
-	const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+	const overrides = useSignal<Record<string, boolean>>({});
 
 	function isSaved(id: string): boolean {
-		return overrides[id] ?? saved.has(id);
+		return overrides.value[id] ?? saved.has(id);
 	}
 
 	const toggle = useMutation({
@@ -124,11 +123,11 @@ export function YouTubeSearchPage() {
 			}
 		},
 		onMutate: ({ id, next }) => {
-			setOverrides((o) => ({ ...o, [id]: next }));
+			overrides.value = { ...overrides.value, [id]: next };
 			return { id, prev: !next };
 		},
 		onError: (_error, _vars, ctx) => {
-			if (ctx) setOverrides((o) => ({ ...o, [ctx.id]: ctx.prev }));
+			if (ctx) overrides.value = { ...overrides.value, [ctx.id]: ctx.prev };
 		},
 		onSuccess: () =>
 			queryClient.invalidateQueries({ queryKey: ["youtube-playlists"] }),
@@ -155,7 +154,9 @@ export function YouTubeSearchPage() {
 							<button
 								type="button"
 								title={t("pages.youtube.videos")}
-								onClick={() => setTab("videos")}
+								onClick={() => {
+									picked.value = { query, tab: "videos" };
+								}}
 								class={cn(
 									"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
 									activeTab === "videos"
@@ -168,7 +169,9 @@ export function YouTubeSearchPage() {
 							<button
 								type="button"
 								title={t("pages.youtube.playlists")}
-								onClick={() => setTab("playlists")}
+								onClick={() => {
+									picked.value = { query, tab: "playlists" };
+								}}
 								class={cn(
 									"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
 									activeTab === "playlists"

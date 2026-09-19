@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import {
 	ChevronUp,
 	Minimize2,
@@ -35,6 +35,9 @@ import Progress from "@/lib/shared/views/ui/components/progress";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 const playerModalOpen = signal(false);
+
+const currentLabel = computed(() => secondsToTime(progress.value));
+const totalLabel = computed(() => secondsToTime(audioDuration.value));
 
 const PLAYER_COMPACT_KEY = "music-player-compact";
 
@@ -134,7 +137,7 @@ function Disc(props: FullPlayerProps) {
 function CurrentTime() {
 	return (
 		<span class="text-white text-sm opacity-70 tabular-nums shrink-0">
-			{secondsToTime(progress.value)}
+			{currentLabel}
 		</span>
 	);
 }
@@ -142,7 +145,7 @@ function CurrentTime() {
 function TotalTime() {
 	return (
 		<span class="text-white text-sm opacity-70 tabular-nums shrink-0">
-			{secondsToTime(audioDuration.value)}
+			{totalLabel}
 		</span>
 	);
 }

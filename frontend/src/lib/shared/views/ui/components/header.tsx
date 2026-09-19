@@ -1,3 +1,4 @@
+import { useSignal, useSignalEffect } from "@preact/signals";
 import { useQueryClient } from "@tanstack/preact-query";
 import { System } from "@wailsio/runtime";
 import {
@@ -10,7 +11,7 @@ import {
 	Undo2,
 	X,
 } from "lucide-preact";
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { useCallback } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
@@ -51,43 +52,44 @@ export function Header() {
 	const [location, setLocation] = useLocation();
 	const queryClient = useQueryClient();
 	const desktop = System.IsDesktop();
-	const [openSearch, setOpenSearch] = useState(false);
-	const [searchDraft, setSearchDraft] = useState("");
-	const [source, setSource] = useState<Source>(loadSource);
-	const [searchType, setSearchType] = useState<SpotifyType>(loadType);
+	const openSearch = useSignal(false);
+	const searchDraft = useSignal("");
+	const source = useSignal<Source>(loadSource());
+	const searchType = useSignal<SpotifyType>(loadType());
 
-	const liveSource: Source = spotifyConnected.value ? source : "youtube";
+	const liveSource: Source = spotifyConnected.value ? source.value : "youtube";
 	const inRoom = role.value !== "off";
 	const connected = status.value === "open";
 
-	useEffect(() => {
-		localStorage.setItem(sourceKey, source);
-	}, [source]);
+	useSignalEffect(() => {
+		localStorage.setItem(sourceKey, source.value);
+	});
 
-	useEffect(() => {
-		localStorage.setItem(typeKey, searchType);
-	}, [searchType]);
+	useSignalEffect(() => {
+		localStorage.setItem(typeKey, searchType.value);
+	});
 
 	const onSearchSubmit = useCallback(
 		(e: Event) => {
 			e.preventDefault();
-			const query = searchDraft.trim();
+			const query = searchDraft.value.trim();
 			if (!query) return;
 
 			// A pasted Spotify link/URI decides its own type, so the selected
 			// search type only applies to plain text queries.
-			const ref = liveSource === "spotify" ? parseSpotifyLink(query) : null;
+			const live = spotifyConnected.value ? source.value : "youtube";
+			const ref = live === "spotify" ? parseSpotifyLink(query) : null;
 			const encoded = encodeURIComponent(ref ? ref.id : query);
 
 			setLocation(
-				liveSource === "youtube"
+				live === "youtube"
 					? `/search/youtube/${encoded}`
 					: ref
 						? `/search/${ref.type}/${encoded}`
-						: `/search/${searchType}/${encoded}`,
+						: `/search/${searchType.value}/${encoded}`,
 			);
 		},
-		[searchDraft, searchType, liveSource, setLocation],
+		[setLocation],
 	);
 
 	const goBack = useCallback(() => {
@@ -101,10 +103,10 @@ export function Header() {
 	const placeholder =
 		liveSource === "youtube"
 			? t("search.youtubePlaceholder")
-			: searchType === "user"
+			: searchType.value === "user"
 				? t("search.userPlaceholder")
 				: t("search.spotifyPlaceholder", {
-						type: t(`search.type.${searchType}`),
+						type: t(`search.type.${searchType.value}`),
 					});
 
 	return (
@@ -171,7 +173,9 @@ export function Header() {
 				<div class="flex items-center gap-3">
 					<button
 						type="button"
-						onClick={() => setOpenSearch((v) => !v)}
+						onClick={() => {
+							openSearch.value = !openSearch.value;
+						}}
 						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
 					>
 						<Search class="size-5 md:size-4" strokeWidth={2.5} />
@@ -205,7 +209,7 @@ export function Header() {
 			<div
 				class={cn(
 					"mx-auto grid max-w-2xl overflow-hidden px-4 transition-[grid-template-rows,opacity] duration-200 md:px-0",
-					openSearch
+					openSearch.value
 						? "grid-rows-[1fr] opacity-100"
 						: "grid-rows-[0fr] opacity-0",
 				)}
@@ -218,12 +222,16 @@ export function Header() {
 								<SourceToggle
 									source={liveSource}
 									showSpotify={spotifyConnected.value}
-									onSelect={setSource}
+									onSelect={(v) => {
+										source.value = v;
+									}}
 								/>
 								{liveSource === "spotify" && (
 									<TypeSelect
-										value={searchType}
-										onChange={setSearchType}
+										value={searchType.value}
+										onChange={(v) => {
+											searchType.value = v;
+										}}
 										stretch
 									/>
 								)}
@@ -231,9 +239,11 @@ export function Header() {
 							<div class="grid grid-cols-[1fr_max-content] gap-1.5">
 								<div class="flex h-11 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 transition-all focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600">
 									<SearchInput
-										value={searchDraft}
+										value={searchDraft.value}
 										placeholder={placeholder}
-										onInput={setSearchDraft}
+										onInput={(v) => {
+											searchDraft.value = v;
+										}}
 										clearable
 									/>
 								</div>
@@ -253,15 +263,24 @@ export function Header() {
 								<SourceToggle
 									source={liveSource}
 									showSpotify={spotifyConnected.value}
-									onSelect={setSource}
+									onSelect={(v) => {
+										source.value = v;
+									}}
 								/>
 								{liveSource === "spotify" && (
-									<TypeSelect value={searchType} onChange={setSearchType} />
+									<TypeSelect
+										value={searchType.value}
+										onChange={(v) => {
+											searchType.value = v;
+										}}
+									/>
 								)}
 								<SearchInput
-									value={searchDraft}
+									value={searchDraft.value}
 									placeholder={placeholder}
-									onInput={setSearchDraft}
+									onInput={(v) => {
+										searchDraft.value = v;
+									}}
 									clearable
 								/>
 							</div>

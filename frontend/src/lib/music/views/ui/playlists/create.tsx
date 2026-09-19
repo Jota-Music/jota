@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useSignal } from "@preact/signals";
 import { createPlaylist } from "@/lib/music/app/playlists";
 import type { PlaylistSummary } from "@/lib/music/model";
 import { t } from "@/lib/shared/i18n";
@@ -14,25 +14,25 @@ export function CreatePlaylistModal({
 	close: () => void;
 	onCreated: (playlist: PlaylistSummary) => void;
 }) {
-	const [name, setName] = useState("");
-	const [saving, setSaving] = useState(false);
+	const name = useSignal("");
+	const saving = useSignal(false);
 
 	const closeAndReset = () => {
-		setName("");
+		name.value = "";
 		close();
 	};
 
 	const submit = async () => {
-		setSaving(true);
+		saving.value = true;
 		try {
-			const playlist = await createPlaylist(name);
+			const playlist = await createPlaylist(name.value);
 			onCreated(playlist);
-			setName("");
+			name.value = "";
 			close();
 		} catch (error) {
 			addError(error, "playlist");
 		} finally {
-			setSaving(false);
+			saving.value = false;
 		}
 	};
 
@@ -61,14 +61,16 @@ export function CreatePlaylistModal({
 				>
 					<input
 						type="text"
-						value={name}
-						onInput={(e) => setName((e.target as HTMLInputElement).value)}
+						value={name.value}
+						onInput={(e) => {
+							name.value = (e.target as HTMLInputElement).value;
+						}}
 						placeholder={t("music.custom.namePlaceholder")}
 						class="h-10 min-w-0 flex-1 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-zinc-600"
 					/>
 					<button
 						type="submit"
-						disabled={saving}
+						disabled={saving.value}
 						class="flex h-10 shrink-0 cursor-pointer items-center rounded-md bg-(--dominant-color) px-4 text-sm font-medium text-(--binary-color) transition-opacity hover:opacity-80 disabled:opacity-40"
 					>
 						{t("music.custom.submit")}

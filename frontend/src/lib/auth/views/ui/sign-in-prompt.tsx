@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useSignal } from "@preact/signals";
 import {
 	dismissYouTubeSignInSuggestion,
 	loginYouTubeWithBrowser,
@@ -11,18 +11,18 @@ import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 export function SignInPrompt() {
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const busy = useSignal(false);
+	const error = useSignal<string | null>(null);
 
 	async function signIn() {
-		setBusy(true);
-		setError(null);
+		busy.value = true;
+		error.value = null;
 		try {
 			await loginYouTubeWithBrowser();
 		} catch (err) {
-			setError(translateError(err));
+			error.value = translateError(err);
 		} finally {
-			setBusy(false);
+			busy.value = false;
 		}
 	}
 
@@ -53,15 +53,17 @@ export function SignInPrompt() {
 					<div class="flex items-center gap-2">
 						<button
 							type="button"
-							disabled={busy}
+							disabled={busy.value}
 							onClick={() => void signIn()}
 							class="rounded-full bg-[#FF0000] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-85 cursor-pointer disabled:opacity-50"
 						>
-							{busy ? t("auth.youtube.waiting") : t("auth.youtube.signIn")}
+							{busy.value
+								? t("auth.youtube.waiting")
+								: t("auth.youtube.signIn")}
 						</button>
 						<button
 							type="button"
-							disabled={busy}
+							disabled={busy.value}
 							onClick={() => dismissYouTubeSignInSuggestion()}
 							class="rounded-full px-5 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer disabled:opacity-50"
 						>
@@ -81,9 +83,9 @@ export function SignInPrompt() {
 					</div>
 				)}
 
-				{error && (
+				{error.value && (
 					<p class="text-xs text-red-400">
-						{t("auth.youtube.errorHint", { error })}
+						{t("auth.youtube.errorHint", { error: error.value })}
 					</p>
 				)}
 			</div>

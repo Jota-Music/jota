@@ -5,7 +5,7 @@ import {
 	selectAll,
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
-import TrackActions from "@/lib/music/views/ui/components/track-actions";
+import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { t } from "@/lib/shared/i18n";
 
 export default function SelectionBar({

@@ -1,6 +1,6 @@
+import { useSignal } from "@preact/signals";
 import { Loader } from "lucide-preact";
 import type { ComponentChildren } from "preact";
-import { useState } from "preact/hooks";
 import {
 	loginSpotifyAndWait,
 	spotifyConnected,
@@ -10,20 +10,20 @@ import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function SpotifyConnect() {
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState("");
+	const busy = useSignal(false);
+	const error = useSignal("");
 
 	async function handleLogin() {
-		setBusy(true);
-		setError("");
+		busy.value = true;
+		error.value = "";
 		const ok = await loginSpotifyAndWait();
 		if (!ok) {
-			setBusy(false);
-			setError(t("auth.spotify.couldNotConnect"));
+			busy.value = false;
+			error.value = t("auth.spotify.couldNotConnect");
 		}
 	}
 
-	if (busy) {
+	if (busy.value) {
 		return (
 			<div class="flex flex-col items-center gap-3 text-center">
 				<Loader size={24} class="animate-spin text-zinc-500" />
@@ -43,7 +43,7 @@ export function SpotifyConnect() {
 			>
 				{t("auth.spotify.connect")}
 			</button>
-			{error && <p class="text-xs text-red-400">{error}</p>}
+			{error.value && <p class="text-xs text-red-400">{error.value}</p>}
 		</div>
 	);
 }

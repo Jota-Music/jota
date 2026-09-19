@@ -1,5 +1,6 @@
+import { useSignal, useSignalEffect } from "@preact/signals";
 import type { PropsWithChildren } from "preact/compat";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 import { cn } from "@/lib/shared/utils/tw";
 
 const STROKE_WIDTH = 8;
@@ -24,15 +25,12 @@ function CircularProgress({
 }: CircularProgressProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const svgRef = useRef<SVGSVGElement>(null);
-	const draggingRef = useRef(false);
 	const lastValue = useRef(0);
 
-	const [size, setSize] = useState(0);
-	const [dragging, setDragging] = useState(false);
-	const [onRing, setOnRing] = useState(false);
+	const size = useSignal(0);
+	const dragging = useSignal(false);
+	const onRing = useSignal(false);
 
-	const sizeRef = useRef(0);
-	sizeRef.current = size;
 	const propsRef = useRef({ min, max, onChange, onCommit });
 	propsRef.current = { min, max, onChange, onCommit };
 
@@ -43,7 +41,7 @@ function CircularProgress({
 
 		const update = () => {
 			const rect = el.getBoundingClientRect();
-			setSize(rect.width || 0);
+			size.value = rect.width || 0;
 		};
 
 		update();
@@ -54,7 +52,7 @@ function CircularProgress({
 		return () => observer.disconnect();
 	}, []);
 
-	const safeSize = Math.max(0, size);
+	const safeSize = Math.max(0, size.value);
 	const center = safeSize / 2;
 
 	const radius = Math.max(0, (safeSize - STROKE_WIDTH) / 2);
@@ -66,7 +64,7 @@ function CircularProgress({
 
 	function updateFromPointer(clientX: number, clientY: number) {
 		const svg = svgRef.current;
-		if (!svg || sizeRef.current === 0) return;
+		if (!svg || size.value === 0) return;
 
 		const rect = svg.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;
@@ -88,7 +86,7 @@ function CircularProgress({
 
 	function isOnRing(clientX: number, clientY: number) {
 		const svg = svgRef.current;
-		if (!svg || sizeRef.current === 0) return false;
+		if (!svg || size.value === 0) return false;
 
 		const rect = svg.getBoundingClientRect();
 		const cx = rect.left + rect.width / 2;
@@ -108,14 +106,13 @@ function CircularProgress({
 	// or an Android pointercancel can never miss the release and freeze the bar.
 	useEffect(() => {
 		const move = (e: PointerEvent) => {
-			if (!draggingRef.current) return;
+			if (!dragging.value) return;
 			updateFromPointer(e.clientX, e.clientY);
 		};
 
 		const finish = () => {
-			if (!draggingRef.current) return;
-			draggingRef.current = false;
-			setDragging(false);
+			if (!dragging.value) return;
+			dragging.value = false;
 			propsRef.current.onCommit?.(lastValue.current);
 		};
 
@@ -133,9 +130,8 @@ function CircularProgress({
 	function onPointerDown(e: PointerEvent) {
 		if (!isOnRing(e.clientX, e.clientY)) return;
 
-		draggingRef.current = true;
-		setDragging(true);
-		setOnRing(true);
+		dragging.value = true;
+		onRing.value = true;
 
 		updateFromPointer(e.clientX, e.clientY);
 
@@ -143,23 +139,20 @@ function CircularProgress({
 	}
 
 	function onHoverMove(e: PointerEvent) {
-		if (draggingRef.current) return;
-		setOnRing(isOnRing(e.clientX, e.clientY));
+		if (dragging.value) return;
+		onRing.value = isOnRing(e.clientX, e.clientY);
 	}
 
-	useEffect(() => {
-		if (dragging) {
-			document.body.style.cursor = "grabbing";
-		} else if (onRing) {
-			document.body.style.cursor = "grab";
-		} else {
-			document.body.style.cursor = "";
-		}
-
+	useSignalEffect(() => {
+		document.body.style.cursor = dragging.value
+			? "grabbing"
+			: onRing.value
+				? "grab"
+				: "";
 		return () => {
 			document.body.style.cursor = "";
 		};
-	}, [dragging, onRing]);
+	});
 
 	return (
 		<div
@@ -175,7 +168,9 @@ function CircularProgress({
 			aria-valuemax={max}
 			onPointerDown={onPointerDown}
 			onPointerMove={onHoverMove}
-			onPointerLeave={() => setOnRing(false)}
+			onPointerLeave={() => {
+				onRing.value = false;
+			}}
 		>
 			{/* CENTER */}
 			<div class="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full z-0 pointer-events-auto">
