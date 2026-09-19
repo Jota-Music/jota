@@ -1,6 +1,6 @@
 package app
 
-import "github.com/Jota-Music/jota/internal/services/sync"
+import "github.com/Jota-Music/jota/internal/rooms"
 
 func (a *App) SyncCheck(relayURL string) (bool, error) {
 	return a.Sync.Check(relayURL)
@@ -20,6 +20,6 @@ func (a *App) SyncSend(payload string) error {
 
 // SyncRoomStatus reports whether a saved room is live and how many members it
 // has, without joining it.
-func (a *App) SyncRoomStatus(relayURL string, room string, token string) (sync.RoomStatus, error) {
+func (a *App) SyncRoomStatus(relayURL string, room string, token string) (rooms.RoomStatus, error) {
 	return a.Sync.RoomStatus(relayURL, room, token)
 }

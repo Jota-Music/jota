@@ -16,13 +16,6 @@ import (
 
 var ErrUnsupported = errors.New("update: automatic install is not supported on this channel")
 
-// Progress reports download progress. Total is 0 when the server sends no
-// Content-Length.
-type Progress struct {
-	Written int64 `json:"written"`
-	Total   int64 `json:"total"`
-}
-
 // httpClient is used for artifact and checksum downloads. It has no short
 // timeout (release assets can be large) but a stalled connection is bounded:
 // 30s to start responding, 10m for the whole transfer.

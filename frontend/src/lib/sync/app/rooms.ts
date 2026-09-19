@@ -1,6 +1,8 @@
 import { ListRooms, RemoveRoom, SaveRoom, SyncRoomStatus } from "@bindings/app";
-import type { Room } from "@models/services/rooms/models";
-import type { RoomStatus as GeneratedRoomStatus } from "@models/services/sync/models";
+import type {
+	RoomStatus as GeneratedRoomStatus,
+	Room,
+} from "@models/rooms/models";
 import type { Playback } from "@/lib/sync/model";
 
 export type { Room };

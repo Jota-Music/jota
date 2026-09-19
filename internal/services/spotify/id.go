@@ -2,7 +2,6 @@ package spotify
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strings"
 
@@ -21,16 +20,6 @@ func spotifyID(uri, typ string) (librespot.SpotifyId, error) {
 		return librespot.SpotifyId{}, &TypeMismatchError{Expected: typ, Got: id.Type(), URI: uri}
 	}
 	return *id, nil
-}
-
-type TypeMismatchError struct {
-	Expected string
-	Got      librespot.SpotifyIdType
-	URI      string
-}
-
-func (e *TypeMismatchError) Error() string {
-	return fmt.Sprintf("expected spotify:%s:..., got spotify:%s: (%s)", e.Expected, e.Got, e.URI)
 }
 
 func resolveContextTracks(ctx context.Context, sess *session.Session, uri string) ([]*connectpb.ContextTrack, error) {

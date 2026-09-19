@@ -10,16 +10,13 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as music$0 from "../music/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as rooms$0 from "../services/rooms/models.js";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as sync$0 from "../services/sync/models.js";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as update$0 from "../services/update/models.js";
+import * as rooms$0 from "../rooms/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as youtube$0 from "../services/youtube/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as update$0 from "../update/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -261,7 +258,7 @@ export function SyncConnect(relayURL: string, room: string, role: string, token:
  * SyncRoomStatus reports whether a saved room is live and how many members it
  * has, without joining it.
  */
-export function SyncRoomStatus(relayURL: string, room: string, token: string): $CancellablePromise<sync$0.RoomStatus> {
+export function SyncRoomStatus(relayURL: string, room: string, token: string): $CancellablePromise<rooms$0.RoomStatus> {
     return $Call.ByID(1137831878, relayURL, room, token);
 }
 

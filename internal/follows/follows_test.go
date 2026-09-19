@@ -30,7 +30,7 @@ func TestFollowLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if want := []string{"Bob"}; !reflect.DeepEqual(got, want) {
+	if want := (Users{"Bob"}); !reflect.DeepEqual(got, want) {
 		t.Fatalf("list = %v, want %v", got, want)
 	}
 

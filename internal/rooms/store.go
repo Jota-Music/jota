@@ -13,27 +13,12 @@ var bucket = kv.UseBucket("rooms")
 
 const listKey = "saved"
 
-// Room is a room the user saved, with the relay it belongs to so its status
-// can be queried later. The relay token and the room password are stored
-// alongside so a saved room can be checked and rejoined without retyping them;
-// both are kept in the local key-value store in plaintext, like the relay
-// settings the app already persists.
-type Room struct {
-	Id       string `json:"id"`
-	Code     string `json:"code"`
-	RelayURL string `json:"relayUrl"`
-	Token    string `json:"token"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
-	SavedAt  int64  `json:"savedAt"`
-}
-
-type Service struct {
+type Store struct {
 	mu sync.Mutex
 }
 
-func New() *Service {
-	return &Service{}
+func NewStore() *Store {
+	return &Store{}
 }
 
 // roomID identifies a room by relay and code. The relay treats codes as
@@ -42,7 +27,7 @@ func roomID(relayURL string, code string) string {
 	return strings.ToLower(strings.TrimSpace(relayURL)) + "|" + strings.TrimSpace(code)
 }
 
-func (s *Service) List() ([]Room, error) {
+func (s *Store) List() ([]Room, error) {
 	var rooms []Room
 	if err := bucket.GetObject(listKey, &rooms); err != nil {
 		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
@@ -55,7 +40,7 @@ func (s *Service) List() ([]Room, error) {
 
 // Save inserts or replaces a room, matched by relay and code. It returns the
 // whole list so the caller can refresh without a second read.
-func (s *Service) Save(room Room) ([]Room, error) {
+func (s *Store) Save(room Room) ([]Room, error) {
 	room.Code = strings.TrimSpace(room.Code)
 	room.RelayURL = strings.TrimSpace(room.RelayURL)
 	room.Name = strings.TrimSpace(room.Name)
@@ -87,7 +72,7 @@ func (s *Service) Save(room Room) ([]Room, error) {
 	return rooms, bucket.SetObject(listKey, rooms)
 }
 
-func (s *Service) Remove(id string) ([]Room, error) {
+func (s *Store) Remove(id string) ([]Room, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

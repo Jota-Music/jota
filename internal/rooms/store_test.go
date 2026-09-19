@@ -16,7 +16,7 @@ func TestRoomLifecycle(t *testing.T) {
 	}
 	t.Cleanup(kv.Close)
 
-	s := New()
+	s := NewStore()
 
 	saved, err := s.Save(Room{Code: " party ", RelayURL: "relay.example.com", Password: "pw"})
 	if err != nil {
@@ -87,7 +87,7 @@ func TestRoomSecretsPersist(t *testing.T) {
 	}
 	t.Cleanup(kv.Close)
 
-	s := New()
+	s := NewStore()
 	if _, err := s.Save(Room{
 		Code:     "locked",
 		RelayURL: "relay.test",

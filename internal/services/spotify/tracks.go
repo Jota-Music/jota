@@ -12,17 +12,6 @@ import (
 	"github.com/devgianlu/go-librespot/session"
 )
 
-type Track struct {
-	URI        string
-	Name       string
-	Artists    []string
-	ArtistURIs []string
-	Album      string
-	AlbumURI   string
-	CoverURL   string
-	Duration   int
-}
-
 func trackFromProto(track *metadatapb.Track) Track {
 	t := Track{}
 	if len(track.GetGid()) == 16 {

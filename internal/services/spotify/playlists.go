@@ -14,14 +14,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type Playlist struct {
-	URI        string
-	Name       string
-	Owner      string
-	CoverURL   string
-	TrackCount int32 // -1 if not available
-}
-
 func coverFromImageURL(s string) string {
 	if s == "" {
 		return ""

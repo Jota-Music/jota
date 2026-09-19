@@ -1,6 +1,6 @@
 package app
 
-import "github.com/Jota-Music/jota/internal/services/rooms"
+import "github.com/Jota-Music/jota/internal/rooms"
 
 func (a *App) ListRooms() ([]rooms.Room, error) {
 	return a.Rooms.List()

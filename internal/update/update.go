@@ -17,25 +17,6 @@ const repo = "Jota-Music/jota"
 // apiBase is overridable in tests.
 var apiBase = "https://api.github.com"
 
-// Channel is how this build reached the user. Only AppImage, MacOS and Windows
-// can replace themselves; every other channel falls back to a link.
-type Channel string
-
-const (
-	AppImage Channel = "appimage"
-	MacOS    Channel = "macos"
-	Windows  Channel = "windows"
-	External Channel = "external"
-)
-
-type Info struct {
-	Current     string `json:"current"`
-	Latest      string `json:"latest"`
-	Available   bool   `json:"available"`
-	Installable bool   `json:"installable"`
-	URL         string `json:"url"`
-}
-
 type asset struct {
 	Name string `json:"name"`
 	URL  string `json:"browser_download_url"`

@@ -5,21 +5,20 @@ import (
 	"errors"
 	"log"
 	"strings"
-	stdsync "sync"
+	"sync"
 	"time"
 
 	"github.com/Jota-Music/jota/internal/env"
+	"github.com/Jota-Music/jota/internal/follows"
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/ordering"
+	"github.com/Jota-Music/jota/internal/playlists"
+	"github.com/Jota-Music/jota/internal/rooms"
 	"github.com/Jota-Music/jota/internal/services/discord"
-	"github.com/Jota-Music/jota/internal/services/follows"
-	"github.com/Jota-Music/jota/internal/services/ordering"
-	"github.com/Jota-Music/jota/internal/services/playlists"
-	"github.com/Jota-Music/jota/internal/services/rooms"
 	"github.com/Jota-Music/jota/internal/services/spotify"
-	"github.com/Jota-Music/jota/internal/services/sync"
-	"github.com/Jota-Music/jota/internal/services/update"
 	"github.com/Jota-Music/jota/internal/services/youtube"
+	"github.com/Jota-Music/jota/internal/update"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -31,14 +30,14 @@ type App struct {
 	Spotify   *spotify.SpotifyService
 	Catalog   *music.Catalog
 	YouTube   *youtube.Service
-	Sync      *sync.Service
+	Sync      *rooms.Relay
 	Follows   *follows.Service
-	Rooms     *rooms.Service
+	Rooms     *rooms.Store
 	Order     *ordering.Service
 	Playlists *playlists.Service
 	Discord   *discord.Service
 
-	discordMu  stdsync.Mutex
+	discordMu  sync.Mutex
 	discord    *discordState
 	discordErr string
 }
@@ -50,7 +49,7 @@ type RelayOverride struct {
 	Token string `json:"token"`
 }
 
-var installMu stdsync.Mutex
+var installMu sync.Mutex
 
 func New(version string) *App {
 	cfg := env.Load()
@@ -65,12 +64,18 @@ func New(version string) *App {
 			URL:   strings.TrimSpace(cfg.RelayAPIURL),
 			Token: strings.TrimSpace(cfg.RelayAPIToken),
 		},
-		Spotify:   spotifySvc,
-		Catalog:   catalog,
-		YouTube:   youTubeSvc,
-		Sync:      sync.New(),
+		Spotify: spotifySvc,
+		Catalog: catalog,
+		YouTube: youTubeSvc,
+		Sync: rooms.NewRelay(func(name string, data ...any) {
+			app := application.Get()
+			if app == nil {
+				return
+			}
+			app.Event.Emit(name, data...)
+		}),
 		Follows:   follows.New(),
-		Rooms:     rooms.New(),
+		Rooms:     rooms.NewStore(),
 		Order:     ordering.New(),
 		Playlists: playlistsSvc,
 		Discord:   discord.New(cfg.DiscordClientID),

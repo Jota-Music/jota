@@ -11,14 +11,6 @@ import (
 	"github.com/devgianlu/go-librespot/session"
 )
 
-type AlbumRef struct {
-	URI      string
-	Name     string
-	Year     int32
-	CoverURL string
-	Group    string
-}
-
 func GetAlbumTracks(ctx context.Context, sess *session.Session, uri string) ([]Track, error) {
 	id, err := spotifyID(uri, "album")
 	if err != nil {

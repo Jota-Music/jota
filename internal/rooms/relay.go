@@ -1,4 +1,4 @@
-package sync
+package rooms
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 const maxMessageBytes = 16 << 20
@@ -21,20 +20,22 @@ const maxMessageBytes = 16 << 20
 // i.e. it has AUTH_TOKEN configured and we did not present a valid one.
 var ErrTokenRequired = errors.New("relay requires a token")
 
-// Message shapes are documented in Jota-Music/relay's README. Keep the JSON
-// contract in sync with frontend/src/lib/sync/model.
-type Service struct {
+// Relay is the WebSocket client for a Jota relay. Message shapes are documented
+// in Jota-Music/relay's README. Keep the JSON contract in sync with
+// frontend/src/lib/sync/model.
+type Relay struct {
 	mu     sync.Mutex
 	conn   *websocket.Conn
 	cancel context.CancelFunc
 	gen    uint64
+	notify func(string, ...any)
 }
 
-func New() *Service {
-	return &Service{}
+func NewRelay(notify func(string, ...any)) *Relay {
+	return &Relay{notify: notify}
 }
 
-func (s *Service) Connect(rawURL string, room string, role string, token string, password string) error {
+func (s *Relay) Connect(rawURL string, room string, role string, token string, password string) error {
 	target, err := endpoint(rawURL, room, role)
 	if err != nil {
 		return err
@@ -90,12 +91,12 @@ func (s *Service) Connect(rawURL string, room string, role string, token string,
 	s.cancel = runCancel
 	s.mu.Unlock()
 
-	emit("sync:connected")
+	s.emit("sync:connected")
 	go s.read(runCtx, conn)
 	return nil
 }
 
-func (s *Service) Send(payload string) error {
+func (s *Relay) Send(payload string) error {
 	s.mu.Lock()
 	conn := s.conn
 	s.mu.Unlock()
@@ -109,7 +110,7 @@ func (s *Service) Send(payload string) error {
 	return conn.Write(ctx, websocket.MessageText, []byte(payload))
 }
 
-func (s *Service) Stop() {
+func (s *Relay) Stop() {
 	s.mu.Lock()
 	s.gen++
 	conn := s.conn
@@ -126,7 +127,7 @@ func (s *Service) Stop() {
 	}
 }
 
-func (s *Service) read(ctx context.Context, conn *websocket.Conn) {
+func (s *Relay) read(ctx context.Context, conn *websocket.Conn) {
 	defer func() {
 		s.mu.Lock()
 		active := s.conn == conn
@@ -136,7 +137,7 @@ func (s *Service) read(ctx context.Context, conn *websocket.Conn) {
 		}
 		s.mu.Unlock()
 		if active {
-			emit("sync:closed")
+			s.emit("sync:closed")
 		}
 	}()
 
@@ -145,14 +146,14 @@ func (s *Service) read(ctx context.Context, conn *websocket.Conn) {
 		if err != nil {
 			return
 		}
-		emit("sync:message", string(data))
+		s.emit("sync:message", string(data))
 	}
 }
 
 // Check probes /healthz. It returns whether the relay requires an auth token
 // so the UI can ask for one up front. Older relays return a plain 200 body, in
 // which case a token is assumed not to be required.
-func (s *Service) Check(rawURL string) (bool, error) {
+func (s *Relay) Check(rawURL string) (bool, error) {
 	target, err := healthURL(rawURL)
 	if err != nil {
 		return false, err
@@ -233,21 +234,10 @@ func roomStatusURL(raw string, room string) (string, error) {
 	return u.String(), nil
 }
 
-// RoomStatus is a saved room's live state as reported by the relay. State is the
-// relay's cached now-playing playback (a Playback object), absent when the room
-// has none or the relay predates the field.
-type RoomStatus struct {
-	Active  bool            `json:"active"`
-	Members int             `json:"members"`
-	HasHost bool            `json:"hasHost"`
-	Locked  bool            `json:"locked"`
-	State   json.RawMessage `json:"state,omitempty"`
-}
-
 // RoomStatus asks whether a room is live and how many members it has. It never
 // joins: only the codes the user saved are queried, so it cannot disturb a room.
 // A relay without this endpoint answers 404, which callers show as "unknown".
-func (s *Service) RoomStatus(rawURL string, room string, token string) (RoomStatus, error) {
+func (s *Relay) RoomStatus(rawURL string, room string, token string) (RoomStatus, error) {
 	target, err := roomStatusURL(rawURL, room)
 	if err != nil {
 		return RoomStatus{}, err
@@ -301,10 +291,9 @@ func relayURL(raw string) (*url.URL, error) {
 	return u, nil
 }
 
-func emit(name string, data ...any) {
-	app := application.Get()
-	if app == nil {
+func (s *Relay) emit(name string, data ...any) {
+	if s.notify == nil {
 		return
 	}
-	app.Event.Emit(name, data...)
+	s.notify(name, data...)
 }

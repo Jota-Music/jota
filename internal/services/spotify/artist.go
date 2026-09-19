@@ -9,13 +9,6 @@ import (
 	"github.com/devgianlu/go-librespot/session"
 )
 
-type ArtistInfo struct {
-	Name     string
-	URI      string
-	ImageURL string
-	Tracks   []Track
-}
-
 func portraitURLFromArtist(artist *metadatapb.Artist) string {
 	images := artist.GetPortrait()
 	if g := artist.GetPortraitGroup(); g != nil {
@@ -41,12 +34,6 @@ func GetArtist(ctx context.Context, sess *session.Session, uri string) (ArtistIn
 		ImageURL: portraitURLFromArtist(&artist),
 		Tracks:   tracks,
 	}, nil
-}
-
-type ArtistDiscography struct {
-	Name   string
-	URI    string
-	Albums []AlbumRef
 }
 
 func GetArtistDiscography(ctx context.Context, sess *session.Session, uri string) (ArtistDiscography, error) {

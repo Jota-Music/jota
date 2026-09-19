@@ -23,7 +23,7 @@ func TestOrderLifecycle(t *testing.T) {
 		t.Fatalf("empty list = %v, %v", ids, err)
 	}
 
-	if err := s.Save("Alice", []string{"b", "a", "b", "  ", "c"}); err != nil {
+	if err := s.Save("Alice", Order{"b", "a", "b", "  ", "c"}); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 
@@ -31,7 +31,7 @@ func TestOrderLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if want := []string{"b", "a", "c"}; !reflect.DeepEqual(got, want) {
+	if want := (Order{"b", "a", "c"}); !reflect.DeepEqual(got, want) {
 		t.Fatalf("list = %v, want %v", got, want)
 	}
 

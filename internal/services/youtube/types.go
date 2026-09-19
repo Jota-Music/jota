@@ -2,11 +2,6 @@ package youtube
 
 import "encoding/json"
 
-type Video struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
-}
-
 type format struct {
 	Itag     int    `json:"itag"`
 	MimeType string `json:"mimeType"`

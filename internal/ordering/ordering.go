@@ -25,13 +25,13 @@ func normalizeAccount(account string) string {
 	return strings.ToLower(strings.TrimSpace(account))
 }
 
-func (s *Service) List(account string) ([]string, error) {
+func (s *Service) List(account string) (Order, error) {
 	account = normalizeAccount(account)
 	if account == "" {
 		return nil, nil
 	}
 
-	var ids []string
+	var ids Order
 	if err := bucket.GetObject(account, &ids); err != nil {
 		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
 			return nil, nil
@@ -41,7 +41,7 @@ func (s *Service) List(account string) ([]string, error) {
 	return ids, nil
 }
 
-func (s *Service) Save(account string, ids []string) error {
+func (s *Service) Save(account string, ids Order) error {
 	account = normalizeAccount(account)
 	if account == "" {
 		return nil
@@ -51,7 +51,7 @@ func (s *Service) Save(account string, ids []string) error {
 	defer s.mu.Unlock()
 
 	seen := make(map[string]struct{}, len(ids))
-	out := make([]string, 0, len(ids))
+	out := make(Order, 0, len(ids))
 	for _, id := range ids {
 		id = strings.TrimSpace(id)
 		if id == "" {

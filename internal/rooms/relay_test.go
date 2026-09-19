@@ -1,4 +1,4 @@
-package sync
+package rooms
 
 import (
 	"errors"
@@ -13,7 +13,7 @@ func TestConnectTokenRequired(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	err := New().Connect(srv.URL, "room", "host", "", "")
+	err := NewRelay(nil).Connect(srv.URL, "room", "host", "", "")
 	if !errors.Is(err, ErrTokenRequired) {
 		t.Fatalf("got %v, want ErrTokenRequired", err)
 	}
@@ -32,7 +32,7 @@ func TestCheckAuthFlag(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte(c.body))
 		}))
-		got, err := New().Check(srv.URL)
+		got, err := NewRelay(nil).Check(srv.URL)
 		srv.Close()
 		if err != nil {
 			t.Fatalf("Check(%q): %v", c.body, err)

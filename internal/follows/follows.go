@@ -24,13 +24,13 @@ func normalizeAccount(account string) string {
 	return strings.ToLower(strings.TrimSpace(account))
 }
 
-func (s *Service) List(account string) ([]string, error) {
+func (s *Service) List(account string) (Users, error) {
 	account = normalizeAccount(account)
 	if account == "" {
 		return nil, nil
 	}
 
-	var users []string
+	var users Users
 	if err := bucket.GetObject(account, &users); err != nil {
 		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
 			return nil, nil
