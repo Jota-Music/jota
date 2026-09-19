@@ -67,7 +67,13 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 		return music.Playlist{}, errors.New("playlist not found or has no videos")
 	}
 
-	songs := extractSongs(list)
+	name, cover := "", ""
+	if header, ok := res.headerRenderer(); ok {
+		name = header.Title.first()
+		cover = header.Banner.HeroPlaylistThumbnailRenderer.Thumbnail.url()
+	}
+
+	songs := extractSongs(list, name)
 	continuation := list.next()
 
 	for pages := 1; continuation != ""; pages++ {
@@ -87,14 +93,8 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 		}
 
 		list := cont.ContinuationContents.PlaylistVideoListContinuation
-		songs = append(songs, extractSongs(list)...)
+		songs = append(songs, extractSongs(list, name)...)
 		continuation = list.next()
-	}
-
-	name, cover := "", ""
-	if header, ok := res.headerRenderer(); ok {
-		name = header.Title.first()
-		cover = header.Banner.HeroPlaylistThumbnailRenderer.Thumbnail.url()
 	}
 
 	return music.Playlist{
@@ -139,13 +139,13 @@ func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 	if playlistID == "" {
 		return music.Playlist{}, errors.New("invalid playlist id")
 	}
-	return kv.Cached(playlistBucket, "playlist:"+playlistID, playlistCacheTTL, func() (music.Playlist, error) {
+	return kv.Cached(playlistBucket, "playlist:v2:"+playlistID, playlistCacheTTL, func() (music.Playlist, error) {
 		return fetchFullPlaylist(playlistID)
 	})
 }
 
 func (s *Service) RevalidateFullPlaylist(id string) error {
-	return playlistBucket.Delete("playlist:" + normalizePlaylistId(id))
+	return playlistBucket.Delete("playlist:v2:" + normalizePlaylistId(id))
 }
 
 func (s *Service) AddPlaylist(id string) (music.PlaylistSummary, error) {
@@ -208,21 +208,21 @@ func (s *Service) RemovePlaylist(id string) error {
 			out = append(out, p)
 		}
 	}
-	_ = playlistBucket.Delete("playlist:" + playlistID)
+	_ = playlistBucket.Delete("playlist:v2:" + playlistID)
 	return playlistBucket.SetObject("index", out)
 }
 
-func extractSongs(list playlistVideoListRenderer) []music.Song {
+func extractSongs(list playlistVideoListRenderer, playlist string) []music.Song {
 	songs := make([]music.Song, 0, len(list.Contents))
 	for _, item := range list.Contents {
-		if song, ok := videoToSong(item.PlaylistVideoRenderer); ok {
+		if song, ok := videoToSong(item.PlaylistVideoRenderer, playlist); ok {
 			songs = append(songs, song)
 		}
 	}
 	return songs
 }
 
-func videoToSong(v playlistVideoRenderer) (music.Song, bool) {
+func videoToSong(v playlistVideoRenderer, playlist string) (music.Song, bool) {
 	id := strings.TrimSpace(v.VideoId)
 	if id == "" || (v.IsPlayable != nil && !*v.IsPlayable) {
 		return music.Song{}, false
@@ -233,6 +233,11 @@ func videoToSong(v playlistVideoRenderer) (music.Song, bool) {
 		artist = "YouTube"
 	}
 
+	album := playlist
+	if album == "" {
+		album = "YouTube"
+	}
+
 	duration, _ := v.LengthSeconds.Int64()
 
 	return music.Song{
@@ -241,7 +246,7 @@ func videoToSong(v playlistVideoRenderer) (music.Song, bool) {
 		Name:      v.Title.first(),
 		Duration:  int(duration),
 		Share:     music.Share{Id: music.YouTubePrefix + id, Url: "https://www.youtube.com/watch?v=" + id},
-		Album:     music.Album{Title: "YouTube", Covers: []string{v.Thumbnail.url()}},
+		Album:     music.Album{Title: album, Covers: []string{v.Thumbnail.url()}},
 		Artists:   []music.Artist{{Name: artist}},
 		YoutubeId: id,
 	}, true

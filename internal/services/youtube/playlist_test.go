@@ -100,7 +100,7 @@ func TestBrowseParsing(t *testing.T) {
 		t.Fatalf("token = %q", token)
 	}
 
-	songs := extractSongs(list)
+	songs := extractSongs(list, "Popular Music Videos")
 	if len(songs) != 1 {
 		t.Fatalf("songs = %d, want 1", len(songs))
 	}
@@ -114,6 +114,9 @@ func TestBrowseParsing(t *testing.T) {
 	}
 	if song.Name != "Song One" {
 		t.Fatalf("name = %q", song.Name)
+	}
+	if song.Album.Title != "Popular Music Videos" {
+		t.Fatalf("album = %q", song.Album.Title)
 	}
 	if song.Duration != 235 {
 		t.Fatalf("duration = %d, want 235", song.Duration)
@@ -133,12 +136,15 @@ func TestContinuationParsing(t *testing.T) {
 	}
 
 	list := res.ContinuationContents.PlaylistVideoListContinuation
-	songs := extractSongs(list)
+	songs := extractSongs(list, "Some Playlist")
 	if len(songs) != 1 {
 		t.Fatalf("songs = %d, want 1", len(songs))
 	}
 	if songs[0].Name != "Song Two" || songs[0].Duration != 180 {
 		t.Fatalf("song = %+v", songs[0])
+	}
+	if songs[0].Album.Title != "Some Playlist" {
+		t.Fatalf("album = %q", songs[0].Album.Title)
 	}
 }
 
