@@ -28,6 +28,7 @@ import TrackActions, {
 } from "@/lib/music/views/ui/track/track-actions";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
@@ -364,6 +365,9 @@ function YouTubeVideoItem({
 				<div class="min-w-0 flex-1">
 					<p class="wrap-break-word text-balance text-sm text-white leading-snug">
 						{song.name}
+					</p>
+					<p class="truncate text-xs text-zinc-500">
+						<ArtistLinks artists={song.artists} />
 					</p>
 				</div>
 			</button>

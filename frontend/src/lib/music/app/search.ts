@@ -13,11 +13,12 @@ export async function searchSpotify(
 interface YouTubeVideo {
 	id: string;
 	title: string;
+	author?: string;
 }
 
 export async function searchYouTube(query: string): Promise<YouTubeVideo[]> {
 	const results = (await SearchYouTube(query)) ?? [];
-	return results.map((v) => ({ id: v.id, title: v.title }));
+	return results.map((v) => ({ id: v.id, title: v.title, author: v.author }));
 }
 
 export async function searchYouTubePlaylists(
@@ -28,6 +29,7 @@ export async function searchYouTubePlaylists(
 
 export function youtubeVideoToSong(video: YouTubeVideo): Song {
 	const id = `youtube:${video.id}`;
+	const author = video.author || "YouTube";
 	const thumbnailUrl = `https://img.youtube.com/vi/${video.id}/default.jpg`;
 	return {
 		id,
@@ -44,7 +46,7 @@ export function youtubeVideoToSong(video: YouTubeVideo): Song {
 			url: "",
 			covers: [thumbnailUrl],
 		},
-		artists: [{ name: "YouTube" }],
+		artists: [{ name: author }],
 		youtubeId: video.id,
 	};
 }
