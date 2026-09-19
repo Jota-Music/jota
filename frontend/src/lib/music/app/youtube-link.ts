@@ -1,10 +1,11 @@
 type YouTubeRef = {
-	type: "video" | "playlist";
+	type: "video" | "playlist" | "channel";
 	id: string;
 };
 
 const videoId = /^[A-Za-z0-9_-]{11}$/;
 const playlistId = /^(PL|LL|FL|RD|UU|OL|PU)[A-Za-z0-9_-]{10,}$/;
+const channelId = /^UC[A-Za-z0-9_-]{22}$/;
 const hosts = new Set(["youtube.com", "youtu.be", "youtube-nocookie.com"]);
 const pathTypes = new Set(["shorts", "embed", "live"]);
 
@@ -12,13 +13,16 @@ function hostOf(url: URL): string {
 	return url.hostname.replace(/^(www|music|m)\./, "");
 }
 
-// Accepts youtube.com / youtu.be links (watch, shorts, embed, live, playlist)
-// and bare video or playlist IDs, and returns the referenced entity. A video
-// wins over a playlist, so a "song inside a playlist" link opens the song.
+// Accepts youtube.com / youtu.be links (watch, shorts, embed, live, playlist,
+// channel) and bare video, playlist, channel ID or @handle, and returns the
+// referenced entity. A video wins over a playlist, so a "song inside a
+// playlist" link opens the song.
 export function parseYoutubeLink(query: string): YouTubeRef | null {
 	const trimmed = query.trim();
 	if (!trimmed) return null;
 
+	if (trimmed.startsWith("@")) return { type: "channel", id: trimmed };
+	if (channelId.test(trimmed)) return { type: "channel", id: trimmed };
 	if (videoId.test(trimmed)) return { type: "video", id: trimmed };
 	if (playlistId.test(trimmed)) return { type: "playlist", id: trimmed };
 
@@ -40,6 +44,13 @@ export function parseYoutubeLink(query: string): YouTubeRef | null {
 	}
 
 	const [, kind, id] = url.pathname.split("/");
+	if (kind?.startsWith("@")) return { type: "channel", id: kind };
+	if (kind === "channel" && channelId.test(id ?? "")) {
+		return { type: "channel", id: id as string };
+	}
+	if (kind === "c" || kind === "user") {
+		return { type: "channel", id: url.toString() };
+	}
 	if (pathTypes.has(kind ?? "") && videoId.test(id ?? "")) {
 		return { type: "video", id: id as string };
 	}

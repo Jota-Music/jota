@@ -7,6 +7,7 @@ import {
 	revalidateFullPlaylist,
 } from "@/lib/music/app/get-playlist";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
+import { playlistSource } from "@/lib/music/app/playlist-source";
 import {
 	isCustom,
 	removeSongFromPlaylist,
@@ -217,6 +218,16 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		);
 	};
 
+	const ownerLink = (() => {
+		if (!data?.owner) return undefined;
+		if (playlistSource(id) === "youtube") {
+			return data.ownerId
+				? { to: `/youtube/user/${data.ownerId}`, label: data.owner }
+				: undefined;
+		}
+		return { to: `/spotify/user/${data.owner}`, label: data.owner };
+	})();
+
 	if (isError) {
 		return (
 			<div className="flex min-h-0 flex-1 flex-col items-start gap-3 p-4 text-sm">
@@ -240,9 +251,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				covers={covers}
 				title={name}
 				subtitle={t("music.trackCount", { count: songs.length })}
-				link={
-					data?.owner ? { to: `/${data.owner}`, label: data.owner } : undefined
-				}
+				link={ownerLink}
 				linkReserve
 				onPlay={playable.length > 0 ? () => void playList(playable) : undefined}
 				playing={isQueue(playable) && isPlaying.value}

@@ -3,6 +3,8 @@ import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 
 const VIDEO = { type: "video", id: "dQw4w9WgXcQ" } as const;
 const PLAYLIST = { type: "playlist", id: "PL1234567890abcdef" } as const;
+const CHANNEL_ID = "UC-lHJZR3Gqxm24_Vd_AJ5Yw";
+const CHANNEL = { type: "channel", id: CHANNEL_ID } as const;
 
 test("parses video links and bare IDs", () => {
 	expect(
@@ -39,6 +41,25 @@ test("parses playlist links and bare IDs", () => {
 		),
 	).toEqual(PLAYLIST);
 	expect(parseYoutubeLink("PL1234567890abcdef")).toEqual(PLAYLIST);
+});
+
+test("parses channel links, handles and bare IDs", () => {
+	expect(parseYoutubeLink(CHANNEL_ID)).toEqual(CHANNEL);
+	expect(parseYoutubeLink("@PewDiePie")).toEqual({
+		type: "channel",
+		id: "@PewDiePie",
+	});
+	expect(parseYoutubeLink("https://www.youtube.com/@PewDiePie")).toEqual({
+		type: "channel",
+		id: "@PewDiePie",
+	});
+	expect(
+		parseYoutubeLink(`https://www.youtube.com/channel/${CHANNEL_ID}`),
+	).toEqual(CHANNEL);
+	expect(parseYoutubeLink("https://www.youtube.com/c/PewDiePie")).toEqual({
+		type: "channel",
+		id: "https://www.youtube.com/c/PewDiePie",
+	});
 });
 
 test("rejects non-YouTube input", () => {

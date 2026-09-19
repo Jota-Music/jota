@@ -1,4 +1,5 @@
 import { Search, SearchYouTube, SearchYouTubePlaylists } from "@bindings/app";
+import type { Video } from "@models/services/youtube/models";
 import type { PlaylistSummary, SearchResult, Song } from "@/lib/music/model";
 
 export type { SearchResult } from "@/lib/music/model";
@@ -10,15 +11,8 @@ export async function searchSpotify(
 	return (await Search(query, type_)) ?? [];
 }
 
-interface YouTubeVideo {
-	id: string;
-	title: string;
-	author?: string;
-}
-
-export async function searchYouTube(query: string): Promise<YouTubeVideo[]> {
-	const results = (await SearchYouTube(query)) ?? [];
-	return results.map((v) => ({ id: v.id, title: v.title, author: v.author }));
+export async function searchYouTube(query: string): Promise<Video[]> {
+	return (await SearchYouTube(query)) ?? [];
 }
 
 export async function searchYouTubePlaylists(
@@ -27,7 +21,7 @@ export async function searchYouTubePlaylists(
 	return (await SearchYouTubePlaylists(query)) ?? [];
 }
 
-export function youtubeVideoToSong(video: YouTubeVideo): Song {
+export function youtubeVideoToSong(video: Video): Song {
 	const id = `youtube:${video.id}`;
 	const author = video.author || "YouTube";
 	const thumbnailUrl = `https://img.youtube.com/vi/${video.id}/default.jpg`;
@@ -46,7 +40,7 @@ export function youtubeVideoToSong(video: YouTubeVideo): Song {
 			url: "",
 			covers: [thumbnailUrl],
 		},
-		artists: [{ name: author }],
+		artists: [{ id: video.channelId, name: author, source: "youtube" }],
 		youtubeId: video.id,
 	};
 }

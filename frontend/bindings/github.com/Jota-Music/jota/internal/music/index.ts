@@ -8,6 +8,7 @@ export type {
     ArtistDiscography,
     ArtistInfo,
     Audio,
+    ChannelInfo,
     Follow,
     Playlist,
     PlaylistSummary,

@@ -18,9 +18,13 @@ function ArtistLink({
 	if (!artist.id) {
 		return <span class={className}>{artist.name}</span>;
 	}
+	const href =
+		artist.source === "youtube"
+			? `/youtube/user/${artist.id}`
+			: `/artist/${artist.id}`;
 	return (
 		<Link
-			href={`/artist/${artist.id}`}
+			href={href}
 			class={cn(className, "hover:underline")}
 			onClick={(e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
 				e.stopPropagation();

@@ -88,6 +88,7 @@ function PlaylistRow({
 			title={broken ? t("music.track.broken") : undefined}
 			onClick={onClick}
 			onContextMenu={(e) => {
+				if (broken) return;
 				const { actions } = buildActions({
 					songs: [song],
 					selection: selected,
@@ -98,13 +99,15 @@ function PlaylistRow({
 				openContextMenu(actions, e);
 			}}
 			class={cn(
-				"group absolute left-0 flex h-full w-full select-none items-center justify-between gap-2 border-b border-zinc-900 px-3 transition hover:cursor-pointer hover:bg-zinc-800/60",
+				"group absolute left-0 flex h-full w-full select-none items-center justify-between gap-2 border-b border-zinc-900 px-3 transition",
+				broken
+					? "cursor-not-allowed text-zinc-500"
+					: "hover:cursor-pointer hover:bg-zinc-800/60",
 				isCurrent ? "font-medium text-(--dominant-color)!" : "",
 				selected && "bg-zinc-800/60",
 				isDragSource && "opacity-40",
 				isDropTarget &&
 					"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/50 ring-inset",
-				broken && "text-zinc-500",
 			)}
 		>
 			<div class="grid grid-cols-[auto_1fr] gap-2">

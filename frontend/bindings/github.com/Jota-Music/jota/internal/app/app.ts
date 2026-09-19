@@ -26,10 +26,6 @@ export function AddSongsToPlaylist(id: string, refs: string[] | null): $Cancella
     return $Call.ByID(2712034592, id, refs);
 }
 
-export function AddYouTubePlaylist(id: string): $CancellablePromise<music$0.PlaylistSummary> {
-    return $Call.ByID(2929125534, id);
-}
-
 export function CheckUpdate(): $CancellablePromise<update$0.Info> {
     return $Call.ByID(1914456057);
 }
@@ -94,6 +90,10 @@ export function GetPlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | 
     return $Call.ByID(2776985747);
 }
 
+export function GetSavedPlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
+    return $Call.ByID(2542461862);
+}
+
 export function GetUserPlaylists(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
     return $Call.ByID(1067966734, user);
 }
@@ -102,12 +102,20 @@ export function GetUserProfile(username: string): $CancellablePromise<music$0.Us
     return $Call.ByID(3889322832, username);
 }
 
-export function GetYouTubeId(cacheKey: string): $CancellablePromise<string> {
-    return $Call.ByID(3943685640, cacheKey);
+export function GetYouTubeChannelInfo(channel: string): $CancellablePromise<music$0.ChannelInfo> {
+    return $Call.ByID(2412343568, channel);
 }
 
-export function GetYouTubePlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
-    return $Call.ByID(4268478320);
+export function GetYouTubeChannelPlaylists(channel: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
+    return $Call.ByID(24316739, channel);
+}
+
+export function GetYouTubeChannelVideos(channel: string): $CancellablePromise<music$0.Song[] | null> {
+    return $Call.ByID(2137789196, channel);
+}
+
+export function GetYouTubeId(cacheKey: string): $CancellablePromise<string> {
+    return $Call.ByID(3943685640, cacheKey);
 }
 
 /**
@@ -152,12 +160,12 @@ export function RemoveRoom(id: string): $CancellablePromise<rooms$0.Room[] | nul
     return $Call.ByID(1937239451, id);
 }
 
-export function RemoveSongFromPlaylist(id: string, ref: string): $CancellablePromise<void> {
-    return $Call.ByID(4016821159, id, ref);
+export function RemoveSavedPlaylist(id: string): $CancellablePromise<void> {
+    return $Call.ByID(3652012245, id);
 }
 
-export function RemoveYouTubePlaylist(id: string): $CancellablePromise<void> {
-    return $Call.ByID(2138005495, id);
+export function RemoveSongFromPlaylist(id: string, ref: string): $CancellablePromise<void> {
+    return $Call.ByID(4016821159, id, ref);
 }
 
 export function ReorderPlaylist(id: string, refs: string[] | null): $CancellablePromise<void> {
@@ -174,6 +182,10 @@ export function RevalidateFullPlaylist(id: string): $CancellablePromise<void> {
 
 export function RevalidateUserPlaylists(user: string): $CancellablePromise<void> {
     return $Call.ByID(771735787, user);
+}
+
+export function RevalidateYouTubeChannel(channel: string): $CancellablePromise<void> {
+    return $Call.ByID(57247543, channel);
 }
 
 /**

@@ -98,8 +98,12 @@
 		"user": {
 			"failed": "Failed to load playlists for @{user}",
 			"noPlaylists": "No playlists found.",
+			"noVideos": "No videos found.",
 			"follow": "Follow user",
-			"unfollow": "Unfollow user"
+			"unfollow": "Unfollow user",
+			"findOnYouTube": "Search this name on YouTube",
+			"videosTab": "Videos",
+			"playlistsTab": "Playlists"
 		},
 		"youtube": {
 			"videos": "Videos",
@@ -202,6 +206,7 @@
 			"clearSearch": "Clear search",
 			"orderBy": "Order by",
 			"refresh": "Refresh",
+			"play": "Play",
 			"order": {
 				"added": "Oldest",
 				"reverse": "Newest",

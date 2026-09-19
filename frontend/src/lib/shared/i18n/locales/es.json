@@ -98,8 +98,12 @@
 		"user": {
 			"failed": "Error al cargar las listas de @{user}",
 			"noPlaylists": "No se encontraron listas.",
+			"noVideos": "No se encontraron vídeos.",
 			"follow": "Seguir usuario",
-			"unfollow": "Dejar de seguir"
+			"unfollow": "Dejar de seguir",
+			"findOnYouTube": "Buscar este nombre en YouTube",
+			"videosTab": "Vídeos",
+			"playlistsTab": "Listas"
 		},
 		"youtube": {
 			"videos": "Vídeos",
@@ -202,6 +206,7 @@
 			"clearSearch": "Limpiar búsqueda",
 			"orderBy": "Ordenar por",
 			"refresh": "Actualizar",
+			"play": "Reproducir",
 			"order": {
 				"added": "Más antiguas",
 				"reverse": "Más recientes",

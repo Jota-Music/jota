@@ -3,16 +3,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Disc3, ListMusic, Turntable, Users } from "lucide-preact";
 import { useLocation } from "wouter-preact";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
-import getUserPlaylists from "@/lib/music/app/get-user-playlists";
+import { getUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import { getOrder, saveOrder } from "@/lib/music/app/order";
+import { playlistSource } from "@/lib/music/app/playlist-source";
 import { deletePlaylist, getPlaylists } from "@/lib/music/app/playlists";
 import { applyOrder, move } from "@/lib/music/app/reorder";
 import {
-	getYouTubePlaylists,
-	removeYouTubePlaylist,
-} from "@/lib/music/app/youtube-playlist";
+	getSavedPlaylists,
+	removeSavedPlaylist,
+} from "@/lib/music/app/saved-playlist";
 import { expireRemoval } from "@/lib/music/views/stores/removal";
+import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { CreatePlaylistModal } from "@/lib/music/views/ui/playlists/create";
 import {
 	type IconType,
@@ -55,14 +57,14 @@ export function MainPage() {
 			: tab.value;
 
 	const spotifyQuery = useQuery({
-		queryKey: ["user-playlists", spotifyHandle],
-		queryFn: () => getUserPlaylists(spotifyHandle),
+		queryKey: ["user-playlists", "spotify", spotifyHandle],
+		queryFn: () => getUserPlaylists("spotify", spotifyHandle),
 		enabled: spotifyConnected.value,
 	});
 
-	const youtubeQuery = useQuery({
-		queryKey: ["youtube-playlists"],
-		queryFn: getYouTubePlaylists,
+	const savedQuery = useQuery({
+		queryKey: ["saved-playlists"],
+		queryFn: getSavedPlaylists,
 	});
 
 	const customQuery = useQuery({
@@ -75,12 +77,6 @@ export function MainPage() {
 		queryFn: () => getOrder(spotifyHandle),
 	});
 
-	const removeYouTube = useMutation({
-		mutationFn: removeYouTubePlaylist,
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["youtube-playlists"] }),
-	});
-
 	const removeCustom = useMutation({
 		mutationFn: deletePlaylist,
 		onSuccess: (_data, id) => {
@@ -88,6 +84,12 @@ export function MainPage() {
 			expireRemoval(id);
 		},
 		onError: (error) => addError(error, "playlist"),
+	});
+
+	const removeSaved = useMutation({
+		mutationFn: removeSavedPlaylist,
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: ["saved-playlists"] }),
 	});
 
 	const items: Item[] = [
@@ -99,16 +101,18 @@ export function MainPage() {
 				source: "spotify",
 			}),
 		),
-		...(youtubeQuery.data ?? []).map(
-			(p): Item => ({
+		...(savedQuery.data ?? []).map((p): Item => {
+			const source = playlistSource(p.id);
+			return {
 				id: p.id,
 				name: p.name,
 				cover: p.cover,
 				subtitle: p.subtitle,
-				source: "youtube",
-				removable: true,
-			}),
-		),
+				source,
+				// YouTube playlists aren't "liked": remove them with the trash.
+				removable: source === "youtube",
+			};
+		}),
 		...(customQuery.data ?? []).map(
 			(p): Item => ({
 				id: p.id,
@@ -142,7 +146,7 @@ export function MainPage() {
 	const confirmRemove = () => {
 		if (!confirming.value) return;
 		if (removingLocal) removeCustom.mutate(confirming.value);
-		else removeYouTube.mutate(confirming.value);
+		else removeSaved.mutate(confirming.value);
 		confirming.value = null;
 	};
 
@@ -190,9 +194,10 @@ export function MainPage() {
 						items={ordered}
 						to={(id) => `/playlist/${id}`}
 						viewKey="cover_grid_view"
+						actions={(id) => <PlaylistPlayButton id={id} />}
 						isLoading={
 							spotifyQuery.isLoading ||
-							youtubeQuery.isLoading ||
+							savedQuery.isLoading ||
 							customQuery.isLoading
 						}
 						emptyMessage={<YouTubeHint />}
@@ -219,7 +224,7 @@ export function MainPage() {
 			<ConfirmModal
 				open={!!confirming.value}
 				danger={removingLocal}
-				pending={removeCustom.isPending || removeYouTube.isPending}
+				pending={removeCustom.isPending || removeSaved.isPending}
 				close={() => {
 					confirming.value = null;
 				}}

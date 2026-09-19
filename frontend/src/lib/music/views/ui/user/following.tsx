@@ -19,7 +19,7 @@ type Entry = {
 function link(id: string): string {
 	return id.startsWith("artist:")
 		? `/artist/${id.slice("artist:".length)}`
-		: `/${id.slice("user:".length)}`;
+		: `/spotify/user/${id.slice("user:".length)}`;
 }
 
 // Following merges the account's own follows with the friends stored locally,

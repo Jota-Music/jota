@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import { Link, useLocation, useParams } from "wouter-preact";
 import { type SearchResult, searchSpotify } from "@/lib/music/app/search";
 import type { Song } from "@/lib/music/model";
+import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
@@ -26,12 +27,14 @@ const detailRoutes: Partial<Record<SearchType, (id: string) => string>> = {
 function SearchResultItem({ item }: { item: SearchResult }) {
 	const coverUrl = item.coverUrl ?? "";
 	const artists = (item.artists ?? []).join(", ");
+	const isPlaylist = item.uri.startsWith("spotify:playlist:");
+	const playlistId = stripUriPrefix(item.uri, "playlist");
 
 	return (
-		<Link href={`/playlist/${stripUriPrefix(item.uri, "playlist")}`}>
+		<Link href={`/playlist/${playlistId}`}>
 			<div class="group cursor-pointer overflow-hidden rounded-md">
 				<div class="flex flex-col gap-2">
-					<div class="aspect-square w-full overflow-hidden rounded-md">
+					<div class="relative aspect-square w-full overflow-hidden rounded-md">
 						{coverUrl ? (
 							<img
 								src={coverUrl}
@@ -40,6 +43,11 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 							/>
 						) : (
 							<div class="h-full w-full bg-zinc-900" />
+						)}
+						{isPlaylist && (
+							<div class="absolute right-1 top-1 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+								<PlaylistPlayButton id={playlistId} />
+							</div>
 						)}
 					</div>
 
@@ -169,7 +177,7 @@ export function SearchPage() {
 		<DefaultLayout class="gap-4">
 			<div class="flex flex-col gap-4 min-h-0 flex-1">
 				{type === "user" ? (
-					<UserHeader username={query} />
+					<UserHeader source="spotify" identifier={query} />
 				) : (
 					<header class="shrink-0">
 						<h2 class="text-xl font-semibold leading-tight">

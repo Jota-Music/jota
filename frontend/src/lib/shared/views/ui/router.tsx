@@ -86,11 +86,12 @@ function Router() {
 						</RequireSpotify>
 					</Route>
 					<Route path="/settings" component={SettingsPage} />
-					<Route path="/:user">
+					<Route path="/spotify/user/:username">
 						<RequireSpotify>
 							<UserPage />
 						</RequireSpotify>
 					</Route>
+					<Route path="/youtube/user/:channelId" component={UserPage} />
 					<Route path="/" component={MainPage} />
 					<Route component={NotFoundPage} />
 				</Switch>

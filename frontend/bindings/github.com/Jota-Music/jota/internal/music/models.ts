@@ -19,6 +19,7 @@ export interface AlbumSummary {
 export interface Artist {
     "id"?: string;
     "name": string;
+    "source"?: string;
 }
 
 export interface ArtistDiscography {
@@ -42,6 +43,12 @@ export interface Audio {
     "clientName"?: string;
 }
 
+export interface ChannelInfo {
+    "id": string;
+    "name": string;
+    "avatar"?: string;
+}
+
 export interface Follow {
     "id": string;
     "name": string;
@@ -53,6 +60,7 @@ export interface Playlist {
     "name"?: string;
     "cover"?: string;
     "owner"?: string;
+    "ownerId"?: string;
     "songs": Song[] | null;
 }
 

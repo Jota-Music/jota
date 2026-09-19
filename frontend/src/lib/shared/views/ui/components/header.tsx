@@ -15,6 +15,7 @@ import { useCallback } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
+import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import { removal, undoRemoval } from "@/lib/music/views/stores/removal";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -78,15 +79,24 @@ export function Header() {
 			// A pasted Spotify link/URI decides its own type, so the selected
 			// search type only applies to plain text queries.
 			const live = spotifyConnected.value ? source.value : "youtube";
-			const ref = live === "spotify" ? parseSpotifyLink(query) : null;
+
+			if (live === "youtube") {
+				const yt = parseYoutubeLink(query);
+				if (yt?.type === "channel") {
+					setLocation(`/youtube/user/${encodeURIComponent(yt.id)}`);
+					return;
+				}
+				setLocation(`/search/youtube/${encodeURIComponent(query)}`);
+				return;
+			}
+
+			const ref = parseSpotifyLink(query);
 			const encoded = encodeURIComponent(ref ? ref.id : query);
 
 			setLocation(
-				live === "youtube"
-					? `/search/youtube/${encoded}`
-					: ref
-						? `/search/${ref.type}/${encoded}`
-						: `/search/${searchType.value}/${encoded}`,
+				ref
+					? `/search/${ref.type}/${encoded}`
+					: `/search/${searchType.value}/${encoded}`,
 			);
 		},
 		[setLocation],

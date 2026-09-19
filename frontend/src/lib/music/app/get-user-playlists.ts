@@ -1,12 +1,31 @@
-import { GetUserPlaylists, RevalidateUserPlaylists } from "@bindings/app";
+import {
+	GetUserPlaylists,
+	GetYouTubeChannelPlaylists,
+	RevalidateUserPlaylists,
+	RevalidateYouTubeChannel,
+} from "@bindings/app";
 import type { PlaylistSummary } from "@/lib/music/model";
 
-export default async function getUserPlaylists(
-	user: string,
+export type UserSource = "spotify" | "youtube";
+
+export async function getUserPlaylists(
+	source: UserSource,
+	id: string,
 ): Promise<PlaylistSummary[]> {
-	return (await GetUserPlaylists(user)) ?? [];
+	const playlists =
+		source === "youtube"
+			? await GetYouTubeChannelPlaylists(id)
+			: await GetUserPlaylists(id);
+	return playlists ?? [];
 }
 
-export async function revalidateUserPlaylists(user: string): Promise<void> {
-	await RevalidateUserPlaylists(user);
+export async function revalidateUserPlaylists(
+	source: UserSource,
+	id: string,
+): Promise<void> {
+	if (source === "youtube") {
+		await RevalidateYouTubeChannel(id);
+		return;
+	}
+	await RevalidateUserPlaylists(id);
 }

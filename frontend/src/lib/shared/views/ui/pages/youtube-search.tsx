@@ -1,6 +1,6 @@
 import { useSignal } from "@preact/signals";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { CirclePlay, Heart, ListVideo, Loader } from "lucide-preact";
+import { useQuery } from "@tanstack/preact-query";
+import { CirclePlay, ListVideo, Loader } from "lucide-preact";
 import { useEffect, useRef } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
@@ -9,27 +9,14 @@ import {
 	youtubeVideoToSong,
 } from "@/lib/music/app/search";
 import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
-import {
-	addYouTubePlaylist,
-	getYouTubePlaylists,
-	removeYouTubePlaylist,
-} from "@/lib/music/app/youtube-playlist";
 import type { PlaylistSummary, Song } from "@/lib/music/model";
-import { rowSelect } from "@/lib/music/views/hooks/row-select";
 import { playFromQueueSelection } from "@/lib/music/views/stores/player";
-import {
-	clearSelection,
-	selectedSongs,
-	toggleSelection,
-} from "@/lib/music/views/stores/selection";
+import { clearSelection } from "@/lib/music/views/stores/selection";
+import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
-import TrackActions, {
-	buildActions,
-} from "@/lib/music/views/ui/track/track-actions";
+import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
-import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
-import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
@@ -62,7 +49,6 @@ export function YouTubeSearchPage() {
 	const target = queryTarget(query);
 	const direct = isDirectQuery(query);
 	const picked = useSignal<{ query: string; tab: Tab } | null>(null);
-	const queryClient = useQueryClient();
 	const listRef = useRef<HTMLElement>(null);
 
 	const wantVideos = !!query && (!direct || target === "videos");
@@ -101,38 +87,6 @@ export function YouTubeSearchPage() {
 	useEffect(() => {
 		clearSelection();
 	}, [activeTab]);
-
-	const savedQuery = useQuery({
-		queryKey: ["youtube-playlists"],
-		queryFn: getYouTubePlaylists,
-		enabled: activeTab === "playlists",
-	});
-
-	const saved = new Set((savedQuery.data ?? []).map((p) => p.id));
-	const overrides = useSignal<Record<string, boolean>>({});
-
-	function isSaved(id: string): boolean {
-		return overrides.value[id] ?? saved.has(id);
-	}
-
-	const toggle = useMutation({
-		mutationFn: async ({ id, next }: { id: string; next: boolean }) => {
-			if (next) {
-				await addYouTubePlaylist(id);
-			} else {
-				await removeYouTubePlaylist(id);
-			}
-		},
-		onMutate: ({ id, next }) => {
-			overrides.value = { ...overrides.value, [id]: next };
-			return { id, prev: !next };
-		},
-		onError: (_error, _vars, ctx) => {
-			if (ctx) overrides.value = { ...overrides.value, [ctx.id]: ctx.prev };
-		},
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["youtube-playlists"] }),
-	});
 
 	const songs: Song[] = videos.map(youtubeVideoToSong);
 
@@ -207,17 +161,7 @@ export function YouTubeSearchPage() {
 							) : (
 								<div class="grid grid-cols-2 gap-3 pt-1 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
 									{playlists.map((playlist) => (
-										<PlaylistCard
-											key={playlist.id}
-											playlist={playlist}
-											saved={isSaved(playlist.id)}
-											onToggle={() =>
-												toggle.mutate({
-													id: playlist.id,
-													next: !isSaved(playlist.id),
-												})
-											}
-										/>
+										<PlaylistCard key={playlist.id} playlist={playlist} />
 									))}
 								</div>
 							)}
@@ -245,7 +189,7 @@ export function YouTubeSearchPage() {
 							}}
 						>
 							{songs.map((song, index) => (
-								<YouTubeVideoItem
+								<YouTubeVideoRow
 									key={song.id}
 									song={song}
 									songs={songs}
@@ -262,15 +206,7 @@ export function YouTubeSearchPage() {
 	);
 }
 
-function PlaylistCard({
-	playlist,
-	saved,
-	onToggle,
-}: {
-	playlist: PlaylistSummary;
-	saved: boolean;
-	onToggle: () => void;
-}) {
+function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
 	return (
 		<div class="group flex flex-col gap-2">
 			<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
@@ -282,23 +218,9 @@ function PlaylistCard({
 					/>
 				</Link>
 
-				<button
-					type="button"
-					title={
-						saved ? t("pages.youtube.removeHome") : t("pages.youtube.addHome")
-					}
-					onClick={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
-						onToggle();
-					}}
-					class={cn(
-						"absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/70 transition hover:bg-black/90",
-						saved ? "text-red-400" : "text-zinc-300 hover:text-white",
-					)}
-				>
-					<Heart size={16} class={saved ? "fill-current" : ""} />
-				</button>
+				<div class="absolute right-2 top-2 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+					<PlaylistPlayButton id={playlist.id} />
+				</div>
 			</div>
 
 			<Link href={`/playlist/${playlist.id}`}>
@@ -311,72 +233,6 @@ function PlaylistCard({
 					)}
 				</div>
 			</Link>
-		</div>
-	);
-}
-
-function YouTubeVideoItem({
-	song,
-	songs,
-	index,
-	onClick,
-}: {
-	song: Song;
-	songs: Song[];
-	index: number;
-	onClick: () => void;
-}) {
-	const selected = selectedSongs.value.some((s) => s.id === song.id);
-
-	const { onClick: onRowClick } = rowSelect({
-		song,
-		songs,
-		index,
-		onActivate: onClick,
-	});
-
-	return (
-		<div
-			data-row={song.id}
-			role="none"
-			class={cn(
-				"flex w-full select-none items-center gap-3 border-b border-zinc-900 px-3 py-2 transition hover:bg-zinc-800/60",
-				selected && "bg-zinc-800/60",
-			)}
-			onContextMenu={(e) => {
-				const { actions } = buildActions({
-					songs: [song],
-					onToggleSelect: toggleSelection,
-				});
-				openContextMenu(actions, e);
-			}}
-		>
-			<button
-				type="button"
-				onClick={onRowClick}
-				class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
-			>
-				<PlaylistCover
-					src={song.album?.covers?.[0]}
-					alt={song.name}
-					imgClass="size-10 shrink-0 rounded-md object-cover"
-				/>
-
-				<div class="min-w-0 flex-1">
-					<p class="wrap-break-word text-balance text-sm text-white leading-snug">
-						{song.name}
-					</p>
-					<p class="truncate text-xs text-zinc-500">
-						<ArtistLinks artists={song.artists} />
-					</p>
-				</div>
-			</button>
-
-			<TrackActions
-				songs={[song]}
-				selection={selected}
-				onToggleSelect={toggleSelection}
-			/>
 		</div>
 	);
 }
