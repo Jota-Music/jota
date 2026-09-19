@@ -1,4 +1,4 @@
-import { useSignal, useSignalEffect } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import {
 	EllipsisVertical,
 	ListChecks,
@@ -10,7 +10,7 @@ import {
 	Trash2,
 } from "lucide-preact";
 import { createPortal } from "preact/compat";
-import { useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { enqueueMany } from "@/lib/music/views/stores/player";
 import {
@@ -164,7 +164,7 @@ export default function TrackActions({
 		anchor.value = null;
 	};
 
-	useSignalEffect(() => {
+	useLayoutEffect(() => {
 		if (!open.value) return;
 		const el = menu.current;
 		if (!el || !anchor.value) return;
@@ -198,7 +198,7 @@ export default function TrackActions({
 			window.removeEventListener("scroll", onScroll, true);
 			window.removeEventListener("resize", onResize);
 		};
-	});
+	}, [open.value, anchor.value]);
 
 	if (actions.length === 0) return null;
 
