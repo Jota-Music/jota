@@ -70,8 +70,9 @@ cd frontend && bun run typecheck && bun run lint
 
 ## Layout
 
-- Backend: `internal/app` (Go↔JS bindings), `internal/services/{spotify,youtube,sync}`,
-  `internal/music` (domain), `internal/{kv,env}`.
+- Backend: `internal/app` (Go↔JS bindings), `internal/music` (domain), local contexts
+  (`internal/{playlists,follows,ordering,rooms,update}`), external service adapters
+  (`internal/services/{spotify,youtube,discord}`), `internal/{kv,env}`.
 - Frontend: features in `frontend/src/lib/{auth,music,sync,shared}`.
 
 ## Conventions
