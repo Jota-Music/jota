@@ -5,7 +5,10 @@ import { Loader } from "lucide-preact";
 import { useParams } from "wouter-preact";
 import { getAlbumTracks } from "@/lib/music/app/get-album";
 import type { Song } from "@/lib/music/model";
-import { isPlaying } from "@/lib/music/views/stores/audio";
+import {
+	isPlaying,
+	isLoading as playbackLoading,
+} from "@/lib/music/views/stores/audio";
 import { isQueue, playList } from "@/lib/music/views/stores/player";
 import { selectAll } from "@/lib/music/views/stores/selection";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
@@ -47,6 +50,7 @@ export function AlbumPage() {
 							: undefined
 					}
 					playing={isQueue(tracks) && isPlaying.value}
+					loading={isQueue(tracks) && playbackLoading.value}
 					actions={<TrackActions songs={tracks} onSelectAll={selectAll} />}
 				/>
 

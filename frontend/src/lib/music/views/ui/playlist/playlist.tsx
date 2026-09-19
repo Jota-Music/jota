@@ -15,7 +15,10 @@ import {
 } from "@/lib/music/app/playlists";
 import { move } from "@/lib/music/app/reorder";
 import type { Playlist, Song } from "@/lib/music/model";
-import { isPlaying } from "@/lib/music/views/stores/audio";
+import {
+	isPlaying,
+	isLoading as playbackLoading,
+} from "@/lib/music/views/stores/audio";
 import { isQueue, playList } from "@/lib/music/views/stores/player";
 import { expireRemoval, stageRemoval } from "@/lib/music/views/stores/removal";
 import {
@@ -253,8 +256,11 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				subtitle={t("music.trackCount", { count: songs.length })}
 				link={ownerLink}
 				linkReserve
-				onPlay={playable.length > 0 ? () => void playList(playable) : undefined}
+				onPlay={
+					playable.length > 0 ? () => void playList(playable, id) : undefined
+				}
 				playing={isQueue(playable) && isPlaying.value}
+				loading={isQueue(playable) && playbackLoading.value}
 				actions={
 					<TrackActions
 						songs={songs}

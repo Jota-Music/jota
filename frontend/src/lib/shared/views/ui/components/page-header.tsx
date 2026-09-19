@@ -1,4 +1,4 @@
-import { Disc3, Pause, Play } from "lucide-preact";
+import { Disc3, Loader, Pause, Play } from "lucide-preact";
 import type { ComponentChildren } from "preact";
 import { Link } from "wouter-preact";
 import { t } from "@/lib/shared/i18n";
@@ -24,6 +24,7 @@ export function PageHeader({
 	linkReserve = false,
 	onPlay,
 	playing,
+	loading,
 	actions,
 }: {
 	cover?: string;
@@ -34,6 +35,7 @@ export function PageHeader({
 	linkReserve?: boolean;
 	onPlay?: () => void;
 	playing?: boolean;
+	loading?: boolean;
 	actions?: ComponentChildren;
 }) {
 	const right =
@@ -45,9 +47,12 @@ export function PageHeader({
 						title={t("music.playAll")}
 						aria-label={t("music.playAll")}
 						onClick={onPlay}
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition"
+						disabled={loading}
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition disabled:opacity-70"
 					>
-						{playing ? (
+						{loading ? (
+							<Loader class="size-5 animate-spin" />
+						) : playing ? (
 							<Pause class="size-5 fill-current" />
 						) : (
 							<Play class="size-5 fill-current" />
