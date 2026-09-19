@@ -38,6 +38,7 @@ type searchResponse struct {
 									Text string `json:"text"`
 								} `json:"runs"`
 							} `json:"title"`
+							ByLine text `json:"shortBylineText"`
 						} `json:"compactVideoRenderer"`
 					} `json:"contents"`
 				} `json:"itemSectionRenderer"`

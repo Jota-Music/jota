@@ -41,7 +41,11 @@ func (s *Service) Search(query string) ([]Video, error) {
 		return nil, fmt.Errorf("invalid JSON: %w", err)
 	}
 
-	var videos []Video
+	return extractVideos(sr), nil
+}
+
+func extractVideos(sr searchResponse) []Video {
+	videos := make([]Video, 0)
 	for _, section := range sr.Contents.SectionListRenderer.Contents {
 		for _, item := range section.ItemSectionRenderer.Contents {
 			v := item.CompactVideoRenderer
@@ -52,11 +56,14 @@ func (s *Service) Search(query string) ([]Video, error) {
 			if len(v.Title.Runs) > 0 {
 				title = v.Title.Runs[0].Text
 			}
-			videos = append(videos, Video{ID: v.VideoID, Title: title})
+			videos = append(videos, Video{
+				ID:     v.VideoID,
+				Title:  title,
+				Author: v.ByLine.first(),
+			})
 		}
 	}
-
-	return videos, nil
+	return videos
 }
 
 var videoIdPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
@@ -102,7 +109,7 @@ func fetchVideo(id string) (Video, error) {
 		return Video{}, errors.New("video unavailable")
 	}
 
-	return Video{ID: id, Title: pr.VideoDetails.Title}, nil
+	return Video{ID: id, Title: pr.VideoDetails.Title, Author: pr.VideoDetails.Author}, nil
 }
 
 func fetchPlayer(id string) (playerResponse, error) {
