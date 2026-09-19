@@ -79,6 +79,9 @@ cd frontend && bun run typecheck && bun run lint
 - DDD: domain model in `internal/music` (types + `Source` port); services are adapters; dependencies point inward.
 - Go: stdlib first; return errors as values.
 - Preact + signals; `@tanstack/preact-query` for data fetching.
+- Frontend state: `useSignal` for component-local state, `signal()` only at module scope.
+  For layout that must be right before first paint, use `useLayoutEffect`, not `useSignalEffect`
+  (the latter runs after paint, on the next animation frame).
 - Add Go↔JS methods to `App` (`internal/app/app.go`); regenerate `frontend/bindings/`,
   never edit it by hand.
 - Keep Go `music.*` JSON tags in sync with `frontend/src/lib/music/model`.
