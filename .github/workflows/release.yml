@@ -275,7 +275,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@v5
         with:
           path: dist
       - name: Checksums
@@ -293,7 +293,15 @@ jobs:
               -o -name '*.exe' -o -name '*.dmg' -o -name '*.zip' \) -type f | sort
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+      - name: Delete existing release if present
+        run: |
+          tag="${{ github.event.inputs.tag_name || github.ref_name }}"
+          if gh release view "$tag" --json name -q .name >/dev/null 2>&1; then
+            gh release delete "$tag" --yes
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
           prerelease: ${{ startsWith(github.event.inputs.tag_name || github.ref_name, 'v0.0.') }}
