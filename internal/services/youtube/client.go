@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -21,11 +22,20 @@ const defaultAPIKey = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
 var apiKeyEnv = os.Getenv("YOUTUBE_API_KEY")
 
 const (
-	visitorTTL       = 5 * time.Minute
-	versionTTL       = 24 * time.Hour
-	visitorBackoff   = time.Minute
-	visitorFetchWait = 10 * time.Second
-	visitorRetries   = 3
+	// How long an in-memory token stays credible before the homepage is
+	// re-fetched mid-session.
+	visitorTTL = 5 * time.Minute
+	// How long the token survives on disk so a cold start resumes it instead of
+	// re-fetching YouTube's homepage.
+	visitorPersistTTL = 24 * time.Hour
+	versionTTL        = 24 * time.Hour
+	// How long a failed refresh waits before the next resolve can try again. A
+	// short wait lets a transient homepage blip recover within the next track
+	// instead of failing silently for a full minute.
+	visitorBackoff = 30 * time.Second
+	// The homepage routinely takes seconds on a healthy network, so the timeout
+	// must leave room for a slow or throttled connection.
+	visitorFetchWait = 30 * time.Second
 )
 
 var (
@@ -56,6 +66,29 @@ func visitorRedirect(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
 	return nil
+}
+
+// fetchHomepage downloads YouTube's homepage once. Its HTML carries the
+// INNERTUBE_API_KEY, INNERTUBE_CLIENT_VERSION and VISITOR_DATA that the guest
+// session needs. One attempt only: the caller backs off on failure instead of
+// hammering a slow or bot-checked homepage.
+func fetchHomepage() ([]byte, error) {
+	req, err := http.NewRequest("GET", "https://www.youtube.com/", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", preferredClient.UserAgent)
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+
+	resp, err := visitorClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("homepage status %d", resp.StatusCode)
+	}
+	return io.ReadAll(resp.Body)
 }
 
 type clientConfig struct {
@@ -197,7 +230,7 @@ func adoptVisitor(body []byte) {
 	visitorDataMu.Lock()
 	if visitorData != token {
 		visitorData = token
-		_ = visitorBucket.SetString(visitorKey, token, visitorTTL)
+		_ = visitorBucket.SetString(visitorKey, token, visitorPersistTTL)
 	}
 	lastFetch = time.Now()
 	blockedUntil = time.Time{}
@@ -246,46 +279,10 @@ func getVisitorData() (string, string, error) {
 		}
 	}
 
-	var body []byte
-	fetched := false
-	for i := range visitorRetries {
-		req, err := http.NewRequest("GET", "https://www.youtube.com/", nil)
-		if err != nil {
-			log.Printf("youtube: visitor fetch request build failed: %v", err)
-			break
-		}
-		req.Header.Set("User-Agent", preferredClient.UserAgent)
-		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-
-		resp, err := visitorClient.Do(req)
-		if err != nil {
-			log.Printf("youtube: visitor fetch attempt %d/%d failed: %v", i+1, visitorRetries, err)
-			time.Sleep(time.Duration(1<<i) * time.Second)
-			continue
-		}
-
-		if resp.StatusCode != 200 {
-			resp.Body.Close()
-			log.Printf("youtube: visitor fetch attempt %d/%d: status %d", i+1, visitorRetries, resp.StatusCode)
-			time.Sleep(time.Duration(1<<i) * time.Second)
-			continue
-		}
-
-		data, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			log.Printf("youtube: visitor fetch attempt %d/%d: read error: %v", i+1, visitorRetries, err)
-			time.Sleep(time.Duration(1<<i) * time.Second)
-			continue
-		}
-		body = data
-		fetched = true
-		break
-	}
-
-	if !fetched {
+	body, err := fetchHomepage()
+	if err != nil {
 		blockedUntil = time.Now().Add(visitorBackoff)
-		log.Printf("youtube: visitor refresh failed, backing off %s", visitorBackoff)
+		log.Printf("youtube: visitor refresh failed, backing off %s: %v", visitorBackoff, err)
 		return visitorData, currentAPIKey(), nil
 	}
 
@@ -308,10 +305,22 @@ func getVisitorData() (string, string, error) {
 
 	if m := visitorDataRe.FindSubmatch(body); len(m) > 1 {
 		visitorData = string(m[1])
-		_ = visitorBucket.SetString(visitorKey, visitorData, visitorTTL)
+		_ = visitorBucket.SetString(visitorKey, visitorData, visitorPersistTTL)
 	}
 	blockedUntil = time.Time{}
 	lastFetch = time.Now()
 
 	return visitorData, currentAPIKey(), nil
+}
+
+// WarmVisitor fetches the visitor token in the background so the first resolve
+// does not stall behind YouTube's homepage, which can take seconds on a slow or
+// throttled connection. No-op when a token is already fresh; the visitorDataMu
+// lock serialises concurrent fetches.
+func WarmVisitor() {
+	go func() {
+		if _, _, err := getVisitorData(); err != nil {
+			log.Printf("youtube: visitor warm-up failed: %v", err)
+		}
+	}()
 }

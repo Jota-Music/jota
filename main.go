@@ -13,6 +13,7 @@ import (
 
 	"github.com/Jota-Music/jota/internal/app"
 	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/services/youtube"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -143,6 +144,10 @@ func main() {
 	log.Printf("jota %s starting", currentVersion)
 
 	a := app.New(currentVersion)
+
+	// Fetch YouTube's visitor token in the background so the first play does not
+	// stall while the homepage round-trips.
+	youtube.WarmVisitor()
 
 	if os.Getenv("WEBKIT_DISABLE_DMABUF_RENDERER") == "" {
 		_ = os.Setenv("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
