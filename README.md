@@ -97,6 +97,33 @@ also where those channels fetch their next version.
 > The Windows `.exe` and macOS `.dmg` are unsigned and may be flagged or blocked
 > by SmartScreen and Gatekeeper.
 
+## Cloudflare WARP
+
+Running Jota behind Cloudflare WARP can make playback and API calls sluggish:
+the free client routes all traffic through Cloudflare's edge (MTU 1300 and extra
+RTT per request), and audio streams ride the tunnel too. On this repo's Linux
+setup, `apresolve.spotify.com` connected in ~6s through the tunnel vs ~0.03s
+direct.
+
+On a personal (non-managed) WARP client, exclude the music domains so their
+traffic goes direct:
+
+```bash
+warp-cli tunnel host add "*.spotify.com"
+warp-cli tunnel host add "*.scdn.co"
+warp-cli tunnel host add "*.youtube.com"
+warp-cli tunnel host add "*.googlevideo.com"
+warp-cli tunnel host add "*.ytimg.com"
+warp-cli disconnect          # re-negotiate the tunnel
+warp-cli connect
+warp-cli tunnel host list    # confirm the exclusions are stored
+```
+
+Host wildcards cover the rotating IPs underneath (Spotify access points and
+`googlevideo` hosts), so re-runs are not needed. The local relay (`127.0.0.1`)
+never goes through the tunnel. On Zero Trust-managed clients, split tunnels are
+controlled by org policy (dashboard/MDM), not `warp-cli`.
+
 ## Roadmap
 
 - **More sources** beyond Spotify and YouTube.
