@@ -22,8 +22,9 @@ export class AudioCache {
 	private static expiryMarginSeconds = 30;
 
 	// Bound a stuck resolve: a promise that never settles must not wedge every
-	// later track behind it (the remote playback tail awaits this).
-	private static resolveTimeoutMs = 15000;
+	// later track behind it (the remote playback tail awaits this). Generous so
+	// a slow or throttled connection still has room to land a stream.
+	private static resolveTimeoutMs = 25000;
 
 	private static withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 		return new Promise<T>((resolve, reject) => {
