@@ -11,6 +11,9 @@ storage/
 .task/
 bin/
 
+# Standalone go build binary
+/jota
+
 # Wails desktop build artifacts
 *.AppImage
 build/bin/
