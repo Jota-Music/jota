@@ -9,6 +9,11 @@ type CachedAudio = {
 	expireAt: number;
 };
 
+// A 45-byte silent 8kHz WAV: played inside the first user gesture to grant the
+// shared player element autoplay for the whole session.
+const SILENT_WAV =
+	"data:audio/wav;base64,UklGRiUAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQEAAAAA";
+
 // WebKit grants autoplay per media element, so a new element created mid-playlist
 // needs its own user gesture and gets blocked. Reuse one element for every track
 // and swap its src, which is WebKit's documented way to play tracks back to back.
@@ -126,6 +131,25 @@ export class AudioCache {
 	static async preload(...songs: Song[]): Promise<void> {
 		await Promise.all(
 			songs.map((song) => AudioCache.get(song).catch(() => undefined)),
+		);
+	}
+
+	// Perfectly silent clip played inside the first user gesture. WebKit grants
+	// autoplay per media element, so grabbing that grant on the shared player
+	// while the gesture is live lets every later track start without another
+	// click, even when the play call lands well past the activation window.
+	static primeAutoplay(): void {
+		let player = AudioCache.player ?? new Audio();
+		AudioCache.player = player;
+		player.muted = true;
+		player.preload = "auto";
+		if (AudioCache.playerUrl === SILENT_WAV) return;
+		AudioCache.playerUrl = SILENT_WAV;
+		player.src = SILENT_WAV;
+		player.load();
+		void player.play().then(
+			() => player.pause(),
+			() => {},
 		);
 	}
 

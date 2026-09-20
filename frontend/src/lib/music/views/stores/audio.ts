@@ -527,6 +527,26 @@ export function playbackBlocked(): boolean {
 	return blockedByPolicy;
 }
 
+// WebKit needs at least one user gesture before a media element may autoplay.
+// Grab that grant on the shared player with a silent prime at the very first
+// pointer/key, so a play that lands after a slow resolve is not rejected and
+// the first click is enough.
+let primedAutoplay = false;
+
+function primeAutoplayOnGesture(): void {
+	if (primedAutoplay || typeof window === "undefined") return;
+	primedAutoplay = true;
+
+	const prime = () => {
+		window.removeEventListener("pointerdown", prime, true);
+		window.removeEventListener("keydown", prime, true);
+		AudioCache.primeAutoplay();
+	};
+
+	window.addEventListener("pointerdown", prime, true);
+	window.addEventListener("keydown", prime, true);
+}
+
 export async function prepareSong(
 	song: Song,
 	startSeconds?: number | (() => number),
@@ -744,6 +764,7 @@ effect(() => {
 });
 
 if (typeof window !== "undefined") {
+	primeAutoplayOnGesture();
 	window.addEventListener("storage", (e: StorageEvent) => {
 		if (e.storageArea !== localStorage) return;
 		if (e.key === VOLUME_STORAGE_KEY) {
