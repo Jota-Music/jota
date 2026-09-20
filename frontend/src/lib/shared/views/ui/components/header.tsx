@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/preact-query";
 import { System } from "@wailsio/runtime";
 import {
 	ArrowLeft,
+	ArrowRight,
 	ChevronDown,
 	House,
 	Search,
@@ -19,6 +20,7 @@ import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import { removal, undoRemoval } from "@/lib/music/views/stores/removal";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import { back, canForward, forward } from "@/lib/shared/views/stores/history";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
@@ -103,12 +105,14 @@ export function Header() {
 	);
 
 	const goBack = useCallback(() => {
-		if (window.history.length > 1) {
-			window.history.back();
-		} else {
+		if (!back()) {
 			setLocation("/");
 		}
 	}, [setLocation]);
+
+	const goForward = useCallback(() => {
+		forward();
+	}, []);
 
 	const placeholder =
 		liveSource === "youtube"
@@ -140,6 +144,21 @@ export function Header() {
 						)}
 					>
 						<ArrowLeft class="size-5 md:size-4" />
+					</button>
+
+					<button
+						type="button"
+						onClick={goForward}
+						disabled={!canForward.value}
+						title={t("nav.forward")}
+						class={cn(
+							"flex aspect-square h-full items-center justify-center cursor-pointer transition-colors",
+							canForward.value
+								? "text-zinc-400 hover:text-zinc-100"
+								: "text-zinc-400 disabled:opacity-30",
+						)}
+					>
+						<ArrowRight class="size-5 md:size-4" />
 					</button>
 
 					<Link

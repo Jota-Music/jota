@@ -20,7 +20,8 @@
 	"nav": {
 		"settings": "Ajustes",
 		"rooms": "Salas",
-		"back": "Atrás"
+		"back": "Atrás",
+		"forward": "Adelante"
 	},
 	"search": {
 		"title": "Buscar",

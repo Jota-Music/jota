@@ -20,7 +20,8 @@
 	"nav": {
 		"settings": "Settings",
 		"rooms": "Rooms",
-		"back": "Back"
+		"back": "Back",
+		"forward": "Forward"
 	},
 	"search": {
 		"title": "Search",
