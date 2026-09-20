@@ -257,7 +257,12 @@ async function loadSongIntoPlayer(
 	const token = ++loadToken;
 
 	stopEndWatch();
+	const replaying = endedElement != null;
 	endedElement = null;
+
+	if (replaying) {
+		AudioCache.releaseElement(song.id);
+	}
 
 	if (audio) {
 		audio.pause();

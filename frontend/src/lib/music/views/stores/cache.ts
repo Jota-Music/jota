@@ -165,7 +165,7 @@ export class AudioCache {
 		}
 		const player = AudioCache.player;
 
-		if (AudioCache.playerUrl !== cached.url || player.error) {
+		if (AudioCache.playerUrl !== cached.url || player.error || player.ended) {
 			AudioCache.playerUrl = cached.url;
 			player.src = cached.url;
 			player.load();
