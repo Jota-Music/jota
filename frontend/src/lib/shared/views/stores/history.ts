@@ -14,25 +14,29 @@ function sync() {
 	canForward.value = pointer < size - 1;
 }
 
-function sameUrl(url: string | URL | null): boolean {
-	if (url == null) return false;
+function sameUrl(url: string | URL | null | undefined): boolean {
+	if (url == null) return true;
 	const target = new URL(url, window.location.href);
 	const current = new URL(window.location.href);
-	return target.pathname + target.search + target.hash ===
-		current.pathname + current.search + current.hash;
+	return (
+		target.pathname + target.search + target.hash ===
+		current.pathname + current.search + current.hash
+	);
 }
 
 history.pushState = (state, title, url) => {
-	if (sameUrl(url)) return;
+	const changed = !sameUrl(url);
 	pushState(state, title, url);
+	if (!changed) return;
 	pointer += 1;
 	size = pointer + 1;
 	sync();
 };
 
 history.replaceState = (state, title, url) => {
-	if (sameUrl(url)) return;
+	const changed = !sameUrl(url);
 	replaceState(state, title, url);
+	if (!changed) return;
 };
 
 export function back(): boolean {
