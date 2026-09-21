@@ -49,6 +49,61 @@ func TestClampWidth(t *testing.T) {
 	}
 }
 
+func TestBucketWidth(t *testing.T) {
+	cases := map[int]int{
+		1:   80,
+		80:  80,
+		81:  128,
+		128: 128,
+		129: 160,
+		160: 160,
+		161: 320,
+		320: 320,
+		321: 480,
+		384: 480,
+		480: 480,
+		481: 640,
+		640: 640,
+	}
+	for width, want := range cases {
+		if got := bucketWidth(width); got != want {
+			t.Fatalf("bucketWidth(%d) = %d, want %d", width, got, want)
+		}
+	}
+}
+
+func TestLRUEvictsLeastRecentlyUsed(t *testing.T) {
+	cache := newLRU(10)
+
+	cache.put("a", make([]byte, 4))
+	cache.put("b", make([]byte, 4))
+	if _, ok := cache.get("a"); !ok {
+		t.Fatal("expected a to be cached")
+	}
+
+	cache.put("c", make([]byte, 4))
+
+	if _, ok := cache.get("b"); ok {
+		t.Fatal("expected b to be evicted")
+	}
+	if _, ok := cache.get("a"); !ok {
+		t.Fatal("expected a to survive eviction")
+	}
+	if _, ok := cache.get("c"); !ok {
+		t.Fatal("expected c to be cached")
+	}
+}
+
+func TestLRUReplacesSameKey(t *testing.T) {
+	cache := newLRU(10)
+	cache.put("a", make([]byte, 4))
+	cache.put("a", make([]byte, 6))
+
+	if cache.bytes != 6 {
+		t.Fatalf("bytes = %d, want 6", cache.bytes)
+	}
+}
+
 func TestResize(t *testing.T) {
 	src := image.NewRGBA(image.Rect(0, 0, 200, 100))
 
