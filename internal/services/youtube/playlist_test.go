@@ -208,7 +208,7 @@ func TestPlaylistSearchParsing(t *testing.T) {
 	if p.Name != "Corridos Mix" || p.Subtitle != "Revive Music" {
 		t.Fatalf("name/subtitle = %q/%q", p.Name, p.Subtitle)
 	}
-	if p.Cover != "https://i.ytimg.com/vi/x/hq720.jpg" {
+	if p.Cover != "https://i.ytimg.com/vi/x/hqdefault.jpg" {
 		t.Fatalf("cover = %q", p.Cover)
 	}
 }

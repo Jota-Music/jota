@@ -107,7 +107,7 @@ func TestChannelPlaylistsParsing(t *testing.T) {
 	if p.Id != "youtube:PLabc123" || p.Name != "Lo-fi Beats" || p.Subtitle != "Chill Channel" {
 		t.Fatalf("playlist = %+v", p)
 	}
-	if p.Cover != "https://i.ytimg.com/vi/x/hq720.jpg" {
+	if p.Cover != "https://i.ytimg.com/vi/x/hqdefault.jpg" {
 		t.Fatalf("cover = %q", p.Cover)
 	}
 }

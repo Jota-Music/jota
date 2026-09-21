@@ -107,7 +107,27 @@ func (t thumbnail) url() string {
 	if len(t.Thumbnails) == 0 {
 		return ""
 	}
-	return t.Thumbnails[len(t.Thumbnails)-1].URL
+	return capThumbnail(t.Thumbnails[len(t.Thumbnails)-1].URL)
+}
+
+// capThumbnail caps i.ytimg.com thumbnails at hqdefault (480px). Art is shown
+// at 40-220px, but the API hands out maxresdefault/hq720 (~1280px), and each
+// one decodes to a few MB in WebKit. Smaller variants are left untouched so
+// nothing is ever upscaled.
+func capThumbnail(url string) string {
+	if !strings.HasPrefix(url, "https://i.ytimg.com/") {
+		return url
+	}
+	slash := strings.LastIndexByte(url, '/')
+	dot := strings.LastIndexByte(url, '.')
+	if slash < 0 || dot <= slash {
+		return url
+	}
+	switch url[slash+1 : dot] {
+	case "hq720", "sddefault", "maxresdefault", "maxres":
+		return url[:slash+1] + "hqdefault" + url[dot:]
+	}
+	return url
 }
 
 type playlistHeaderRenderer struct {
