@@ -119,6 +119,14 @@ export function GetYouTubeId(cacheKey: string): $CancellablePromise<string> {
 }
 
 /**
+ * IdleReload reports whether the app may reload the webview after sitting idle
+ * and hidden, which is the only way to flush WebKit's internal image caches.
+ */
+export function IdleReload(): $CancellablePromise<boolean> {
+    return $Call.ByID(2217801143);
+}
+
+/**
  * InstallUpdate downloads and swaps in the newest release, then quits so the
  * relaunch scheduled by the updater can start the new version.
  */
@@ -154,6 +162,14 @@ export function OpenURL(url: string): $CancellablePromise<void> {
  */
 export function RelayOverride(): $CancellablePromise<$models.RelayOverride> {
     return $Call.ByID(577785897);
+}
+
+/**
+ * ReloadWindow reloads the webview. The queue and preferences live in
+ * localStorage, so they survive; only in-memory caches are dropped.
+ */
+export function ReloadWindow(): $CancellablePromise<void> {
+    return $Call.ByID(3515900797);
 }
 
 export function RemoveRoom(id: string): $CancellablePromise<rooms$0.Room[] | null> {
@@ -219,6 +235,10 @@ export function SearchYouTubePlaylists(query: string): $CancellablePromise<music
 
 export function SetDiscordEnabled(enabled: boolean): $CancellablePromise<void> {
     return $Call.ByID(2965467793, enabled);
+}
+
+export function SetIdleReload(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(4291922887, enabled);
 }
 
 /**

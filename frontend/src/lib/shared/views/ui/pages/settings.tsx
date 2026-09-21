@@ -3,6 +3,7 @@ import { AccountSettings } from "@/lib/auth/views/ui/account-settings";
 import { t } from "@/lib/shared/i18n";
 import { open } from "@/lib/shared/utils/open";
 import { DiscordSettings } from "@/lib/shared/views/ui/components/discord-settings";
+import { IdleSettings } from "@/lib/shared/views/ui/components/idle-settings";
 import { LanguageSettings } from "@/lib/shared/views/ui/components/language-settings";
 import { LogsSettings } from "@/lib/shared/views/ui/components/logs-settings";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
@@ -39,6 +40,7 @@ function SettingsPage() {
 					<AccountSettings />
 					<LanguageSettings />
 					{!isAndroid && <DiscordSettings />}
+					<IdleSettings />
 					<RelaySettings />
 					<AboutSettings />
 					<LogsSettings />

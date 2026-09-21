@@ -65,6 +65,11 @@
 			"description": "Show what you're listening to in your Discord status.",
 			"label": "Discord rich presence"
 		},
+		"idle": {
+			"title": "Background memory",
+			"description": "Reload the app after it has been hidden for a while to free cached images. Playback is not affected.",
+			"label": "Idle reload"
+		},
 		"logs": {
 			"title": "Logs",
 			"description": "Share the app log when reporting a problem.",

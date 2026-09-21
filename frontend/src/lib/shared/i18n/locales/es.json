@@ -65,6 +65,11 @@
 			"description": "Muestra lo que escuchas en tu estado de Discord.",
 			"label": "Discord rich presence"
 		},
+		"idle": {
+			"title": "Memoria en segundo plano",
+			"description": "Recarga la app tras estar oculta un rato para liberar imágenes en caché. No afecta la reproducción.",
+			"label": "Recarga en reposo"
+		},
 		"logs": {
 			"title": "Registros",
 			"description": "Comparte el registro de la app al reportar un problema.",

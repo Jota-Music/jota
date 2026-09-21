@@ -1,12 +1,11 @@
-import { DiscordEnabled, SetDiscordEnabled } from "@bindings/app";
+import { IdleReload, SetIdleReload } from "@bindings/app";
 import { useSignal } from "@preact/signals";
-import { Headphones } from "lucide-preact";
+import { Moon } from "lucide-preact";
 import { useEffect } from "preact/hooks";
-import * as media from "@/lib/music/views/stores/media-session";
 import { t } from "@/lib/shared/i18n";
 import { Switch } from "@/lib/shared/views/ui/components/switch";
 
-export function DiscordSettings() {
+export function IdleSettings() {
 	const enabled = useSignal(false);
 	const ready = useSignal(false);
 
@@ -17,7 +16,7 @@ export function DiscordSettings() {
 			enabled.value = value;
 			ready.value = true;
 		};
-		DiscordEnabled().then(load, () => load(false));
+		IdleReload().then(load, () => load(false));
 		return () => {
 			alive = false;
 		};
@@ -28,8 +27,7 @@ export function DiscordSettings() {
 		const next = !enabled.value;
 		enabled.value = next;
 		try {
-			await SetDiscordEnabled(next);
-			if (next) media.refresh();
+			await SetIdleReload(next);
 		} catch {
 			enabled.value = !next;
 		}
@@ -39,19 +37,21 @@ export function DiscordSettings() {
 		<section class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
 			<div class="flex items-center justify-between gap-2">
 				<div class="flex items-center gap-2">
-					<Headphones size={18} class="text-zinc-400" />
+					<Moon size={18} class="text-zinc-400" />
 					<h2 class="text-sm font-semibold text-zinc-200">
-						{t("settings.discord.title")}
+						{t("settings.idle.title")}
 					</h2>
 				</div>
 				<Switch
 					checked={enabled.value}
-					label={t("settings.discord.label")}
+					label={t("settings.idle.label")}
 					disabled={!ready.value}
 					onToggle={() => void toggle()}
 				/>
 			</div>
-			<p class="text-xs text-zinc-500">{t("settings.discord.description")}</p>
+			<p class="text-xs text-zinc-500">{t("settings.idle.description")}</p>
 		</section>
 	);
 }
+
+export default IdleSettings;
