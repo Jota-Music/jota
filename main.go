@@ -9,7 +9,9 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strconv"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/Jota-Music/jota/internal/app"
 	"github.com/Jota-Music/jota/internal/covers"
@@ -115,7 +117,21 @@ func loadWindowState() windowState {
 	return st
 }
 
-func saveWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
+// Moving or resizing the window floods WindowDidMove/Resize events at every
+// pointer move, and each state write churns the Badger value log. Throttle the
+// writes to one per interval and keep the freshest pending state; the last one
+// is flushed at WindowClosing and again after the app exits.
+const windowSaveInterval = 400 * time.Millisecond
+
+var (
+	windowSaveMu     sync.Mutex
+	windowLastSave   time.Time
+	windowSaveWindow *application.WebviewWindow
+	windowSaveOnTop  atomic.Bool
+	windowSaveDirty  atomic.Bool
+)
+
+func writeWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
 	x, y := w.Position()
 	width, height := w.Size()
 	_ = windowBucket.SetObject("state", windowState{
@@ -126,6 +142,53 @@ func saveWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
 		Maximised:   w.IsMaximised(),
 		AlwaysOnTop: alwaysOnTop,
 	})
+}
+
+func saveWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
+	windowSaveMu.Lock()
+	if time.Since(windowLastSave) >= windowSaveInterval {
+		windowLastSave = time.Now()
+		windowSaveMu.Unlock()
+		writeWindowState(w, alwaysOnTop)
+		return
+	}
+	if windowSaveWindow == nil {
+		windowSaveWindow = w
+	}
+	windowSaveOnTop.Store(alwaysOnTop)
+	windowSaveDirty.Store(true)
+	windowSaveMu.Unlock()
+}
+
+func flushWindowState() {
+	windowSaveMu.Lock()
+	defer windowSaveMu.Unlock()
+	if !windowSaveDirty.Load() || windowSaveWindow == nil {
+		return
+	}
+	w := windowSaveWindow
+	windowSaveDirty.Store(false)
+	writeWindowState(w, windowSaveOnTop.Load())
+}
+
+// shedMemory returns the Go heap to the OS once the window is hidden. The
+// webview owns most of the memory, but while the app sits in the background
+// there is no reason for Go to keep pages it no longer needs. Debounced so a
+// minimise/hide burst only triggers one collection.
+var (
+	shedMu   sync.Mutex
+	shedLast time.Time
+)
+
+func shedMemory() {
+	shedMu.Lock()
+	if time.Since(shedLast) < time.Minute {
+		shedMu.Unlock()
+		return
+	}
+	shedLast = time.Now()
+	shedMu.Unlock()
+	go debug.FreeOSMemory()
 }
 
 // ponytail: workaround for Wails v3 macOS clearing the native min size on
@@ -141,6 +204,17 @@ func enforceMinSize(w *application.WebviewWindow) {
 
 func main() {
 	defer setupLogging()()
+
+	// The webview owns most of the memory; keep Go's heap small and bounded so
+	// it stops competing with WebKit instead of ballooning to 2x live data.
+	// GOMEMLIMIT is a soft limit: Go just collects harder, so 128MB cannot OOM
+	// the app. Explicit GOGC/GOMEMLIMIT env vars still win for tuning.
+	if os.Getenv("GOGC") == "" {
+		debug.SetGCPercent(50)
+	}
+	if os.Getenv("GOMEMLIMIT") == "" {
+		debug.SetMemoryLimit(128 << 20)
+	}
 
 	log.Printf("jota %s starting", currentVersion)
 
@@ -261,19 +335,27 @@ func main() {
 	})
 	window.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
 		if quitting.CompareAndSwap(false, true) {
+			flushWindowState()
 			wailsApp.Quit()
 		}
+	})
+	window.OnWindowEvent(events.Common.WindowMinimise, func(*application.WindowEvent) {
+		shedMemory()
+	})
+	window.OnWindowEvent(events.Common.WindowHide, func(*application.WindowEvent) {
+		shedMemory()
 	})
 
 	application.Get().Event.On("window:always-on-top:toggle", func(*application.CustomEvent) {
 		state.AlwaysOnTop = !state.AlwaysOnTop
 		window.SetAlwaysOnTop(state.AlwaysOnTop)
-		saveWindowState(window, state.AlwaysOnTop)
+		writeWindowState(window, state.AlwaysOnTop)
 		application.Get().Event.Emit("window:always-on-top", state.AlwaysOnTop)
 	})
 
 	if err := wailsApp.Run(); err != nil {
 		log.Fatal(err)
 	}
+	flushWindowState()
 	log.Printf("jota shutting down")
 }
