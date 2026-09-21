@@ -6,8 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/dgraph-io/badger/v4"
+	"github.com/dgraph-io/badger/v4/options"
 )
 
 var (
@@ -16,9 +18,11 @@ var (
 )
 
 var (
-	db      *badger.DB
-	mu      sync.Mutex
-	openErr error
+	db             *badger.DB
+	mu             sync.Mutex
+	openErr        error
+	valueLogGCOn   sync.Once
+	valueLogGCRate = 0.5
 )
 
 func EnsureStarted() error {
@@ -48,9 +52,44 @@ func EnsureStarted() error {
 		WithLogger(nil).
 		WithBlockCacheSize(8 << 20).
 		WithMemTableSize(8 << 20).
-		WithNumMemtables(1)
+		WithNumMemtables(1).
+		WithIndexCacheSize(4 << 20).
+		WithValueLogFileSize(64 << 20).
+		WithCompression(options.ZSTD)
 	db, openErr = badger.Open(opts)
+	if openErr == nil {
+		startValueLogGC()
+	}
 	return openErr
+}
+
+// startValueLogGC keeps the value log compacted: every write (window state,
+// cache entries, settings) appends to it, and an unconverged log makes both
+// disk usage and the read path grow over time. Each RunValueLogGC pass handles
+// one rewrite, so keep retrying while Badger reports progress and only stop on
+// ErrNoRewrite.
+func startValueLogGC() {
+	valueLogGCOn.Do(func() {
+		go func() {
+			for range time.Tick(5 * time.Minute) {
+				mu.Lock()
+				d := db
+				mu.Unlock()
+				if d == nil {
+					return
+				}
+				for {
+					err := d.RunValueLogGC(valueLogGCRate)
+					if err != nil {
+						if !errors.Is(err, badger.ErrNoRewrite) {
+							log.Printf("kv: value log GC: %v", err)
+						}
+						break
+					}
+				}
+			}
+		}()
+	})
 }
 
 func Start() {
