@@ -23,6 +23,7 @@ let playing = false;
 let storedDuration = 0;
 let storedPosition = 0;
 let lastPush = 0;
+let lastPositionState = 0;
 
 function session() {
 	if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
@@ -40,7 +41,7 @@ function native(): NativeBridge | null {
 function pushNative(force = false) {
 	if (!current) return;
 	const now = Date.now();
-	if (!force && now - lastPush < 2000) return;
+	if (!force && now - lastPush < 5000) return;
 	lastPush = now;
 	const payload = JSON.stringify({
 		title: current.name,
@@ -168,8 +169,10 @@ export function position(audio: HTMLAudioElement, durationOverride = 0) {
 		media &&
 		Number.isFinite(duration) &&
 		duration > 0 &&
-		Number.isFinite(audio.currentTime)
+		Number.isFinite(audio.currentTime) &&
+		Date.now() - lastPositionState >= 1000
 	) {
+		lastPositionState = Date.now();
 		try {
 			media.setPositionState({
 				duration,
