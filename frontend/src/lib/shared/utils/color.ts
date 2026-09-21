@@ -1,3 +1,5 @@
+import { cover } from "@/lib/shared/utils/cover";
+
 /* --------------------------------------------------
    NEUTRAL FILTER
 -------------------------------------------------- */
@@ -43,16 +45,48 @@ function averageRgbFromImageData(
 /* --------------------------------------------------
    DOMINANT COLOR (fixed internals)
 -------------------------------------------------- */
-export async function getDominantColorFromImage(
-	url: string,
-): Promise<[number, number, number] | null> {
+type Rgb = [number, number, number];
+
+const dominantCache = new Map<string, Promise<Rgb | null>>();
+const DOMINANT_CACHE_MAX = 200;
+
+function cachedDominantColor(url: string): Promise<Rgb | null> {
+	const hit = dominantCache.get(url);
+	if (hit) {
+		// Refresh recency so a hot cover survives eviction.
+		dominantCache.delete(url);
+		dominantCache.set(url, hit);
+		return hit;
+	}
+
+	const pending = computeDominantColor(url).catch((err) => {
+		// A failed fetch is not worth remembering: drop it so the next call
+		// can retry instead of replaying the rejection forever.
+		dominantCache.delete(url);
+		throw err;
+	});
+
+	dominantCache.set(url, pending);
+	if (dominantCache.size > DOMINANT_CACHE_MAX) {
+		const oldest = dominantCache.keys().next().value;
+		if (oldest !== undefined) dominantCache.delete(oldest);
+	}
+
+	return pending;
+}
+
+export function getDominantColorFromImage(url: string): Promise<Rgb | null> {
+	return cachedDominantColor(url);
+}
+
+async function computeDominantColor(url: string): Promise<Rgb | null> {
 	const img = new Image();
 	img.crossOrigin = "anonymous";
 
 	await new Promise<void>((resolve, reject) => {
 		img.onload = () => resolve();
 		img.onerror = reject;
-		img.src = url;
+		img.src = cover(url, 160) ?? url;
 	});
 
 	if (!img.naturalWidth || !img.naturalHeight) return null;
