@@ -62,12 +62,14 @@ export function YouTubeSearchPage() {
 		queryKey: ["youtube-search", query],
 		queryFn: () => searchYouTube(query),
 		enabled: wantVideos,
+		gcTime: 0,
 	});
 
 	const playlistsQuery = useQuery({
 		queryKey: ["youtube-playlist-search", query],
 		queryFn: () => searchYouTubePlaylists(query),
 		enabled: wantPlaylists,
+		gcTime: 0,
 	});
 
 	const videos = videosQuery.data ?? [];

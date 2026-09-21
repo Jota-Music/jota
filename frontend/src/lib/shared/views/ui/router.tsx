@@ -51,6 +51,10 @@ const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
 			staleTime: 5 * 60 * 1000,
+			gcTime: 60 * 1000,
+			// A desktop window regains focus constantly; refetching every active
+			// query on each focus just churns network and allocations.
+			refetchOnWindowFocus: false,
 		},
 	},
 });

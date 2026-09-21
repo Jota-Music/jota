@@ -162,6 +162,7 @@ export function SearchPage() {
 			return searchSpotify(type, query);
 		},
 		enabled: !detailRoute && !!type && !!query,
+		gcTime: 0,
 	});
 
 	useLayoutEffect(() => {
