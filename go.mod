@@ -7,6 +7,7 @@ require (
 	github.com/dgraph-io/badger/v4 v4.9.1
 	github.com/joho/godotenv v1.5.1
 	github.com/wailsapp/wails/v3 v3.0.0-beta.16
+	golang.org/x/image v0.41.0
 	golang.org/x/oauth2 v0.35.0
 	google.golang.org/protobuf v1.36.11
 )
