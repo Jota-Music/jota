@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 
 	"github.com/Jota-Music/jota/internal/app"
+	"github.com/Jota-Music/jota/internal/covers"
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/services/youtube"
 
@@ -183,7 +184,8 @@ func main() {
 			application.NewService(a),
 		},
 		Assets: application.AssetOptions{
-			Handler: application.AssetFileServerFS(assets),
+			Handler:    application.AssetFileServerFS(assets),
+			Middleware: covers.New().Middleware,
 		},
 		Linux: application.LinuxOptions{
 			ProgramName: "jota", // Linux program name (used in .desktop GTK app id)

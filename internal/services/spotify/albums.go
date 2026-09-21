@@ -42,22 +42,33 @@ func coverURLFromAlbum(album *metadatapb.Album) string {
 	return bestImageURL(images)
 }
 
+// bestImageURL picks the smallest cover that still covers the largest UI tile
+// (480px), falling back to the largest one when no image is big enough. The
+// /__img proxy downscales from here to the exact display size, so this only
+// needs to guarantee enough source resolution.
 func bestImageURL(images []*metadatapb.Image) string {
+	const targetW = 640
+
+	var overW int32
+	var over string
 	var bestW int32
 	var best string
 	for _, img := range images {
 		if img == nil || len(img.GetFileId()) == 0 {
 			continue
 		}
+		id := hex.EncodeToString(img.GetFileId())
+		if w := img.GetWidth(); w >= targetW && (overW == 0 || w < overW) {
+			overW, over = w, id
+		}
 		if w := img.GetWidth(); w >= bestW {
-			bestW = w
-			best = hex.EncodeToString(img.GetFileId())
+			bestW, best = w, id
 		}
 	}
-	if best == "" {
-		return ""
+	if over == "" {
+		return "https://i.scdn.co/image/" + best
 	}
-	return "https://i.scdn.co/image/" + best
+	return "https://i.scdn.co/image/" + over
 }
 
 func enrichAlbums(ctx context.Context, sess *session.Session, albums []AlbumRef) {
