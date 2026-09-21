@@ -27,6 +27,10 @@ export function Mosaic({ covers, alt = "", placeholder, size = 480 }: Props) {
 		);
 	}
 
+	// A quadrant only fills a quarter of the tile, so half the resolution is
+	// more than enough and saves four full-size downloads per playlist.
+	const tile = Math.ceil(size / 2);
+
 	return (
 		<div
 			class={cn(
@@ -37,7 +41,7 @@ export function Mosaic({ covers, alt = "", placeholder, size = 480 }: Props) {
 			{imgs.map((src) => (
 				<img
 					key={src}
-					src={cover(src, size)}
+					src={cover(src, tile)}
 					alt={alt}
 					loading="lazy"
 					decoding="async"
