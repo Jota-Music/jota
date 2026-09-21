@@ -61,6 +61,7 @@ export function YouTubeVideoRow({
 				<PlaylistCover
 					src={song.album?.covers?.[0]}
 					alt={song.name}
+					size={80}
 					imgClass="size-10 shrink-0 rounded-md object-cover"
 				/>
 

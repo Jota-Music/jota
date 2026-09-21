@@ -11,6 +11,7 @@ import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
+import { cover } from "@/lib/shared/utils/cover";
 import {
 	type Action,
 	openContextMenu,
@@ -67,7 +68,7 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 					<div class="relative aspect-square w-full overflow-hidden rounded-md">
 						{coverUrl ? (
 							<img
-								src={coverUrl}
+								src={cover(coverUrl, 320)}
 								alt={item.name}
 								class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
 							/>

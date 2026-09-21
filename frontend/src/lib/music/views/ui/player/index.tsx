@@ -25,6 +25,7 @@ import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
 import Toggle from "@/lib/music/views/ui/player/toggle";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { t } from "@/lib/shared/i18n";
+import { cover as coverImage } from "@/lib/shared/utils/cover";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
@@ -79,7 +80,7 @@ const DiscCenter = memo(function DiscCenter({
 	return (
 		<div class="relative aspect-square w-full">
 			<img
-				src={cover}
+				src={coverImage(cover, 384)}
 				alt={song.name}
 				draggable={false}
 				class={cn(
@@ -356,7 +357,7 @@ export function Player() {
 					>
 						<div class="relative w-12 h-12 shrink-0">
 							<img
-								src={cover}
+								src={coverImage(cover, 128)}
 								alt={song.name}
 								draggable={false}
 								class="w-full h-full object-cover rounded-lg shadow-lg select-none"

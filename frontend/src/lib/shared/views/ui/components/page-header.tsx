@@ -2,6 +2,7 @@ import { Disc3, Loader, Pause, Play } from "lucide-preact";
 import type { ComponentChildren } from "preact";
 import { Link } from "wouter-preact";
 import { t } from "@/lib/shared/i18n";
+import { cover as coverImage } from "@/lib/shared/utils/cover";
 import { Mosaic } from "@/lib/shared/views/ui/components/mosaic";
 
 function LinkLine({ link }: { link: { to: string; label: string } }) {
@@ -67,11 +68,15 @@ export function PageHeader({
 		<header class="flex shrink-0 items-center gap-4">
 			{covers?.length ? (
 				<div class="h-16 w-16 shrink-0 overflow-hidden rounded-md">
-					<Mosaic covers={covers} placeholder={<Disc3 size={16} />} />
+					<Mosaic
+						covers={covers}
+						size={128}
+						placeholder={<Disc3 size={16} />}
+					/>
 				</div>
 			) : cover ? (
 				<img
-					src={cover}
+					src={coverImage(cover, 128)}
 					alt=""
 					class="h-16 w-16 shrink-0 rounded-md object-cover"
 				/>

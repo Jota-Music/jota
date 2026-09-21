@@ -234,6 +234,7 @@ function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
 					<PlaylistCover
 						src={playlist.cover}
 						alt={playlist.name}
+						size={320}
 						imgClass="h-full w-full object-cover transition-opacity group-hover:opacity-80"
 					/>
 				</Link>

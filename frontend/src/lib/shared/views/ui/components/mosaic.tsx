@@ -1,13 +1,15 @@
 import type { ComponentChildren } from "preact";
+import { cover } from "@/lib/shared/utils/cover";
 import { cn } from "@/lib/shared/utils/tw";
 
 type Props = {
 	covers: string[];
 	alt?: string;
 	placeholder?: ComponentChildren;
+	size?: number;
 };
 
-export function Mosaic({ covers, alt = "", placeholder }: Props) {
+export function Mosaic({ covers, alt = "", placeholder, size = 480 }: Props) {
 	const imgs = covers.slice(0, 4);
 
 	if (imgs.length === 0) return null;
@@ -15,8 +17,10 @@ export function Mosaic({ covers, alt = "", placeholder }: Props) {
 	if (imgs.length === 1) {
 		return (
 			<img
-				src={imgs[0]}
+				src={cover(imgs[0], size)}
 				alt={alt}
+				loading="lazy"
+				decoding="async"
 				draggable={false}
 				class="h-full w-full object-cover"
 			/>
@@ -33,7 +37,7 @@ export function Mosaic({ covers, alt = "", placeholder }: Props) {
 			{imgs.map((src) => (
 				<img
 					key={src}
-					src={src}
+					src={cover(src, size)}
 					alt={alt}
 					loading="lazy"
 					decoding="async"

@@ -1,5 +1,6 @@
 import { Loader, Music, Pause } from "lucide-preact";
 import type { Song } from "@/lib/music/model";
+import { cover } from "@/lib/shared/utils/cover";
 import { cn } from "@/lib/shared/utils/tw";
 
 type Props = {
@@ -26,7 +27,7 @@ export function TrackArt({
 			<img
 				loading="lazy"
 				decoding="async"
-				src={song.album?.covers?.[0]}
+				src={cover(song.album?.covers?.[0], 80)}
 				alt={alt}
 				class={cn(imgClass, current && "brightness-40")}
 			/>

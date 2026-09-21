@@ -43,7 +43,7 @@ export function Grid({
 						)}
 					>
 						<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
-							<Cover item={item} size={48} iconSize={28} />
+							<Cover item={item} size={48} iconSize={28} imageSize={480} />
 							<div class="pointer-coarse:opacity-100 absolute right-1 top-1 flex gap-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
 								{actions(item)}
 							</div>

@@ -1,16 +1,18 @@
 import { ListMusic } from "lucide-preact";
+import { cover } from "@/lib/shared/utils/cover";
 
 type Props = {
 	src?: string;
 	alt?: string;
 	imgClass?: string;
+	size?: number;
 };
 
-export function PlaylistCover({ src, alt = "", imgClass }: Props) {
+export function PlaylistCover({ src, alt = "", imgClass, size = 320 }: Props) {
 	if (src) {
 		return (
 			<img
-				src={src}
+				src={cover(src, size)}
 				alt={alt}
 				loading="lazy"
 				decoding="async"

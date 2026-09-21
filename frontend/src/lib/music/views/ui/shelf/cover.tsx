@@ -1,4 +1,5 @@
 import { Disc3 } from "lucide-preact";
+import { cover } from "@/lib/shared/utils/cover";
 import { Mosaic } from "@/lib/shared/views/ui/components/mosaic";
 import type { IconType, Item } from "./types";
 
@@ -16,10 +17,12 @@ export function Cover({
 	item,
 	size,
 	iconSize,
+	imageSize = 480,
 }: {
 	item: Item;
 	size: number;
 	iconSize: number;
+	imageSize?: number;
 }) {
 	return (
 		<>
@@ -27,6 +30,7 @@ export function Cover({
 				<Mosaic
 					covers={item.covers}
 					alt={item.name}
+					size={imageSize}
 					placeholder={
 						item.placeholder?.(size) ?? (
 							<Placeholder icon={item.icon} size={iconSize} />
@@ -35,7 +39,7 @@ export function Cover({
 				/>
 			) : item.cover ? (
 				<img
-					src={item.cover}
+					src={cover(item.cover, imageSize)}
 					alt={item.name}
 					draggable={false}
 					loading="lazy"
