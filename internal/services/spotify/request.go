@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 
 	"github.com/devgianlu/go-librespot/session"
 )
@@ -17,12 +16,10 @@ func getJSON(ctx context.Context, sess *session.Session, path string, out any) e
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("%s returned %d", path, resp.StatusCode)
 	}
-	return json.Unmarshal(body, out)
+	// Stream the body into the decoder instead of buffering the whole payload
+	// alongside the decoded struct.
+	return json.NewDecoder(resp.Body).Decode(out)
 }
