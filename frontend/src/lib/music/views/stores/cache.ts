@@ -139,7 +139,7 @@ export class AudioCache {
 	// while the gesture is live lets every later track start without another
 	// click, even when the play call lands well past the activation window.
 	static primeAutoplay(): void {
-		let player = AudioCache.player ?? new Audio();
+		const player = AudioCache.player ?? new Audio();
 		AudioCache.player = player;
 		player.muted = true;
 		player.preload = "auto";
@@ -177,6 +177,17 @@ export class AudioCache {
 	// Keep the element; just make the next getAudioElement reload the stream.
 	static releaseElement(_id: string): void {
 		AudioCache.player?.pause();
+		AudioCache.playerUrl = null;
+	}
+
+	// Detach the stream currently loaded in the shared element so WebKit can
+	// free its buffered data while idle; the next getAudioElement re-attaches.
+	static dropBuffers(): void {
+		const player = AudioCache.player;
+		if (!player) return;
+		player.pause();
+		player.removeAttribute("src");
+		player.load();
 		AudioCache.playerUrl = null;
 	}
 

@@ -67,6 +67,7 @@ function endPlayback(a: HTMLAudioElement) {
 	progress.value = 0;
 	isPlaying.value = false;
 	media.update(currentSong.value, false);
+	AudioCache.dropBuffers();
 	onTrackEndedCallback?.();
 }
 
@@ -692,6 +693,7 @@ export function stopPlayer() {
 		loadedSongId = null;
 		knownDuration = 0;
 	}
+	AudioCache.dropBuffers();
 	currentSong.value = null;
 	media.clear();
 	progress.value = 0;
