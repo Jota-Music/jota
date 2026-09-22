@@ -1,11 +1,6 @@
 package env
 
-import (
-	"log"
-	"os"
-
-	"github.com/joho/godotenv"
-)
+import "os"
 
 type Config struct {
 	SpotifyClientID string
@@ -19,10 +14,6 @@ type Config struct {
 }
 
 func Load() Config {
-	if err := godotenv.Load(); err != nil {
-		log.Println("no .env file found, using defaults")
-	}
-
 	discordClientID := os.Getenv("DISCORD_CLIENT_ID")
 	if discordClientID == "" {
 		discordClientID = "1550829418388131892"
