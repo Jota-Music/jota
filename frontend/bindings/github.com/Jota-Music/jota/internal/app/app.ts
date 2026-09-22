@@ -156,6 +156,16 @@ export function OpenURL(url: string): $CancellablePromise<void> {
 }
 
 /**
+ * RamMB reports the resident memory of the app plus its WebKit helper
+ * processes (renderer, network, GPU), so the frontend can flush WebKit's
+ * internal image caches exactly when they are what is growing. Zero means the
+ * platform exposes no /proc and the frontend falls back to its deadline.
+ */
+export function RamMB(): $CancellablePromise<number> {
+    return $Call.ByID(1151072423);
+}
+
+/**
  * RelayOverride reports the relay pinned through RELAY_API_URL/RELAY_API_TOKEN,
  * if any. The frontend applies it over the user's saved relay so a dev build can
  * point at a local relay.

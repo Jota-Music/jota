@@ -1,4 +1,4 @@
-import { IdleReload, ReloadWindow } from "@bindings/app";
+import { IdleReload, RamMB, ReloadWindow } from "@bindings/app";
 import { QueryClient, QueryClientProvider } from "@tanstack/preact-query";
 import { lazy, Suspense } from "preact/compat";
 import { useEffect } from "preact/hooks";
@@ -66,8 +66,13 @@ const queryClient = new QueryClient({
 const IDLE_SHED_MS = 5 * 60 * 1000;
 
 // Opt-in: reload the webview when it has been hidden this long and playback is
-// paused, which is the only way to flush WebKit's internal image caches.
+// paused, which is the only way to flush WebKit's internal image caches. Once
+// the hidden session crosses this RSS, the reload fires early instead of
+// waiting out the full deadline; below it (or on platforms without /proc,
+// where RamMB is 0) the deadline still applies.
 const IDLE_RELOAD_MS = 10 * 60 * 1000;
+const IDLE_RAM_MB = 600;
+const RELOAD_POLL_MS = 30 * 1000;
 
 function Router() {
 	useEffect(() => {
@@ -80,10 +85,10 @@ function Router() {
 
 	useEffect(() => {
 		let shed: ReturnType<typeof setTimeout> | undefined;
-		let reload: ReturnType<typeof setTimeout> | undefined;
+		let reload: ReturnType<typeof setInterval> | undefined;
 		const cancel = () => {
 			if (shed !== undefined) clearTimeout(shed);
-			if (reload !== undefined) clearTimeout(reload);
+			if (reload !== undefined) clearInterval(reload);
 			shed = undefined;
 			reload = undefined;
 		};
@@ -93,11 +98,15 @@ function Router() {
 				return;
 			}
 			shed = setTimeout(() => queryClient.clear(), IDLE_SHED_MS);
-			reload = setTimeout(async () => {
+			const deadline = Date.now() + IDLE_RELOAD_MS;
+			reload = setInterval(async () => {
 				if (isPlaying.value) return;
 				if (!(await IdleReload())) return;
+				const mb = await RamMB();
+				const due = Date.now() >= deadline;
+				if (!due && mb > 0 && mb < IDLE_RAM_MB) return;
 				void ReloadWindow();
-			}, IDLE_RELOAD_MS);
+			}, RELOAD_POLL_MS);
 		};
 		document.addEventListener("visibilitychange", onVisibility);
 		return () => {
