@@ -1,19 +1,12 @@
 import type { RefObject } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { clientAxis } from "@/lib/shared/utils/pointer";
 
 const CLOSE_PX = 96;
 const FLING_PX_PER_MS = 0.5;
 const DRAG_START_PX = 6;
 const INTERACTIVE =
 	"button, a, input, select, textarea, label, [role='slider'], [contenteditable='true'], [data-drag-self]";
-
-function clientYOf(e: MouseEvent | TouchEvent): number {
-	if ("touches" in e) {
-		const touch = e.touches[0] ?? e.changedTouches[0];
-		return touch ? touch.clientY : 0;
-	}
-	return e.clientY;
-}
 
 function isDraggableTarget(e: MouseEvent, panel: HTMLElement): boolean {
 	const target = e.target as HTMLElement;
@@ -108,7 +101,7 @@ export function useSheetDrag(
 			const me = e as MouseEvent | TouchEvent;
 			if ((me.target as HTMLElement).closest(INTERACTIVE)) return;
 			const scroll = scrollableWithin(me.target as HTMLElement);
-			g.startY = clientYOf(me);
+			g.startY = clientAxis(me, "y");
 			g.startTime = performance.now();
 			g.offset = 0;
 			g.scroll = scroll;
@@ -119,7 +112,7 @@ export function useSheetDrag(
 		const onMove = (e: Event) => {
 			if (!g.possible && !g.active) return;
 			const me = e as MouseEvent | TouchEvent;
-			const delta = clientYOf(me) - g.startY;
+			const delta = clientAxis(me, "y") - g.startY;
 			if (!g.active) {
 				if (delta < -DRAG_START_PX || (g.scroll && g.scroll.scrollTop > 0)) {
 					g.possible = false;

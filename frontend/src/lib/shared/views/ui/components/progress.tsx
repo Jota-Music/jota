@@ -1,6 +1,7 @@
 import { useSignal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
+import { clientAxis } from "@/lib/shared/utils/pointer";
 import { cn } from "@/lib/shared/utils/tw";
 
 type ProgressProps = {
@@ -11,14 +12,6 @@ type ProgressProps = {
 	onCommit?: (value: number) => void;
 	class?: string;
 };
-
-function clientXOf(e: MouseEvent | TouchEvent): number {
-	if ("touches" in e) {
-		const touch = e.touches[0] ?? e.changedTouches[0];
-		return touch ? touch.clientX : 0;
-	}
-	return e.clientX;
-}
 
 function Progress({
 	value,
@@ -52,7 +45,7 @@ function Progress({
 		function move(e: MouseEvent | TouchEvent) {
 			if (!dragging.value) return;
 			if ("touches" in e) e.preventDefault();
-			preview(clientXOf(e));
+			preview(clientAxis(e, "x"));
 		}
 		function finish() {
 			if (!dragging.value) return;
@@ -77,7 +70,7 @@ function Progress({
 
 	function start(e: MouseEvent | TouchEvent) {
 		dragging.value = true;
-		preview(clientXOf(e));
+		preview(clientAxis(e, "x"));
 	}
 
 	function onWheel(e: WheelEvent) {
