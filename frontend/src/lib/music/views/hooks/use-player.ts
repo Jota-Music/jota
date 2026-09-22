@@ -41,8 +41,6 @@ export function usePlayer() {
 
 			dominantColor.value = color;
 			binaryColor.value = binary;
-			document.documentElement.style.setProperty("--dominant-color", color);
-			document.documentElement.style.setProperty("--binary-color", binary);
 		})();
 
 		return () => {

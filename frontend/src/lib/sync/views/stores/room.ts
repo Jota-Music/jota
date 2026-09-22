@@ -418,14 +418,8 @@ function handleMessage(msg: ServerMessage): void {
 }
 
 function applyColor(color?: string | null, binary?: string | null): void {
-	if (color) {
-		dominantColor.value = color;
-		document.documentElement.style.setProperty("--dominant-color", color);
-	}
-	if (binary) {
-		binaryColor.value = binary;
-		document.documentElement.style.setProperty("--binary-color", binary);
-	}
+	if (color) dominantColor.value = color;
+	if (binary) binaryColor.value = binary;
 }
 
 transport.onMessage(handleMessage);
