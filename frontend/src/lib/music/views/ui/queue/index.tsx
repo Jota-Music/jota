@@ -11,7 +11,6 @@ import {
 import { memo } from "preact/compat";
 import { useEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
-import { useQueuePanel } from "@/lib/music/views/hooks/use-queue";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
 import {
 	failedSongs,
@@ -24,7 +23,7 @@ import {
 	playAt,
 	unqueue,
 } from "@/lib/music/views/stores/player";
-import { queue, showQueue } from "@/lib/music/views/stores/queue";
+import { currentIndex, queue, showQueue } from "@/lib/music/views/stores/queue";
 import TrackArt from "@/lib/music/views/ui/track/track-art";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -237,10 +236,8 @@ const QueueRow = memo(function QueueRow({
 });
 
 function Queue() {
-	const panel = useQueuePanel();
-
-	const songs = panel.songs;
-	const idx = panel.currentIndex;
+	const songs = queue.value;
+	const idx = currentIndex.value;
 	const viewStart = idx >= 0 ? Math.max(0, idx - QUEUE_VIEW_LOOKBACK) : 0;
 	const viewCount = songs.length === 0 ? 0 : songs.length - viewStart;
 
@@ -329,7 +326,7 @@ function Queue() {
 	};
 
 	useEffect(() => {
-		if (!panel.open) return;
+		if (!showQueue.value) return;
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key === "Escape") {
 				showQueue.value = false;
@@ -337,11 +334,11 @@ function Queue() {
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
-	}, [panel.open]);
+	}, [showQueue.value]);
 
 	return (
 		<Modal
-			open={panel.open}
+			open={showQueue.value}
 			close={closeQueue}
 			labelledBy="queue-panel-title"
 			closeLabel={t("music.queue.close")}

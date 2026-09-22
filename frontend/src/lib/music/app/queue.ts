@@ -1,17 +1,5 @@
 import type { Song } from "@/lib/music/model";
 
-export function insertAfter(queue: Song[], index: number, song: Song): Song[] {
-	const next = [...queue];
-	if (next.length === 0) {
-		next.push(song);
-		return next;
-	}
-
-	const at = index >= 0 && index < next.length ? index + 1 : next.length;
-	next.splice(at, 0, song);
-	return next;
-}
-
 // Shuffle permutes the queue, so a source list matches the queue by membership,
 // not by order. Counts each id so duplicates are compared correctly.
 export function sameQueue(a: Song[], b: Song[]): boolean {

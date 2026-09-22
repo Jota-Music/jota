@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { insertAfter, pinAfter, sameQueue } from "@/lib/music/app/queue";
+import { pinAfter, sameQueue } from "@/lib/music/app/queue";
 import type { Song } from "@/lib/music/model";
 
 const base = {
@@ -13,27 +13,6 @@ const base = {
 function song(id: string): Song {
 	return { id, name: id, ...base };
 }
-
-function ids(queue: Song[]): string[] {
-	return queue.map((s) => s.id);
-}
-
-test("insertAfter places the song right after the current one", () => {
-	const out = insertAfter([song("a"), song("b"), song("c")], 0, song("x"));
-	expect(ids(out)).toEqual(["a", "x", "b", "c"]);
-});
-
-test("insertAfter appends to an empty queue", () => {
-	expect(ids(insertAfter([], -1, song("x")))).toEqual(["x"]);
-});
-
-test("insertAfter appends when the current index is out of range", () => {
-	expect(ids(insertAfter([song("a"), song("b")], 5, song("x")))).toEqual([
-		"a",
-		"b",
-		"x",
-	]);
-});
 
 test("pinAfter moves a song next to the current one", () => {
 	const state = pinAfter([song("cur"), song("b"), song("c")], 0, 2);
