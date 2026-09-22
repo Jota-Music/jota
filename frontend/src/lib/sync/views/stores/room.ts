@@ -125,7 +125,11 @@ function waitForPlay(gen: string): Promise<{ at: number }> {
 				if (playWait !== wait) return;
 				playWait = null;
 				pendingStart.value = false;
+				// Abandon the round so settle returns without starting solo, and
+				// pull the room snapshot to land on the real track and position.
+				consensusGen = null;
 				addError(new Error("consensus timeout"), "room");
+				requestJoin();
 				resolve({ at: clock.serverNow() });
 			}, 20000),
 		};
