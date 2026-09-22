@@ -2,7 +2,6 @@ package spotify
 
 import (
 	"strings"
-	"time"
 
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
@@ -10,17 +9,11 @@ import (
 
 var musicBucket = kv.UseBucket("spotify-music")
 
-const musicCacheTTL = 6 * time.Hour
-
 // cachedPlaylist pairs a playlist with the Spotify revision it was fetched at,
-// so a later load can tell whether the playlist changed.
+// so a background refresh can tell whether the playlist changed.
 type cachedPlaylist struct {
 	Revision string         `json:"revision"`
 	Playlist music.Playlist `json:"playlist"`
-}
-
-func cachedFullPlaylist(playlistID string, fetch func() (music.Playlist, error)) (music.Playlist, error) {
-	return kv.Cached(musicBucket, "playlist:v2:"+playlistID, musicCacheTTL, fetch)
 }
 
 func loadCachedPlaylist(playlistID string) (cachedPlaylist, bool) {
@@ -38,7 +31,7 @@ func storeCachedPlaylist(playlistID string, cached cachedPlaylist) {
 	if err := kv.EnsureStarted(); err != nil {
 		return
 	}
-	_ = musicBucket.SetObject("playlist:v3:"+playlistID, cached, musicCacheTTL)
+	_ = musicBucket.SetObject("playlist:v3:"+playlistID, cached)
 }
 
 // needsRevalidate reports whether the cached playlist is stale against the
@@ -57,7 +50,7 @@ func revalidateFullPlaylist(playlistID string) error {
 }
 
 func cachedUserPlaylists(user string, fetch func() ([]music.PlaylistSummary, error)) ([]music.PlaylistSummary, error) {
-	return kv.Cached(musicBucket, "playlists:v3:"+user, musicCacheTTL, fetch)
+	return kv.Cached(musicBucket, "playlists:v3:"+user, fetch)
 }
 
 func revalidateUserPlaylists(user string) error {
@@ -65,21 +58,21 @@ func revalidateUserPlaylists(user string) error {
 }
 
 func cachedUserProfile(username string, fetch func() (music.UserProfile, error)) (music.UserProfile, error) {
-	return kv.Cached(musicBucket, "user:"+strings.ToLower(username), musicCacheTTL, fetch)
+	return kv.Cached(musicBucket, "user:"+strings.ToLower(username), fetch)
 }
 
 func cachedArtist(uri string, fetch func() (music.ArtistInfo, error)) (music.ArtistInfo, error) {
-	return kv.Cached(musicBucket, "artist:"+uri, musicCacheTTL, fetch)
+	return kv.Cached(musicBucket, "artist:"+uri, fetch)
 }
 
 func cachedArtistDiscography(uri string, fetch func() (music.ArtistDiscography, error)) (music.ArtistDiscography, error) {
-	return kv.Cached(musicBucket, "artist-discography:"+uri, musicCacheTTL, fetch)
+	return kv.Cached(musicBucket, "artist-discography:"+uri, fetch)
 }
 
 func cachedAlbumTracks(uri string, fetch func() ([]music.Song, error)) ([]music.Song, error) {
-	return kv.Cached(musicBucket, "album:"+uri, musicCacheTTL, fetch)
+	return kv.Cached(musicBucket, "album:"+uri, fetch)
 }
 
 func cachedTrack(uri string, fetch func() (music.Song, error)) (music.Song, error) {
-	return kv.Cached(musicBucket, "track:"+uri, musicCacheTTL, fetch)
+	return kv.Cached(musicBucket, "track:"+uri, fetch)
 }

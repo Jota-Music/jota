@@ -8,12 +8,9 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 	"regexp"
 	"strings"
-	"time"
 )
 
 var playlistBucket = kv.UseBucket("youtube-playlists")
-
-const playlistCacheTTL = 12 * time.Hour
 
 const browseEndpoint = "https://www.youtube.com/youtubei/v1/browse"
 
@@ -78,7 +75,7 @@ func resolveChannelID(channel string) (string, error) {
 		return channel, nil
 	}
 
-	return kv.Cached(playlistBucket, "channel-id:"+channel, playlistCacheTTL, func() (string, error) {
+	return kv.Cached(playlistBucket, "channel-id:"+channel, func() (string, error) {
 		target := channel
 		if !strings.Contains(channel, "://") {
 			target = "https://www.youtube.com/" + channel
@@ -172,7 +169,7 @@ func (s *Service) GetChannelPlaylists(channel string) ([]music.PlaylistSummary, 
 	if err != nil {
 		return nil, err
 	}
-	return kv.Cached(playlistBucket, "channel:playlists:"+channelID, playlistCacheTTL, func() ([]music.PlaylistSummary, error) {
+	return kv.Cached(playlistBucket, "channel:playlists:"+channelID, func() ([]music.PlaylistSummary, error) {
 		return fetchChannelTab(channelID, channelPlaylistsParams, func(s itemSection, _ string) []music.PlaylistSummary {
 			return s.summaries()
 		})
@@ -185,7 +182,7 @@ func (s *Service) GetChannelVideos(channel string) ([]music.Song, error) {
 	if err != nil {
 		return nil, err
 	}
-	return kv.Cached(playlistBucket, "channel:videos:"+channelID, playlistCacheTTL, func() ([]music.Song, error) {
+	return kv.Cached(playlistBucket, "channel:videos:"+channelID, func() ([]music.Song, error) {
 		return fetchChannelTab(channelID, channelVideosParams, func(s itemSection, name string) []music.Song {
 			return s.videos(channelID, name)
 		})
@@ -208,24 +205,28 @@ func (s *Service) GetChannelInfo(channel string) (music.ChannelInfo, error) {
 	if err != nil {
 		return music.ChannelInfo{}, err
 	}
-	return kv.Cached(playlistBucket, "channel:info:"+channelID, playlistCacheTTL, func() (music.ChannelInfo, error) {
-		data, err := channelBrowseData(channelID, channelPlaylistsParams, "")
-		if err != nil {
-			return music.ChannelInfo{}, err
-		}
-
-		var res channelBrowseResponse
-		if err := json.Unmarshal(data, &res); err != nil {
-			return music.ChannelInfo{}, fmt.Errorf("invalid channel JSON: %w", err)
-		}
-
-		header := res.Header.C4TabbedHeaderRenderer
-		return music.ChannelInfo{
-			Id:     channelID,
-			Name:   header.Title,
-			Avatar: header.Avatar.url(),
-		}, nil
+	return kv.Cached(playlistBucket, "channel:info:"+channelID, func() (music.ChannelInfo, error) {
+		return channelInfo(channelID)
 	})
+}
+
+func channelInfo(channelID string) (music.ChannelInfo, error) {
+	data, err := channelBrowseData(channelID, channelPlaylistsParams, "")
+	if err != nil {
+		return music.ChannelInfo{}, err
+	}
+
+	var res channelBrowseResponse
+	if err := json.Unmarshal(data, &res); err != nil {
+		return music.ChannelInfo{}, fmt.Errorf("invalid channel JSON: %w", err)
+	}
+
+	header := res.Header.C4TabbedHeaderRenderer
+	return music.ChannelInfo{
+		Id:     channelID,
+		Name:   header.Title,
+		Avatar: header.Avatar.url(),
+	}, nil
 }
 
 func (r channelBrowseResponse) section() (itemSection, bool) {
@@ -370,7 +371,7 @@ func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 	if playlistID == "" {
 		return music.Playlist{}, errors.New("invalid playlist id")
 	}
-	return kv.Cached(playlistBucket, "playlist:v3:"+playlistID, playlistCacheTTL, func() (music.Playlist, error) {
+	return kv.Cached(playlistBucket, "playlist:v3:"+playlistID, func() (music.Playlist, error) {
 		return fetchFullPlaylist(playlistID)
 	})
 }

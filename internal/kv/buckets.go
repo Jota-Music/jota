@@ -71,6 +71,33 @@ func (b *Bucket) get(key string) ([]byte, error) {
 	return data, nil
 }
 
+// ForEach visits every stored entry in the bucket, passing the bare key and
+// raw value. Used by refresh loops that revalidate cached content.
+func (b *Bucket) ForEach(fn func(key string, data []byte) error) error {
+	if err := EnsureStarted(); err != nil {
+		return err
+	}
+	prefix := []byte(b.prefix)
+	return db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 10
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			key := string(item.KeyCopy(nil))[len(b.prefix):]
+			data, err := item.ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+			if err := fn(key, data); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (b *Bucket) SetObject(key string, value any, ttl ...time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {

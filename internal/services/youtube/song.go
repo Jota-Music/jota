@@ -3,13 +3,10 @@ package youtube
 import (
 	"errors"
 	"strings"
-	"time"
 
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 )
-
-const songCacheTTL = 6 * time.Hour
 
 // GetSong resolves a single video by ID to its full metadata.
 func (s *Service) GetSong(id string) (music.Song, error) {
@@ -18,7 +15,7 @@ func (s *Service) GetSong(id string) (music.Song, error) {
 		return music.Song{}, errors.New("invalid youtube id")
 	}
 
-	return kv.Cached(youtubeSourceBucket, "song:v2:"+id, songCacheTTL, func() (music.Song, error) {
+	return kv.Cached(youtubeSourceBucket, "song:v2:"+id, func() (music.Song, error) {
 		return fetchSong(id)
 	})
 }

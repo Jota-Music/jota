@@ -1,5 +1,6 @@
 import { IdleReload, RamMB, ReloadWindow } from "@bindings/app";
 import { QueryClient, QueryClientProvider } from "@tanstack/preact-query";
+import { Events } from "@wailsio/runtime";
 import { lazy, Suspense } from "preact/compat";
 import { useEffect } from "preact/hooks";
 import { Route, Switch } from "wouter-preact";
@@ -63,6 +64,11 @@ const queryClient = new QueryClient({
 
 // Hidden for this long means the app is genuinely idle, not just unfocused, so
 // it is safe to drop every cached query and let them refetch on return.
+// A background refresh pass revalidated cached catalog content; drop stale
+// queries so open views pick up changes on their next render. Unmounted queries
+// are not refetched, so untouched views keep their cached snapshot.
+Events.On("refresh:updated", () => void queryClient.invalidateQueries());
+
 const IDLE_SHED_MS = 5 * 60 * 1000;
 
 // Opt-in: reload the webview when it has been hidden this long and playback is

@@ -7,6 +7,7 @@ import (
 
 	"github.com/devgianlu/go-librespot/session"
 
+	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -14,43 +15,29 @@ func (s *SpotifyService) GetFullPlaylist(playlistID string) (music.Playlist, err
 	uri := normalizeID(playlistID, "playlist")
 
 	// Liked Songs and other user contexts aren't playlists: no revision to
-	// compare, so they keep the plain TTL cache.
+	// compare, so they get a plain eternal cache entry.
 	if !strings.HasPrefix(uri, URIPlaylistPrefix) {
-		return cachedFullPlaylist(playlistID, func() (music.Playlist, error) {
+		return kv.Cached(musicBucket, "playlist:v2:"+playlistID, func() (music.Playlist, error) {
 			return s.fullPlaylist(playlistID)
 		})
 	}
 
-	cached, hasCached := loadCachedPlaylist(playlistID)
+	// Serve what's stored; freshness is the refresh loop's job.
+	if cached, hasCached := loadCachedPlaylist(playlistID); hasCached {
+		return cached.Playlist, nil
+	}
 
 	sess := s.Session()
 	if sess == nil {
-		// No session to check the revision: a cached copy still loads.
-		if hasCached {
-			return cached.Playlist, nil
-		}
 		return music.Playlist{}, ErrNotConnected
 	}
 
 	meta, err := getPlaylistMetadata(context.Background(), sess, uri)
 	if err != nil {
-		// Can't detect changes without metadata: serve the cache when present,
-		// otherwise resolve from scratch.
-		if hasCached {
-			return cached.Playlist, nil
-		}
-		return s.fullPlaylist(playlistID)
+		return music.Playlist{}, err
 	}
-
-	if hasCached && !needsRevalidate(cached.Revision, meta.revision) {
-		return cached.Playlist, nil
-	}
-
 	playlist, err := s.playlistTracks(context.Background(), sess, uri, meta)
 	if err != nil {
-		if hasCached {
-			return cached.Playlist, nil
-		}
 		return music.Playlist{}, err
 	}
 

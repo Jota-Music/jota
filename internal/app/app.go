@@ -14,6 +14,7 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/ordering"
 	"github.com/Jota-Music/jota/internal/playlists"
+	"github.com/Jota-Music/jota/internal/refresh"
 	"github.com/Jota-Music/jota/internal/rooms"
 	"github.com/Jota-Music/jota/internal/saved"
 	"github.com/Jota-Music/jota/internal/services/discord"
@@ -60,7 +61,7 @@ func New(version string) *App {
 	playlistsSvc := playlists.New(nil)
 	catalog := music.NewCatalog(spotifySvc, youTubeSvc, playlistsSvc)
 	playlistsSvc.SetResolver(catalog)
-	return &App{
+	app := &App{
 		version: version,
 		relay: RelayOverride{
 			URL:   strings.TrimSpace(cfg.RelayAPIURL),
@@ -83,6 +84,11 @@ func New(version string) *App {
 		Saved:     saved.New(),
 		Discord:   discord.New(cfg.DiscordClientID),
 	}
+
+	refresh.Register("spotify-catalog", spotifySvc.RefreshCatalog)
+	refresh.Register("youtube-catalog", youTubeSvc.RefreshCatalog)
+
+	return app
 }
 
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
@@ -93,6 +99,12 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	} else {
 		log.Printf("spotify: connected as %s", a.Spotify.Username())
 	}
+	refresh.Start(func() {
+		app := application.Get()
+		if app != nil {
+			app.Event.Emit("refresh:updated")
+		}
+	})
 	return nil
 }
 
