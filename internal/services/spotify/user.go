@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -17,7 +18,7 @@ func (s *SpotifyService) GetUserProfile(username string) (music.UserProfile, err
 	if username == "" {
 		return music.UserProfile{}, nil
 	}
-	return cachedUserProfile(username, func() (music.UserProfile, error) {
+	return kv.Cached(musicBucket, "user:"+strings.ToLower(username), func() (music.UserProfile, error) {
 		return s.userProfile(username)
 	})
 }

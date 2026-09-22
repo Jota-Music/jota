@@ -7,6 +7,7 @@ import (
 	extmetadatapb "github.com/devgianlu/go-librespot/proto/spotify/extendedmetadata"
 	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 
+	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -14,7 +15,7 @@ import (
 // full metadata.
 func (s *SpotifyService) GetSong(id string) (music.Song, error) {
 	uri := normalizeID(id, "track")
-	return cachedTrack(uri, func() (music.Song, error) {
+	return kv.Cached(musicBucket, "track:"+uri, func() (music.Song, error) {
 		return s.song(uri)
 	})
 }

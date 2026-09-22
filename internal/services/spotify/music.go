@@ -85,7 +85,7 @@ func (s *SpotifyService) playlistTracks(ctx context.Context, sess *session.Sessi
 }
 
 func (s *SpotifyService) GetUserPlaylists(user string) ([]music.PlaylistSummary, error) {
-	return cachedUserPlaylists(user, func() ([]music.PlaylistSummary, error) {
+	return kv.Cached(musicBucket, "playlists:v3:"+user, func() ([]music.PlaylistSummary, error) {
 		return s.userPlaylists(user)
 	})
 }
@@ -187,7 +187,7 @@ func trackToSong(t Track) music.Song {
 
 func (s *SpotifyService) GetArtist(uri string) (music.ArtistInfo, error) {
 	normalizedURI := normalizeID(uri, "artist")
-	return cachedArtist(normalizedURI, func() (music.ArtistInfo, error) {
+	return kv.Cached(musicBucket, "artist:"+normalizedURI, func() (music.ArtistInfo, error) {
 		return s.artist(normalizedURI)
 	})
 }
@@ -219,7 +219,7 @@ func (s *SpotifyService) artist(normalizedURI string) (music.ArtistInfo, error) 
 
 func (s *SpotifyService) GetArtistDiscography(uri string) (music.ArtistDiscography, error) {
 	normalizedURI := normalizeID(uri, "artist")
-	return cachedArtistDiscography(normalizedURI, func() (music.ArtistDiscography, error) {
+	return kv.Cached(musicBucket, "artist-discography:"+normalizedURI, func() (music.ArtistDiscography, error) {
 		return s.artistDiscography(normalizedURI)
 	})
 }
@@ -260,7 +260,7 @@ func (s *SpotifyService) artistDiscography(normalizedURI string) (music.ArtistDi
 
 func (s *SpotifyService) GetAlbumTracks(uri string) ([]music.Song, error) {
 	normalizedURI := normalizeID(uri, "album")
-	return cachedAlbumTracks(normalizedURI, func() ([]music.Song, error) {
+	return kv.Cached(musicBucket, "album:"+normalizedURI, func() ([]music.Song, error) {
 		return s.albumTracks(normalizedURI)
 	})
 }
