@@ -11,10 +11,7 @@ import (
 )
 
 var (
-	bucket = kv.UseBucket("saved-playlists")
-	// legacy is the pre-generic YouTube bucket, read once to adopt its index.
-	legacy = kv.UseBucket("youtube-playlists")
-
+	bucket   = kv.UseBucket("saved-playlists")
 	indexKey = "index"
 )
 
@@ -26,27 +23,14 @@ func New() *Service {
 	return &Service{}
 }
 
-// index reads the saved list. Callers must hold mu (it may migrate the legacy
-// index into the new bucket).
+// index reads the saved list. Callers must hold mu.
 func (s *Service) index() ([]music.PlaylistSummary, error) {
 	var list []music.PlaylistSummary
 	err := bucket.GetObject(indexKey, &list)
-	if err == nil {
-		return list, nil
+	if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
+		return nil, nil
 	}
-	if !errors.Is(err, kv.ErrKeyNotFound) && !errors.Is(err, kv.ErrNotStarted) {
-		return nil, err
-	}
-
-	// Adopt the YouTube-only index once, so existing saves survive the move to
-	// the source-agnostic store.
-	var legacyList []music.PlaylistSummary
-	if legacy.GetObject(indexKey, &legacyList) == nil && len(legacyList) > 0 {
-		_ = bucket.SetObject(indexKey, legacyList)
-		_ = legacy.Delete(indexKey)
-		return legacyList, nil
-	}
-	return nil, nil
+	return list, err
 }
 
 func (s *Service) List() ([]music.PlaylistSummary, error) {
