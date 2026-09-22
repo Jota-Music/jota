@@ -9,31 +9,25 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
-type fakeResolver struct {
-	fail   map[string]bool
-	covers map[string]string
-}
-
-func (f *fakeResolver) GetSong(id string) (music.Song, error) {
-	if f.fail[id] {
-		return music.Song{}, errors.New("unavailable")
+func fakeResolver(covers map[string]string, fail map[string]bool) func(string) (music.Song, error) {
+	return func(id string) (music.Song, error) {
+		if fail[id] {
+			return music.Song{}, errors.New("unavailable")
+		}
+		cover := covers[id]
+		if cover == "" {
+			cover = "cover-" + id
+		}
+		return music.Song{
+			Id:    id,
+			Name:  "Song " + id,
+			Album: music.Album{Covers: []string{cover}},
+		}, nil
 	}
-	cover := f.covers[id]
-	if cover == "" {
-		cover = "cover-" + id
-	}
-	return music.Song{
-		Id:    id,
-		Name:  "Song " + id,
-		Album: music.Album{Covers: []string{cover}},
-	}, nil
 }
 
 func setup(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
+	t.Helper()
 	if err := kv.EnsureStarted(); err != nil {
 		t.Fatalf("kv: %v", err)
 	}
@@ -43,8 +37,8 @@ func setup(t *testing.T) {
 func TestPlaylistLifecycle(t *testing.T) {
 	setup(t)
 
-	resolver := &fakeResolver{fail: map[string]bool{}}
-	s := New(resolver)
+	fail := map[string]bool{}
+	s := New(fakeResolver(nil, fail))
 
 	summary, err := s.Create("Chill")
 	if err != nil {
@@ -80,7 +74,7 @@ func TestPlaylistLifecycle(t *testing.T) {
 	}
 
 	// A failing reference rejects the whole add, storing nothing.
-	resolver.fail["bad"] = true
+	fail["bad"] = true
 	if err := s.AddSongs(summary.Id, []string{"ok", "bad"}); err == nil {
 		t.Fatal("add with failing ref = nil, want error")
 	}
@@ -90,12 +84,12 @@ func TestPlaylistLifecycle(t *testing.T) {
 	}
 
 	// A reference that stops resolving later is marked broken, not dropped.
-	resolver.fail["spotifyId"] = true
+	fail["spotifyId"] = true
 	pl, _ = s.GetFullPlaylist(summary.Id)
 	if !pl.Songs[0].Broken || pl.Songs[0].Id != "spotifyId" {
 		t.Fatalf("broken = %+v", pl.Songs[0])
 	}
-	resolver.fail["spotifyId"] = false
+	fail["spotifyId"] = false
 
 	// Reorder keeps only known references and preserves the given order.
 	if err := s.Reorder(summary.Id, []string{"youtube:vid", "spotifyId", "ghost"}); err != nil {
@@ -126,18 +120,14 @@ func TestPlaylistLifecycle(t *testing.T) {
 func TestListCoversDedupAndCap(t *testing.T) {
 	setup(t)
 
-	resolver := &fakeResolver{
-		fail: map[string]bool{},
-		covers: map[string]string{
-			"a": "same",
-			"b": "same",
-			"c": "c",
-			"d": "d",
-			"e": "e",
-			"f": "f",
-		},
-	}
-	s := New(resolver)
+	s := New(fakeResolver(map[string]string{
+		"a": "same",
+		"b": "same",
+		"c": "c",
+		"d": "d",
+		"e": "e",
+		"f": "f",
+	}, nil))
 
 	summary, err := s.Create("Mix")
 	if err != nil {

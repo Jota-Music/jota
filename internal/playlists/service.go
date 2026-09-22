@@ -19,21 +19,21 @@ var (
 )
 
 type Service struct {
-	mu       sync.Mutex
-	resolver Resolver
+	mu      sync.Mutex
+	resolve func(id string) (music.Song, error)
 }
 
-func New(resolver Resolver) *Service {
-	return &Service{resolver: resolver}
+func New(resolve func(id string) (music.Song, error)) *Service {
+	return &Service{resolve: resolve}
 }
 
 // SetResolver wires the catalog after construction, breaking the cycle between
 // the catalog (which routes local playlists) and this service (which resolves
 // tracks through the catalog).
-func (s *Service) SetResolver(resolver Resolver) {
+func (s *Service) SetResolver(resolve func(id string) (music.Song, error)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.resolver = resolver
+	s.resolve = resolve
 }
 
 func newId() (string, error) {
@@ -109,7 +109,7 @@ func (s *Service) List() ([]music.PlaylistSummary, error) {
 // covers collects the album covers of the first tracks, skipping unresolved
 // tracks and duplicate covers so the mosaic never repeats the same art.
 func (s *Service) covers(refs []string) []string {
-	if s.resolver == nil {
+	if s.resolve == nil {
 		return nil
 	}
 
@@ -119,7 +119,7 @@ func (s *Service) covers(refs []string) []string {
 		if len(covers) == coverCount {
 			break
 		}
-		song, err := s.resolver.GetSong(ref)
+		song, err := s.resolve(ref)
 		if err != nil || len(song.Album.Covers) == 0 {
 			continue
 		}
@@ -193,7 +193,7 @@ func (s *Service) AddSongs(id string, refs []string) error {
 	}
 
 	for _, ref := range refs {
-		if _, err := s.resolver.GetSong(ref); err != nil {
+		if _, err := s.resolve(ref); err != nil {
 			return fmt.Errorf("cannot add %q: %w", ref, err)
 		}
 	}
@@ -281,7 +281,7 @@ func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 
 	songs := make([]music.Song, 0, len(pl.Songs))
 	for _, ref := range pl.Songs {
-		song, err := s.resolver.GetSong(ref)
+		song, err := s.resolve(ref)
 		if err != nil {
 			songs = append(songs, music.Song{Id: ref, Broken: true})
 			continue

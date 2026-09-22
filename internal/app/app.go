@@ -60,7 +60,7 @@ func New(version string) *App {
 	youTubeSvc := youtube.NewService()
 	playlistsSvc := playlists.New(nil)
 	catalog := music.NewCatalog(spotifySvc, youTubeSvc, playlistsSvc)
-	playlistsSvc.SetResolver(catalog)
+	playlistsSvc.SetResolver(catalog.GetSong)
 	app := &App{
 		version: version,
 		relay: RelayOverride{
