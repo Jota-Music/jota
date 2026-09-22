@@ -353,6 +353,13 @@ func main() {
 		application.Get().Event.Emit("window:always-on-top", state.AlwaysOnTop)
 	})
 
+	// The window is created with the saved state before the frontend even loads,
+	// so the runtime-ready broadcast can beat the pin button's subscription and
+	// the two would disagree. Answer on demand instead of racing the mount.
+	application.Get().Event.On("window:always-on-top:get", func(*application.CustomEvent) {
+		application.Get().Event.Emit("window:always-on-top", state.AlwaysOnTop)
+	})
+
 	if err := wailsApp.Run(); err != nil {
 		log.Fatal(err)
 	}

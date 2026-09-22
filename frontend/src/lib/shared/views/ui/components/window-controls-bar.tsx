@@ -23,6 +23,9 @@ export function WindowControlsBar() {
 		const off = Events.On("window:always-on-top", (ev) => {
 			isOnTop.value = Boolean(ev.data);
 		});
+		// Ask for the current state instead of betting the runtime-ready
+		// broadcast arrived before this subscription was in place.
+		void Events.Emit("window:always-on-top:get");
 		return off;
 	}, [isDesktop]);
 
