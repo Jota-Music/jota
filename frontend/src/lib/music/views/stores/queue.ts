@@ -87,7 +87,30 @@ export function pingQueue() {
 	queuePulse.value++;
 }
 
+// Writes are debounced: play/skip/reorder mutate the queue several times a
+// second, and each synchronous localStorage write freezes the main thread. The
+// last state wins after a quiet pause, flushed immediately on hide or close so
+// nothing is lost.
+const QUEUE_SAVE_DELAY = 500;
+let saveTimer: number | null = null;
+let saveDirty = false;
+
 export function persistQueue() {
+	saveDirty = true;
+	if (saveTimer != null) return;
+	if (typeof window === "undefined") {
+		flushQueue();
+		return;
+	}
+	saveTimer = window.setTimeout(() => {
+		saveTimer = null;
+		flushQueue();
+	}, QUEUE_SAVE_DELAY);
+}
+
+function flushQueue() {
+	if (!saveDirty) return;
+	saveDirty = false;
 	saveQueue(queue.value);
 	saveIndex(currentIndex.value);
 }
@@ -146,4 +169,18 @@ export function setSongYoutubeId(id: string, youtubeId: string) {
 	next[idx] = { ...next[idx], youtubeId };
 	queue.value = next;
 	persistQueue();
+}
+
+if (typeof window !== "undefined") {
+	const flush = () => {
+		if (saveTimer != null) {
+			clearTimeout(saveTimer);
+			saveTimer = null;
+		}
+		flushQueue();
+	};
+	window.addEventListener("beforeunload", flush);
+	document.addEventListener("visibilitychange", () => {
+		if (document.hidden) flush();
+	});
 }
