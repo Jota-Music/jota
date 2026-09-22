@@ -5,7 +5,6 @@ import { translateError } from "@/lib/shared/i18n/errors";
 type RoomError = {
 	id: string;
 	message: string;
-	timestamp: number;
 };
 
 export const roomErrors = signal<RoomError[]>([]);
@@ -44,7 +43,6 @@ export function addError(error: unknown, context?: string): void {
 	const entry: RoomError = {
 		id: `${Date.now()}-${Math.random()}`,
 		message: line(context, translateError(error)),
-		timestamp: Date.now(),
 	};
 
 	roomErrors.value = [...roomErrors.value, entry];
