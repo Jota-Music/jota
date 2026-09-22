@@ -9,6 +9,7 @@ import {
 	setSongYoutubeId,
 } from "@/lib/music/views/stores/queue";
 import { publish } from "@/lib/music/views/stores/remote";
+import * as storage from "@/lib/shared/utils/storage";
 import { addError, logError } from "@/lib/shared/views/stores/errors";
 
 const VOLUME_STORAGE_KEY = "audio-volume";
@@ -137,17 +138,11 @@ export function setYoutube(song: Song, youtube: string) {
 }
 
 function getInitialVolume() {
-	if (typeof window !== "undefined") {
-		return parseStoredVolume(localStorage.getItem(VOLUME_STORAGE_KEY));
-	}
-	return 1;
+	return parseStoredVolume(storage.get(VOLUME_STORAGE_KEY, null));
 }
 
 function getInitialMuted() {
-	if (typeof window !== "undefined") {
-		return parseStoredMuted(localStorage.getItem(MUTED_STORAGE_KEY));
-	}
-	return false;
+	return parseStoredMuted(storage.get(MUTED_STORAGE_KEY, null));
 }
 
 function waitForPlayable(
@@ -646,25 +641,13 @@ export function setVolume(value: number) {
 	const v = Math.max(0, Math.min(1, value));
 	volume.value = v;
 	if (audio) audio.volume = v;
-	if (typeof window !== "undefined") {
-		try {
-			localStorage.setItem(VOLUME_STORAGE_KEY, String(v));
-		} catch {
-			// ignore storage errors
-		}
-	}
+	storage.set(VOLUME_STORAGE_KEY, String(v));
 }
 
 function setMuted(value: boolean) {
 	muted.value = value;
 	if (audio) audio.muted = muted.value;
-	if (typeof window !== "undefined") {
-		try {
-			localStorage.setItem(MUTED_STORAGE_KEY, value ? "1" : "0");
-		} catch {
-			// ignore storage errors
-		}
-	}
+	storage.set(MUTED_STORAGE_KEY, value ? "1" : "0");
 }
 
 export function pause(): boolean {

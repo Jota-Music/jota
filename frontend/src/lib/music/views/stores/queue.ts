@@ -2,27 +2,12 @@ import { signal } from "@preact/signals";
 import { permute, random, seed } from "@/lib/music/app/shuffle";
 import type { RepeatMode, Song } from "@/lib/music/model";
 import { publish } from "@/lib/music/views/stores/remote";
+import { get as read, set as write } from "@/lib/shared/utils/storage";
 
 const QUEUE_STORAGE_KEY = "music-queue";
 const INDEX_STORAGE_KEY = "music-queue-index";
 const SHUFFLE_STORAGE_KEY = "music-shuffle";
 const REPEAT_STORAGE_KEY = "music-repeat";
-
-function read(key: string): string | null {
-	if (typeof window === "undefined") return null;
-	try {
-		return localStorage.getItem(key);
-	} catch {
-		return null;
-	}
-}
-
-function write(key: string, value: string): void {
-	if (typeof window === "undefined") return;
-	try {
-		localStorage.setItem(key, value);
-	} catch {}
-}
 
 function loadQueue(): Song[] {
 	const raw = read(QUEUE_STORAGE_KEY);

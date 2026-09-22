@@ -1,4 +1,5 @@
 import { signal } from "@preact/signals";
+import { get } from "@/lib/shared/utils/storage";
 
 type Status = "idle" | "connecting" | "open" | "closed";
 
@@ -8,14 +9,14 @@ export const peers = signal(0);
 // True once the room has answered our join, so the UI can tell connecting from
 // actually listening.
 export const joined = signal(false);
-export const room = signal(localStorage.getItem("sync:room") ?? "");
-export const relayUrl = signal(localStorage.getItem("sync:relay") ?? "");
-export const token = signal(localStorage.getItem("sync:token") ?? "");
+export const room = signal(get("sync:room"));
+export const relayUrl = signal(get("sync:relay"));
+export const token = signal(get("sync:token"));
 // True when RELAY_API_URL pins the relay from the environment: the value wins
 // over the saved one and is not persisted.
 export const relayLocked = signal(false);
 export const tokenRequired = signal(false);
-export const password = signal(localStorage.getItem("sync:password") ?? "");
+export const password = signal(get("sync:password"));
 export const error = signal("");
 export const offsetMs = signal(0);
 export const showSync = signal(false);
