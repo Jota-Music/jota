@@ -202,15 +202,24 @@ export function playList(songs: Song[], source: string | null = null) {
 	return playAll(songs, source);
 }
 
+let enqueueAnchor = -1;
+let enqueueAnchorId: string | null = null;
+
 export function enqueueMany(songs: Song[]) {
 	if (songs.length === 0) return;
 
 	const q = [...queue.value];
-	const at =
-		currentIndex.value >= 0 && currentIndex.value < q.length
+	const anchored =
+		enqueueAnchorId != null && q[enqueueAnchor]?.id === enqueueAnchorId;
+	const at = anchored
+		? enqueueAnchor + 1
+		: currentIndex.value >= 0 && currentIndex.value < q.length
 			? currentIndex.value + 1
 			: q.length;
+	if (anchored && at > q.length) return;
 	q.splice(at, 0, ...songs);
+	enqueueAnchor = at + songs.length - 1;
+	enqueueAnchorId = songs[songs.length - 1]?.id ?? null;
 	queue.value = q;
 	persistQueue();
 	pingQueue();
