@@ -190,11 +190,11 @@
 			}
 		},
 		"hint": {
-			"title": "No YouTube playlists yet",
-			"body": "Save any playlist and it shows up here.",
-			"step1": "Search a playlist by name, or paste its link in the search bar.",
-			"step2": "Open the Playlists tab in the results.",
-			"step3": "Tap the heart to save it here."
+			"title": "No playlists yet",
+			"body": "Save a YouTube playlist or create a local one — both show up here.",
+			"step1": "In the search bar at the top, search a playlist by name or paste its link.",
+			"step2": "Open the Playlists tab in the results and tap the heart to save it.",
+			"step3": "Or use the + button to create a local playlist."
 		},
 		"queue": {
 			"title": "Queue",

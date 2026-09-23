@@ -190,11 +190,11 @@
 			}
 		},
 		"hint": {
-			"title": "Aún no hay listas de YouTube",
-			"body": "Guarda cualquier lista y aparecerá aquí.",
-			"step1": "Busca una lista por nombre o pega su enlace en la barra de búsqueda.",
-			"step2": "Abre la pestaña Listas en los resultados.",
-			"step3": "Toca el corazón para guardarla aquí."
+			"title": "Aún no hay listas",
+			"body": "Guarda una lista de YouTube o crea una local: ambas aparecerán aquí.",
+			"step1": "En la barra de búsqueda de arriba, busca una lista por nombre o pega su enlace.",
+			"step2": "Abre la pestaña Listas en los resultados y toca el corazón para guardarla.",
+			"step3": "O usa el botón + para crear una lista local."
 		},
 		"queue": {
 			"title": "Cola",
