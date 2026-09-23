@@ -130,7 +130,7 @@ function Progress({
 					dragging.value ? "scale-110 cursor-grabbing" : "cursor-grab",
 				)}
 				style={{
-					left: `${percent}%`,
+					left: `clamp(0.375rem, ${percent}%, calc(100% - 0.375rem))`,
 				}}
 			/>
 		</div>
