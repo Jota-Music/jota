@@ -9,7 +9,7 @@ import {
 	SkipForward,
 } from "lucide-preact";
 import { memo } from "preact/compat";
-import { useRef } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { usePlayer } from "@/lib/music/views/hooks/use-player";
 import { audioDuration, progress } from "@/lib/music/views/stores/audio";
@@ -17,6 +17,7 @@ import { commitSeek, previewSeek } from "@/lib/music/views/stores/player";
 import {
 	cycleRepeat,
 	repeat,
+	showQueue,
 	shuffle,
 	toggleShuffle,
 } from "@/lib/music/views/stores/queue";
@@ -367,6 +368,10 @@ export function Player() {
 	const dragTracking = useRef({ startY: 0, active: false });
 	const modalListRef = useRef<HTMLDivElement>(null);
 
+	useEffect(() => {
+		if (showQueue.value) playerModalOpen.value = false;
+	}, [showQueue.value]);
+
 	const onBarPointerDown = (e: PointerEvent) => {
 		const target = e.target as HTMLElement;
 		if (target.closest("button, input, a, [role='slider']")) return;
@@ -412,10 +417,12 @@ export function Player() {
 
 			<div
 				class={cn(
-					"block fixed bottom-0 left-0 right-0 z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out",
+					"block fixed bottom-14 md:bottom-0 left-0 right-0 z-60 md:z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out",
 					compactPlayer.value ? "md:block" : "md:hidden",
 				)}
-				style={`transform: translateY(${playerModalOpen.value ? "100%" : "0"})`}
+				style={`transform: translateY(${
+					playerModalOpen.value ? "calc(100% + 3.5rem)" : "0"
+				})`}
 				onPointerDown={onBarPointerDown}
 				onPointerMove={onBarPointerMove}
 				onPointerUp={onBarPointerUp}
@@ -491,7 +498,9 @@ export function Player() {
 							>
 								<Shuffle class="size-5 stroke-current" />
 							</button>
+						</div>
 
+						<div class="flex items-center gap-0.5 max-md:hidden">
 							<button
 								type="button"
 								title={
@@ -576,6 +585,7 @@ export function Player() {
 				mobileOnly
 				closeLabel={t("music.player.close")}
 				hideClose
+				abovePlayer={false}
 			>
 				<ModalHeader
 					close={() => {

@@ -18,6 +18,9 @@ interface ModalProps {
 	closeLabel?: string;
 	mobileOnly?: boolean;
 	hideClose?: boolean;
+	// abovePlayer anchors the mobile sheet above the collapsed player bar so
+	// the bar stays visible; false lets the sheet cover it (full player).
+	abovePlayer?: boolean;
 	children: ComponentChildren;
 }
 
@@ -78,6 +81,7 @@ export function Modal({
 	closeLabel = t("common.close"),
 	mobileOnly = false,
 	hideClose = false,
+	abovePlayer = true,
 	children,
 }: ModalProps) {
 	const mounted = useSignal(open);
@@ -115,7 +119,7 @@ export function Modal({
 	return createPortal(
 		<div
 			class={cn(
-				"z-50 flex items-end justify-center p-0 sm:items-center sm:p-4",
+				"z-50 md:z-[120] flex items-end justify-center p-0 sm:items-center sm:p-4",
 				host ? "absolute inset-0" : "fixed inset-0",
 				mobileOnly && "md:hidden",
 			)}
@@ -125,7 +129,10 @@ export function Modal({
 				ref={backdropRef}
 				type="button"
 				class={cn(
-					"absolute inset-0 bg-black/70 transition-opacity duration-300",
+					"absolute inset-x-0 top-0 bg-black/70 transition-opacity duration-300 sm:inset-0",
+					abovePlayer
+						? "bottom-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))]"
+						: "bottom-0",
 					shown.value ? "opacity-100" : "opacity-0",
 				)}
 				aria-label={closeLabel}
@@ -138,12 +145,15 @@ export function Modal({
 					if (e.propertyName === "translate") clearInline();
 				}}
 				class={cn(
-					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-b-0 border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)] shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out sm:rounded-2xl sm:border-b",
+					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-b-0 border-zinc-800 bg-zinc-950 pb-3 sm:pb-0 shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out sm:rounded-2xl sm:border-b sm:mb-0",
+					abovePlayer
+						? "mb-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))]"
+						: "mb-[calc(3.5rem+env(safe-area-inset-bottom))]",
 					"max-h-[70dvh]",
 					host ? "sm:max-h-full" : "sm:max-h-[85dvh]",
 					shown.value
 						? "translate-y-0 opacity-100 sm:scale-100"
-						: "translate-y-full opacity-0 sm:translate-y-0 sm:scale-95",
+						: "translate-y-[calc(100%+3.5rem)] opacity-100 sm:translate-y-0 sm:opacity-0 sm:scale-95",
 				)}
 				role="dialog"
 				aria-modal="true"

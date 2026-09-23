@@ -6,6 +6,9 @@
 	   the app icon). Black text keeps contrast on this light accent. */
 	--dominant-color: #ff6dd6;
 	--binary-color: #000000;
+	/* Height the collapsed player bar reserves above the bottom nav on mobile
+	   (seekbar 3px + py-3 24px + cover 48px). Modal sheets stop above it. */
+	--player-compact: 4.75rem;
 }
 
 :focus,
