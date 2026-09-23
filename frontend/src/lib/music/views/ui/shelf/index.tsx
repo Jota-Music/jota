@@ -33,6 +33,7 @@ export function Shelf({
 	onRemove,
 	onReorder,
 	onCreate,
+	showLocal = true,
 }: Props) {
 	const {
 		variant,
@@ -143,6 +144,7 @@ export function Shelf({
 						variant={variant}
 						setVariant={setVariant}
 						onCreate={onCreate}
+						showLocal={showLocal}
 					/>
 
 					<div class="relative min-h-0 flex-1">

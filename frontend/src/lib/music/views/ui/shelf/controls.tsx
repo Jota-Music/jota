@@ -12,6 +12,7 @@ interface ControlsProps {
 	variant: Variant;
 	setVariant: (next: Variant) => void;
 	onCreate?: () => void;
+	showLocal?: boolean;
 }
 
 export function Controls({
@@ -21,6 +22,7 @@ export function Controls({
 	variant,
 	setVariant,
 	onCreate,
+	showLocal = true,
 }: ControlsProps) {
 	return (
 		<div class="flex shrink-0 items-center justify-end px-1 pt-1 pb-2 gap-2">
@@ -67,20 +69,22 @@ export function Controls({
 							<SpotifyIcon size={18} class="md:hidden" />
 							<SpotifyIcon size={14} class="hidden md:block" />
 						</button>
-						<button
-							type="button"
-							onClick={() => setFilter("local")}
-							aria-label={t("music.custom.tab")}
-							class={cn(
-								"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
-								sourceFilter === "local"
-									? "bg-zinc-800 text-white"
-									: "text-zinc-500 hover:text-white",
-							)}
-						>
-							<Library size={18} class="md:hidden" />
-							<Library size={14} class="hidden md:block" />
-						</button>
+						{showLocal && (
+							<button
+								type="button"
+								onClick={() => setFilter("local")}
+								aria-label={t("music.custom.tab")}
+								class={cn(
+									"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
+									sourceFilter === "local"
+										? "bg-zinc-800 text-white"
+										: "text-zinc-500 hover:text-white",
+								)}
+							>
+								<Library size={18} class="md:hidden" />
+								<Library size={14} class="hidden md:block" />
+							</button>
+						)}
 					</div>
 				)}
 

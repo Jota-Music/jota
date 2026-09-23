@@ -43,4 +43,6 @@ export interface Props {
 	onReorder?: (fromId: string, toId: string) => void;
 	// onCreate renders a "new playlist" button next to the source filters.
 	onCreate?: () => void;
+	// showLocal hides the "Local" source filter when the shelf has no local items.
+	showLocal?: boolean;
 }

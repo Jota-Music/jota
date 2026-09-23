@@ -33,8 +33,10 @@ export function UserHeader({
 
 	const { users, follow, unfollow } = useFollows(account);
 
+	const followKey = spotify ? identifier : `youtube:${identifier}`;
+
 	const isFollowing = users.some(
-		(u) => u.toLowerCase() === identifier.toLowerCase(),
+		(u) => u.toLowerCase() === followKey.toLowerCase(),
 	);
 
 	const name = profile.data?.displayName || fallbackName || identifier;
@@ -65,30 +67,28 @@ export function UserHeader({
 			</div>
 
 			{spotify && (
-				<>
-					<Link
-						href={`/search/youtube/${encodeURIComponent(name)}`}
-						title={t("pages.user.findOnYouTube")}
-						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 transition-colors hover:text-white"
-					>
-						<YoutubeIcon class="size-4" />
-					</Link>
-					<button
-						type="button"
-						onClick={() => (isFollowing ? unfollow : follow).mutate(identifier)}
-						disabled={!account || follow.isPending || unfollow.isPending}
-						aria-label={
-							isFollowing ? t("pages.user.unfollow") : t("pages.user.follow")
-						}
-						class={cn(
-							"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white disabled:opacity-50",
-							isFollowing ? "text-red-400" : "text-zinc-400",
-						)}
-					>
-						<Heart size={14} class={isFollowing ? "fill-current" : ""} />
-					</button>
-				</>
+				<Link
+					href={`/search/youtube/${encodeURIComponent(name)}`}
+					title={t("pages.user.findOnYouTube")}
+					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 transition-colors hover:text-white"
+				>
+					<YoutubeIcon class="size-4" />
+				</Link>
 			)}
+			<button
+				type="button"
+				onClick={() => (isFollowing ? unfollow : follow).mutate(followKey)}
+				disabled={!account || follow.isPending || unfollow.isPending}
+				aria-label={
+					isFollowing ? t("pages.user.unfollow") : t("pages.user.follow")
+				}
+				class={cn(
+					"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white disabled:opacity-50",
+					isFollowing ? "text-red-400" : "text-zinc-400",
+				)}
+			>
+				<Heart size={14} class={isFollowing ? "fill-current" : ""} />
+			</button>
 		</header>
 	);
 }
