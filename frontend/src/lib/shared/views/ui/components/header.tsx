@@ -465,16 +465,16 @@ export function MobileBottomNav() {
 
 	const items = [
 		{
-			href: "/playlists",
-			active: location.startsWith("/playlists"),
-			icon: ListMusic,
-			label: t("nav.playlists"),
-		},
-		{
 			href: "/following",
 			active: location.startsWith("/following"),
 			icon: Users,
 			label: t("nav.following"),
+		},
+		{
+			href: "/playlists",
+			active: location === "/" || location.startsWith("/playlists"),
+			icon: ListMusic,
+			label: t("nav.playlists"),
 		},
 		{
 			href: "/rooms",
