@@ -1,5 +1,6 @@
 import { ListMusic } from "lucide-preact";
 import { cover } from "@/lib/shared/utils/cover";
+import { Image } from "@/lib/shared/views/ui/components/image";
 
 type Props = {
 	src?: string;
@@ -11,7 +12,7 @@ type Props = {
 export function PlaylistCover({ src, alt = "", imgClass, size = 320 }: Props) {
 	if (src) {
 		return (
-			<img
+			<Image
 				src={cover(src, size)}
 				alt={alt}
 				loading="lazy"

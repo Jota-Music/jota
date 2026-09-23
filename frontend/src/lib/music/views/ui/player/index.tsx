@@ -31,6 +31,7 @@ import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
+import { Image } from "@/lib/shared/views/ui/components/image";
 import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import Progress from "@/lib/shared/views/ui/components/progress";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
@@ -79,7 +80,7 @@ const DiscCenter = memo(function DiscCenter({
 }: FullPlayerProps) {
 	return (
 		<div class="relative aspect-square w-full">
-			<img
+			<Image
 				src={coverImage(cover, 384)}
 				alt={song.name}
 				draggable={false}
@@ -356,7 +357,7 @@ export function Player() {
 						class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
 					>
 						<div class="relative w-12 h-12 shrink-0">
-							<img
+							<Image
 								src={coverImage(cover, 128)}
 								alt={song.name}
 								draggable={false}

@@ -8,6 +8,7 @@ import { useFollows } from "@/lib/music/views/ui/user/follow";
 import { t } from "@/lib/shared/i18n";
 import { cover } from "@/lib/shared/utils/cover";
 import { cn } from "@/lib/shared/utils/tw";
+import { Image } from "@/lib/shared/views/ui/components/image";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 export function UserHeader({
@@ -47,7 +48,7 @@ export function UserHeader({
 	return (
 		<header class="flex shrink-0 items-center gap-4">
 			{imageUrl ? (
-				<img
+				<Image
 					src={cover(imageUrl, 128)}
 					alt={name}
 					class="h-16 w-16 shrink-0 rounded-full object-cover"

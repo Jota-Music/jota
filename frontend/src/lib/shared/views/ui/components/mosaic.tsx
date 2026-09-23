@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { cover } from "@/lib/shared/utils/cover";
 import { cn } from "@/lib/shared/utils/tw";
+import { Image } from "@/lib/shared/views/ui/components/image";
 
 type Props = {
 	covers: string[];
@@ -16,7 +17,7 @@ export function Mosaic({ covers, alt = "", placeholder, size = 480 }: Props) {
 
 	if (imgs.length === 1) {
 		return (
-			<img
+			<Image
 				src={cover(imgs[0], size)}
 				alt={alt}
 				loading="lazy"
@@ -39,7 +40,7 @@ export function Mosaic({ covers, alt = "", placeholder, size = 480 }: Props) {
 			)}
 		>
 			{imgs.map((src) => (
-				<img
+				<Image
 					key={src}
 					src={cover(src, tile)}
 					alt={alt}

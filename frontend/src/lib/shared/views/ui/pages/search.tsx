@@ -16,6 +16,7 @@ import {
 	type Action,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
+import { Image } from "@/lib/shared/views/ui/components/image";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
@@ -67,7 +68,7 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 				<div class="flex flex-col gap-2">
 					<div class="relative aspect-square w-full overflow-hidden rounded-md">
 						{coverUrl ? (
-							<img
+							<Image
 								src={cover(coverUrl, 320)}
 								alt={item.name}
 								class="h-full w-full object-cover transition-opacity group-hover:opacity-80"

@@ -3,6 +3,7 @@ import type { ComponentChildren } from "preact";
 import { Link } from "wouter-preact";
 import { t } from "@/lib/shared/i18n";
 import { cover as coverImage } from "@/lib/shared/utils/cover";
+import { Image } from "@/lib/shared/views/ui/components/image";
 import { Mosaic } from "@/lib/shared/views/ui/components/mosaic";
 
 function LinkLine({ link }: { link: { to: string; label: string } }) {
@@ -75,7 +76,7 @@ export function PageHeader({
 					/>
 				</div>
 			) : cover ? (
-				<img
+				<Image
 					src={coverImage(cover, 128)}
 					alt=""
 					class="h-16 w-16 shrink-0 rounded-md object-cover"
