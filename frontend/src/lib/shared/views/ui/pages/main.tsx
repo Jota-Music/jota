@@ -1,6 +1,6 @@
-import { useSignal, useSignalEffect } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { Disc3, ListMusic, Turntable, Users } from "lucide-preact";
+import { Disc3 } from "lucide-preact";
 import { useLocation } from "wouter-preact";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import { getUserPlaylists } from "@/lib/music/app/get-user-playlists";
@@ -17,15 +17,9 @@ import { playPlaylist } from "@/lib/music/views/play";
 import { expireRemoval } from "@/lib/music/views/stores/removal";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { CreatePlaylistModal } from "@/lib/music/views/ui/playlists/create";
-import {
-	type IconType,
-	type Item,
-	Shelf,
-	YouTubeHint,
-} from "@/lib/music/views/ui/shelf";
+import { type Item, Shelf, YouTubeHint } from "@/lib/music/views/ui/shelf";
 import { FollowingShelf } from "@/lib/music/views/ui/user/following";
 import { t } from "@/lib/shared/i18n";
-import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
 import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
@@ -33,29 +27,20 @@ import { RoomsShelf } from "@/lib/sync/views/ui/rooms";
 
 type Tab = "playlists" | "following" | "rooms";
 
-const tabKey = "main_tab";
-
-function loadTab(): Tab {
-	const saved = localStorage.getItem(tabKey);
-	return saved === "following" || saved === "rooms" ? saved : "playlists";
-}
-
 export function MainPage() {
 	const queryClient = useQueryClient();
-	const [, setLocation] = useLocation();
+	const [location, setLocation] = useLocation();
 	const spotifyHandle = spotifyUser.value ?? "default";
-	const tab = useSignal<Tab>(loadTab());
 	const creating = useSignal(false);
 	const confirming = useSignal<string | null>(null);
 
-	useSignalEffect(() => {
-		localStorage.setItem(tabKey, tab.value);
-	});
-
-	const activeTab: Tab =
-		tab.value === "following" && !spotifyConnected.value
-			? "playlists"
-			: tab.value;
+	// Following covers the account's own follows (Spotify artists and YouTube
+	// channels) plus local friends, so it works without a Spotify account.
+	const tab: Tab = location.startsWith("/following")
+		? "following"
+		: location.startsWith("/rooms")
+			? "rooms"
+			: "playlists";
 
 	const spotifyQuery = useQuery({
 		queryKey: ["user-playlists", "spotify", spotifyHandle],
@@ -151,44 +136,12 @@ export function MainPage() {
 		confirming.value = null;
 	};
 
-	const tabs: { id: Tab; label: string; icon: IconType }[] = [
-		{ id: "playlists", label: "Playlists", icon: ListMusic },
-		...(spotifyConnected.value
-			? [{ id: "following" as Tab, label: "Following", icon: Users }]
-			: []),
-		{ id: "rooms", label: "Rooms", icon: Turntable },
-	];
-
 	return (
 		<DefaultLayout class="gap-6">
 			<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
-				<div class="flex shrink-0 items-center gap-2 self-start">
-					<div class="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-						{tabs.map(({ id, label, icon: Icon }) => (
-							<button
-								key={id}
-								type="button"
-								title={label}
-								aria-label={label}
-								onClick={() => {
-									tab.value = id;
-								}}
-								class={cn(
-									"flex h-10 md:h-8 cursor-pointer items-center rounded-md px-3 transition-colors",
-									activeTab === id
-										? "bg-zinc-800 text-white"
-										: "text-zinc-500 hover:text-zinc-300",
-								)}
-							>
-								<Icon size={16} />
-							</button>
-						))}
-					</div>
-				</div>
-
-				{activeTab === "following" ? (
+				{tab === "following" ? (
 					<FollowingShelf account={spotifyHandle} />
-				) : activeTab === "rooms" ? (
+				) : tab === "rooms" ? (
 					<RoomsShelf />
 				) : (
 					<Shelf

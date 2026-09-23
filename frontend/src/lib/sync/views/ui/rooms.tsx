@@ -314,75 +314,90 @@ export function RoomsShelf() {
 		"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md bg-black/70 text-zinc-300";
 
 	return (
-		<Shelf
-			items={items}
-			to={() => "/"}
-			viewKey="rooms_view"
-			onSelect={open}
-			actions={(id) => {
-				const room = rows.find((r) => r.id === id);
-				if (!room) return null;
-				const isActive = room.code === activeCode;
-				const connecting = isActive && connectingCode === room.code;
-				const connected = isActive && connectedCode === room.code;
+		<>
+			<div class="flex shrink-0 items-center">
+				<button
+					type="button"
+					onClick={() => (store.showSync.value = true)}
+					class="flex items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer"
+				>
+					<LogIn size={16} />
+					{t("sync.rooms.joinHost")}
+				</button>
+			</div>
+			<Shelf
+				items={items}
+				to={() => "/"}
+				viewKey="rooms_view"
+				onSelect={open}
+				actions={(id) => {
+					const room = rows.find((r) => r.id === id);
+					if (!room) return null;
+					const isActive = room.code === activeCode;
+					const connecting = isActive && connectingCode === room.code;
+					const connected = isActive && connectedCode === room.code;
 
-				if (connecting) {
+					if (connecting) {
+						return (
+							<span
+								title={t("sync.rooms.status.connecting")}
+								class={buttonClass}
+							>
+								<Loader size={16} class="animate-spin text-amber-400" />
+							</span>
+						);
+					}
+
 					return (
-						<span title={t("sync.rooms.status.connecting")} class={buttonClass}>
-							<Loader size={16} class="animate-spin text-amber-400" />
-						</span>
+						<>
+							{connected ? (
+								<button
+									type="button"
+									title={t("sync.rooms.leave")}
+									onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										leave();
+									}}
+									class={cn(buttonClass, "hover:text-red-300")}
+								>
+									<LogOut size={16} />
+								</button>
+							) : (
+								<button
+									type="button"
+									title={t("sync.rooms.connect")}
+									onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										join(room);
+									}}
+									class={cn(buttonClass, "hover:text-green-400")}
+								>
+									<LogIn size={16} />
+								</button>
+							)}
+							{room.id === ACTIVE_ID && (
+								<button
+									type="button"
+									title={t("sync.rooms.save")}
+									onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										persist(room);
+									}}
+									class={cn(buttonClass, "hover:text-amber-300")}
+								>
+									<BookmarkPlus size={16} />
+								</button>
+							)}
+						</>
 					);
-				}
-
-				return (
-					<>
-						{connected ? (
-							<button
-								type="button"
-								title={t("sync.rooms.leave")}
-								onClick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									leave();
-								}}
-								class={cn(buttonClass, "hover:text-red-300")}
-							>
-								<LogOut size={16} />
-							</button>
-						) : (
-							<button
-								type="button"
-								title={t("sync.rooms.connect")}
-								onClick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									join(room);
-								}}
-								class={cn(buttonClass, "hover:text-green-400")}
-							>
-								<LogIn size={16} />
-							</button>
-						)}
-						{room.id === ACTIVE_ID && (
-							<button
-								type="button"
-								title={t("sync.rooms.save")}
-								onClick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									persist(room);
-								}}
-								class={cn(buttonClass, "hover:text-amber-300")}
-							>
-								<BookmarkPlus size={16} />
-							</button>
-						)}
-					</>
-				);
-			}}
-			isLoading={rooms.isLoading}
-			emptyMessage={t("sync.rooms.empty")}
-			onRemove={onRemove}
-		/>
+				}}
+				isLoading={rooms.isLoading}
+				emptyMessage={t("sync.rooms.empty")}
+				onRemove={onRemove}
+			/>
+		</>
 	);
 }

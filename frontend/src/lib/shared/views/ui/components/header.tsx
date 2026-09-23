@@ -5,11 +5,12 @@ import {
 	ArrowLeft,
 	ArrowRight,
 	ChevronDown,
-	House,
+	ListMusic,
 	Search,
 	Settings,
 	Turntable,
 	Undo2,
+	Users,
 	X,
 } from "lucide-preact";
 import { useCallback } from "preact/hooks";
@@ -24,7 +25,7 @@ import { back, canForward, forward } from "@/lib/shared/views/stores/history";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
-import { role, showSync, status } from "@/lib/sync/views/stores";
+import { role, status } from "@/lib/sync/views/stores";
 
 type Source = "spotify" | "youtube";
 type SpotifyType = "user" | "track" | "album" | "playlist" | "artist";
@@ -128,7 +129,7 @@ export function Header() {
 			style="--wails-draggable: drag"
 			class="sticky top-0 z-40 md:z-100 border-b border-zinc-800 bg-zinc-950"
 		>
-			<div class="mx-auto flex items-center justify-between text-sm text-zinc-300 h-10 pr-4">
+			<div class="relative mx-auto flex items-center justify-between text-sm text-zinc-300 h-10 pr-4">
 				<div class="flex h-full items-center gap-1 pl-1">
 					<button
 						type="button"
@@ -162,28 +163,59 @@ export function Header() {
 					</button>
 
 					<Link
-						href="/"
+						href="/playlists"
+						title={t("nav.playlists")}
 						class={cn(
-							"flex aspect-square h-full items-center justify-center transition-colors",
-							location === "/"
-								? "text-(--dominant-color)"
-								: "text-zinc-400 hover:text-zinc-100",
+							"hidden md:flex aspect-square h-full items-center justify-center transition-colors border-t-2",
+							location === "/" || location.startsWith("/playlists")
+								? "text-(--dominant-color) border-(--dominant-color)"
+								: "text-zinc-400 hover:text-zinc-100 border-transparent",
 						)}
 					>
-						<House class="size-5 md:size-4" />
+						<ListMusic class="size-5 md:size-4" />
+					</Link>
+
+					<Link
+						href="/following"
+						title={t("nav.following")}
+						class={cn(
+							"hidden md:flex aspect-square h-full items-center justify-center transition-colors border-t-2",
+							location.startsWith("/following")
+								? "text-(--dominant-color) border-(--dominant-color)"
+								: "text-zinc-400 hover:text-zinc-100 border-transparent",
+						)}
+					>
+						<Users class="size-5 md:size-4" />
 					</Link>
 
 					<Link
 						href="/settings"
 						title={t("nav.settings")}
 						class={cn(
-							"flex aspect-square h-full items-center justify-center transition-colors",
+							"flex aspect-square h-full items-center justify-center transition-colors border-t-2",
 							location.startsWith("/settings")
-								? "text-(--dominant-color)"
-								: "text-zinc-400 hover:text-zinc-100",
+								? "text-(--dominant-color) border-(--dominant-color)"
+								: "text-zinc-400 hover:text-zinc-100 border-transparent",
 						)}
 					>
 						<Settings class="size-5 md:size-4" />
+					</Link>
+
+					<Link
+						href="/rooms"
+						title={t("nav.rooms")}
+						class={cn(
+							"hidden md:flex aspect-square h-full items-center justify-center transition-colors border-t-2",
+							!location.startsWith("/rooms")
+								? connected
+									? "text-green-400"
+									: inRoom
+										? "text-yellow-400"
+										: "text-zinc-400 hover:text-zinc-100 border-transparent"
+								: "text-(--dominant-color) border-(--dominant-color)",
+						)}
+					>
+						<Turntable class="size-5 md:size-4" />
 					</Link>
 
 					{removal.value && (
@@ -199,7 +231,7 @@ export function Header() {
 					)}
 				</div>
 
-				<div class="flex items-center gap-3">
+				<div class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2">
 					<button
 						type="button"
 						onClick={() => {
@@ -208,24 +240,6 @@ export function Header() {
 						class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
 					>
 						<Search class="size-5 md:size-4" strokeWidth={2.5} />
-					</button>
-
-					<button
-						onClick={() => (showSync.value = !showSync.value)}
-						type="button"
-						title={t("nav.rooms")}
-						class="flex size-8 items-center justify-center cursor-pointer"
-					>
-						<Turntable
-							class={cn(
-								"size-5 md:size-4",
-								connected
-									? "text-green-400"
-									: inRoom
-										? "text-yellow-400"
-										: "text-zinc-400 hover:text-zinc-100",
-							)}
-						/>
 					</button>
 				</div>
 
@@ -339,6 +353,19 @@ function SourceToggle({
 }) {
 	return (
 		<div class="flex shrink-0 items-stretch border-r border-zinc-800">
+			<button
+				type="button"
+				title={t("search.inYouTube")}
+				onClick={() => onSelect("youtube")}
+				class={cn(
+					"flex w-11 items-center justify-center transition-colors cursor-pointer md:w-10",
+					source === "youtube"
+						? "bg-zinc-800 text-[#FF0033]"
+						: "text-zinc-500 hover:text-zinc-300",
+				)}
+			>
+				<YoutubeIcon class="size-4" />
+			</button>
 			{showSpotify && (
 				<button
 					type="button"
@@ -354,19 +381,6 @@ function SourceToggle({
 					<SpotifyIcon size={16} />
 				</button>
 			)}
-			<button
-				type="button"
-				title={t("search.inYouTube")}
-				onClick={() => onSelect("youtube")}
-				class={cn(
-					"flex w-11 items-center justify-center transition-colors cursor-pointer md:w-10",
-					source === "youtube"
-						? "bg-zinc-800 text-[#FF0033]"
-						: "text-zinc-500 hover:text-zinc-300",
-				)}
-			>
-				<YoutubeIcon class="size-4" />
-			</button>
 		</div>
 	);
 }
@@ -441,5 +455,67 @@ function SearchInput({
 				</button>
 			)}
 		</div>
+	);
+}
+
+export function MobileBottomNav() {
+	const [location] = useLocation();
+	const inRoom = role.value !== "off";
+	const connected = status.value === "open";
+
+	const items = [
+		{
+			href: "/playlists",
+			active: location.startsWith("/playlists"),
+			icon: ListMusic,
+			label: t("nav.playlists"),
+		},
+		{
+			href: "/following",
+			active: location.startsWith("/following"),
+			icon: Users,
+			label: t("nav.following"),
+		},
+		{
+			href: "/rooms",
+			active: location.startsWith("/rooms"),
+			icon: Turntable,
+			label: t("nav.rooms"),
+		},
+	];
+
+	return (
+		<nav
+			aria-label={t("nav.main")}
+			class="fixed inset-x-0 bottom-0 z-60 flex h-14 items-stretch justify-around bg-stone-950 pb-[env(safe-area-inset-bottom)] md:hidden"
+		>
+			{items.map(({ href, active, icon: Icon, label }) => (
+				<Link
+					key={href}
+					href={href}
+					title={label}
+					aria-label={label}
+					class={cn(
+						"flex w-16 items-center justify-center border-b-2",
+						active ? "border-(--dominant-color)" : "border-transparent",
+					)}
+				>
+					<Icon
+						size={22}
+						class={
+							href === "/rooms" && !active
+								? connected
+									? "text-green-400"
+									: inRoom
+										? "text-yellow-400"
+										: "text-zinc-400"
+								: active
+									? "text-(--dominant-color)"
+									: "text-zinc-400"
+						}
+					/>
+				</Link>
+			))}
+		</nav>
 	);
 }

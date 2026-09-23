@@ -40,13 +40,16 @@ export function ContextMenu() {
 		const el = ref.current;
 		if (!el) return;
 
+		// ponytail: mobile bottom bar is fixed h-14, so the menu never fits
+		// below it; 56px constant instead of measuring the bar.
+		const bar = window.matchMedia("(min-width: 768px)").matches ? 0 : 56;
 		const x = Math.max(
 			GAP,
 			Math.min(menu.x, window.innerWidth - el.offsetWidth - GAP),
 		);
 		const y = Math.max(
 			GAP,
-			Math.min(menu.y, window.innerHeight - el.offsetHeight - GAP),
+			Math.min(menu.y, window.innerHeight - bar - el.offsetHeight - GAP),
 		);
 		el.style.left = `${x}px`;
 		el.style.top = `${y}px`;

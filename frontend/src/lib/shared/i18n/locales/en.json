@@ -20,6 +20,9 @@
 	"nav": {
 		"settings": "Settings",
 		"rooms": "Rooms",
+		"playlists": "Playlists",
+		"following": "Following",
+		"main": "Main",
 		"back": "Back",
 		"forward": "Forward"
 	},
@@ -282,6 +285,7 @@
 	"sync": {
 		"rooms": {
 			"empty": "No saved rooms. Connect to a room and save it from the Rooms panel.",
+			"joinHost": "Join or host a room",
 			"leave": "Leave room",
 			"connect": "Connect",
 			"save": "Save room",

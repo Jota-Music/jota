@@ -11,7 +11,10 @@ import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
 import Queue from "@/lib/music/views/ui/queue";
 import YoutubeEditor from "@/lib/music/views/ui/track/youtube-editor";
 import { cn } from "@/lib/shared/utils/tw";
-import { Header } from "@/lib/shared/views/ui/components/header";
+import {
+	Header,
+	MobileBottomNav,
+} from "@/lib/shared/views/ui/components/header";
 import { OverlayHost } from "@/lib/shared/views/ui/components/modal";
 import { ErrorBar } from "@/lib/shared/views/ui/error-bar";
 import { SyncPanel } from "@/lib/sync/views/ui/session";
@@ -74,6 +77,7 @@ export function AppShell({
 					<Welcome />
 				</div>
 
+				<MobileBottomNav />
 				<ErrorBar />
 			</div>
 		</OverlayHost.Provider>

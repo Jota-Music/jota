@@ -149,6 +149,9 @@ function Router() {
 						</RequireSpotify>
 					</Route>
 					<Route path="/youtube/user/:channelId" component={UserPage} />
+					<Route path="/playlists" component={MainPage} />
+					<Route path="/following" component={MainPage} />
+					<Route path="/rooms" component={MainPage} />
 					<Route path="/" component={MainPage} />
 					<Route component={NotFoundPage} />
 				</Switch>

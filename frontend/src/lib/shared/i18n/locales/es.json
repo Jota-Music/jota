@@ -20,6 +20,9 @@
 	"nav": {
 		"settings": "Ajustes",
 		"rooms": "Salas",
+		"playlists": "Playlists",
+		"following": "Siguiendo",
+		"main": "Principal",
 		"back": "Atrás",
 		"forward": "Adelante"
 	},
@@ -282,6 +285,7 @@
 	"sync": {
 		"rooms": {
 			"empty": "No hay salas guardadas. Conéctate a una sala y guárdala desde el panel de Salas.",
+			"joinHost": "Unirse o crear sala",
 			"leave": "Salir de la sala",
 			"connect": "Conectar",
 			"save": "Guardar sala",

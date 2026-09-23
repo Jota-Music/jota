@@ -190,8 +190,9 @@ export default function TrackActions({
 		if (!el || !anchor.value) return;
 
 		const width = el.offsetWidth;
+		const bar = window.matchMedia("(min-width: 768px)").matches ? 0 : 56; // ponytail: fixed bottom bar h-14
 		const below = anchor.value.bottom + GAP;
-		const fits = below + el.offsetHeight <= window.innerHeight - GAP;
+		const fits = below + el.offsetHeight <= window.innerHeight - GAP - bar;
 		el.style.left = `${anchor.value.right - width}px`;
 		el.style.top = `${fits ? below : Math.max(GAP, anchor.value.top - el.offsetHeight - GAP)}px`;
 		el.querySelector("button")?.focus();
