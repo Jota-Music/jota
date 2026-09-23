@@ -133,7 +133,7 @@ export function ArtistPage() {
 					}
 				/>
 
-				<div class="flex flex-wrap items-center gap-2 shrink-0">
+				<div class="grid shrink-0 grid-cols-2 gap-2 md:grid-cols-4">
 					{tabs.map((tab) =>
 						tab === "tracks" ? (
 							<button
@@ -143,7 +143,7 @@ export function ArtistPage() {
 									view.value = "tracks";
 								}}
 								class={cn(
-									"flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm transition-colors",
+									"flex h-9 w-full cursor-pointer items-center justify-start gap-2 rounded-md border px-3 text-sm transition-colors",
 									activeTab === "tracks"
 										? "border-zinc-600 bg-zinc-900 text-white"
 										: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white",
@@ -160,7 +160,7 @@ export function ArtistPage() {
 									view.value = tab;
 								}}
 								class={cn(
-									"flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm transition-colors",
+									"flex h-9 w-full cursor-pointer items-center justify-start gap-2 rounded-md border px-3 text-sm transition-colors",
 									activeTab === tab
 										? "border-zinc-600 bg-zinc-900 text-white"
 										: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white",
@@ -175,11 +175,13 @@ export function ArtistPage() {
 						),
 					)}
 					{discoLoading && (
-						<Loader
-							size={16}
-							class="animate-spin text-zinc-500"
-							aria-label={t("pages.artist.loadingDiscography")}
-						/>
+						<div class="flex items-center justify-start">
+							<Loader
+								size={16}
+								class="animate-spin text-zinc-500"
+								aria-label={t("pages.artist.loadingDiscography")}
+							/>
+						</div>
 					)}
 				</div>
 
