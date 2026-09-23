@@ -130,12 +130,23 @@ controlled by org policy (dashboard/MDM), not `warp-cli`.
 
 ## Disclaimer
 
-Jota interfaces with Spotify's public OAuth API and YouTube's undocumented
-innertube API for audio. It does not bypass Spotify's access controls; YouTube
-usage is not endorsed by Google and may violate their Terms of Service — you
-are responsible for complying with applicable laws and platform policies. No
-content is distributed, cached or monetized: everything is fetched at runtime
-and belongs to its respective rights holders.
+Jota is an independent, unofficial client. It is not affiliated with,
+endorsed or sponsored by Spotify AB, Google LLC or any music label; the
+names "Spotify" and "YouTube" are used solely to describe interoperability
+and remain the property of their respective owners.
+
+Jota signs into Spotify through the platform's OAuth flow, then reads
+metadata over its private Connect protocol and plays audio through
+YouTube's undocumented client API. It does not bypass Spotify's access
+controls or play its audio streams; it never stores, redistributes or
+monetizes content — everything is fetched at runtime from the user's own
+session and streamed audio belongs to its rights holders.
+
+By using Jota you are responsible for complying with the terms of service
+and applicable laws of the platforms you reach through it. Spotify and
+Google may restrict, modify or revoke access to their services at any
+time; Jota provides no guarantee that any feature will keep working and
+is provided as-is under the GPL-3.0 license.
 
 ## License
 
