@@ -6,6 +6,7 @@ import {
 	type LucideIcon,
 	Pause,
 	Play,
+	Radio,
 	Square,
 	SquareCheck,
 	SquarePlus,
@@ -13,6 +14,8 @@ import {
 } from "lucide-preact";
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef } from "preact/hooks";
+import { useLocation } from "wouter-preact";
+import { playlistSource } from "@/lib/music/app/playlist-source";
 import type { Song } from "@/lib/music/model";
 import { currentSong, isPlaying } from "@/lib/music/views/stores/audio";
 import { enqueueMany, playList } from "@/lib/music/views/stores/player";
@@ -44,6 +47,7 @@ type Props = {
 	onToggleSelect?: (song: Song) => void;
 	onSelectAll?: (songs: Song[]) => void;
 	onDone?: () => void;
+	navigate?: (to: string) => void;
 };
 
 const GAP = 6;
@@ -57,6 +61,7 @@ export function buildActions({
 	onToggleSelect,
 	onSelectAll,
 	onDone,
+	navigate,
 }: Props): { actions: Action[]; count: number } {
 	const batch =
 		selection && selectedSongs.value.length > 1 && songs.length === 1;
@@ -127,6 +132,16 @@ export function buildActions({
 		});
 	}
 	if (single) {
+		if (playlistSource(single.id) === "spotify" && navigate) {
+			actions.push({
+				icon: Radio,
+				label: t("music.radio.go"),
+				run: () => {
+					navigate(`/radio/${single.id}`);
+					done();
+				},
+			});
+		}
 		actions.push({
 			icon: YoutubeMenuIcon,
 			label: single.youtubeId
@@ -167,6 +182,7 @@ export default function TrackActions({
 	const anchor = useSignal<DOMRect | null>(null);
 	const button = useRef<HTMLButtonElement>(null);
 	const menu = useRef<HTMLDivElement>(null);
+	const [, navigate] = useLocation();
 
 	const { actions, count } = buildActions({
 		songs,
@@ -177,6 +193,7 @@ export default function TrackActions({
 		onToggleSelect,
 		onSelectAll,
 		onDone,
+		navigate,
 	});
 
 	const close = () => {

@@ -12,6 +12,12 @@ import (
 )
 
 func (s *SpotifyService) GetFullPlaylist(playlistID string) (music.Playlist, error) {
+	// Radio is a synthetic context, not a playlist: never cached, recomputed on
+	// every visit.
+	if strings.HasPrefix(playlistID, URIRadioPrefix) || strings.HasPrefix(playlistID, URIStationPrefix) {
+		return s.GetSongRadio(playlistID)
+	}
+
 	uri := normalizeID(playlistID, "playlist")
 
 	// Liked Songs and other user contexts aren't playlists: no revision to

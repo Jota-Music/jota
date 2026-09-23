@@ -2,6 +2,7 @@ import { computed, signal } from "@preact/signals";
 import { GripVertical, TriangleAlert } from "lucide-preact";
 import { memo } from "preact/compat";
 import { useRef } from "preact/hooks";
+import { useLocation } from "wouter-preact";
 import type { Song } from "@/lib/music/model";
 import { coarse, rowSelect } from "@/lib/music/views/hooks/row-select";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
@@ -76,6 +77,7 @@ function PlaylistRow({
 }) {
 	const isCurrent = song.id === currentId.value;
 	const broken = song.broken === true;
+	const [, navigate] = useLocation();
 
 	const { onClick } = rowSelect({
 		song,
@@ -101,6 +103,7 @@ function PlaylistRow({
 					onPlay: () => void playFromQueueSelection(songs, song, sourceId),
 					onRemove,
 					onToggleSelect: toggleSelection,
+					navigate,
 				});
 				openContextMenu(actions, e);
 			}}

@@ -29,6 +29,11 @@ const AlbumPage = lazy(() =>
 		default: m.AlbumPage,
 	})),
 );
+const RadioPage = lazy(() =>
+	import("@/lib/shared/views/ui/pages/radio").then((m) => ({
+		default: m.RadioPage,
+	})),
+);
 const YouTubeSearchPage = lazy(() =>
 	import("@/lib/shared/views/ui/pages/youtube-search").then((m) => ({
 		default: m.YouTubeSearchPage,
@@ -134,6 +139,11 @@ function Router() {
 					<Route path="/album/:id">
 						<RequireSpotify>
 							<AlbumPage />
+						</RequireSpotify>
+					</Route>
+					<Route path="/radio/:id">
+						<RequireSpotify>
+							<RadioPage />
 						</RequireSpotify>
 					</Route>
 					<Route path="/search/youtube/:query" component={YouTubeSearchPage} />

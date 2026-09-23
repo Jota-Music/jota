@@ -6,6 +6,8 @@ const (
 	URIArtistPrefix   = "spotify:artist:"
 	URIUserPrefix     = "spotify:user:"
 	URITrackPrefix    = "spotify:track:"
+	URIRadioPrefix    = "spotify:radio:track:"
+	URIStationPrefix  = "spotify:station:track:"
 	URILocalPrefix    = "spotify:local:"
 	URIMosaicPrefix   = "spotify:mosaic:"
 

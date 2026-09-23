@@ -174,6 +174,9 @@
 		"playAll": "Reproducir todo",
 		"play": "Reproducir",
 		"pause": "Pausar",
+		"radio": {
+			"go": "Ir a radio"
+		},
 		"trackCount": {
 			"one": "{count} canción",
 			"other": "{count} canciones"
