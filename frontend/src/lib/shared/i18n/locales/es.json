@@ -260,7 +260,14 @@
 			"unmute": "Activar sonido"
 		},
 		"following": {
-			"empty": "Aún no sigues a nadie. Sigue un perfil de Spotify o un canal de YouTube para verlos aquí."
+			"empty": "Aún no sigues a nadie. Sigue un perfil de Spotify o un canal de YouTube para verlos aquí.",
+			"hint": {
+				"title": "Aún no sigues a nadie",
+				"body": "Sigue un perfil de Spotify o un canal de YouTube y aparecerá aquí.",
+				"step1": "En la barra de búsqueda de arriba, busca un artista, perfil o canal.",
+				"step2": "Abre el perfil o canal y toca el corazón para seguirlo.",
+				"step3": "Los perfiles de Spotify y canales de YouTube que sigas aparecerán en esta página."
+			}
 		},
 		"custom": {
 			"tab": "Mis playlists",
@@ -280,6 +287,15 @@
 			"deselectAll": "Deseleccionar todo",
 			"noPlaylists": "Aún no hay playlists. Crea una abajo.",
 			"undo": "Deshacer"
+		},
+		"local": {
+			"hint": {
+				"title": "Aún no hay playlists locales",
+				"body": "Crea una playlist local para reunir canciones guardadas en este dispositivo.",
+				"step1": "Toca el botón + en la esquina superior de tus playlists.",
+				"step2": "Ponle nombre y aparecerá en esta lista.",
+				"step3": "Ábrela y añade canciones de cualquier fuente."
+			}
 		}
 	},
 	"sync": {

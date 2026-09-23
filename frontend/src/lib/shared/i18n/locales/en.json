@@ -260,7 +260,14 @@
 			"unmute": "Unmute"
 		},
 		"following": {
-			"empty": "Nothing here yet. Follow a Spotify profile or a YouTube channel to see it in this list."
+			"empty": "Nothing here yet. Follow a Spotify profile or a YouTube channel to see it in this list.",
+			"hint": {
+				"title": "Nothing to see yet",
+				"body": "Follow a Spotify profile or a YouTube channel and it will show up here.",
+				"step1": "In the search bar at the top, search an artist, profile or channel.",
+				"step2": "Open the profile or channel and tap the heart to follow it.",
+				"step3": "Spotify profiles and YouTube channels you follow appear on this page."
+			}
 		},
 		"custom": {
 			"tab": "My playlists",
@@ -280,6 +287,15 @@
 			"deselectAll": "Deselect all",
 			"noPlaylists": "No playlists yet. Create one below.",
 			"undo": "Undo"
+		},
+		"local": {
+			"hint": {
+				"title": "No local playlists yet",
+				"body": "Create a local playlist to collect songs that live on this device.",
+				"step1": "Tap the + button in the top corner of your playlists.",
+				"step2": "Name it and it appears in this list.",
+				"step3": "Open it and add songs from any source."
+			}
 		}
 	},
 	"sync": {

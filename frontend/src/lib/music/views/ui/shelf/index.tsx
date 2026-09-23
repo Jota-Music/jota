@@ -13,11 +13,12 @@ import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { Compact } from "./compact";
 import { Controls } from "./controls";
 import { Grid } from "./grid";
+import { LocalHint } from "./hint";
 import { useReorder } from "./hooks/use-reorder";
 import { defaultViewKey, useView } from "./hooks/use-view";
 import type { Item, Props } from "./types";
 
-export { YouTubeHint } from "./hint";
+export { FollowingHint, LocalHint, YouTubeHint } from "./hint";
 export type { IconType, Item, Source } from "./types";
 
 export function Shelf({
@@ -159,7 +160,7 @@ export function Shelf({
 									) : sourceFilter === "spotify" ? (
 										t("music.shelf.noSpotify")
 									) : sourceFilter === "local" ? (
-										t("music.custom.empty")
+										<LocalHint />
 									) : (
 										t("music.shelf.empty")
 									)}

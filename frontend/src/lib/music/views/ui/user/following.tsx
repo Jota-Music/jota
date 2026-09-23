@@ -5,13 +5,13 @@ import getFollowing from "@/lib/music/app/get-following";
 import getFriends from "@/lib/music/app/get-friends";
 import getUserProfile from "@/lib/music/app/get-user-profile";
 import {
+	FollowingHint,
 	type IconType,
 	type Item,
 	Shelf,
 	type Source,
 } from "@/lib/music/views/ui/shelf";
 import { useFollows } from "@/lib/music/views/ui/user/follow";
-import { t } from "@/lib/shared/i18n";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 type Entry = {
@@ -161,7 +161,7 @@ export function FollowingShelf({ account }: { account: string }) {
 			to={link}
 			viewKey="following_view"
 			isLoading={followedLoading || friends.isLoading || following.isLoading}
-			emptyMessage={t("music.following.empty")}
+			emptyMessage={<FollowingHint />}
 			showLocal={false}
 			onRemove={(id) => {
 				if (id.startsWith("youtube:")) {
