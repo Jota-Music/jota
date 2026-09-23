@@ -123,16 +123,19 @@ function Progress({
 					width: `${percent}%`,
 				}}
 			/>
-
-			<div
-				class={cn(
-					"absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-current transition-transform",
-					dragging.value ? "scale-110 cursor-grabbing" : "cursor-grab",
+			<div class="absolute inset-y-0 left-1.5 right-1.5">
+				{percent > 0 && (
+					<div
+						class={cn(
+							"absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-current transition-transform",
+							dragging.value ? "scale-110 cursor-grabbing" : "cursor-grab",
+						)}
+						style={{
+							left: `${percent}%`,
+						}}
+					/>
 				)}
-				style={{
-					left: `${percent}%`,
-				}}
-			/>
+			</div>
 		</div>
 	);
 }
