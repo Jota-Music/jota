@@ -13,7 +13,6 @@ import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { Compact } from "./compact";
 import { Controls } from "./controls";
 import { Grid } from "./grid";
-import { YouTubeHint } from "./hint";
 import { useReorder } from "./hooks/use-reorder";
 import { defaultViewKey, useView } from "./hooks/use-view";
 import type { Item, Props } from "./types";
@@ -162,7 +161,7 @@ export function Shelf({
 									) : sourceFilter === "local" ? (
 										t("music.custom.empty")
 									) : (
-										<YouTubeHint />
+										t("music.shelf.empty")
 									)}
 								</div>
 							) : variant === "grid" ? (
