@@ -162,7 +162,7 @@ export function Shelf({
 									) : sourceFilter === "local" ? (
 										<LocalHint />
 									) : (
-										t("music.shelf.empty")
+										emptyMessage
 									)}
 								</div>
 							) : variant === "grid" ? (
