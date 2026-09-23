@@ -218,6 +218,29 @@ public class MainActivity extends AppCompatActivity {
                         return serveCaptureFile(path.substring("/__capture__/".length()), request);
                     }
 
+                    // Cover proxy: /__img needs its query string (w, u) to reach
+                    // the Go middleware, but WebViewAssetLoader strips query
+                    // params. Serve it from the Go handler like /wails/, keeping
+                    // the query. The Go side always answers with a JPEG.
+                    if (path != null && path.startsWith("/__img")) {
+                        String fullPath = path;
+                        String query = request.getUrl().getQuery();
+                        if (query != null && !query.isEmpty()) {
+                            fullPath = path + "?" + query;
+                        }
+                        byte[] data = bridge.serveAsset(fullPath, request.getMethod(), "{}");
+                        if (data != null && data.length > 0) {
+                            java.util.Map<String, String> headers = new java.util.HashMap<>();
+                            headers.put("Access-Control-Allow-Origin", "*");
+                            headers.put("Cache-Control", "public, max-age=31536000, immutable");
+                            return new WebResourceResponse("image/jpeg", null, 200, "OK",
+                                    headers, new java.io.ByteArrayInputStream(data));
+                        }
+                        return new WebResourceResponse("image/jpeg", null, 500, "Error",
+                                new java.util.HashMap<>(),
+                                new java.io.ByteArrayInputStream(new byte[0]));
+                    }
+
                     // For regular assets, use the asset loader
                     return assetLoader.shouldInterceptRequest(request.getUrl());
                 }
