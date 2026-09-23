@@ -165,6 +165,7 @@ if (typeof window !== "undefined") {
 		flushQueue();
 	};
 	window.addEventListener("beforeunload", flush);
+	window.addEventListener("pagehide", flush);
 	document.addEventListener("visibilitychange", () => {
 		if (document.hidden) flush();
 	});
