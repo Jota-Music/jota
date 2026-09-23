@@ -18,6 +18,37 @@ const PLAYING_STORAGE_KEY = "music-playing";
 const POSITION_STORAGE_KEY = "music-position";
 const POSITION_SONG_KEY = "music-position-song";
 
+// Volume mapping: from 30% up the bar behaves like a plain linear volume (the
+// feel users are used to), so lowering is responsive and needs no precision.
+// Below 30% a quadratic taper drops toward true silence, giving the low end a
+// real quiet floor instead of the old "still loud" minimum.
+const QUIET_START = 0.3;
+const QUIET_LEVEL = 0.2;
+
+function gainFor(value: number): number {
+	if (value >= QUIET_START) {
+		return (
+			QUIET_LEVEL +
+			((value - QUIET_START) / (1 - QUIET_START)) * (1 - QUIET_LEVEL)
+		);
+	}
+	const t = value / QUIET_START;
+	return t * t * QUIET_LEVEL;
+}
+
+// A track's source loudness relative to YouTube's reference level: boost quiet
+// uploads, tame loud ones, skip videos YouTube never measured.
+const LOUDNESS_GAIN_DB = 18;
+
+function trackGainFor(loudnessDb: number | null | undefined): number {
+	if (loudnessDb == null) return 1;
+	const db = Math.max(
+		-LOUDNESS_GAIN_DB,
+		Math.min(LOUDNESS_GAIN_DB, -loudnessDb),
+	);
+	return 10 ** (db / 20);
+}
+
 function parseStoredVolume(raw: string | null): number {
 	if (raw === null) return 1;
 	const parsed = Number(raw);
@@ -36,6 +67,8 @@ function parseStoredMuted(raw: string | null): boolean {
 let audio: HTMLAudioElement | null = null;
 let loadedSongId: string | null = null;
 let knownDuration = 0;
+// Per-track loudness normalization for the song currently in the element.
+let trackGain = 1;
 let loadToken = 0;
 // Identifies the latest play() call. A superseded call (a newer one started)
 // must bail out without touching the shared element or reporting a failure.
@@ -277,10 +310,16 @@ async function loadSongIntoPlayer(
 	currentSong.value = song;
 	media.update(song, isPlaying.value);
 
-	let data: { url: string; youtube: string; duration: number };
+	let data: {
+		url: string;
+		youtube: string;
+		duration: number;
+		loudnessDb: number | null;
+	};
 	try {
 		data = await AudioCache.get(song);
 		knownDuration = data.duration > 0 ? data.duration : 0;
+		trackGain = trackGainFor(data.loudnessDb);
 		if (data.youtube) setYoutube(song, data.youtube);
 	} catch (err) {
 		if (token !== loadToken) return "aborted";
@@ -305,7 +344,7 @@ async function loadSongIntoPlayer(
 	audio = instance;
 	loadedSongId = song.id;
 
-	instance.volume = volume.value;
+	applyVolume(instance);
 	instance.muted = muted.value;
 	instance.currentTime = 0;
 
@@ -715,8 +754,13 @@ export function seekTo(time: number, timeoutMs = 2000): Promise<void> {
 export function setVolume(value: number) {
 	const v = Math.max(0, Math.min(1, value));
 	volume.value = v;
-	if (audio) audio.volume = v;
+	applyVolume();
 	storage.set(VOLUME_STORAGE_KEY, String(v));
+}
+
+function applyVolume(a: HTMLAudioElement | null = audio) {
+	if (!a) return;
+	a.volume = Math.min(1, gainFor(volume.value) * trackGain);
 }
 
 function setMuted(value: boolean) {
@@ -836,7 +880,7 @@ if (typeof window !== "undefined") {
 		if (e.key === VOLUME_STORAGE_KEY) {
 			const v = parseStoredVolume(e.newValue);
 			volume.value = v;
-			if (audio) audio.volume = v;
+			applyVolume();
 		} else if (e.key === MUTED_STORAGE_KEY) {
 			muted.value = parseStoredMuted(e.newValue);
 			if (audio) audio.muted = muted.value;
