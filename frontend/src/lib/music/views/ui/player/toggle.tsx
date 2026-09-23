@@ -7,15 +7,25 @@ export function Toggle(props: {
 	onClick: () => void;
 	iconClass?: string;
 	class?: string;
+	disabled?: boolean;
 }) {
-	const { loading, playing, onClick, iconClass, class: className } = props;
+	const {
+		loading,
+		playing,
+		onClick,
+		iconClass,
+		class: className,
+		disabled = false,
+	} = props;
 	const icon = cn("fill-current text-(--binary-color)", iconClass);
 	return (
 		<button
 			type="button"
 			onClick={onClick}
+			disabled={disabled}
 			class={cn(
-				"p-3 rounded-full transition-all drop-shadow-lg drop-shadow-black cursor-pointer",
+				"p-3 rounded-full transition-all drop-shadow-lg drop-shadow-black",
+				disabled ? "cursor-not-allowed" : "cursor-pointer",
 				className,
 			)}
 		>

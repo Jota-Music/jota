@@ -12,6 +12,7 @@ type CircularProgressProps = {
 	onChange?: (value: number) => void;
 	onCommit?: (value: number) => void;
 	class?: string;
+	disabled?: boolean;
 } & PropsWithChildren;
 
 function CircularProgress({
@@ -21,6 +22,7 @@ function CircularProgress({
 	onChange,
 	onCommit,
 	class: className,
+	disabled = false,
 	children,
 }: CircularProgressProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -128,6 +130,7 @@ function CircularProgress({
 	}, []);
 
 	function onPointerDown(e: PointerEvent) {
+		if (disabled) return;
 		if (!isOnRing(e.clientX, e.clientY)) return;
 
 		dragging.value = true;
@@ -139,16 +142,14 @@ function CircularProgress({
 	}
 
 	function onHoverMove(e: PointerEvent) {
+		if (disabled) return;
 		if (dragging.value) return;
 		onRing.value = isOnRing(e.clientX, e.clientY);
 	}
 
 	useSignalEffect(() => {
-		document.body.style.cursor = dragging.value
-			? "grabbing"
-			: onRing.value
-				? "grab"
-				: "";
+		const cursor = dragging.value ? "grabbing" : onRing.value ? "grab" : "";
+		document.body.style.cursor = disabled ? "" : cursor;
 		return () => {
 			document.body.style.cursor = "";
 		};
@@ -159,10 +160,12 @@ function CircularProgress({
 			ref={containerRef}
 			class={cn(
 				"relative inline-flex aspect-square shrink-0 select-none touch-none",
+				disabled && "cursor-default",
 				className,
 			)}
 			role="slider"
-			tabIndex={0}
+			tabIndex={disabled ? -1 : 0}
+			aria-disabled={disabled}
 			aria-valuenow={value}
 			aria-valuemin={min}
 			aria-valuemax={max}
@@ -183,7 +186,10 @@ function CircularProgress({
 				width="100%"
 				height="100%"
 				viewBox={`0 0 ${safeSize} ${safeSize}`}
-				class="relative z-10 pointer-events-none"
+				class={cn(
+					"relative z-10 pointer-events-none",
+					disabled && "brightness-75 saturate-50",
+				)}
 			>
 				<title>Circular Progress</title>
 

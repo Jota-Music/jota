@@ -11,6 +11,7 @@ type ProgressProps = {
 	onChange?: (value: number) => void;
 	onCommit?: (value: number) => void;
 	class?: string;
+	disabled?: boolean;
 };
 
 function Progress({
@@ -20,6 +21,7 @@ function Progress({
 	onChange,
 	onCommit,
 	class: className,
+	disabled = false,
 }: ProgressProps) {
 	const trackRef = useRef<HTMLDivElement>(null);
 	const dragging = useSignal(false);
@@ -69,11 +71,13 @@ function Progress({
 	}, []);
 
 	function start(e: MouseEvent | TouchEvent) {
+		if (disabled) return;
 		dragging.value = true;
 		preview(clientAxis(e, "x"));
 	}
 
 	function onWheel(e: WheelEvent) {
+		if (disabled) return;
 		e.preventDefault();
 		const step = (max - min) * 0.05;
 		const next = value + (e.deltaY < 0 ? step : -step);
@@ -99,11 +103,15 @@ function Progress({
 			onTouchStart={start}
 			onWheel={onWheel}
 			class={cn(
-				"relative h-2 w-full cursor-pointer select-none rounded-full bg-neutral-300 touch-none",
+				"relative h-2 w-full select-none rounded-full bg-neutral-300 touch-none",
+				disabled
+					? "cursor-default brightness-75 saturate-50"
+					: "cursor-pointer",
 				className,
 			)}
 			role="slider"
-			tabIndex={0}
+			tabIndex={disabled ? -1 : 0}
+			aria-disabled={disabled}
 			aria-valuenow={value}
 			aria-valuemin={min}
 			aria-valuemax={max}

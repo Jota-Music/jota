@@ -235,6 +235,7 @@
 			"repeatAll": "Repeat all",
 			"repeatOne": "Repeat one",
 			"noRepeat": "No repeat",
+			"nothingPlaying": "Nothing is playing",
 			"repeatMode": "Repeat mode",
 			"seek": "Seek",
 			"queue": "Playback queue",
