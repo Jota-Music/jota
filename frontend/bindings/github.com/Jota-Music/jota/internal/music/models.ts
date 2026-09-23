@@ -41,6 +41,12 @@ export interface Audio {
     "expireAt": number;
     "videoId": string;
     "clientName"?: string;
+
+    /**
+     * LoudnessDb is the source loudness YouTube measured (dB relative to its
+     * reference level); nil when the video has not been measured.
+     */
+    "loudnessDb"?: number | null;
 }
 
 export interface ChannelInfo {

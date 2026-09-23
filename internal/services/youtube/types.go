@@ -28,6 +28,11 @@ type playerResponse struct {
 		Status string `json:"status"`
 		Reason string `json:"reason"`
 	} `json:"playabilityStatus"`
+	PlayerConfig struct {
+		AudioConfig struct {
+			LoudnessDb json.RawMessage `json:"loudnessDb"`
+		} `json:"audioConfig"`
+	} `json:"playerConfig"`
 }
 
 type compactVideoRenderer struct {
