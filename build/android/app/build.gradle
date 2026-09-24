@@ -2,6 +2,18 @@ plugins {
     id 'com.android.application'
 }
 
+// Encodes x.y.z into a monotonic versionCode (x*10000 + y*100 + z) so each
+// release build is greater than or equal to the previous one. Android requires
+// the installed versionCode <= new versionCode to accept an in-app update.
+static int parseVersionCode(String v) {
+    def parts = v.tokenize(".")
+    def major = parts.size() > 0 ? (parts[0].replaceAll(/[^0-9]/, "") ?: "0").toInteger() : 0
+    def minor = parts.size() > 1 ? (parts[1].replaceAll(/[^0-9]/, "") ?: "0").toInteger() : 0
+    def patch = parts.size() > 2 ? (parts[2].replaceAll(/[^0-9]/, "") ?: "0").toInteger() : 0
+    def code = major * 10000 + minor * 100 + patch
+    return code < 1 ? 1 : code
+}
+
 android {
     namespace 'com.wails.app'
     compileSdk 35
@@ -14,8 +26,10 @@ android {
         applicationId "com.jotamusic.jota"
         minSdk 21
         targetSdk 35
-        versionCode 1
-        versionName "0.0.0"
+        // Version mirrors the release VERSION (x.y.z) when provided via
+        // -Pversion=..., so Android accepts in-app updates over prior builds.
+        versionCode parseVersionCode(project.findProperty("version") ?: "0.0.0")
+        versionName project.findProperty("version") ?: "0.0.0"
 
         // Configure supported ABIs
         ndk {

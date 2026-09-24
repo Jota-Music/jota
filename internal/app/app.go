@@ -141,10 +141,12 @@ func (a *App) InstallUpdate() error {
 	}); err != nil {
 		return err
 	}
-	go func() {
-		time.Sleep(500 * time.Millisecond)
-		application.Get().Quit()
-	}()
+	if relaunchAfterUpdate() {
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			application.Get().Quit()
+		}()
+	}
 	return nil
 }
 

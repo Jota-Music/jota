@@ -1,13 +1,14 @@
 package update
 
-// Channel is how this build reached the user. Only AppImage, MacOS and Windows
-// can replace themselves; every other channel falls back to a link.
+// Channel is how this build reached the user. Only AppImage, MacOS, Windows
+// and Android can replace themselves; every other channel falls back to a link.
 type Channel string
 
 const (
 	AppImage Channel = "appimage"
 	MacOS    Channel = "macos"
 	Windows  Channel = "windows"
+	Android  Channel = "android"
 	External Channel = "external"
 )
 

@@ -38,6 +38,8 @@ func channel() Channel {
 		return MacOS
 	case "windows":
 		return Windows
+	case "android":
+		return Android
 	default:
 		return External
 	}
@@ -126,6 +128,8 @@ func matches(ch Channel, name string) bool {
 	case Windows:
 		return strings.HasSuffix(n, ".exe") && strings.Contains(n, "windows") &&
 			!strings.Contains(n, "installer") && containsArch(n, runtime.GOARCH)
+	case Android:
+		return n == "jota.apk"
 	}
 	return false
 }

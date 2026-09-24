@@ -85,6 +85,17 @@ public class WailsJSBridge {
     }
 
     /**
+     * Hand the downloaded release APK to the system package installer.
+     * Called from JavaScript: wails.installApk()
+     * The APK must already be staged at "<filesDir>/updates/jota.apk" (the
+     * update pipeline moves it there after download + checksum verification).
+     */
+    @JavascriptInterface
+    public void installApk() {
+        bridge.installApk();
+    }
+
+    /**
      * Log a message from JavaScript to Android's logcat
      * Called from JavaScript: wails.log(level, message)
      *

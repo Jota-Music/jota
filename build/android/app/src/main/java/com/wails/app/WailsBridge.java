@@ -60,6 +60,7 @@ import androidx.security.crypto.MasterKey;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.Locale;
 import java.util.concurrent.Executor;
 
@@ -483,6 +484,45 @@ public class WailsBridge {
                 activity.startActivity(chooser);
             } catch (Exception e) {
                 Log.e(TAG, "share failed", e);
+            }
+        });
+    }
+
+    /**
+     * Hand the staged release APK to the system package installer. The APK is
+     * expected at "<filesDir>/updates/jota.apk" (placed there by the Go update
+     * pipeline after download + checksum verification) and exposed via the
+     * FileProvider so the installer can read it. On Android 8+ the user must
+     * first allow "install unknown apps" for this app; that setting is shown
+     * when not yet granted.
+     */
+    public void installApk() {
+        mainHandler.post(() -> {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                        && !activity.getPackageManager().canRequestPackageInstalls()) {
+                    Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                    settings.setData(Uri.parse("package:" + activity.getPackageName()));
+                    settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    activity.startActivity(settings);
+                    return;
+                }
+                File apk = new File(activity.getFilesDir(), "updates/jota.apk");
+                if (!apk.exists()) {
+                    Log.e(TAG, "installApk: staged APK missing: " + apk.getAbsolutePath());
+                    emitEvent("update:installError", "{\"error\":\"staged apk missing\"}");
+                    return;
+                }
+                Uri uri = androidx.core.content.FileProvider.getUriForFile(activity,
+                        activity.getPackageName() + ".fileprovider", apk);
+                Intent install = new Intent(Intent.ACTION_VIEW);
+                install.setDataAndType(uri, "application/vnd.android.package-archive");
+                install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                activity.startActivity(install);
+            } catch (Exception e) {
+                Log.e(TAG, "installApk failed", e);
+                emitEvent("update:installError", "{\"error\":\"install launch failed\"}");
             }
         });
     }

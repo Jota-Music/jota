@@ -51,9 +51,22 @@ export async function install(): Promise<void> {
 	progress.value = null;
 	try {
 		await InstallUpdate();
+		// Android: GOOS=android installs hand the verified APK to the system
+		// package installer from Java (WailsJSBridge.installApk), so after the
+		// download+verify resolves the installer takes over.
+		native()?.installApk?.();
+		installing.value = false;
 	} catch (e) {
 		installing.value = false;
 		progress.value = null;
 		addError(e, `update install ${update.value?.latest ?? ""}`.trim());
 	}
+}
+
+type NativeBridge = { installApk?: () => void };
+
+function native(): NativeBridge | null {
+	if (typeof window === "undefined") return null;
+	const wails = (window as unknown as { wails?: NativeBridge }).wails;
+	return wails && typeof wails.installApk === "function" ? wails : null;
 }

@@ -192,7 +192,7 @@ tasks:
         # The exec bit is lost when gradlew is extracted from the embedded
         # build assets, so restore it before invoking the wrapper.
         chmod +x ./gradlew
-        ./gradlew assembleRelease
+        ./gradlew assembleRelease -Pversion="{{.VERSION | default "0.0.0"}}"
         cp app/build/outputs/apk/release/app-release.apk "../../{{.BIN_DIR}}/{{.APP_NAME}}.apk"
         echo "Release APK created: {{.BIN_DIR}}/{{.APP_NAME}}.apk"
 
@@ -231,7 +231,7 @@ tasks:
         # The exec bit is lost when gradlew is extracted from the embedded
         # build assets, so restore it before invoking the wrapper.
         chmod +x ./gradlew
-        ./gradlew bundleRelease
+        ./gradlew bundleRelease -Pversion="{{.VERSION | default "0.0.0"}}"
         cp app/build/outputs/bundle/release/app-release.aab "../../{{.BIN_DIR}}/{{.APP_NAME}}.aab"
         echo "Release AAB created: {{.BIN_DIR}}/{{.APP_NAME}}.aab"
 

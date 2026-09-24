@@ -70,6 +70,8 @@ func TestMatches(t *testing.T) {
 		{Windows, "jota-windows-amd64.exe", true},
 		{Windows, "jota-amd64-installer.exe", false},
 		{Windows, "jota-macos.zip", false},
+		{Android, "jota.apk", true},
+		{Android, "jota.deb", false},
 		{External, "jota.deb", false},
 	}
 	for _, c := range cases {
