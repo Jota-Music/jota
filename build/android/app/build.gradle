@@ -38,18 +38,29 @@ android {
     }
 
     def keystoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
-    def hasKeystore = keystoreFile != null && !keystoreFile.trim().isEmpty()
+    def hasEnvKeystore = keystoreFile != null && !keystoreFile.trim().isEmpty()
+
+    Properties keyProps = new Properties()
+    def propsFile = rootProject.file("keystore.properties")
+    if (propsFile.exists()) {
+        keyProps.load(propsFile.newInputStream())
+    }
 
     signingConfigs {
-        // A real keystore can be provided via environment variables; without
-        // one, release builds are signed with the debug keystore so they can
-        // be installed for testing (not suitable for Play Store uploads).
+        // All builds sign with the committed jota-release.keystore so the
+        // signature is identical no matter where the build runs (in-app APK
+        // updates require a stable signer). Environment variables override it.
         release {
-            if (hasKeystore) {
+            if (hasEnvKeystore) {
                 storeFile file(keystoreFile)
                 storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
                 keyAlias System.getenv("ANDROID_KEY_ALIAS")
                 keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            } else {
+                storeFile rootProject.file(keyProps.storeFile ?: "jota-release.keystore")
+                storePassword keyProps.storePassword
+                keyAlias keyProps.keyAlias
+                keyPassword keyProps.keyPassword
             }
         }
     }
@@ -59,7 +70,7 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig hasKeystore ? signingConfigs.release : signingConfigs.debug
+            signingConfig signingConfigs.release
         }
         debug {
             debuggable true

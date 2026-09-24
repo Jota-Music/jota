@@ -175,25 +175,11 @@ jobs:
         run: |
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
           CGO_ENABLED=0 go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
-      - name: Provision signing keystore
-        # A stable signing key (github secrets) is required for in-app APK
-        # updates: without one every CI build signs with a fresh debug keystore
-        # and Android rejects replacing the installed app. ANDROID_KEYSTORE_FILE
-        # holds the PKCS12 keystore base64-encoded; it is decoded here so the
-        # build can sign with a reproducible fingerprint across releases.
-        run: |
-          if [ -n "${ANDROID_KEYSTORE_FILE}" ]; then
-            echo "${ANDROID_KEYSTORE_FILE}" | base64 -d > "${RUNNER_TEMP}/jota-release.keystore"
-            echo "ANDROID_KEYSTORE_FILE=${RUNNER_TEMP}/jota-release.keystore" >> "${GITHUB_ENV}"
-          fi
-        env:
-          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
       - name: Package release APK
+        # Signed with the committed build/android/jota-release.keystore so the
+        # signature is identical to any local build (in-app APK updates keep
+        # working no matter where the build runs).
         run: wails3 task android:package VERSION="${GITHUB_REF_NAME#v}"
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android-apk
