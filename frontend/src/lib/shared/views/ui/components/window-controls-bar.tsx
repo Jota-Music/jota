@@ -9,6 +9,7 @@ import { cn } from "@/lib/shared/utils/tw";
 export function WindowControlsBar() {
 	const isDesktop = System.IsDesktop();
 	const isMaximised = useSignal(false);
+	const isFullscreen = useSignal(false);
 	const isOnTop = useSignal(false);
 
 	const buttonClass =
@@ -17,27 +18,64 @@ export function WindowControlsBar() {
 
 	useEffect(() => {
 		if (!isDesktop) return;
-		void Window.IsMaximised().then((v) => {
-			isMaximised.value = v;
+		const offMaximised = Events.On(Events.Types.Common.WindowMaximise, () => {
+			isMaximised.value = true;
 		});
+		const offUnMaximised = Events.On(
+			Events.Types.Common.WindowUnMaximise,
+			() => {
+				isMaximised.value = false;
+			},
+		);
+		const offFullscreen = Events.On(
+			Events.Types.Common.WindowFullscreen,
+			() => {
+				isFullscreen.value = true;
+			},
+		);
+		const offUnFullscreen = Events.On(
+			Events.Types.Common.WindowUnFullscreen,
+			() => {
+				isFullscreen.value = false;
+			},
+		);
+		void Promise.all([Window.IsMaximised(), Window.IsFullscreen()]).then(
+			([maximised, fullscreen]) => {
+				isMaximised.value = maximised;
+				isFullscreen.value = fullscreen;
+			},
+		);
 		const off = Events.On("window:always-on-top", (ev) => {
 			isOnTop.value = Boolean(ev.data);
 		});
 		// Ask for the current state instead of betting the runtime-ready
 		// broadcast arrived before this subscription was in place.
 		void Events.Emit("window:always-on-top:get");
-		return off;
+		return () => {
+			offMaximised();
+			offUnMaximised();
+			offFullscreen();
+			offUnFullscreen();
+			off();
+		};
 	}, [isDesktop]);
 
 	if (!isDesktop) return null;
 
 	const onMaximize = async () => {
-		const maximised = await Window.IsMaximised();
-		if (maximised) {
+		const [fullscreen, maximised] = await Promise.all([
+			Window.IsFullscreen(),
+			Window.IsMaximised(),
+		]);
+		if (fullscreen) {
+			await Window.UnFullscreen();
+		} else if (maximised) {
 			await Window.Restore();
+			if (await Window.IsMaximised()) await Window.UnMaximise();
 		} else {
 			await Window.Maximise();
 		}
+		isFullscreen.value = await Window.IsFullscreen();
 		isMaximised.value = await Window.IsMaximised();
 	};
 
@@ -75,7 +113,11 @@ export function WindowControlsBar() {
 				type="button"
 				onClick={() => void onMaximize()}
 				class={cn(buttonClass, hoverClass)}
-				title={isMaximised.value ? t("window.restore") : t("window.maximise")}
+				title={
+					isFullscreen.value || isMaximised.value
+						? t("window.restore")
+						: t("window.maximise")
+				}
 			>
 				<Copy class="size-3.5" />
 			</button>
