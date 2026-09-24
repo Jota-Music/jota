@@ -7,7 +7,34 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
+
+func TestClampWindowStateDropsFullScreenResidue(t *testing.T) {
+	screens := []*application.Screen{
+		{WorkArea: application.Rect{X: 0, Y: 0, Width: 5120, Height: 1440}},
+	}
+	st := windowState{X: 0, Y: 0, Width: 5120, Height: 1440, Maximised: false}
+	clampWindowState(&st, screens)
+	if st.Width != 0 || st.Height != 0 {
+		t.Fatalf("full-work-area geometry not dropped: %+v", st)
+	}
+}
+
+func TestClampWindowStateCapsToScreen(t *testing.T) {
+	screens := []*application.Screen{
+		{WorkArea: application.Rect{X: 0, Y: 0, Width: 2560, Height: 1440}},
+	}
+	st := windowState{X: 100, Y: 50, Width: 3000, Height: 1000}
+	clampWindowState(&st, screens)
+	if st.Width != 2560 || st.Height != 1000 {
+		t.Fatalf("oversized geometry not capped: %+v", st)
+	}
+	if st.X != 100 || st.Y != 50 {
+		t.Fatalf("position must be preserved: %+v", st)
+	}
+}
 
 func TestRotatingWriterCapsFileSize(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "jota.log")

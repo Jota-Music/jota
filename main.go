@@ -117,6 +117,32 @@ func loadWindowState() windowState {
 	return st
 }
 
+// clampWindowState keeps the restored window usable. Save-on-resize stores the
+// geometry as reported by the window, so a maximize/restore cycle can leave a
+// "normal" window the size of the whole monitor (dragging and maximize/restore
+// then appear dead). Drop a geometry that fills a screen's work area and cap
+// any oversized one to the screen it sits on.
+func clampWindowState(st *windowState, screens []*application.Screen) {
+	if st.Width <= 0 || len(screens) == 0 {
+		return
+	}
+	screen := screens[0]
+	for _, s := range screens {
+		wa := s.WorkArea
+		if st.X >= wa.X && st.X < wa.X+wa.Width && st.Y >= wa.Y && st.Y < wa.Y+wa.Height {
+			screen = s
+			break
+		}
+	}
+	wa := screen.WorkArea
+	if st.Width >= wa.Width && st.Height >= wa.Height {
+		st.Width, st.Height = 0, 0
+		return
+	}
+	st.Width = min(st.Width, wa.Width)
+	st.Height = min(st.Height, wa.Height)
+}
+
 // Moving or resizing the window floods WindowDidMove/Resize events at every
 // pointer move, and each state write churns the Badger value log. Throttle the
 // writes to one per interval and keep the freshest pending state; the last one
@@ -302,6 +328,7 @@ func main() {
 		URL: "/",
 	}
 	if state.Width > 0 {
+		clampWindowState(&state, application.Get().Screen.GetAll())
 		opts.Width, opts.Height = state.Width, state.Height
 		if state.Maximised {
 			opts.StartState = application.WindowStateMaximised
@@ -314,6 +341,7 @@ func main() {
 	var quitting atomic.Bool
 	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
 		application.Get().Event.Emit("window:always-on-top", state.AlwaysOnTop)
+		clampWindowState(&state, application.Get().Screen.GetAll())
 		if restored.Swap(true) || state.Width <= 0 {
 			return
 		}
