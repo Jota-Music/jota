@@ -46,22 +46,33 @@ android {
         keyProps.load(propsFile.newInputStream())
     }
 
+    // The signing key lives outside the repo: in ANDROID_KEYSTORE_* env vars
+    // (CI) or in a gitignored keystore.properties (local). The build fails
+    // loudly if neither is present — never fall back to the debug keystore,
+    // or in-app APK updates and Play uploads silently change signer.
+    def signingProps = [
+        storeFile: hasEnvKeystore ? file(keystoreFile)
+                                  : (keyProps.storeFile ? rootProject.file(keyProps.storeFile) : null),
+        storePassword: hasEnvKeystore ? System.getenv("ANDROID_KEYSTORE_PASSWORD") : keyProps.storePassword,
+        keyAlias: hasEnvKeystore ? System.getenv("ANDROID_KEY_ALIAS") : keyProps.keyAlias,
+        keyPassword: hasEnvKeystore ? System.getenv("ANDROID_KEY_PASSWORD") : keyProps.keyPassword,
+    ]
+    def missing = signingProps.findAll { it.value == null || it.value.toString().trim().isEmpty() }.keySet()
+    if (!missing.isEmpty()) {
+        def hint = hasEnvKeystore
+            ? "set ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD"
+            : "create a gitignored build/android/keystore.properties with storeFile, storePassword, keyAlias and keyPassword"
+        throw new GradleException("Android signing is not configured (missing: ${missing.join(', ')}): ${hint}.")
+    }
+
     signingConfigs {
-        // All builds sign with the committed jota-release.keystore so the
-        // signature is identical no matter where the build runs (in-app APK
-        // updates require a stable signer). Environment variables override it.
+        // All builds sign with the same release keystore so the signature is
+        // identical no matter where the build runs.
         release {
-            if (hasEnvKeystore) {
-                storeFile file(keystoreFile)
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-            } else {
-                storeFile rootProject.file(keyProps.storeFile ?: "jota-release.keystore")
-                storePassword keyProps.storePassword
-                keyAlias keyProps.keyAlias
-                keyPassword keyProps.keyPassword
-            }
+            storeFile signingProps.storeFile
+            storePassword signingProps.storePassword
+            keyAlias signingProps.keyAlias
+            keyPassword signingProps.keyPassword
         }
     }
 

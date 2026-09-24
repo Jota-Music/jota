@@ -182,7 +182,7 @@ tasks:
         echo "APK created: {{.BIN_DIR}}/{{.APP_NAME}}.apk"
 
   assemble:apk:release:
-    summary: Assembles a release APK using Gradle (signed with the committed jota-release.keystore)
+    summary: Assembles a release APK using Gradle (signed with the release keystore from ANDROID_KEYSTORE_* or gitignored keystore.properties; fails if absent)
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
         msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
@@ -212,7 +212,7 @@ tasks:
         echo "AAB created: {{.BIN_DIR}}/{{.APP_NAME}}.aab"
 
   assemble:aab:release:
-    summary: Assembles a release AAB for Play Store upload (signed with the committed jota-release.keystore)
+    summary: Assembles a release AAB for Play Store upload (signed with the release keystore from ANDROID_KEYSTORE_* or gitignored keystore.properties; fails if absent)
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
         msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
@@ -220,9 +220,7 @@ tasks:
       - |
         # With Play App Signing, the keystore configured here is your UPLOAD
         # key: Google verifies the upload with it, then re-signs the app with
-        # the app signing key it manages for distribution. The committed
-        # jota-release.keystore (keystore.properties) is used unless
-        # ANDROID_KEYSTORE_FILE overrides it.
+        # the app signing key it manages for distribution.
         cd build/android
         # The exec bit is lost when gradlew is extracted from the embedded
         # build assets, so restore it before invoking the wrapper.
