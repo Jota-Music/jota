@@ -487,35 +487,37 @@ export function MobileBottomNav() {
 	return (
 		<nav
 			aria-label={t("nav.main")}
-			class="fixed inset-x-0 bottom-0 z-60 flex h-14 items-stretch justify-around bg-stone-950 pb-[env(safe-area-inset-bottom)] md:hidden"
+			class="fixed inset-x-0 bottom-0 z-60 bg-stone-950 pb-[env(safe-area-inset-bottom)] md:hidden"
 		>
-			{items.map(({ href, active, icon: Icon, label }) => (
-				<Link
-					key={href}
-					href={href}
-					title={label}
-					aria-label={label}
-					class={cn(
-						"flex w-16 items-center justify-center border-b-2",
-						active ? "border-(--dominant-color)" : "border-transparent",
-					)}
-				>
-					<Icon
-						size={22}
-						class={
-							href === "/rooms" && !active
-								? connected
-									? "text-green-400"
-									: inRoom
-										? "text-yellow-400"
+			<div class="flex h-14 items-stretch justify-around">
+				{items.map(({ href, active, icon: Icon, label }) => (
+					<Link
+						key={href}
+						href={href}
+						title={label}
+						aria-label={label}
+						class={cn(
+							"flex w-16 items-center justify-center border-b-2",
+							active ? "border-(--dominant-color)" : "border-transparent",
+						)}
+					>
+						<Icon
+							size={22}
+							class={
+								href === "/rooms" && !active
+									? connected
+										? "text-green-400"
+										: inRoom
+											? "text-yellow-400"
+											: "text-zinc-400"
+									: active
+										? "text-(--dominant-color)"
 										: "text-zinc-400"
-								: active
-									? "text-(--dominant-color)"
-									: "text-zinc-400"
-						}
-					/>
-				</Link>
-			))}
+							}
+						/>
+					</Link>
+				))}
+			</div>
 		</nav>
 	);
 }

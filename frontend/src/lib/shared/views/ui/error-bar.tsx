@@ -12,7 +12,7 @@ export function ErrorBar() {
 	}
 
 	return (
-		<div class="fixed bottom-14 left-0 right-0 z-60 md:bottom-0">
+		<div class="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-60 md:bottom-0">
 			<div ref={listRef} class="max-h-96 overflow-y-auto space-y-2 p-4">
 				{errors.value.map((error) => (
 					<div

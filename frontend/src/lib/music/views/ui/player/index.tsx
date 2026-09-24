@@ -417,7 +417,7 @@ export function Player() {
 
 			<div
 				class={cn(
-					"block fixed bottom-14 md:bottom-0 left-0 right-0 z-60 md:z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out",
+					"block fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-60 md:z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out",
 					compactPlayer.value ? "md:block" : "md:hidden",
 				)}
 				style={`transform: translateY(${
