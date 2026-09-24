@@ -105,6 +105,9 @@ function Router() {
 		};
 		const onVisibility = () => {
 			if (!document.hidden) {
+				// A release being (re)created while the app is backgrounded can
+				// leave the update snapshot stale; refresh on return.
+				void checkUpdate();
 				cancel();
 				return;
 			}

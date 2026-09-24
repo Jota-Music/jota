@@ -1,7 +1,9 @@
 import { Download, ExternalLink, Info, Loader2 } from "lucide-preact";
+import { useEffect } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { open } from "@/lib/shared/utils/open";
 import {
+	checkUpdate,
 	install,
 	installing,
 	percent,
@@ -10,6 +12,10 @@ import {
 } from "@/lib/update/views/stores/update";
 
 export function AboutSettings() {
+	useEffect(() => {
+		void checkUpdate();
+	}, []);
+
 	return (
 		<section class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
 			<div class="flex items-center gap-2">
