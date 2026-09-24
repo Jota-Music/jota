@@ -14,9 +14,6 @@ import { addError, logError } from "@/lib/shared/views/stores/errors";
 
 const VOLUME_STORAGE_KEY = "audio-volume";
 const MUTED_STORAGE_KEY = "audio-muted";
-const PLAYING_STORAGE_KEY = "music-playing";
-const POSITION_STORAGE_KEY = "music-position";
-const POSITION_SONG_KEY = "music-position-song";
 
 // Volume mapping: from 30% up the bar behaves like a plain linear volume (the
 // feel users are used to), so lowering is responsive and needs no precision.
@@ -608,53 +605,6 @@ export function getPlaybackSeconds(): number {
 	return 0;
 }
 
-function getStoredPosition(): number {
-	const raw = storage.get(POSITION_STORAGE_KEY, null);
-	const parsed = Number(raw);
-	return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-}
-
-function getStoredPlaying(): boolean {
-	return storage.get(PLAYING_STORAGE_KEY, null) === "1";
-}
-
-function storedPositionFor(songId: string): number {
-	return storage.get(POSITION_SONG_KEY, null) === songId
-		? getStoredPosition()
-		: 0;
-}
-
-const PLAYBACK_SAVE_DELAY = 2000;
-let playbackSaveTimer: number | null = null;
-
-export function flushPlaybackState(): void {
-	if (playbackSaveTimer != null) {
-		clearTimeout(playbackSaveTimer);
-		playbackSaveTimer = null;
-	}
-	storage.set(POSITION_STORAGE_KEY, String(getPlaybackSeconds()));
-	storage.set(POSITION_SONG_KEY, currentSong.value?.id ?? "");
-	storage.set(PLAYING_STORAGE_KEY, isPlaying.value ? "1" : "0");
-}
-
-function schedulePlaybackSave(): void {
-	if (typeof window === "undefined") {
-		flushPlaybackState();
-		return;
-	}
-	if (playbackSaveTimer != null) return;
-	playbackSaveTimer = window.setTimeout(() => {
-		playbackSaveTimer = null;
-		flushPlaybackState();
-	}, PLAYBACK_SAVE_DELAY);
-}
-
-effect(() => {
-	progress.value;
-	isPlaying.value;
-	schedulePlaybackSave();
-});
-
 function hasLoadedAudio(): boolean {
 	return !!audio && !audio.error && endedElement !== audio;
 }
@@ -684,32 +634,7 @@ export async function resume(): Promise<boolean> {
 	// queued current track instead of leaving a fresh session's play control mute.
 	const song = currentSong.value ?? queue.value[currentIndex.value] ?? null;
 	if (!song) return false;
-	const saved = storedPositionFor(song.id);
-	return (await play(song, saved > 0 ? saved : undefined)) === "ok";
-}
-
-let resumeArmed = false;
-
-function armResume(): void {
-	if (resumeArmed || typeof window === "undefined") return;
-	resumeArmed = true;
-	const retry = () => {
-		window.removeEventListener("pointerdown", retry, true);
-		window.removeEventListener("keydown", retry, true);
-		resumeArmed = false;
-		void tryPlay();
-	};
-	window.addEventListener("pointerdown", retry, true);
-	window.addEventListener("keydown", retry, true);
-}
-
-async function tryPlay(): Promise<void> {
-	if (!audio || audio.error || endedElement === audio) return;
-	try {
-		await audio.play();
-	} catch (err) {
-		if (!isAbortError(err)) armResume();
-	}
+	return (await play(song)) === "ok";
 }
 
 export function seek(time: number) {
@@ -802,7 +727,6 @@ export function stopPlayer() {
 	audioDuration.value = 0;
 	isPlaying.value = false;
 	pendingStart.value = false;
-	flushPlaybackState();
 }
 
 function bindEvents(a: HTMLAudioElement) {
@@ -886,11 +810,6 @@ if (typeof window !== "undefined") {
 			if (audio) audio.muted = muted.value;
 		}
 	});
-	window.addEventListener("beforeunload", flushPlaybackState);
-	window.addEventListener("pagehide", flushPlaybackState);
-	document.addEventListener("visibilitychange", () => {
-		if (document.hidden) flushPlaybackState();
-	});
 }
 
 media.setup({
@@ -916,16 +835,15 @@ media.setup({
 function restorePlayback(): void {
 	const song = queue.value[currentIndex.value] ?? null;
 	if (!song) return;
-	const saved = storedPositionFor(song.id);
+	// Restore only what the UI needs: the track and a clean zeroed state. No
+	// eager element load, which would collide with the autoplay prime on the
+	// shared element and end the track before it plays. The first play builds
+	// the element through the normal playback path instead.
 	currentSong.value = song;
-	progress.value = saved;
+	progress.value = 0;
 	audioDuration.value = 0;
 	isPlaying.value = false;
 	media.update(song, false);
-	void prepareSong(song, saved).then((ok) => {
-		if (!ok || !getStoredPlaying()) return;
-		void tryPlay();
-	});
 }
 
 if (typeof window !== "undefined") {
