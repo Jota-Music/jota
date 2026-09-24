@@ -28,6 +28,9 @@ flatpak-repo/
 build/darwin/*.icns
 build/darwin/Assets.car
 
+# Windows WebView2 bootstrapper downloaded for the NSIS installer
+build/windows/nsis/*.exe
+
 # Android generated artifacts (scaffolding in build/ is tracked)
 build/android/.gradle/
 build/android/build/
