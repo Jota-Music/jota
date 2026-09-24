@@ -2,6 +2,7 @@ import { signal } from "@preact/signals";
 import type { LucideIcon } from "lucide-preact";
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef } from "preact/hooks";
+import { bottomBarHeight } from "@/lib/shared/utils/layout";
 import { cn } from "@/lib/shared/utils/tw";
 
 export type Action = {
@@ -40,9 +41,9 @@ export function ContextMenu() {
 		const el = ref.current;
 		if (!el) return;
 
-		// ponytail: mobile bottom bar is fixed h-14, so the menu never fits
-		// below it; 56px constant instead of measuring the bar.
-		const bar = window.matchMedia("(min-width: 768px)").matches ? 0 : 56;
+		// ponytail: measure the fixed bottom bar (h-14 + safe-area inset) so
+		// the menu never sits behind it on phones with a gesture bar.
+		const bar = bottomBarHeight();
 		const x = Math.max(
 			GAP,
 			Math.min(menu.x, window.innerWidth - el.offsetWidth - GAP),

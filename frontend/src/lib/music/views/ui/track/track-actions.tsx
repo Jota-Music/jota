@@ -26,6 +26,7 @@ import {
 } from "@/lib/music/views/stores/selection";
 import { openYoutubeEditor } from "@/lib/music/views/stores/youtube-editor";
 import { t } from "@/lib/shared/i18n";
+import { bottomBarHeight } from "@/lib/shared/utils/layout";
 import { cn } from "@/lib/shared/utils/tw";
 import type { Action } from "@/lib/shared/views/ui/components/context-menu";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
@@ -207,7 +208,7 @@ export default function TrackActions({
 		if (!el || !anchor.value) return;
 
 		const width = el.offsetWidth;
-		const bar = window.matchMedia("(min-width: 768px)").matches ? 0 : 56; // ponytail: fixed bottom bar h-14
+		const bar = bottomBarHeight();
 		const below = anchor.value.bottom + GAP;
 		const fits = below + el.offsetHeight <= window.innerHeight - GAP - bar;
 		el.style.left = `${anchor.value.right - width}px`;
