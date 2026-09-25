@@ -32,8 +32,9 @@
 		"inSpotify": "Search in Spotify",
 		"inYouTube": "Search in YouTube",
 		"youtubePlaceholder": "Search in YouTube (videos or playlists)",
+		"trackPlaceholder": "Song, artist, or Spotify link/ID...",
 		"userPlaceholder": "Spotify username or link...",
-		"spotifyPlaceholder": "Spotify {type} ID, URI or link...",
+		"spotifyPlaceholder": "Paste a Spotify {type} link, URI or ID...",
 		"type": {
 			"user": "User",
 			"track": "Track",

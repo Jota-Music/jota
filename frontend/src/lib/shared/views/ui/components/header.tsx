@@ -31,15 +31,15 @@ type Source = "spotify" | "youtube";
 type SpotifyType = "user" | "track" | "album" | "playlist" | "artist";
 
 const spotifyTypeOptions = [
-	{ value: "user", label: "search.type.user" },
 	{ value: "track", label: "search.type.track" },
+	{ value: "user", label: "search.type.user" },
 	{ value: "album", label: "search.type.album" },
 	{ value: "playlist", label: "search.type.playlist" },
 	{ value: "artist", label: "search.type.artist" },
 ] as const;
 
 const sourceKey = "search_source";
-const typeKey = "search_type";
+const typeKey = "search_type_v2";
 
 function loadSource(): Source {
 	return localStorage.getItem(sourceKey) === "youtube" ? "youtube" : "spotify";
@@ -49,7 +49,7 @@ function loadType(): SpotifyType {
 	const raw = localStorage.getItem(typeKey);
 	return spotifyTypeOptions.some((option) => option.value === raw)
 		? (raw as SpotifyType)
-		: "user";
+		: "track";
 }
 
 export function Header() {
@@ -118,11 +118,13 @@ export function Header() {
 	const placeholder =
 		liveSource === "youtube"
 			? t("search.youtubePlaceholder")
-			: searchType.value === "user"
-				? t("search.userPlaceholder")
-				: t("search.spotifyPlaceholder", {
-						type: t(`search.type.${searchType.value}`),
-					});
+			: searchType.value === "track"
+				? t("search.trackPlaceholder")
+				: searchType.value === "user"
+					? t("search.userPlaceholder")
+					: t("search.spotifyPlaceholder", {
+							type: t(`search.type.${searchType.value}`),
+						});
 
 	return (
 		<header
