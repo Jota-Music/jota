@@ -238,61 +238,37 @@ func playerPayload(c clientConfig, videoID string) map[string]any {
 	return payload
 }
 
-// streamInfo carries the resolved stream plus the loudness YouTube measured for
-// its source, so the player can even out tracks against YouTube's reference
-// level. LoudnessDb is nil when YouTube has not measured this video.
-type streamInfo struct {
-	URL        string
-	LoudnessDb *float64
-}
-
-// parseLoudness reads the player response's `loudnessDb` (sent as a number or
-// a string), returning nil when absent or unparseable.
-func parseLoudness(raw json.RawMessage) *float64 {
-	if len(raw) == 0 {
-		return nil
-	}
-	val, err := strconv.ParseFloat(strings.Trim(string(raw), `"`), 64)
-	if err != nil {
-		return nil
-	}
-	return &val
-}
-
 // playerStreamURLFn is a test hook; do not assign in production code.
 var playerStreamURLFn = playerStreamURL
 
-func playerStreamURL(c clientConfig, videoID string) (streamInfo, error) {
+func playerStreamURL(c clientConfig, videoID string) (string, error) {
 	payload := playerPayload(c, videoID)
 
 	data, err := retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, 3)
 	if err != nil {
-		return streamInfo{}, fmt.Errorf("player request failed: %w", err)
+		return "", fmt.Errorf("player request failed: %w", err)
 	}
 
 	var pr playerResponse
 	if err := json.Unmarshal(data, &pr); err != nil {
-		return streamInfo{}, fmt.Errorf("invalid JSON: %w", err)
+		return "", fmt.Errorf("invalid JSON: %w", err)
 	}
 
 	if pr.PlayabilityStatus.Status == "LOGIN_REQUIRED" {
-		return streamInfo{}, ErrLoginRequired
+		return "", ErrLoginRequired
 	}
 
 	if pr.PlayabilityStatus.Status != "OK" {
-		return streamInfo{}, fmt.Errorf("unavailable: %s", pr.PlayabilityStatus.Reason)
+		return "", fmt.Errorf("unavailable: %s", pr.PlayabilityStatus.Reason)
 	}
 
 	formats := append(pr.StreamingData.Formats, pr.StreamingData.AdaptiveFormats...)
 	f, ok := bestAudio(formats)
 	if !ok {
-		return streamInfo{}, errors.New("no valid audio format found")
+		return "", errors.New("no valid audio format found")
 	}
 
-	return streamInfo{
-		URL:        f.URL,
-		LoudnessDb: parseLoudness(pr.PlayerConfig.AudioConfig.LoudnessDb),
-	}, nil
+	return f.URL, nil
 }
 
 // streamPlayable reports whether the stream answers the plain/HEAD request that
@@ -327,9 +303,9 @@ func streamPlayable(c clientConfig, raw string) bool {
 // YouTube's homepage, so it is deferred until no client worked at all. That way
 // a healthy fallback (e.g. IOS while ANDROID_VR is bot-checked) never triggers a
 // homepage fetch.
-func audioURL(videoID string) (streamInfo, clientConfig, error) {
+func audioURL(videoID string) (string, clientConfig, error) {
 	if len(videoID) != 11 {
-		return streamInfo{}, clientConfig{}, errors.New("invalid video ID length")
+		return "", clientConfig{}, errors.New("invalid video ID length")
 	}
 
 	var firstErr error
@@ -339,7 +315,7 @@ func audioURL(videoID string) (streamInfo, clientConfig, error) {
 		loginRequired := false
 
 		for _, c := range allClients() {
-			info, err := playerStreamURLFn(c, videoID)
+			raw, err := playerStreamURLFn(c, videoID)
 			if err != nil {
 				if errors.Is(err, ErrLoginRequired) {
 					loginRequired = true
@@ -349,11 +325,11 @@ func audioURL(videoID string) (streamInfo, clientConfig, error) {
 				}
 				continue
 			}
-			if streamPlayable(c, info.URL) {
+			if streamPlayable(c, raw) {
 				if c.Name != preferredClient.Name {
 					log.Printf("youtube: %s fell back to client %s", videoID, c.Name)
 				}
-				return info, c, nil
+				return raw, c, nil
 			}
 			if firstErr == nil {
 				firstErr = fmt.Errorf("client %s returned unplayable URL", c.Name)
@@ -369,9 +345,9 @@ func audioURL(videoID string) (streamInfo, clientConfig, error) {
 	}
 
 	if firstErr != nil {
-		return streamInfo{}, clientConfig{}, firstErr
+		return "", clientConfig{}, firstErr
 	}
-	return streamInfo{}, clientConfig{}, errors.New("no playable stream found")
+	return "", clientConfig{}, errors.New("no playable stream found")
 }
 
 func fetchAudio(youtubeId string) (*music.Audio, error) {
@@ -388,12 +364,12 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 		return nil, fmt.Errorf("cache error: %w", err)
 	}
 
-	stream, client, err := audioURL(youtubeId)
+	streamURL, client, err := audioURL(youtubeId)
 	if err != nil {
 		return nil, err
 	}
 
-	info, ok := getExpireAndDurationFromURL(stream.URL)
+	info, ok := getExpireAndDurationFromURL(streamURL)
 	if !ok {
 		return nil, errors.New("bad stream response from YouTube")
 	}
@@ -404,12 +380,11 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 	}
 
 	audio := music.Audio{
-		Url:        stream.URL,
+		Url:        streamURL,
 		Duration:   info.Duration,
 		ExpireAt:   info.ExpireAt,
 		VideoID:    youtubeId,
 		ClientName: client.Name,
-		LoudnessDb: stream.LoudnessDb,
 	}
 
 	if err := audioBucket.SetObject(youtubeId, audio, ttl); err != nil {

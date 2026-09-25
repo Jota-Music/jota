@@ -7,7 +7,6 @@ function toAudio(data: Audio, fallback: string): Audio & { youtube: string } {
 		duration: data.duration,
 		expireAt: data.expireAt,
 		videoId: data.videoId,
-		loudnessDb: data.loudnessDb,
 		youtube: data.videoId ?? fallback,
 	};
 }

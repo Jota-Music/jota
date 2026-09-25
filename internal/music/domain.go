@@ -50,9 +50,6 @@ type Audio struct {
 	ExpireAt   int64  `json:"expireAt"`
 	VideoID    string `json:"videoId"`
 	ClientName string `json:"clientName,omitempty"`
-	// LoudnessDb is the source loudness YouTube measured (dB relative to its
-	// reference level); nil when the video has not been measured.
-	LoudnessDb *float64 `json:"loudnessDb,omitempty"`
 }
 
 type PlaylistSummary struct {

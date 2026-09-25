@@ -80,7 +80,7 @@ func TestWebClientWithProviderIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WEB client failed with a provider token: %v", err)
 	}
-	if raw.URL == "" {
+	if raw == "" {
 		t.Fatal("empty stream URL")
 	}
 }
@@ -127,32 +127,6 @@ func TestPlayerPayloadWithoutProviderHasNoPoToken(t *testing.T) {
 
 	if _, ok := playerPayload(webClient(), "vid12345678")["serviceIntegrityDimensions"]; ok {
 		t.Fatal("no provider configured, so no poToken expected")
-	}
-}
-
-func testFloat(v float64) *float64 { return &v }
-
-func TestParseLoudness(t *testing.T) {
-	cases := []struct {
-		name string
-		raw  string
-		want *float64
-	}{
-		{"number", `-8.4`, testFloat(-8.4)},
-		{"string", `"-8.4"`, testFloat(-8.4)},
-		{"absent", ``, nil},
-		{"garbage", `"loud"`, nil},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			got := parseLoudness([]byte(c.raw))
-			if (got == nil) != (c.want == nil) {
-				t.Fatalf("parseLoudness(%q) = %v, want %v", c.raw, got, c.want)
-			}
-			if got != nil && c.want != nil && *got != *c.want {
-				t.Fatalf("parseLoudness(%q) = %v, want %v", c.raw, *got, *c.want)
-			}
-		})
 	}
 }
 
@@ -319,8 +293,8 @@ func TestAudioURLRejectsUnplayableStreams(t *testing.T) {
 	oldFn := playerStreamURLFn
 	defer func() { playerStreamURLFn = oldFn }()
 
-	playerStreamURLFn = func(c clientConfig, videoID string) (streamInfo, error) {
-		return streamInfo{URL: "http://127.0.0.1:1/unplayable"}, nil
+	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
+		return "http://127.0.0.1:1/unplayable", nil
 	}
 
 	_, _, err := audioURL("dQw4w9WgXcQ")
@@ -349,19 +323,19 @@ func TestAudioURLDoesNotRefreshWhenFallbackWorks(t *testing.T) {
 		visitorDataMu.Unlock()
 	}()
 
-	playerStreamURLFn = func(c clientConfig, videoID string) (streamInfo, error) {
+	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
 		if c.Name == preferredClient.Name {
-			return streamInfo{}, ErrLoginRequired
+			return "", ErrLoginRequired
 		}
-		return streamInfo{URL: okServer.URL}, nil
+		return okServer.URL, nil
 	}
 
 	url, client, err := audioURL("dQw4w9WgXcQ")
 	if err != nil {
 		t.Fatalf("expected a fallback to play, got %v", err)
 	}
-	if url.URL != okServer.URL || client.Name == preferredClient.Name {
-		t.Fatalf("expected a non-preferred client, got %q/%q", url.URL, client.Name)
+	if url != okServer.URL || client.Name == preferredClient.Name {
+		t.Fatalf("expected a non-preferred client, got %q/%q", url, client.Name)
 	}
 
 	visitorDataMu.RLock()
@@ -388,9 +362,9 @@ func TestAudioURLRefreshesVisitorWhenNoClientPlays(t *testing.T) {
 	}()
 
 	calls := 0
-	playerStreamURLFn = func(c clientConfig, videoID string) (streamInfo, error) {
+	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
 		calls++
-		return streamInfo{}, ErrLoginRequired
+		return "", ErrLoginRequired
 	}
 
 	_, _, err := audioURL("dQw4w9WgXcQ")
@@ -419,20 +393,20 @@ func TestAudioURLReturnsFirstPlayableClient(t *testing.T) {
 	defer okServer.Close()
 
 	callCount := 0
-	playerStreamURLFn = func(c clientConfig, videoID string) (streamInfo, error) {
+	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
 		callCount++
 		if c.Name == "ANDROID_VR" {
-			return streamInfo{URL: okServer.URL}, nil
+			return okServer.URL, nil
 		}
-		return streamInfo{URL: "http://127.0.0.1:1/unplayable"}, nil
+		return "http://127.0.0.1:1/unplayable", nil
 	}
 
 	url, client, err := audioURL("dQw4w9WgXcQ")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if url.URL != okServer.URL {
-		t.Fatalf("url = %q, want %q", url.URL, okServer.URL)
+	if url != okServer.URL {
+		t.Fatalf("url = %q, want %q", url, okServer.URL)
 	}
 	if client.Name != "ANDROID_VR" {
 		t.Fatalf("client = %q, want ANDROID_VR", client.Name)

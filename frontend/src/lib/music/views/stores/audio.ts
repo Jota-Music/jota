@@ -33,19 +33,6 @@ function gainFor(value: number): number {
 	return t * t * QUIET_LEVEL;
 }
 
-// A track's source loudness relative to YouTube's reference level: boost quiet
-// uploads, tame loud ones, skip videos YouTube never measured.
-const LOUDNESS_GAIN_DB = 18;
-
-function trackGainFor(loudnessDb: number | null | undefined): number {
-	if (loudnessDb == null) return 1;
-	const db = Math.max(
-		-LOUDNESS_GAIN_DB,
-		Math.min(LOUDNESS_GAIN_DB, -loudnessDb),
-	);
-	return 10 ** (db / 20);
-}
-
 function parseStoredVolume(raw: string | null): number {
 	if (raw === null) return 1;
 	const parsed = Number(raw);
@@ -64,8 +51,6 @@ function parseStoredMuted(raw: string | null): boolean {
 let audio: HTMLAudioElement | null = null;
 let loadedSongId: string | null = null;
 let knownDuration = 0;
-// Per-track loudness normalization for the song currently in the element.
-let trackGain = 1;
 let loadToken = 0;
 // Identifies the latest play() call. A superseded call (a newer one started)
 // must bail out without touching the shared element or reporting a failure.
@@ -307,16 +292,10 @@ async function loadSongIntoPlayer(
 	currentSong.value = song;
 	media.update(song, isPlaying.value);
 
-	let data: {
-		url: string;
-		youtube: string;
-		duration: number;
-		loudnessDb: number | null;
-	};
+	let data: { url: string; youtube: string; duration: number };
 	try {
 		data = await AudioCache.get(song);
 		knownDuration = data.duration > 0 ? data.duration : 0;
-		trackGain = trackGainFor(data.loudnessDb);
 		if (data.youtube) setYoutube(song, data.youtube);
 	} catch (err) {
 		if (token !== loadToken) return "aborted";
@@ -341,7 +320,7 @@ async function loadSongIntoPlayer(
 	audio = instance;
 	loadedSongId = song.id;
 
-	applyVolume(instance);
+	instance.volume = Math.min(1, gainFor(volume.value));
 	instance.muted = muted.value;
 	instance.currentTime = 0;
 
@@ -679,13 +658,8 @@ export function seekTo(time: number, timeoutMs = 2000): Promise<void> {
 export function setVolume(value: number) {
 	const v = Math.max(0, Math.min(1, value));
 	volume.value = v;
-	applyVolume();
+	if (audio) audio.volume = Math.min(1, gainFor(v));
 	storage.set(VOLUME_STORAGE_KEY, String(v));
-}
-
-function applyVolume(a: HTMLAudioElement | null = audio) {
-	if (!a) return;
-	a.volume = Math.min(1, gainFor(volume.value) * trackGain);
 }
 
 function setMuted(value: boolean) {
@@ -804,7 +778,7 @@ if (typeof window !== "undefined") {
 		if (e.key === VOLUME_STORAGE_KEY) {
 			const v = parseStoredVolume(e.newValue);
 			volume.value = v;
-			applyVolume();
+			if (audio) audio.volume = Math.min(1, gainFor(v));
 		} else if (e.key === MUTED_STORAGE_KEY) {
 			muted.value = parseStoredMuted(e.newValue);
 			if (audio) audio.muted = muted.value;

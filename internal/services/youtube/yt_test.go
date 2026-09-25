@@ -47,8 +47,8 @@ func TestGetAudioURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	if url.URL == "" || len(url.URL) < 50 {
-		t.Fatalf("invalid URL: %s", url.URL)
+	if url == "" || len(url) < 50 {
+		t.Fatalf("invalid URL: %s", url)
 	}
 	if client.Name == "" {
 		t.Fatalf("expected client name, got empty")

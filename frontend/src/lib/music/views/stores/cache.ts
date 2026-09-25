@@ -7,7 +7,6 @@ type CachedAudio = {
 	lastUsed: number;
 	youtube: string;
 	expireAt: number;
-	loudnessDb: number | null;
 };
 
 // A 45-byte silent 8kHz WAV: played inside the first user gesture to grant the
@@ -112,7 +111,6 @@ export class AudioCache {
 					lastUsed: Date.now(),
 					youtube: data.youtube,
 					expireAt: data.expireAt ?? 0,
-					loudnessDb: data.loudnessDb ?? null,
 				};
 
 				AudioCache.cache.set(song.id, value);

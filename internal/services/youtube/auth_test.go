@@ -139,7 +139,7 @@ func TestAgeRestrictedWithCookiesIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("age-restricted video failed while signed in: %v", err)
 	}
-	if raw.URL == "" {
+	if raw == "" {
 		t.Fatal("empty stream URL")
 	}
 }
