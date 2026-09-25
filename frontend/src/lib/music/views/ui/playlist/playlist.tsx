@@ -1,7 +1,7 @@
 import { effect, signal, useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
-import { useEffect } from "preact/hooks";
+import { useEffect, useMemo } from "preact/hooks";
 import {
 	getFullPlaylist,
 	revalidateFullPlaylist,
@@ -182,31 +182,39 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	const cover = liked
 		? likedCover
 		: (data?.cover ?? songs[0]?.album?.covers?.[0]);
-	const covers = custom
-		? [...new Set(songs.map((song) => song.album?.covers?.[0]))]
-				.filter((value): value is string => !!value)
-				.slice(0, 4)
-		: [];
 	const name = liked
 		? t("music.likedSongs")
 		: data?.name || t("music.playlist.defaultName");
 
 	const query = search.value.trim().toLowerCase();
-	const base =
-		query.length === 0
-			? songs
-			: songs.filter((song) => {
-					return (
-						song.name.toLowerCase().includes(query) ||
-						(song.artists ?? []).some((a) =>
-							a.name.toLowerCase().includes(query),
-						)
-					);
-				});
-	const filteredSongs = sortSongs(base, order.value);
-	const playable = filteredSongs.filter((song) => !song.broken);
-	const canReorder =
-		custom && query.length === 0 && order.value === "added" && songs.length > 1;
+	const { covers, filteredSongs, playable, canReorder } = useMemo(() => {
+		const base =
+			query.length === 0
+				? songs
+				: songs.filter((song) => {
+						return (
+							song.name.toLowerCase().includes(query) ||
+							(song.artists ?? []).some((a) =>
+								a.name.toLowerCase().includes(query),
+							)
+						);
+					});
+		const sorted = sortSongs(base, order.value);
+		return {
+			covers: custom
+				? [...new Set(songs.map((song) => song.album?.covers?.[0]))]
+						.filter((value): value is string => !!value)
+						.slice(0, 4)
+				: [],
+			filteredSongs: sorted,
+			playable: sorted.filter((song) => !song.broken),
+			canReorder:
+				custom &&
+				query.length === 0 &&
+				order.value === "added" &&
+				songs.length > 1,
+		};
+	}, [songs, custom, query, order.value]);
 
 	const handleReorder = (from: number, to: number) => {
 		const fromSong = songs[from];
@@ -249,35 +257,20 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-4 pb-6">
-			<PageHeader
+			<PlaylistHeader
+				id={id}
 				cover={cover}
 				covers={covers}
-				title={name}
-				subtitle={t("music.trackCount", { count: songs.length })}
+				name={name}
+				trackCount={songs.length}
+				playable={playable}
 				link={ownerLink}
-				linkReserve
-				onPlay={
-					playable.length > 0 ? () => void playList(playable, id) : undefined
-				}
-				playing={isQueue(playable) && isPlaying.value}
-				loading={isQueue(playable) && playbackLoading.value}
-				actions={
-					<TrackActions
-						songs={songs}
-						onSelectAll={selectAll}
-						removable={custom}
-						onRemove={
-							custom
-								? () => {
-										removing.value =
-											selectedSongs.value.length > 0
-												? selectedSongs.value
-												: songs;
-									}
-								: undefined
-						}
-					/>
-				}
+				custom={custom}
+				songs={songs}
+				onRemove={() => {
+					removing.value =
+						selectedSongs.value.length > 0 ? selectedSongs.value : songs;
+				}}
 			/>
 
 			{selectedSongs.value.length > 1 ? (
@@ -402,5 +395,56 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				onConfirm={confirmRemove}
 			/>
 		</div>
+	);
+}
+
+// Playback state is read here so a play/pause toggle re-renders the header
+// alone, instead of re-deriving the whole list in the page body.
+function PlaylistHeader({
+	id,
+	cover,
+	covers,
+	name,
+	trackCount,
+	playable,
+	link,
+	custom,
+	songs,
+	onRemove,
+}: {
+	id: string;
+	cover?: string;
+	covers: string[];
+	name: string;
+	trackCount: number;
+	playable: Song[];
+	link?: { to: string; label: string };
+	custom: boolean;
+	songs: Song[];
+	onRemove: () => void;
+}) {
+	const active = isQueue(playable);
+	return (
+		<PageHeader
+			cover={cover}
+			covers={covers}
+			title={name}
+			subtitle={t("music.trackCount", { count: trackCount })}
+			link={link}
+			linkReserve
+			onPlay={
+				playable.length > 0 ? () => void playList(playable, id) : undefined
+			}
+			playing={active && isPlaying.value}
+			loading={active && playbackLoading.value}
+			actions={
+				<TrackActions
+					songs={songs}
+					onSelectAll={selectAll}
+					removable={custom}
+					onRemove={custom ? onRemove : undefined}
+				/>
+			}
+		/>
 	);
 }
