@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/devgianlu/go-librespot/session"
 )
@@ -17,7 +19,10 @@ func getJSON(ctx context.Context, sess *session.Session, path string, out any) e
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("%s returned %d", path, resp.StatusCode)
+		// spclient answers with a JSON "error" body that says why, and without
+		// it a rejected request is unreadable.
+		reason, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+		return fmt.Errorf("%s returned %d: %s", path, resp.StatusCode, strings.TrimSpace(string(reason)))
 	}
 	// Stream the body into the decoder instead of buffering the whole payload
 	// alongside the decoded struct.
