@@ -31,7 +31,7 @@
 		"clear": "Limpiar",
 		"inSpotify": "Buscar en Spotify",
 		"inYouTube": "Buscar en YouTube",
-		"youtubePlaceholder": "Buscar en YouTube (vídeos o listas)",
+		"youtubePlaceholder": "Buscar en YouTube (vídeos, listas o canales)",
 		"trackPlaceholder": "Canción, artista o enlace/ID de Spotify...",
 		"userPlaceholder": "Usuario de Spotify o enlace...",
 		"spotifyPlaceholder": "Pega un enlace, URI o ID de {type} de Spotify...",
@@ -118,9 +118,11 @@
 		"youtube": {
 			"videos": "Vídeos",
 			"playlists": "Listas",
+			"channels": "Canales",
 			"failed": "Error al buscar en YouTube",
 			"noResults": "Sin resultados.",
 			"noPlaylists": "No se encontraron listas.",
+			"noChannels": "No se encontraron canales.",
 			"addHome": "Añadir a inicio",
 			"removeHome": "Quitar de inicio"
 		},

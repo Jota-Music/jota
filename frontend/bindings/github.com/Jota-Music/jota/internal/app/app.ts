@@ -239,6 +239,10 @@ export function SearchYouTube(query: string): $CancellablePromise<youtube$0.Vide
     return $Call.ByID(4098143421, query);
 }
 
+export function SearchYouTubeChannels(query: string): $CancellablePromise<music$0.ChannelInfo[] | null> {
+    return $Call.ByID(3396227789, query);
+}
+
 export function SearchYouTubePlaylists(query: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
     return $Call.ByID(4089111504, query);
 }

@@ -40,6 +40,10 @@ func (a *App) SearchYouTubePlaylists(query string) ([]music.PlaylistSummary, err
 	return a.YouTube.SearchPlaylists(query)
 }
 
+func (a *App) SearchYouTubeChannels(query string) ([]music.ChannelInfo, error) {
+	return a.YouTube.SearchChannels(query)
+}
+
 func (a *App) GetYouTubeChannelPlaylists(channel string) ([]music.PlaylistSummary, error) {
 	return a.YouTube.GetChannelPlaylists(channel)
 }

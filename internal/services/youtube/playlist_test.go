@@ -192,7 +192,7 @@ const searchFixture = `{
 }`
 
 func TestPlaylistSearchParsing(t *testing.T) {
-	var res playlistSearchResponse
+	var res searchResponse
 	if err := json.Unmarshal([]byte(searchFixture), &res); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

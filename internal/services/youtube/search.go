@@ -13,6 +13,34 @@ import (
 
 var youtubeSourceBucket = kv.UseBucket("youtube-source")
 
+const searchEndpoint = "https://www.youtube.com/youtubei/v1/search"
+
+// search runs an innertube search with an optional filter param and decodes
+// the shared response envelope. The music endpoint is used for plain video
+// search; the web endpoint for the playlist/channel filtered queries.
+func search(url, query, params string) (searchResponse, error) {
+	payload := map[string]any{
+		"query":          query,
+		"context":        map[string]any{"client": clientContext(preferredClient)},
+		"contentCheckOk": true,
+		"racyCheckOk":    true,
+	}
+	if params != "" {
+		payload["params"] = params
+	}
+
+	data, err := retryRequest(preferredClient, url, payload, 3)
+	if err != nil {
+		return searchResponse{}, fmt.Errorf("search request failed: %w", err)
+	}
+
+	var sr searchResponse
+	if err := json.Unmarshal(data, &sr); err != nil {
+		return searchResponse{}, fmt.Errorf("invalid JSON: %w", err)
+	}
+	return sr, nil
+}
+
 func (s *Service) Search(query string) ([]Video, error) {
 	if query == "" {
 		return nil, errors.New("empty query")
@@ -24,23 +52,10 @@ func (s *Service) Search(query string) ([]Video, error) {
 		}
 	}
 
-	payload := map[string]any{
-		"query":          query,
-		"context":        map[string]any{"client": clientContext(preferredClient)},
-		"contentCheckOk": true,
-		"racyCheckOk":    true,
-	}
-
-	data, err := retryRequest(preferredClient, "https://music.youtube.com/youtubei/v1/search", payload, 3)
+	sr, err := search("https://music.youtube.com/youtubei/v1/search", query, "")
 	if err != nil {
-		return nil, fmt.Errorf("search request failed: %w", err)
+		return nil, err
 	}
-
-	var sr searchResponse
-	if err := json.Unmarshal(data, &sr); err != nil {
-		return nil, fmt.Errorf("invalid JSON: %w", err)
-	}
-
 	return extractVideos(sr), nil
 }
 
@@ -132,6 +147,9 @@ func fetchPlayer(id string) (playerResponse, error) {
 // playlistFilter is the innertube search params that restricts results to playlists.
 const playlistFilter = "EgIQAw=="
 
+// channelFilter is the innertube search params that restricts results to channels.
+const channelFilter = "EgIQAg=="
+
 // playlistIdPattern matches bare playlist IDs (PL…, LL…, FL…, RD…, UU…, OL…, PU…).
 var playlistIdPattern = regexp.MustCompile(`^(?:PL|LL|FL|RD|UU|OL|PU)[A-Za-z0-9_-]{10,}$`)
 
@@ -162,28 +180,49 @@ func (s *Service) SearchPlaylists(query string) ([]music.PlaylistSummary, error)
 		}
 	}
 
-	payload := map[string]any{
-		"query":          query,
-		"params":         playlistFilter,
-		"context":        map[string]any{"client": clientContext(preferredClient)},
-		"contentCheckOk": true,
-		"racyCheckOk":    true,
-	}
-
-	data, err := retryRequest(preferredClient, "https://www.youtube.com/youtubei/v1/search", payload, 3)
+	sr, err := search(searchEndpoint, query, playlistFilter)
 	if err != nil {
-		return nil, fmt.Errorf("search request failed: %w", err)
+		return nil, err
 	}
-
-	var res playlistSearchResponse
-	if err := json.Unmarshal(data, &res); err != nil {
-		return nil, fmt.Errorf("invalid JSON: %w", err)
-	}
-
-	return extractPlaylists(res), nil
+	return extractPlaylists(sr), nil
 }
 
-func extractPlaylists(res playlistSearchResponse) []music.PlaylistSummary {
+func extractChannels(res searchResponse) []music.ChannelInfo {
+	out := make([]music.ChannelInfo, 0)
+	for _, section := range res.Contents.SectionListRenderer.Contents {
+		for _, item := range section.ItemSectionRenderer.Contents {
+			if info, ok := item.CompactChannelRenderer.info(); ok {
+				out = append(out, info)
+			}
+		}
+	}
+	return out
+}
+
+func (c compactChannelRenderer) info() (music.ChannelInfo, bool) {
+	if c.ChannelId == "" {
+		return music.ChannelInfo{}, false
+	}
+	return music.ChannelInfo{
+		Id:     c.ChannelId,
+		Name:   c.Title.first(),
+		Avatar: c.Thumbnail.url(),
+	}, true
+}
+
+func (s *Service) SearchChannels(query string) ([]music.ChannelInfo, error) {
+	if query == "" {
+		return nil, errors.New("empty query")
+	}
+
+	sr, err := search(searchEndpoint, query, channelFilter)
+	if err != nil {
+		return nil, err
+	}
+	return extractChannels(sr), nil
+}
+
+func extractPlaylists(res searchResponse) []music.PlaylistSummary {
 	out := make([]music.PlaylistSummary, 0)
 	for _, section := range res.Contents.SectionListRenderer.Contents {
 		for _, item := range section.ItemSectionRenderer.Contents {

@@ -1,6 +1,16 @@
-import { Search, SearchYouTube, SearchYouTubePlaylists } from "@bindings/app";
+import {
+	Search,
+	SearchYouTube,
+	SearchYouTubeChannels,
+	SearchYouTubePlaylists,
+} from "@bindings/app";
 import type { Video } from "@models/services/youtube/models";
-import type { PlaylistSummary, SearchResult, Song } from "@/lib/music/model";
+import type {
+	ChannelInfo,
+	PlaylistSummary,
+	SearchResult,
+	Song,
+} from "@/lib/music/model";
 
 export type { SearchResult } from "@/lib/music/model";
 
@@ -19,6 +29,12 @@ export async function searchYouTubePlaylists(
 	query: string,
 ): Promise<PlaylistSummary[]> {
 	return (await SearchYouTubePlaylists(query)) ?? [];
+}
+
+export async function searchYouTubeChannels(
+	query: string,
+): Promise<ChannelInfo[]> {
+	return (await SearchYouTubeChannels(query)) ?? [];
 }
 
 export function youtubeVideoToSong(video: Video): Song {

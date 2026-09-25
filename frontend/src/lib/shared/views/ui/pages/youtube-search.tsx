@@ -1,10 +1,18 @@
 import { useSignal } from "@preact/signals";
 import { useQuery } from "@tanstack/preact-query";
-import { CirclePlay, ListVideo, Loader, Pause, Play } from "lucide-preact";
+import {
+	CirclePlay,
+	ListVideo,
+	Loader,
+	Pause,
+	Play,
+	User,
+} from "lucide-preact";
 import { useEffect, useRef } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
 	searchYouTube,
+	searchYouTubeChannels,
 	searchYouTubePlaylists,
 	youtubeVideoToSong,
 } from "@/lib/music/app/search";
@@ -16,6 +24,7 @@ import { playFromQueueSelection } from "@/lib/music/views/stores/player";
 import { queueSource } from "@/lib/music/views/stores/queue";
 import { clearSelection } from "@/lib/music/views/stores/selection";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
+import { Shelf } from "@/lib/music/views/ui/shelf";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
 import { t } from "@/lib/shared/i18n";
@@ -25,7 +34,19 @@ import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
-type Tab = "videos" | "playlists";
+type Tab = "videos" | "playlists" | "channels";
+
+const TAB_ICONS = {
+	videos: CirclePlay,
+	playlists: ListVideo,
+	channels: User,
+} as const;
+
+const TAB_TITLES = {
+	videos: "pages.youtube.videos",
+	playlists: "pages.youtube.playlists",
+	channels: "pages.youtube.channels",
+} as const;
 
 // A pasted YouTube link/ID decides which category it points to.
 function queryTarget(query: string): Tab {
@@ -57,6 +78,8 @@ export function YouTubeSearchPage() {
 
 	const wantVideos = !!query && (!direct || target === "videos");
 	const wantPlaylists = !!query && (!direct || target === "playlists");
+	// A pasted link is never a channel, so it only needs the two other queries.
+	const wantChannels = !!query && !direct;
 
 	const videosQuery = useQuery({
 		queryKey: ["youtube-search", query],
@@ -72,23 +95,37 @@ export function YouTubeSearchPage() {
 		gcTime: 0,
 	});
 
+	const channelsQuery = useQuery({
+		queryKey: ["youtube-channel-search", query],
+		queryFn: () => searchYouTubeChannels(query),
+		enabled: wantChannels,
+		gcTime: 0,
+	});
+
 	const videos = videosQuery.data ?? [];
 	const playlists = playlistsQuery.data ?? [];
+	const channels = channelsQuery.data ?? [];
 
-	const videosAvailable =
-		wantVideos && (videosQuery.isSuccess ? videos.length > 0 : true);
-	const playlistsAvailable =
-		wantPlaylists && (playlistsQuery.isSuccess ? playlists.length > 0 : true);
+	// A category with no results drops out of the switcher, but one that is
+	// still loading stays in so the tabs do not jump around as answers land.
+	const tabs = (
+		[
+			wantVideos &&
+				(videosQuery.isSuccess ? videos.length > 0 : true) &&
+				"videos",
+			wantPlaylists &&
+				(playlistsQuery.isSuccess ? playlists.length > 0 : true) &&
+				"playlists",
+			wantChannels &&
+				(channelsQuery.isSuccess ? channels.length > 0 : true) &&
+				"channels",
+		] as const
+	).filter((tab) => tab !== false);
 
-	// Only offer the switcher when both categories actually have content.
-	const bothAvailable = videosAvailable && playlistsAvailable;
-	const activeTab: Tab = bothAvailable
-		? picked.value?.query === query
-			? picked.value.tab
-			: target
-		: videosAvailable
-			? "videos"
-			: "playlists";
+	const pickedTab = picked.value?.query === query ? picked.value.tab : target;
+	const activeTab: Tab = tabs.includes(pickedTab)
+		? pickedTab
+		: (tabs[0] ?? "videos");
 
 	useEffect(() => {
 		clearSelection();
@@ -102,46 +139,38 @@ export function YouTubeSearchPage() {
 
 	const loading =
 		(wantVideos && videosQuery.isLoading) ||
-		(wantPlaylists && playlistsQuery.isLoading);
-	const hasResults = videosAvailable || playlistsAvailable;
+		(wantPlaylists && playlistsQuery.isLoading) ||
+		(wantChannels && channelsQuery.isLoading);
+	const hasResults = tabs.length > 0;
 
 	return (
 		<DefaultLayout class="gap-4">
 			<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
 				<header class="flex shrink-0 flex-col gap-3">
 					<h2 class="text-xl font-semibold leading-tight">{query}</h2>
-					{bothAvailable && (
+					{tabs.length > 1 && (
 						<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-							<button
-								type="button"
-								title={t("pages.youtube.videos")}
-								onClick={() => {
-									picked.value = { query, tab: "videos" };
-								}}
-								class={cn(
-									"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
-									activeTab === "videos"
-										? "bg-zinc-800 text-white"
-										: "text-zinc-500 hover:text-zinc-300",
-								)}
-							>
-								<CirclePlay size={18} />
-							</button>
-							<button
-								type="button"
-								title={t("pages.youtube.playlists")}
-								onClick={() => {
-									picked.value = { query, tab: "playlists" };
-								}}
-								class={cn(
-									"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
-									activeTab === "playlists"
-										? "bg-zinc-800 text-white"
-										: "text-zinc-500 hover:text-zinc-300",
-								)}
-							>
-								<ListVideo size={16} />
-							</button>
+							{tabs.map((tab) => {
+								const Icon = TAB_ICONS[tab];
+								return (
+									<button
+										key={tab}
+										type="button"
+										title={t(TAB_TITLES[tab])}
+										onClick={() => {
+											picked.value = { query, tab };
+										}}
+										class={cn(
+											"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
+											activeTab === tab
+												? "bg-zinc-800 text-white"
+												: "text-zinc-500 hover:text-zinc-300",
+										)}
+									>
+										<Icon size={16} />
+									</button>
+								);
+							})}
 						</div>
 					)}
 				</header>
@@ -150,6 +179,22 @@ export function YouTubeSearchPage() {
 
 				{!hasResults && !loading ? (
 					<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
+				) : activeTab === "channels" ? (
+					<Shelf
+						items={channels.map((channel) => ({
+							id: channel.id,
+							name: channel.name,
+							cover: channel.avatar,
+						}))}
+						to={(id) => `/youtube/user/${id}`}
+						viewKey="youtube_search_channels"
+						isLoading={channelsQuery.isLoading}
+						emptyMessage={t(
+							channelsQuery.isError
+								? "pages.youtube.failed"
+								: "pages.youtube.noChannels",
+						)}
+					/>
 				) : activeTab === "playlists" ? (
 					<div class="relative min-h-0 flex-1">
 						<section ref={listRef} class="h-full flex flex-col overflow-y-auto">

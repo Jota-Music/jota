@@ -51,13 +51,18 @@ func (v compactVideoRenderer) duration() int {
 	return total
 }
 
+// searchResponse is the innertube search envelope. The same item section can
+// carry videos, playlists or channels depending on the filter param, so all
+// three renderers are decoded and each extractor picks the ones it wants.
 type searchResponse struct {
 	Contents struct {
 		SectionListRenderer struct {
 			Contents []struct {
 				ItemSectionRenderer struct {
 					Contents []struct {
-						CompactVideoRenderer compactVideoRenderer `json:"compactVideoRenderer"`
+						CompactVideoRenderer    compactVideoRenderer    `json:"compactVideoRenderer"`
+						CompactPlaylistRenderer compactPlaylistRenderer `json:"compactPlaylistRenderer"`
+						CompactChannelRenderer  compactChannelRenderer  `json:"compactChannelRenderer"`
 					} `json:"contents"`
 				} `json:"itemSectionRenderer"`
 			} `json:"contents"`
@@ -215,18 +220,10 @@ type compactPlaylistRenderer struct {
 	Thumbnail  thumbnail `json:"thumbnail"`
 }
 
-type playlistSearchResponse struct {
-	Contents struct {
-		SectionListRenderer struct {
-			Contents []struct {
-				ItemSectionRenderer struct {
-					Contents []struct {
-						CompactPlaylistRenderer compactPlaylistRenderer `json:"compactPlaylistRenderer"`
-					} `json:"contents"`
-				} `json:"itemSectionRenderer"`
-			} `json:"contents"`
-		} `json:"sectionListRenderer"`
-	} `json:"contents"`
+type compactChannelRenderer struct {
+	ChannelId string    `json:"channelId"`
+	Title     text      `json:"displayName"`
+	Thumbnail thumbnail `json:"thumbnail"`
 }
 
 // itemSection holds a run of compact playlist or video renderers plus its
