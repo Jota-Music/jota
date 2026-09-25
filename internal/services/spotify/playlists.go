@@ -81,7 +81,10 @@ func enrichPlaylistsWithTracks(ctx context.Context, sess *session.Session, pls [
 					cover:      meta.cover,
 					trackCount: meta.trackCount,
 				}
-				if meta.cover != "" && meta.name != "" {
+				// A successful metadata fetch always carries a name, so the
+				// cover is the only field still missing. Falling through for a
+				// name would page the whole playlist to read one track.
+				if meta.cover != "" {
 					return
 				}
 			}
