@@ -62,3 +62,14 @@ func TestGroupByURISharesDuplicates(t *testing.T) {
 		t.Fatal("invalid URI must be skipped")
 	}
 }
+
+// Song ids are bare, and every id-based call depends on that staying true, so
+// pin the contract here.
+func TestSongIdIsBare(t *testing.T) {
+	const uri = "spotify:track:4uLU6hMCjMI75M1A2tKUQC"
+	song := trackToSong(Track{URI: uri, Name: "Test"})
+
+	if song.Id != "4uLU6hMCjMI75M1A2tKUQC" {
+		t.Fatalf("Song.Id = %q, want the bare id", song.Id)
+	}
+}
