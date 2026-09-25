@@ -28,6 +28,10 @@ func fakeResolver(covers map[string]string, fail map[string]bool) func(string) (
 
 func setup(t *testing.T) {
 	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	kv.Close()
 	if err := kv.EnsureStarted(); err != nil {
 		t.Fatalf("kv: %v", err)
 	}
