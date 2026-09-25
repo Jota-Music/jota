@@ -32,10 +32,10 @@ func Search(ctx context.Context, sess *session.Session, query string, searchType
 	case "track":
 		uri := normalizeID(query, "track")
 		id, err := librespot.SpotifyIdFromUri(uri)
-		if err != nil {
-			return nil, fmt.Errorf("invalid track id: %w", err)
+		if err == nil && id.Type() == librespot.SpotifyIdTypeTrack {
+			return getTrackResult(ctx, sess, *id)
 		}
-		return getTrackResult(ctx, sess, *id)
+		return searchTracks(ctx, sess, query)
 	case "album":
 		uri := normalizeID(query, "album")
 		id, err := librespot.SpotifyIdFromUri(uri)
@@ -81,6 +81,32 @@ func searchUser(ctx context.Context, sess *session.Session, username string) ([]
 			CoverURL:   p.CoverURL,
 			OwnerName:  p.Owner,
 			TrackCount: p.TrackCount,
+		})
+	}
+	return results, nil
+}
+
+func searchTracks(ctx context.Context, sess *session.Session, query string) ([]music.SearchResult, error) {
+	sp := sess.Spclient()
+	resolved, err := sp.Search(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("search tracks: %w", err)
+	}
+	tracks, err := contextTracks(ctx, sp, resolved)
+	if err != nil {
+		return nil, fmt.Errorf("resolve track search: %w", err)
+	}
+
+	enriched := tracksFromContext(tracks)
+	enrichTracks(ctx, sess, enriched)
+	results := make([]music.SearchResult, 0, len(enriched))
+	for _, track := range enriched {
+		results = append(results, music.SearchResult{
+			URI:      track.URI,
+			Name:     track.Name,
+			Type:     "track",
+			CoverURL: track.CoverURL,
+			Artists:  track.Artists,
 		})
 	}
 	return results, nil

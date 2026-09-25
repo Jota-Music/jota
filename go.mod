@@ -47,4 +47,4 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 )
 
-replace github.com/devgianlu/go-librespot => github.com/Jota-Music/go-librespot v0.9.0-jota.6
+replace github.com/devgianlu/go-librespot => github.com/Jota-Music/go-librespot v0.9.0-jota.7

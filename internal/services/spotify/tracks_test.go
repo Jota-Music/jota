@@ -21,6 +21,23 @@ func TestTracksFromContext(t *testing.T) {
 	}
 }
 
+func TestContextTracksFromSearch(t *testing.T) {
+	resolved := &connectpb.Context{
+		Uri: "spotify:search:Daft+Punk",
+		Pages: []*connectpb.ContextPage{{
+			Tracks: []*connectpb.ContextTrack{{Gid: make([]byte, 16)}},
+		}},
+	}
+
+	got, err := contextTracks(t.Context(), nil, resolved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].GetUri() != "spotify:track:0000000000000000000000" {
+		t.Fatalf("contextTracks = %+v", got)
+	}
+}
+
 func TestGroupByURISharesDuplicates(t *testing.T) {
 	const (
 		trackA = "spotify:track:4uLU6hMCjMI75M1A2tKUQC"

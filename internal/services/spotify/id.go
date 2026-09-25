@@ -24,11 +24,16 @@ func spotifyID(uri, typ string) (librespot.SpotifyId, error) {
 }
 
 func resolveContextTracks(ctx context.Context, sess *session.Session, uri string) ([]*connectpb.ContextTrack, error) {
-	resolved, err := sess.Spclient().ContextResolve(ctx, uri)
+	sp := sess.Spclient()
+	resolved, err := sp.ContextResolve(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
-	cr, err := spclient.NewContextResolver(ctx, &librespot.NullLogger{}, sess.Spclient(), resolved)
+	return contextTracks(ctx, sp, resolved)
+}
+
+func contextTracks(ctx context.Context, sp *spclient.Spclient, resolved *connectpb.Context) ([]*connectpb.ContextTrack, error) {
+	cr, err := spclient.NewContextResolver(ctx, &librespot.NullLogger{}, sp, resolved)
 	if err != nil {
 		return nil, err
 	}
