@@ -6,6 +6,7 @@
 	"common": {
 		"loading": "Cargando...",
 		"retry": "Reintentar",
+		"reload": "Recargar",
 		"save": "Guardar",
 		"saving": "Guardando…",
 		"remove": "Quitar",
@@ -378,6 +379,7 @@
 		"consensusTimeout": "tiempo de espera del consenso",
 		"recoveryFailed": "todos los intentos de recuperación fallaron",
 		"playbackBlocked": "el navegador necesita un clic para permitir la reproducción",
+		"crash": "Jota tuvo un error inesperado. Recargá para seguir.",
 		"backend": {
 			"loginUnavailable": "El inicio de sesión con navegador integrado no está disponible en esta plataforma",
 			"loginWindowClosed": "ventana de inicio de sesión cerrada",

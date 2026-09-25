@@ -6,6 +6,7 @@
 	"common": {
 		"loading": "Loading...",
 		"retry": "Retry",
+		"reload": "Reload",
 		"save": "Save",
 		"saving": "Saving…",
 		"remove": "Remove",
@@ -378,6 +379,7 @@
 		"consensusTimeout": "consensus timeout",
 		"recoveryFailed": "every recovery attempt failed",
 		"playbackBlocked": "the browser needs a click to allow playback",
+		"crash": "Jota hit an unexpected error. Reload to keep going.",
 		"backend": {
 			"loginUnavailable": "In-app browser login is not available on this platform",
 			"loginWindowClosed": "login window closed",
