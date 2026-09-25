@@ -179,6 +179,9 @@ var (
 	visitorData   string
 	lastFetch     time.Time
 	blockedUntil  time.Time
+	// visitorRefreshMu serialises homepage refreshes without being taken on the
+	// request path, so one slow fetch cannot block the other resolves.
+	visitorRefreshMu sync.Mutex
 )
 
 func initialAPIKey() string {
@@ -250,42 +253,87 @@ func visitorCached() bool {
 // A failed refresh degrades to the cached values and backs off for
 // visitorBackoff, so a bot-checked homepage is not hammered on every request.
 func getVisitorData() (string, string, error) {
-	visitorDataMu.RLock()
-	if visitorCached() {
-		vd := visitorData
-		visitorDataMu.RUnlock()
+	if vd, ok := cachedVisitor(); ok {
 		return vd, currentAPIKey(), nil
 	}
-	visitorDataMu.RUnlock()
 
-	visitorDataMu.Lock()
-	defer visitorDataMu.Unlock()
-	if visitorCached() {
-		return visitorData, currentAPIKey(), nil
+	// The refresh runs under its own mutex, never under visitorDataMu: that lock
+	// is taken again on every response by adoptVisitor, so holding it across the
+	// homepage fetch would serialise all YouTube resolution behind one request.
+	visitorRefreshMu.Lock()
+	defer visitorRefreshMu.Unlock()
+
+	// A refresher that held the lock first may have refreshed in the meantime.
+	if vd, ok := cachedVisitor(); ok {
+		return vd, currentAPIKey(), nil
+	}
+	if vd, ok := resumeVisitor(); ok {
+		return vd, currentAPIKey(), nil
 	}
 
-	// Resume what a previous session persisted, so a cold start does not have to
-	// touch the homepage at all.
+	body, err := fetchHomepage()
+	if err != nil {
+		visitorDataMu.Lock()
+		blockedUntil = time.Now().Add(visitorBackoff)
+		vd := visitorData
+		visitorDataMu.Unlock()
+		log.Printf("youtube: visitor refresh failed, backing off %s: %v", visitorBackoff, err)
+		return vd, currentAPIKey(), nil
+	}
+
+	vd, token, version := storeHomepage(body)
+	if token != "" {
+		_ = visitorBucket.SetString(visitorKey, token, visitorPersistTTL)
+	}
+	if version != "" {
+		_ = visitorBucket.SetString(versionKey, version, versionTTL)
+	}
+	return vd, currentAPIKey(), nil
+}
+
+// cachedVisitor reports the in-memory token when it is still fresh or a previous
+// refresh failure is still backing off.
+func cachedVisitor() (string, bool) {
+	visitorDataMu.RLock()
+	defer visitorDataMu.RUnlock()
+	if !visitorCached() {
+		return "", false
+	}
+	return visitorData, true
+}
+
+// resumeVisitor restores what a previous session persisted, so a cold start does
+// not have to touch the homepage at all.
+func resumeVisitor() (string, bool) {
 	if stored, err := visitorBucket.GetString(versionKey); err == nil && stored != "" {
 		webVersionMu.Lock()
 		webVersion = stored
 		webVersionMu.Unlock()
 	}
-	if visitorData == "" {
-		if stored, err := visitorBucket.GetString(visitorKey); err == nil && stored != "" {
-			visitorData = stored
-			lastFetch = time.Now()
-			return visitorData, currentAPIKey(), nil
-		}
+
+	visitorDataMu.RLock()
+	empty := visitorData == ""
+	visitorDataMu.RUnlock()
+	if !empty {
+		return "", false
 	}
 
-	body, err := fetchHomepage()
-	if err != nil {
-		blockedUntil = time.Now().Add(visitorBackoff)
-		log.Printf("youtube: visitor refresh failed, backing off %s: %v", visitorBackoff, err)
-		return visitorData, currentAPIKey(), nil
+	stored, err := visitorBucket.GetString(visitorKey)
+	if err != nil || stored == "" {
+		return "", false
 	}
+	visitorDataMu.Lock()
+	visitorData = stored
+	lastFetch = time.Now()
+	visitorDataMu.Unlock()
+	return stored, true
+}
 
+// storeHomepage takes the API key, client version and visitor token out of a
+// freshly fetched homepage. It returns the token in use plus the token and
+// version worth persisting, so the disk writes stay outside visitorDataMu.
+func storeHomepage(body []byte) (string, string, string) {
+	var token, version string
 	if apiKeyEnv == "" {
 		if m := innertubeApiKeyRe.FindSubmatch(body); len(m) > 1 {
 			apiKeyMu.Lock()
@@ -299,18 +347,22 @@ func getVisitorData() (string, string, error) {
 	if m := clientVersionRe.FindSubmatch(body); len(m) > 1 {
 		webVersionMu.Lock()
 		webVersion = string(m[1])
+		version = webVersion
 		webVersionMu.Unlock()
-		_ = visitorBucket.SetString(versionKey, string(m[1]), versionTTL)
 	}
 
 	if m := visitorDataRe.FindSubmatch(body); len(m) > 1 {
-		visitorData = string(m[1])
-		_ = visitorBucket.SetString(visitorKey, visitorData, visitorPersistTTL)
+		token = string(m[1])
+	}
+	visitorDataMu.Lock()
+	if token != "" {
+		visitorData = token
 	}
 	blockedUntil = time.Time{}
 	lastFetch = time.Now()
-
-	return visitorData, currentAPIKey(), nil
+	vd := visitorData
+	visitorDataMu.Unlock()
+	return vd, token, version
 }
 
 // WarmVisitor fetches the visitor token in the background so the first resolve

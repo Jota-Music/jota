@@ -268,6 +268,82 @@ func TestGetVisitorDataResumesPersistedToken(t *testing.T) {
 	}
 }
 
+// A homepage refresh is slow network work, while adoptVisitor runs on every
+// innertube response. Holding visitorDataMu across the fetch would serialise all
+// YouTube resolution behind it, so adoptVisitor must complete while a refresh is
+// in flight.
+func TestAdoptVisitorDoesNotBlockOnRefresh(t *testing.T) {
+	origClient := visitorClient
+	defer func() { visitorClient = origClient }()
+
+	apiKeyMu.Lock()
+	origKey := apiKey
+	apiKeyMu.Unlock()
+	visitorDataMu.Lock()
+	origVisitor, origLast, origBlocked := visitorData, lastFetch, blockedUntil
+	visitorData, lastFetch, blockedUntil = "", time.Time{}, time.Time{}
+	visitorDataMu.Unlock()
+	_ = visitorBucket.Delete(visitorKey)
+	defer func() {
+		apiKeyMu.Lock()
+		apiKey = origKey
+		apiKeyMu.Unlock()
+		visitorDataMu.Lock()
+		visitorData, lastFetch, blockedUntil = origVisitor, origLast, origBlocked
+		visitorDataMu.Unlock()
+		_ = visitorBucket.Delete(visitorKey)
+	}()
+
+	fetching := make(chan struct{})
+	release := make(chan struct{})
+	visitorClient = &http.Client{
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			close(fetching)
+			<-release
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(`"INNERTUBE_API_KEY":"k"`)),
+			}, nil
+		}),
+	}
+
+	refreshed := make(chan struct{})
+	go func() {
+		defer close(refreshed)
+		if _, _, err := getVisitorData(); err != nil {
+			t.Errorf("getVisitorData: %v", err)
+		}
+	}()
+	// Released even on failure, so a regression fails this test instead of
+	// deadlocking the rest of the package behind the stuck refresh.
+	defer func() {
+		close(release)
+		<-refreshed
+	}()
+
+	<-fetching
+
+	adopted := make(chan struct{})
+	go func() {
+		defer close(adopted)
+		adoptVisitor([]byte(`{"visitorData":"fresh-token"}`))
+	}()
+
+	select {
+	case <-adopted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("adoptVisitor blocked behind an in-flight homepage refresh")
+	}
+
+	visitorDataMu.RLock()
+	got := visitorData
+	visitorDataMu.RUnlock()
+	if got != "fresh-token" {
+		t.Fatalf("visitorData = %q, want fresh-token", got)
+	}
+}
+
 func TestVisitorRedirectStopsAtGoogle(t *testing.T) {
 	req := func(host string) *http.Request {
 		r, _ := http.NewRequest("GET", "https://"+host+"/", nil)
