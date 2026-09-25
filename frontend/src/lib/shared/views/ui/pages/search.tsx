@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/preact-query";
+import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Loader, Pause, Play } from "lucide-preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { Link, useLocation, useParams } from "wouter-preact";
@@ -34,6 +34,7 @@ const detailRoutes: Partial<Record<SearchType, (id: string) => string>> = {
 };
 
 function SearchResultItem({ item }: { item: SearchResult }) {
+	const queryClient = useQueryClient();
 	const coverUrl = item.coverUrl ?? "";
 	const artists = (item.artists ?? []).join(", ");
 	const isPlaylist = item.uri.startsWith("spotify:playlist:");
@@ -51,12 +52,13 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 		if (isPlaylist) {
 			actions.push({
 				...play,
-				run: () => void playPlaylist(playlistId),
+				run: () => void playPlaylist(queryClient, playlistId),
 			});
 		} else if (isAlbum) {
 			actions.push({
 				...play,
-				run: () => void playAlbum(stripUriPrefix(item.uri, "album")),
+				run: () =>
+					void playAlbum(queryClient, stripUriPrefix(item.uri, "album")),
 			});
 		}
 		if (actions.length > 0) openContextMenu(actions, e);

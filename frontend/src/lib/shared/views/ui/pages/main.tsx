@@ -155,7 +155,7 @@ export function MainPage() {
 							customQuery.isLoading
 						}
 						emptyMessage={<YouTubeHint />}
-						onPlay={playPlaylist}
+						onPlay={(id) => void playPlaylist(queryClient, id)}
 						onRemove={(id) => remove(id)}
 						onReorder={reorder}
 						onCreate={() => {

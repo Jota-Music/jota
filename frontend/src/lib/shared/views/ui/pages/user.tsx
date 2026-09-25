@@ -202,7 +202,7 @@ export function UserPage() {
 				items={playlists.map(toItem)}
 				to={(id) => `/playlist/${id}`}
 				actions={(id) => <PlaylistPlayButton id={id} />}
-				onPlay={playPlaylist}
+				onPlay={(id) => void playPlaylist(queryClient, id)}
 				viewKey="user_view"
 				isLoading={playlistsQuery.isLoading}
 				emptyMessage={t("pages.user.noPlaylists")}

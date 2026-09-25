@@ -1,5 +1,5 @@
 import { useSignal } from "@preact/signals";
-import { useQuery } from "@tanstack/preact-query";
+import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import {
 	CirclePlay,
 	ListVideo,
@@ -258,6 +258,7 @@ export function YouTubeSearchPage() {
 }
 
 function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
+	const queryClient = useQueryClient();
 	const playing = queueSource.value === playlist.id && isPlaying.value;
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: right-click opens the playlist actions
@@ -269,7 +270,7 @@ function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
 						{
 							icon: playing ? Pause : Play,
 							label: playing ? t("music.pause") : t("music.play"),
-							run: () => void playPlaylist(playlist.id),
+							run: () => void playPlaylist(queryClient, playlist.id),
 						},
 					],
 					e,

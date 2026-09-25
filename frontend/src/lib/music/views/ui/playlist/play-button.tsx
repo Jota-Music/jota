@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/preact-query";
 import { CirclePlay, Loader, Pause } from "lucide-preact";
 import { loadingPlaylist, playPlaylist } from "@/lib/music/views/play";
 import { isLoading, isPlaying } from "@/lib/music/views/stores/audio";
@@ -8,6 +9,7 @@ const buttonClass =
 	"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md bg-black/70 text-zinc-300 transition hover:bg-black/90 hover:text-white disabled:opacity-50";
 
 export function PlaylistPlayButton({ id }: { id: string }) {
+	const queryClient = useQueryClient();
 	const loading =
 		loadingPlaylist.value === id ||
 		(queueSource.value === id && isLoading.value);
@@ -23,7 +25,7 @@ export function PlaylistPlayButton({ id }: { id: string }) {
 			onClick={(e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				void playPlaylist(id);
+				void playPlaylist(queryClient, id);
 			}}
 			class={buttonClass}
 		>

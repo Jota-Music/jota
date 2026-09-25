@@ -1,7 +1,7 @@
 import "@/lib/music/views/stores/audio";
 
 import { signal } from "@preact/signals";
-import { useQuery } from "@tanstack/preact-query";
+import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Disc3, ListMusic, Loader } from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import { useParams } from "wouter-preact";
@@ -67,6 +67,7 @@ function groupCounts(
 }
 
 export function ArtistPage() {
+	const queryClient = useQueryClient();
 	const { id } = useParams<{ id: string }>();
 
 	const { data, isLoading, isError } = useQuery({
@@ -206,7 +207,7 @@ export function ArtistPage() {
 							}),
 						)}
 						to={(id) => `/album/${id}`}
-						onPlay={playAlbum}
+						onPlay={(id) => void playAlbum(queryClient, id)}
 						viewKey="artist_view"
 						isLoading={discoLoading}
 						emptyMessage={t("pages.artist.noGroup", {
