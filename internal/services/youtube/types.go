@@ -107,7 +107,17 @@ func (t thumbnail) url() string {
 	if len(t.Thumbnails) == 0 {
 		return ""
 	}
-	return capThumbnail(t.Thumbnails[len(t.Thumbnails)-1].URL)
+	return absolute(capThumbnail(t.Thumbnails[len(t.Thumbnails)-1].URL))
+}
+
+// absolute fills in the scheme innertube leaves off on many avatar URLs
+// ("//yt3.ggpht.com/..."). Left as is, the app resolves them against its own
+// scheme and the image never loads.
+func absolute(url string) string {
+	if strings.HasPrefix(url, "//") {
+		return "https:" + url
+	}
+	return url
 }
 
 // capThumbnail caps i.ytimg.com thumbnails at hqdefault (480px). Art is shown

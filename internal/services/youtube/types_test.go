@@ -19,3 +19,17 @@ func TestCapThumbnail(t *testing.T) {
 		}
 	}
 }
+
+func TestAbsolute(t *testing.T) {
+	cases := map[string]string{
+		"//yt3.ggpht.com/abc=s176":            "https://yt3.ggpht.com/abc=s176",
+		"//yt3.googleusercontent.com/abc=s88": "https://yt3.googleusercontent.com/abc=s88",
+		"https://i.ytimg.com/vi/x/hq.jpg":     "https://i.ytimg.com/vi/x/hq.jpg",
+		"":                                    "",
+	}
+	for in, want := range cases {
+		if got := absolute(in); got != want {
+			t.Errorf("absolute(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
