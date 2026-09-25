@@ -24,6 +24,7 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 	const origin = useRef({ x: 0, y: 0 });
 	const timer = useRef<number | null>(null);
 	const frame = useRef(0);
+	const moveFrame = useRef(0);
 	const last = useRef<PointerEvent | null>(null);
 	const callbacks = useRef({ begin, move, end });
 	callbacks.current = { begin, move, end };
@@ -40,6 +41,33 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		if (frame.current === 0) return;
 		cancelAnimationFrame(frame.current);
 		frame.current = 0;
+	};
+
+	// move may force layout (hit testing), so it runs at most once per frame
+	// instead of on every pointermove the browser delivers.
+	const runMove = () => {
+		moveFrame.current = 0;
+		const e = last.current;
+		if (e) callbacks.current.move(e);
+	};
+
+	const scheduleMove = () => {
+		if (moveFrame.current !== 0) return;
+		moveFrame.current = requestAnimationFrame(runMove);
+	};
+
+	const stopMove = () => {
+		if (moveFrame.current === 0) return;
+		cancelAnimationFrame(moveFrame.current);
+		moveFrame.current = 0;
+	};
+
+	// The last move must land before the drag ends, or a drop would resolve
+	// against the previous frame's hover target.
+	const flushMove = () => {
+		if (moveFrame.current === 0) return;
+		cancelAnimationFrame(moveFrame.current);
+		runMove();
 	};
 
 	const tick = () => {
@@ -64,7 +92,7 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		if (delta === 0) return;
 		const before = el.scrollTop;
 		el.scrollTop = before + delta;
-		if (el.scrollTop !== before) callbacks.current.move(e);
+		if (el.scrollTop !== before) scheduleMove();
 	};
 
 	const beginDrag = () => {
@@ -88,12 +116,13 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 				beginDrag();
 			}
 			dragged.current = true;
-			callbacks.current.move(e);
+			scheduleMove();
 		};
 
 		const onEnd = () => {
 			stopTimer();
 			stopScroll();
+			flushMove();
 			if (!active.current) return;
 			active.current = false;
 			last.current = null;
@@ -114,6 +143,7 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		return () => {
 			stopTimer();
 			stopScroll();
+			stopMove();
 			window.removeEventListener("pointermove", onMove);
 			window.removeEventListener("pointerup", onEnd);
 			window.removeEventListener("pointercancel", onEnd);
