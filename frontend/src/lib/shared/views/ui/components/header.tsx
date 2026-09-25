@@ -191,19 +191,6 @@ export function Header() {
 					</Link>
 
 					<Link
-						href="/settings"
-						title={t("nav.settings")}
-						class={cn(
-							"flex aspect-square h-full items-center justify-center transition-colors border-t-2",
-							location.startsWith("/settings")
-								? "text-(--dominant-color) border-(--dominant-color)"
-								: "text-zinc-400 hover:text-zinc-100 border-transparent",
-						)}
-					>
-						<Settings class="size-5 md:size-4" />
-					</Link>
-
-					<Link
 						href="/rooms"
 						title={t("nav.rooms")}
 						class={cn(
@@ -218,6 +205,19 @@ export function Header() {
 						)}
 					>
 						<Turntable class="size-5 md:size-4" />
+					</Link>
+
+					<Link
+						href="/settings"
+						title={t("nav.settings")}
+						class={cn(
+							"flex aspect-square h-full items-center justify-center transition-colors border-t-2",
+							location.startsWith("/settings")
+								? "text-(--dominant-color) border-(--dominant-color)"
+								: "text-zinc-400 hover:text-zinc-100 border-transparent",
+						)}
+					>
+						<Settings class="size-5 md:size-4" />
 					</Link>
 
 					{removal.value && (
