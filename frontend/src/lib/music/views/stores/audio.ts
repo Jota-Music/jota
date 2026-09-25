@@ -1,5 +1,6 @@
 import { effect, signal } from "@preact/signals";
 import { shouldEnd } from "@/lib/music/app/end";
+import { gain } from "@/lib/music/app/volume";
 import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
@@ -14,24 +15,6 @@ import { addError, logError } from "@/lib/shared/views/stores/errors";
 
 const VOLUME_STORAGE_KEY = "audio-volume";
 const MUTED_STORAGE_KEY = "audio-muted";
-
-// Volume mapping: from 30% up the bar behaves like a plain linear volume (the
-// feel users are used to), so lowering is responsive and needs no precision.
-// Below 30% a quadratic taper drops toward true silence, giving the low end a
-// real quiet floor instead of the old "still loud" minimum.
-const QUIET_START = 0.3;
-const QUIET_LEVEL = 0.2;
-
-function gainFor(value: number): number {
-	if (value >= QUIET_START) {
-		return (
-			QUIET_LEVEL +
-			((value - QUIET_START) / (1 - QUIET_START)) * (1 - QUIET_LEVEL)
-		);
-	}
-	const t = value / QUIET_START;
-	return t * t * QUIET_LEVEL;
-}
 
 function parseStoredVolume(raw: string | null): number {
 	if (raw === null) return 1;
@@ -320,7 +303,7 @@ async function loadSongIntoPlayer(
 	audio = instance;
 	loadedSongId = song.id;
 
-	instance.volume = Math.min(1, gainFor(volume.value));
+	instance.volume = gain(volume.value);
 	instance.muted = muted.value;
 	instance.currentTime = 0;
 
@@ -658,7 +641,7 @@ export function seekTo(time: number, timeoutMs = 2000): Promise<void> {
 export function setVolume(value: number) {
 	const v = Math.max(0, Math.min(1, value));
 	volume.value = v;
-	if (audio) audio.volume = Math.min(1, gainFor(v));
+	if (audio) audio.volume = gain(v);
 	storage.set(VOLUME_STORAGE_KEY, String(v));
 }
 
@@ -778,7 +761,7 @@ if (typeof window !== "undefined") {
 		if (e.key === VOLUME_STORAGE_KEY) {
 			const v = parseStoredVolume(e.newValue);
 			volume.value = v;
-			if (audio) audio.volume = Math.min(1, gainFor(v));
+			if (audio) audio.volume = gain(v);
 		} else if (e.key === MUTED_STORAGE_KEY) {
 			muted.value = parseStoredMuted(e.newValue);
 			if (audio) audio.muted = muted.value;
