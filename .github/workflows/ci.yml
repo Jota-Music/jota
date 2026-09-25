@@ -43,7 +43,7 @@ jobs:
       - name: vet
         run: go vet -tags gtk3 ./internal/...
       - name: test
-        run: go test -tags gtk3 -short ./internal/... -count=1
+        run: go test -tags gtk3 -short -race ./internal/... -count=1
 
   frontend:
     runs-on: ubuntu-latest
