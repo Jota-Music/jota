@@ -5,6 +5,7 @@ import { getChannelInfo } from "@/lib/music/app/get-channel";
 import getFollowing from "@/lib/music/app/get-following";
 import getFriends from "@/lib/music/app/get-friends";
 import getUserProfile from "@/lib/music/app/get-user-profile";
+import { FollowButton } from "@/lib/music/views/ui/follow";
 import {
 	FollowingHint,
 	type IconType,
@@ -19,13 +20,13 @@ type Entry = {
 	id: string;
 	name: string;
 	cover?: string;
-	removable: boolean;
 	icon: IconType;
 	user?: string;
 	channel?: string;
 	artist?: string;
-	// follow is the key this entry has in the local follows store. Only
-	// local follows have one: the Spotify list is read-only.
+	// follow is the key this entry has in the local follows store, so its menu
+	// can offer the same unfollow the hover button does. Only local follows
+	// have one: the Spotify list is read-only and cannot be unwritten.
 	follow?: string;
 	source?: Source;
 };
@@ -46,7 +47,6 @@ export function FollowingShelf({ account }: { account: string }) {
 		users: followed,
 		isLoading: followedLoading,
 		toggle,
-		unfollow,
 	} = useFollows(account);
 
 	const friends = useQuery({
@@ -61,18 +61,18 @@ export function FollowingShelf({ account }: { account: string }) {
 		enabled: !!account,
 	});
 
-	// Local follows are removable; Spotify follows and friends are read-only.
+	// Spotify follows and friends are read-only, so they get no follow key
+	// and no heart; only local follows can be unwritten.
 	const entries: Entry[] = [];
 	const seen = new Set<string>();
 
-	function addUser(user: string, removable: boolean) {
+	function addUser(user: string) {
 		const key = `user:${user}`;
 		if (seen.has(key.toLowerCase())) return;
 		seen.add(key.toLowerCase());
 		entries.push({
 			id: key,
 			name: user,
-			removable,
 			icon: UserIcon,
 			user,
 		});
@@ -87,7 +87,6 @@ export function FollowingShelf({ account }: { account: string }) {
 			entries.push({
 				id: `youtube:${channel}`,
 				name: channel,
-				removable: true,
 				icon: YoutubeIcon,
 				channel,
 				follow: user,
@@ -102,7 +101,6 @@ export function FollowingShelf({ account }: { account: string }) {
 			entries.push({
 				id: key,
 				name: handle,
-				removable: true,
 				icon: artist ? Mic2 : UserIcon,
 				follow: user,
 				...(artist ? { artist: handle } : { user: handle }),
@@ -118,14 +116,13 @@ export function FollowingShelf({ account }: { account: string }) {
 			id: key,
 			name: follow.name || follow.id,
 			cover: follow.imageUrl,
-			removable: false,
 			icon: follow.kind === "artist" ? Mic2 : UserIcon,
 			user: follow.kind === "user" ? follow.id : undefined,
 			source: "spotify",
 		});
 	}
 
-	for (const user of friends.data ?? []) addUser(user, false);
+	for (const user of friends.data ?? []) addUser(user);
 
 	const profileTargets = entries.filter((entry) => entry.user && !entry.cover);
 	const profiles = useQueries({
@@ -196,7 +193,6 @@ export function FollowingShelf({ account }: { account: string }) {
 			name: profile?.displayName || info?.name || artist?.name || entry.name,
 			cover:
 				entry.cover ?? profile?.imageUrl ?? info?.avatar ?? artist?.imageUrl,
-			removable: entry.removable,
 			icon: entry.icon,
 			menu: entry.follow ? [toggle(entry.follow)] : [],
 			source: entry.source,
@@ -211,9 +207,11 @@ export function FollowingShelf({ account }: { account: string }) {
 			isLoading={followedLoading || friends.isLoading || following.isLoading}
 			emptyMessage={<FollowingHint />}
 			showLocal={false}
-			onRemove={(id) => {
+			// Everything on this shelf is a follow, so the hover control is the
+			// heart itself instead of a generic remove button.
+			leading={(id) => {
 				const key = followById.get(id.toLowerCase());
-				if (key) unfollow.mutate(key);
+				return key ? <FollowButton id={key} variant="cover" /> : null;
 			}}
 		/>
 	);
