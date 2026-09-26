@@ -64,6 +64,15 @@ body {
 	display: none;
 }
 
+/* Scroll anchoring quietly moves scrollTop by however much content above it
+   resized. Every scroll pane here already pins its own geometry (fixed row
+   heights, an explicit spacer, aspect-ratio covers), so that compensation only
+   fights the layout: a tile that resolves a frame late would shift the whole
+   list under the finger. */
+* {
+	overflow-anchor: none;
+}
+
 .shimmer {
 	background-color: #18181b;
 	background-image: linear-gradient(
