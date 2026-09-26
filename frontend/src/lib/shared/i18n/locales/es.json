@@ -84,6 +84,7 @@
 	"pages": {
 		"search": {
 			"failed": "Error al buscar",
+			"referenceOnly": "Spotify solo abre {type} por enlace, URI o ID. Pega uno o busca por nombre en otro tipo.",
 			"playlistsBy": "Listas de {query}",
 			"noPlaylists": "No se encontraron listas."
 		},

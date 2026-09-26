@@ -84,6 +84,7 @@
 	"pages": {
 		"search": {
 			"failed": "Failed to search",
+			"referenceOnly": "Spotify only opens a {type} from a link, URI or ID. Paste one, or search by name under another type.",
 			"playlistsBy": "Playlists by {query}",
 			"noPlaylists": "No playlists found."
 		},

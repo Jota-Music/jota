@@ -8,6 +8,7 @@ import {
 	searchSpotify,
 	stripUriPrefix,
 } from "@/lib/music/app/search";
+import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
 import { playAlbum, playPlaylist } from "@/lib/music/views/play";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { queueSource } from "@/lib/music/views/stores/queue";
@@ -130,8 +131,11 @@ export function SearchPage() {
 	const query = params.query ? decodeURIComponent(params.query) : "";
 	const [, setLocation] = useLocation();
 
+	// Spotify only resolves artists, albums and playlists by reference, so a
+	// bare name is not something the detail page can open.
 	const detailRoute = type ? detailRoutes[type] : undefined;
-	const redirectId = detailRoute && type ? stripUriPrefix(query, type) : "";
+	const ref = parseSpotifyLink(query);
+	const redirectId = detailRoute && ref && ref.type === type ? ref.id : "";
 	const listRef = useRef<HTMLElement>(null);
 
 	const { data, isLoading, isError } = useQuery({
@@ -149,6 +153,16 @@ export function SearchPage() {
 			setLocation(detailRoute(redirectId), { replace: true });
 		}
 	}, [detailRoute, redirectId, setLocation]);
+
+	if (detailRoute && !redirectId) {
+		return (
+			<DefaultLayout class="gap-6">
+				<p class="text-sm text-zinc-500">
+					{t("pages.search.referenceOnly", { type: t(`search.type.${type}`) })}
+				</p>
+			</DefaultLayout>
+		);
+	}
 
 	if (isError) {
 		return (
