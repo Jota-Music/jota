@@ -20,6 +20,13 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  # The release tag, and the single source of the version baked into every
+  # artifact. A manual run is dispatched from a branch, so reading
+  # github.ref_name there would build "main" and leave the updater with a
+  # version it cannot compare.
+  RELEASE_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
+
 jobs:
   linux:
     if: ${{ !github.event.inputs.jobs || github.event.inputs.jobs == 'all' || contains(github.event.inputs.jobs, 'linux') }}
@@ -55,7 +62,7 @@ jobs:
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
           CGO_ENABLED=0 go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
       - name: Package (.deb, .rpm, .AppImage, AUR)
-        run: wails3 task package VERSION="${GITHUB_REF_NAME#v}"
+        run: wails3 task package VERSION="${RELEASE_TAG#v}"
       - name: Smoke-test the AppImage across distributions
         run: |
           set -euo pipefail
@@ -186,7 +193,7 @@ jobs:
         env:
           ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
       - name: Package release APK
-        run: wails3 task android:package VERSION="${GITHUB_REF_NAME#v}"
+        run: wails3 task android:package VERSION="${RELEASE_TAG#v}"
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -230,7 +237,7 @@ jobs:
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
           CGO_ENABLED=0 go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
       - name: Build unsigned NSIS installer (per-user, no UAC)
-        run: wails3 task windows:create:nsis:installer VERSION="${GITHUB_REF_NAME#v}" INSTALL_SCOPE=user
+        run: wails3 task windows:create:nsis:installer VERSION="${RELEASE_TAG#v}" INSTALL_SCOPE=user
       - name: Name the raw executable for the in-app updater
         run: cp bin/jota.exe bin/jota-windows-amd64.exe
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -269,7 +276,7 @@ jobs:
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
           CGO_ENABLED=0 go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
       - name: Package unsigned universal .dmg
-        run: wails3 task darwin:package:dmg VERSION="${GITHUB_REF_NAME#v}"
+        run: wails3 task darwin:package:dmg VERSION="${RELEASE_TAG#v}"
       - name: Zip the .app for in-app updates
         run: ditto -c -k --keepParent bin/jota.app bin/jota-macos.zip
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -309,16 +316,15 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       - name: Delete existing release if present
         run: |
-          tag="${{ github.event.inputs.tag_name || github.ref_name }}"
-          if gh release view "$tag" --json name -q .name >/dev/null 2>&1; then
-            gh release delete "$tag" --yes
+          if gh release view "$RELEASE_TAG" --json name -q .name >/dev/null 2>&1; then
+            gh release delete "$RELEASE_TAG" --yes
           fi
         env:
           GH_TOKEN: ${{ github.token }}
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
-          prerelease: ${{ startsWith(github.event.inputs.tag_name || github.ref_name, 'v0.0.') }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          prerelease: ${{ startsWith(env.RELEASE_TAG, 'v0.0.') }}
           files: |
             ${{ steps.collect.outputs.files }}
             SHA256SUMS
