@@ -131,7 +131,14 @@ public class MainActivity extends AppCompatActivity {
         ViewCompat.setOnApplyWindowInsetsListener(container, (v, insets) -> {
             int types = WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout();
             Insets bars = insets.getInsets(types);
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            // Insets are delivered again on unrelated events (a focus change, a
+            // rotation, a sheet dismiss). setPadding invalidates the container and
+            // with it the WebView, which resizes the CSS viewport, so only write
+            // when the padding actually moves.
+            if (v.getPaddingLeft() != bars.left || v.getPaddingTop() != bars.top
+                    || v.getPaddingRight() != bars.right || v.getPaddingBottom() != bars.bottom) {
+                v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            }
             // Zero the handled types so the WebView stops forwarding them to CSS:
             // env(safe-area-inset-*) is already covered by the padding above.
             return new WindowInsetsCompat.Builder(insets)
