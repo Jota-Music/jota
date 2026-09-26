@@ -22,6 +22,7 @@ import {
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
 import {
+	clampIndex,
 	currentIndex,
 	persistQueue,
 	pingQueue,
@@ -207,6 +208,12 @@ let enqueueAnchorId: string | null = null;
 
 export function enqueueMany(songs: Song[]) {
 	if (songs.length === 0) return;
+
+	// A position left over from a longer queue would insert at the end and stay
+	// out of range, so reconcile it before it decides where the songs land.
+	if (currentIndex.value < 0 || currentIndex.value >= queue.value.length) {
+		currentIndex.value = clampIndex(currentIndex.value, queue.value.length);
+	}
 
 	const q = [...queue.value];
 	const anchored =

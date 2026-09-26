@@ -52,9 +52,21 @@ function saveRepeat(v: RepeatMode) {
 	write(REPEAT_STORAGE_KEY, v);
 }
 
+// The index may outlive the queue it points into: a room snapshot replaces the
+// queue with a shorter one, and a stale index persists in storage across
+// reloads. An out-of-range index breaks pick(), leaves the panel with nothing to
+// render and sends every enqueue to the end, so it is clamped on every load and
+// replacement.
+export function clampIndex(index: number, length: number): number {
+	if (length <= 0 || index < 0) return -1;
+	return Math.min(index, length - 1);
+}
+
 export const queue = signal<Song[]>(loadQueue());
 
-export const currentIndex = signal<number>(loadIndex());
+export const currentIndex = signal<number>(
+	clampIndex(loadIndex(), queue.value.length),
+);
 
 // The playlist or album the current queue was started from, when known. Lets a
 // card's play button reflect (and toggle) its own playback.
@@ -70,6 +82,13 @@ export const queuePulse = signal(0);
 
 export function pingQueue() {
 	queuePulse.value++;
+}
+
+// Swap the whole queue (a room snapshot) and keep the position inside it.
+export function replaceQueue(songs: Song[]) {
+	queue.value = songs;
+	currentIndex.value = clampIndex(currentIndex.value, songs.length);
+	persistQueue();
 }
 
 // Writes are debounced: play/skip/reorder mutate the queue several times a

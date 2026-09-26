@@ -20,9 +20,9 @@ import {
 	applyShuffle,
 	currentIndex,
 	nextRepeat,
-	persistQueue,
 	queue,
 	repeat,
+	replaceQueue,
 	setRepeat,
 	shuffle,
 } from "@/lib/music/views/stores/queue";
@@ -307,8 +307,7 @@ function applyQueue(input: string | Song[]): void {
 	}
 	if (!Array.isArray(parsed)) return;
 	suppressQueue = true;
-	queue.value = parsed as Song[];
-	persistQueue();
+	replaceQueue(parsed as Song[]);
 }
 
 function broadcastQueue(): void {

@@ -243,8 +243,11 @@ const QueueRow = memo(function QueueRow({
 function Queue() {
 	const songs = queue.value;
 	const idx = currentIndex.value;
-	const viewStart = idx >= 0 ? Math.max(0, idx - QUEUE_VIEW_LOOKBACK) : 0;
-	const viewCount = songs.length === 0 ? 0 : songs.length - viewStart;
+	const viewStart =
+		idx >= 0
+			? Math.min(Math.max(0, idx - QUEUE_VIEW_LOOKBACK), songs.length)
+			: 0;
+	const viewCount = songs.length - viewStart;
 
 	const { ref, totalSize, items } = useWindow<HTMLUListElement>(
 		viewCount,
