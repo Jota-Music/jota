@@ -3,21 +3,21 @@ type SpotifyRef = {
 	id: string;
 };
 
-const types = ["user", "track", "album", "playlist", "artist"] as const;
-const hosts = new Set(["open.spotify.com", "play.spotify.com"]);
+const TYPES = ["user", "track", "album", "playlist", "artist"] as const;
+const HOSTS = new Set(["open.spotify.com", "play.spotify.com"]);
 
 // Entity ids are base62 and 21-22 chars long. Anything else never resolves on
 // the Spotify side, so a bare name must not parse as a reference. Usernames are
 // the exception: they are textual.
-const idRegexp = /^[0-9a-zA-Z]{21,22}$/;
+const ID_REGEXP = /^[0-9a-zA-Z]{21,22}$/;
 
 function isType(value: string | undefined): value is SpotifyRef["type"] {
-	return value !== undefined && (types as readonly string[]).includes(value);
+	return value !== undefined && (TYPES as readonly string[]).includes(value);
 }
 
 function ref(type: string | undefined, id: string): SpotifyRef | null {
 	if (!isType(type) || !id) return null;
-	if (type !== "user" && !idRegexp.test(id)) return null;
+	if (type !== "user" && !ID_REGEXP.test(id)) return null;
 	return { type, id };
 }
 
@@ -38,7 +38,7 @@ export function parseSpotifyLink(query: string): SpotifyRef | null {
 	} catch {
 		return null;
 	}
-	if (!hosts.has(url.hostname.replace(/^www\./, ""))) return null;
+	if (!HOSTS.has(url.hostname.replace(/^www\./, ""))) return null;
 
 	const segments = url.pathname.split("/").filter(Boolean);
 	if (segments[0]?.startsWith("intl-")) segments.shift();

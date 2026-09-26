@@ -26,7 +26,7 @@ const view = signal<string>("tracks");
 
 const groupOrder = ["album", "single", "compilation"] as const;
 
-const groupLabels: Record<string, string> = {
+const GROUP_LABELS: Record<string, string> = {
 	album: "pages.artist.groups.album",
 	single: "pages.artist.groups.single",
 	compilation: "pages.artist.groups.compilation",
@@ -34,7 +34,7 @@ const groupLabels: Record<string, string> = {
 };
 
 function groupLabel(key: string): string {
-	const label = groupLabels[key];
+	const label = GROUP_LABELS[key];
 	return label ? t(label) : key.charAt(0).toUpperCase() + key.slice(1);
 }
 

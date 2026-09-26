@@ -27,7 +27,7 @@ import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type SearchType = "user" | "track" | "album" | "playlist" | "artist";
 
-const detailRoutes: Partial<Record<SearchType, (id: string) => string>> = {
+const DETAIL_ROUTES: Partial<Record<SearchType, (id: string) => string>> = {
 	artist: (id) => `/artist/${id}`,
 	album: (id) => `/album/${id}`,
 	playlist: (id) => `/playlist/${id}`,
@@ -133,7 +133,7 @@ export function SearchPage() {
 
 	// Spotify only resolves artists, albums and playlists by reference, so a
 	// bare name is not something the detail page can open.
-	const detailRoute = type ? detailRoutes[type] : undefined;
+	const detailRoute = type ? DETAIL_ROUTES[type] : undefined;
 	const ref = parseSpotifyLink(query);
 	const redirectId = detailRoute && ref && ref.type === type ? ref.id : "";
 	const listRef = useRef<HTMLElement>(null);

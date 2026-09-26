@@ -8,10 +8,10 @@ import {
 } from "@bindings/app";
 import type { PlaylistSummary } from "@/lib/music/model";
 
-const localPrefix = "local:";
+const LOCAL_PREFIX = "local:";
 
 export function isCustom(id: string): boolean {
-	return id.startsWith(localPrefix);
+	return id.startsWith(LOCAL_PREFIX);
 }
 
 export async function getPlaylists(): Promise<PlaylistSummary[]> {
