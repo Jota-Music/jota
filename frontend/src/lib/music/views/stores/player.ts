@@ -220,13 +220,15 @@ export function enqueueMany(songs: Song[]) {
 	persistQueue();
 	pingQueue();
 
+	// No preload here: adding one song warmed four, and every resolved id
+	// rewrote the whole queue (O(n) copy + a full notification + a persist). The
+	// tracks are warmed by playAtIndex when the queue reaches them.
 	if (currentSong.value === null) {
 		void playAtIndex(at);
 		return;
 	}
 
 	if (currentIndex.value < 0) currentIndex.value = 0;
-	preloadUpcomingSongs(q, currentIndex.value);
 }
 
 export async function unqueue(removeIdx: number): Promise<void> {
