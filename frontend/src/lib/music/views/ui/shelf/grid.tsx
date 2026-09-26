@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { Link } from "wouter-preact";
 import { cn } from "@/lib/shared/utils/tw";
+import { hover } from "../cover-hover";
 import { SourceBadge } from "./badge";
 import { Cover } from "./cover";
 import { type DragProps, dragFrom, dragOver } from "./hooks/use-reorder";
@@ -13,6 +14,7 @@ interface GridProps {
 	select: (item: Item, e: MouseEvent) => void;
 	menu: (item: Item) => (e: MouseEvent) => void;
 	actions: (item: Item) => ComponentChildren;
+	leading: (item: Item) => ComponentChildren;
 }
 
 export function Grid({
@@ -22,6 +24,7 @@ export function Grid({
 	select,
 	menu,
 	actions,
+	leading,
 }: GridProps) {
 	return (
 		<div class="grid grid-cols-3 gap-0.5 md:gap-4">
@@ -44,9 +47,8 @@ export function Grid({
 					>
 						<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
 							<Cover item={item} size={48} iconSize={28} imageSize={320} />
-							<div class="pointer-coarse:opacity-100 absolute right-1 top-1 flex gap-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
-								{actions(item)}
-							</div>
+							<div class={cn(hover, "left-1 top-1")}>{leading(item)}</div>
+							<div class={cn(hover, "right-1 top-1")}>{actions(item)}</div>
 							{item.source && (
 								<div class="absolute bottom-1 left-1 rounded-md bg-black/70 p-0.5">
 									<SourceBadge source={item.source} />

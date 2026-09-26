@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { Link } from "wouter-preact";
 import { cn } from "@/lib/shared/utils/tw";
+import { hover } from "../cover-hover";
 import { SourceBadge } from "./badge";
 import { Cover } from "./cover";
 import { type DragProps, dragFrom, dragOver } from "./hooks/use-reorder";
@@ -13,6 +14,7 @@ interface CompactProps {
 	select: (item: Item, e: MouseEvent) => void;
 	menu: (item: Item) => (e: MouseEvent) => void;
 	actions: (item: Item) => ComponentChildren;
+	leading: (item: Item) => ComponentChildren;
 	// hoverable fades the source badge out on hover to reveal the actions.
 	hoverable: (item: Item) => boolean;
 }
@@ -24,6 +26,7 @@ export function Compact({
 	select,
 	menu,
 	actions,
+	leading,
 	hoverable,
 }: CompactProps) {
 	return (
@@ -68,7 +71,10 @@ export function Compact({
 									<SourceBadge source={item.source} />
 								</span>
 							)}
-							<div class="pointer-coarse:opacity-100 absolute right-2 top-1/2 flex -translate-y-1/2 gap-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+							<div class={cn(hover, "right-2 top-1/2 -translate-y-1/2")}>
+								{/* The thumbnail is too small for its own corner button, so
+								    leading joins the right cluster here. */}
+								{leading(item)}
 								{actions(item)}
 							</div>
 						</div>

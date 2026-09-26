@@ -28,6 +28,7 @@ export function Shelf({
 	onSelect,
 	onPlay,
 	actions,
+	leading,
 	isLoading = false,
 	emptyMessage = t("music.shelf.empty"),
 	onRemove,
@@ -72,8 +73,18 @@ export function Shelf({
 		openContextMenu(actions, e);
 	};
 
-	const renderActions = (item: Item) => {
-		const extra = actions?.(item.id);
+	const renderActions = (item: Item) => actions?.(item.id) ?? null;
+
+	const select = (item: Item, e: MouseEvent) => {
+		if (!onSelect) return;
+		e.preventDefault();
+		onSelect(item.id);
+	};
+
+	// The left edge carries the destructive and secondary toggles, keeping the
+	// right edge for playing whatever the item is.
+	const renderLeading = (item: Item) => {
+		const extra = leading?.(item.id);
 		const removable = onRemove && item.removable;
 		if (!extra && !removable) return null;
 		return (
@@ -97,13 +108,8 @@ export function Shelf({
 		);
 	};
 
-	const select = (item: Item, e: MouseEvent) => {
-		if (!onSelect) return;
-		e.preventDefault();
-		onSelect(item.id);
-	};
-
-	const hoverable = (item: Item) => (onRemove && item.removable) || !!actions;
+	const hoverable = (item: Item) =>
+		(onRemove && item.removable) || !!actions || !!leading;
 
 	const filterable = items.some((item) => item.source);
 
@@ -173,6 +179,7 @@ export function Shelf({
 									select={select}
 									menu={openItemMenu}
 									actions={renderActions}
+									leading={renderLeading}
 								/>
 							) : (
 								<Compact
@@ -182,6 +189,7 @@ export function Shelf({
 									select={select}
 									menu={openItemMenu}
 									actions={renderActions}
+									leading={renderLeading}
 									hoverable={hoverable}
 								/>
 							)}

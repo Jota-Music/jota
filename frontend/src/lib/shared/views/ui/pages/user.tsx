@@ -21,6 +21,8 @@ import { isLiked, likedCover } from "@/lib/music/app/liked";
 import type { PlaylistSummary, Song } from "@/lib/music/model";
 import { playPlaylist } from "@/lib/music/views/play";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
+import { SaveButton } from "@/lib/music/views/ui/playlist/save-button";
+import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
@@ -61,6 +63,7 @@ export function UserPage() {
 	const youtube = source === "youtube";
 
 	const queryClient = useQueryClient();
+	const { toggle } = useSaved();
 	const activeTab = useSignal<Tab>("playlists");
 	const videosSearch = useSignal("");
 	const videoOrder = useSignal<OrderType>("added");
@@ -119,6 +122,13 @@ export function UserPage() {
 	}
 
 	const playlists = playlistsQuery.data ?? [];
+	// Liked Songs still shows up, it just has nothing to follow.
+	const items: Item[] = playlists.map(
+		(p): Item => ({
+			...toItem(p),
+			menu: followable(p.id) ? [toggle(p.id)] : [],
+		}),
+	);
 	const videos = videosQuery.data ?? [];
 
 	const query = videosSearch.value.trim().toLowerCase();
@@ -199,8 +209,9 @@ export function UserPage() {
 			</>
 		) : (
 			<Shelf
-				items={playlists.map(toItem)}
+				items={items}
 				to={(id) => `/playlist/${id}`}
+				leading={(id) => (followable(id) ? <SaveButton id={id} /> : null)}
 				actions={(id) => <PlaylistPlayButton id={id} />}
 				onPlay={(id) => void playPlaylist(queryClient, id)}
 				viewKey="user_view"

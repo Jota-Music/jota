@@ -23,7 +23,10 @@ import { isPlaying } from "@/lib/music/views/stores/audio";
 import { playFromQueueSelection } from "@/lib/music/views/stores/player";
 import { queueSource } from "@/lib/music/views/stores/queue";
 import { clearSelection } from "@/lib/music/views/stores/selection";
+import { hover } from "@/lib/music/views/ui/cover-hover";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
+import { SaveButton } from "@/lib/music/views/ui/playlist/save-button";
+import { useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Shelf } from "@/lib/music/views/ui/shelf";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
@@ -259,6 +262,7 @@ export function YouTubeSearchPage() {
 
 function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
 	const queryClient = useQueryClient();
+	const { toggle } = useSaved();
 	const playing = queueSource.value === playlist.id && isPlaying.value;
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: right-click opens the playlist actions
@@ -272,6 +276,7 @@ function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
 							label: playing ? t("music.pause") : t("music.play"),
 							run: () => void playPlaylist(queryClient, playlist.id),
 						},
+						toggle(playlist.id),
 					],
 					e,
 				);
@@ -287,7 +292,10 @@ function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
 					/>
 				</Link>
 
-				<div class="absolute right-2 top-2 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+				<div class={cn(hover, "left-2 top-2")}>
+					<SaveButton id={playlist.id} />
+				</div>
+				<div class={cn(hover, "right-2 top-2")}>
 					<PlaylistPlayButton id={playlist.id} />
 				</div>
 			</div>

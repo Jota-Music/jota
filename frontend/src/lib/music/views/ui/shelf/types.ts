@@ -37,6 +37,9 @@ export interface Props {
 	onPlay?: (id: string) => void;
 	// actions renders hover buttons for an item, next to the remove button.
 	actions?: (id: string) => ComponentChildren;
+	// leading renders hover buttons on the cover's left edge, alongside the
+	// remove button and away from the play button on the right.
+	leading?: (id: string) => ComponentChildren;
 	isLoading?: boolean;
 	emptyMessage?: ComponentChildren;
 	onRemove?: (id: string) => void;

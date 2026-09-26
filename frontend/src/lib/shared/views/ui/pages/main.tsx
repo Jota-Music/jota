@@ -9,13 +9,11 @@ import { getOrder, saveOrder } from "@/lib/music/app/order";
 import { playlistSource } from "@/lib/music/app/playlist-source";
 import { deletePlaylist, getPlaylists } from "@/lib/music/app/playlists";
 import { applyOrder, move } from "@/lib/music/app/reorder";
-import {
-	getSavedPlaylists,
-	removeSavedPlaylist,
-} from "@/lib/music/app/saved-playlist";
 import { playPlaylist } from "@/lib/music/views/play";
 import { expireRemoval } from "@/lib/music/views/stores/removal";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
+import { SaveButton } from "@/lib/music/views/ui/playlist/save-button";
+import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { CreatePlaylistModal } from "@/lib/music/views/ui/playlists/create";
 import { type Item, Shelf, YouTubeHint } from "@/lib/music/views/ui/shelf";
 import { FollowingShelf } from "@/lib/music/views/ui/user/following";
@@ -48,10 +46,7 @@ export function MainPage() {
 		enabled: spotifyConnected.value,
 	});
 
-	const savedQuery = useQuery({
-		queryKey: ["saved-playlists"],
-		queryFn: getSavedPlaylists,
-	});
+	const { saved, isLoading: loadingSaved } = useSaved();
 
 	const customQuery = useQuery({
 		queryKey: ["playlists"],
@@ -72,11 +67,10 @@ export function MainPage() {
 		onError: (error) => addError(error, "playlist"),
 	});
 
-	const removeSaved = useMutation({
-		mutationFn: removeSavedPlaylist,
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["saved-playlists"] }),
-	});
+	// A playlist the account already owns is listed by the Spotify query above,
+	// so keeping it out of the saved list avoids showing it twice.
+	const own = new Set((spotifyQuery.data ?? []).map((p) => p.id));
+	const followed = new Set(saved.map((p) => p.id));
 
 	const items: Item[] = [
 		...(spotifyQuery.data ?? []).map(
@@ -87,18 +81,20 @@ export function MainPage() {
 				source: "spotify",
 			}),
 		),
-		...(savedQuery.data ?? []).map((p): Item => {
-			const source = playlistSource(p.id);
-			return {
-				id: p.id,
-				name: p.name,
-				cover: p.cover,
-				subtitle: p.subtitle,
-				source,
-				// YouTube playlists aren't "liked": remove them with the trash.
-				removable: source === "youtube",
-			};
-		}),
+		// The heart is what unfollows a saved playlist, so it needs no trash:
+		// the shelf keeps one way to drop an external playlist and one to delete
+		// a local one.
+		...saved
+			.filter((p) => !own.has(p.id))
+			.map(
+				(p): Item => ({
+					id: p.id,
+					name: p.name,
+					cover: p.cover,
+					subtitle: p.subtitle,
+					source: playlistSource(p.id),
+				}),
+			),
 		...(customQuery.data ?? []).map(
 			(p): Item => ({
 				id: p.id,
@@ -127,12 +123,9 @@ export function MainPage() {
 		confirming.value = id;
 	};
 
-	const removingLocal = confirming.value?.startsWith("local:") ?? false;
-
 	const confirmRemove = () => {
 		if (!confirming.value) return;
-		if (removingLocal) removeCustom.mutate(confirming.value);
-		else removeSaved.mutate(confirming.value);
+		removeCustom.mutate(confirming.value);
 		confirming.value = null;
 	};
 
@@ -148,11 +141,12 @@ export function MainPage() {
 						items={ordered}
 						to={(id) => `/playlist/${id}`}
 						viewKey="cover_grid_view"
+						leading={(id) =>
+							followed.has(id) && followable(id) ? <SaveButton id={id} /> : null
+						}
 						actions={(id) => <PlaylistPlayButton id={id} />}
 						isLoading={
-							spotifyQuery.isLoading ||
-							savedQuery.isLoading ||
-							customQuery.isLoading
+							spotifyQuery.isLoading || loadingSaved || customQuery.isLoading
 						}
 						emptyMessage={<YouTubeHint />}
 						onPlay={(id) => void playPlaylist(queryClient, id)}
@@ -178,8 +172,8 @@ export function MainPage() {
 
 			<ConfirmModal
 				open={!!confirming.value}
-				danger={removingLocal}
-				pending={removeCustom.isPending || removeSaved.isPending}
+				danger
+				pending={removeCustom.isPending}
 				close={() => {
 					confirming.value = null;
 				}}

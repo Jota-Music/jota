@@ -45,6 +45,9 @@ const YoutubeMenuIcon: LucideIcon = ({ class: cls, size }) => (
 
 type Props = {
 	songs: Song[];
+	// playlistActions are about the containing playlist, not its tracks, and
+	// lead the same menu.
+	playlistActions?: Action[];
 	selection?: boolean;
 	removable?: boolean;
 	onPlay?: () => void;
@@ -59,6 +62,7 @@ const GAP = 6;
 
 export function buildActions({
 	songs,
+	playlistActions,
 	selection,
 	removable,
 	onPlay,
@@ -82,7 +86,10 @@ export function buildActions({
 	const playing =
 		!!single && currentSong.value?.id === single.id && isPlaying.value;
 
-	const actions: Action[] = [
+	// Playlist actions come first: they act on the whole list, while the rest
+	// act on the tracks inside it.
+	const actions: Action[] = [...(playlistActions ?? [])];
+	actions.push(
 		{
 			icon: playing ? Pause : Play,
 			label: playing ? t("music.pause") : t("music.play"),
@@ -111,7 +118,7 @@ export function buildActions({
 				done();
 			},
 		},
-	];
+	);
 	if ((onSelectAll || batch) && list.length > 1) {
 		const allSelected = list.every((song) =>
 			selectedSongs.value.some((s) => s.id === song.id),
@@ -178,6 +185,7 @@ export function buildActions({
 
 export default function TrackActions({
 	songs,
+	playlistActions,
 	selection,
 	removable,
 	onPlay,
@@ -194,6 +202,7 @@ export default function TrackActions({
 
 	const { actions, count } = buildActions({
 		songs,
+		playlistActions,
 		selection,
 		removable,
 		onPlay,

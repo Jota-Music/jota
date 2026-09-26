@@ -12,11 +12,15 @@ import { spotifyRef } from "@/lib/music/app/spotify-link";
 import { playAlbum, playPlaylist } from "@/lib/music/views/play";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { queueSource } from "@/lib/music/views/stores/queue";
+import { hover } from "@/lib/music/views/ui/cover-hover";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
+import { SaveButton } from "@/lib/music/views/ui/playlist/save-button";
+import { useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
 import { cover } from "@/lib/shared/utils/cover";
+import { cn } from "@/lib/shared/utils/tw";
 import {
 	type Action,
 	openContextMenu,
@@ -35,6 +39,7 @@ const DETAIL_ROUTES: Partial<Record<SearchType, (id: string) => string>> = {
 
 function SearchResultItem({ item }: { item: SearchResult }) {
 	const queryClient = useQueryClient();
+	const { toggle } = useSaved();
 	const coverUrl = item.coverUrl ?? "";
 	const artists = (item.artists ?? []).map((a) => a.name).join(", ");
 	const isPlaylist = item.uri.startsWith("spotify:playlist:");
@@ -54,6 +59,7 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 				...play,
 				run: () => void playPlaylist(queryClient, playlistId),
 			});
+			actions.push(toggle(playlistId));
 		} else if (isAlbum) {
 			actions.push({
 				...play,
@@ -79,9 +85,14 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 							<div class="h-full w-full bg-zinc-900" />
 						)}
 						{isPlaylist && (
-							<div class="absolute right-1 top-1 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-								<PlaylistPlayButton id={playlistId} />
-							</div>
+							<>
+								<div class={cn(hover, "left-1 top-1")}>
+									<SaveButton id={playlistId} />
+								</div>
+								<div class={cn(hover, "right-1 top-1")}>
+									<PlaylistPlayButton id={playlistId} />
+								</div>
+							</>
 						)}
 					</div>
 

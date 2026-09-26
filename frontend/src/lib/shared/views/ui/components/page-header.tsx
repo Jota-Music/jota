@@ -24,6 +24,7 @@ export function PageHeader({
 	subtitle,
 	link,
 	linkReserve = false,
+	beforePlay,
 	onPlay,
 	playing,
 	loading,
@@ -35,14 +36,17 @@ export function PageHeader({
 	subtitle?: string;
 	link?: { to: string; label: string };
 	linkReserve?: boolean;
+	// beforePlay sits left of the play button, inside the same cluster.
+	beforePlay?: ComponentChildren;
 	onPlay?: () => void;
 	playing?: boolean;
 	loading?: boolean;
 	actions?: ComponentChildren;
 }) {
 	const right =
-		onPlay || actions ? (
+		beforePlay || onPlay || actions ? (
 			<div class="ml-auto flex shrink-0 items-center gap-2">
+				{beforePlay}
 				{onPlay && (
 					<button
 						type="button"

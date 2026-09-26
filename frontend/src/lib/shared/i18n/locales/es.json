@@ -124,9 +124,7 @@
 			"failed": "Error al buscar en YouTube",
 			"noResults": "Sin resultados.",
 			"noPlaylists": "No se encontraron listas.",
-			"noChannels": "No se encontraron canales.",
-			"addHome": "Añadir a inicio",
-			"removeHome": "Quitar de inicio"
+			"noChannels": "No se encontraron canales."
 		},
 		"notFound": {
 			"title": "404 — Página no encontrada",
@@ -179,6 +177,8 @@
 		"playAll": "Reproducir todo",
 		"play": "Reproducir",
 		"pause": "Pausar",
+		"followPlaylist": "Seguir playlist",
+		"unfollowPlaylist": "Dejar de seguir playlist",
 		"radio": {
 			"go": "Ir a radio"
 		},
@@ -199,9 +199,9 @@
 		},
 		"hint": {
 			"title": "Aún no hay listas",
-			"body": "Guarda una lista de YouTube o crea una local: ambas aparecerán aquí.",
+			"body": "Sigue una lista de YouTube o crea una local: ambas aparecerán aquí.",
 			"step1": "En la barra de búsqueda de arriba, busca una lista por nombre o pega su enlace.",
-			"step2": "Abre la pestaña Listas en los resultados y toca el corazón para guardarla.",
+			"step2": "Abre la pestaña Listas en los resultados y toca el corazón para seguirla.",
 			"step3": "O usa el botón + para crear una lista local."
 		},
 		"queue": {

@@ -27,6 +27,8 @@ import {
 	selectAll,
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
+import { SaveButton } from "@/lib/music/views/ui/playlist/save-button";
+import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
@@ -427,6 +429,8 @@ function PlaylistHeader({
 	// queueSource instead of isQueue: membership walks the whole queue, so the
 	// header re-rendered and re-filtered the track list on every queue edit.
 	const active = queueSource.value === id;
+	const { toggle } = useSaved();
+	const follow = followable(id);
 	return (
 		<PageHeader
 			cover={cover}
@@ -435,6 +439,7 @@ function PlaylistHeader({
 			subtitle={t("music.trackCount", { count: trackCount })}
 			link={link}
 			linkReserve
+			beforePlay={follow ? <SaveButton id={id} variant="toolbar" /> : undefined}
 			onPlay={
 				playable.length > 0 ? () => void playList(playable, id) : undefined
 			}
@@ -443,6 +448,7 @@ function PlaylistHeader({
 			actions={
 				<TrackActions
 					songs={songs}
+					playlistActions={follow ? [toggle(id)] : undefined}
 					onSelectAll={selectAll}
 					removable={custom}
 					onRemove={custom ? onRemove : undefined}
