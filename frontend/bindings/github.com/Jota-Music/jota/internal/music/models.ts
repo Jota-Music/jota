@@ -78,7 +78,8 @@ export interface SearchResult {
     "name": string;
     "type": string;
     "coverUrl"?: string;
-    "artists"?: string[] | null;
+    "artists"?: Artist[] | null;
+    "duration"?: number;
     "ownerName"?: string;
     "trackCount"?: number;
 }

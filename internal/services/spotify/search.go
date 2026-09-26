@@ -86,6 +86,18 @@ func searchUser(ctx context.Context, sess *session.Session, username string) ([]
 	return results, nil
 }
 
+// Track.Duration is milliseconds, music.SearchResult.Duration is seconds.
+func trackToSearchResult(t Track) music.SearchResult {
+	return music.SearchResult{
+		URI:      t.URI,
+		Name:     t.Name,
+		Type:     "track",
+		CoverURL: t.CoverURL,
+		Artists:  artistsFromTrack(t),
+		Duration: t.Duration / 1000,
+	}
+}
+
 func searchTracks(ctx context.Context, sess *session.Session, query string) ([]music.SearchResult, error) {
 	sp := sess.Spclient()
 	resolved, err := sp.Search(ctx, query)
@@ -101,13 +113,7 @@ func searchTracks(ctx context.Context, sess *session.Session, query string) ([]m
 	enrichTracks(ctx, sess, enriched)
 	results := make([]music.SearchResult, 0, len(enriched))
 	for _, track := range enriched {
-		results = append(results, music.SearchResult{
-			URI:      track.URI,
-			Name:     track.Name,
-			Type:     "track",
-			CoverURL: track.CoverURL,
-			Artists:  track.Artists,
-		})
+		results = append(results, trackToSearchResult(track))
 	}
 	return results, nil
 }
@@ -118,13 +124,7 @@ func getTrackResult(ctx context.Context, sess *session.Session, id librespot.Spo
 		return nil, fmt.Errorf("failed to fetch track: %w", err)
 	}
 	t := trackFromProto(&track)
-	return []music.SearchResult{{
-		URI:      t.URI,
-		Name:     t.Name,
-		Type:     "track",
-		CoverURL: t.CoverURL,
-		Artists:  t.Artists,
-	}}, nil
+	return []music.SearchResult{trackToSearchResult(t)}, nil
 }
 
 func getAlbumResult(ctx context.Context, sess *session.Session, id librespot.SpotifyId) ([]music.SearchResult, error) {
@@ -141,7 +141,7 @@ func getAlbumResult(ctx context.Context, sess *session.Session, id librespot.Spo
 	}
 	for _, a := range album.GetArtist() {
 		if name := a.GetName(); name != "" {
-			result.Artists = append(result.Artists, name)
+			result.Artists = append(result.Artists, music.Artist{Name: name})
 		}
 	}
 	return []music.SearchResult{result}, nil

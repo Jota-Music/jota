@@ -147,9 +147,7 @@ func (s *SpotifyService) Search(query string, searchType string) ([]music.Search
 	return Search(ctx, sess, query, searchType)
 }
 
-func trackToSong(t Track) music.Song {
-	id := strings.TrimPrefix(t.URI, URITrackPrefix)
-
+func artistsFromTrack(t Track) []music.Artist {
 	artists := make([]music.Artist, 0, len(t.Artists))
 	for i, a := range t.Artists {
 		if a == "" {
@@ -161,6 +159,13 @@ func trackToSong(t Track) music.Song {
 		}
 		artists = append(artists, artist)
 	}
+	return artists
+}
+
+func trackToSong(t Track) music.Song {
+	id := strings.TrimPrefix(t.URI, URITrackPrefix)
+
+	artists := artistsFromTrack(t)
 
 	covers := []string{}
 	if t.CoverURL != "" {

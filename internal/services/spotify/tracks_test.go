@@ -1,9 +1,12 @@
 package spotify
 
 import (
+	"slices"
 	"testing"
 
 	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
+
+	"github.com/Jota-Music/jota/internal/music"
 )
 
 func TestTracksFromContext(t *testing.T) {
@@ -71,5 +74,33 @@ func TestSongIdIsBare(t *testing.T) {
 
 	if song.Id != "4uLU6hMCjMI75M1A2tKUQC" {
 		t.Fatalf("Song.Id = %q, want the bare id", song.Id)
+	}
+}
+
+// Track.Duration is milliseconds; the frontend formats seconds, so the search
+// payload must convert.
+func TestSearchResultDurationIsSeconds(t *testing.T) {
+	got := trackToSearchResult(Track{URI: "spotify:track:x", Duration: 238_000})
+
+	if got.Duration != 238 {
+		t.Fatalf("SearchResult.Duration = %d, want 238 seconds", got.Duration)
+	}
+}
+
+// Artist ids must arrive bare and paired by position, or the frontend cannot
+// link to the artist page.
+func TestSearchResultArtistsAreBare(t *testing.T) {
+	got := trackToSearchResult(Track{
+		URI:        "spotify:track:x",
+		Artists:    []string{"Radiohead", "Radiohead"},
+		ArtistURIs: []string{"spotify:artist:4Z8W4fKeB5YxbusRsdQVPb"},
+	})
+
+	want := []music.Artist{
+		{Id: "4Z8W4fKeB5YxbusRsdQVPb", Name: "Radiohead"},
+		{Name: "Radiohead"},
+	}
+	if !slices.Equal(got.Artists, want) {
+		t.Fatalf("SearchResult.Artists = %+v, want %+v", got.Artists, want)
 	}
 }

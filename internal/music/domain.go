@@ -66,7 +66,8 @@ type SearchResult struct {
 	Name       string   `json:"name"`
 	Type       string   `json:"type"`
 	CoverURL   string   `json:"coverUrl,omitempty"`
-	Artists    []string `json:"artists,omitempty"`
+	Artists    []Artist `json:"artists,omitempty"`
+	Duration   int      `json:"duration,omitempty"`
 	OwnerName  string   `json:"ownerName,omitempty"`
 	TrackCount int32    `json:"trackCount,omitempty"`
 }
