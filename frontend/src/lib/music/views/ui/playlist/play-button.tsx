@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/preact-query";
-import { CirclePlay, Loader, Pause } from "lucide-preact";
+import { Loader, Pause, Play } from "lucide-preact";
 import { loadingPlaylist, playPlaylist } from "@/lib/music/views/play";
 import { isLoading, isPlaying } from "@/lib/music/views/stores/audio";
 import { queueSource } from "@/lib/music/views/stores/queue";
@@ -34,7 +34,7 @@ export function PlaylistPlayButton({ id }: { id: string }) {
 			) : playing ? (
 				<Pause size={16} class="fill-current" />
 			) : (
-				<CirclePlay size={16} />
+				<Play size={16} class="fill-current" />
 			)}
 		</button>
 	);
