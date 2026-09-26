@@ -47,24 +47,24 @@ export function PageHeader({
 		beforePlay || onPlay || actions ? (
 			<div class="ml-auto flex shrink-0 items-center gap-2">
 				{beforePlay}
-				{onPlay && (
-					<button
-						type="button"
-						title={t("music.playAll")}
-						aria-label={t("music.playAll")}
-						onClick={onPlay}
-						disabled={loading}
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition disabled:opacity-70"
-					>
-						{loading ? (
-							<Loader class="size-5 animate-spin" />
-						) : playing ? (
-							<Pause class="size-5 fill-current" />
-						) : (
-							<Play class="size-5 fill-current" />
-						)}
-					</button>
-				)}
+				{/* The play slot is reserved whenever the cluster exists, so the
+				    header does not shift once the tracks land. */}
+				<button
+					type="button"
+					title={t("music.playAll")}
+					aria-label={t("music.playAll")}
+					onClick={onPlay}
+					disabled={loading || !onPlay}
+					class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition disabled:cursor-default disabled:opacity-70"
+				>
+					{loading ? (
+						<Loader class="size-5 animate-spin" />
+					) : playing ? (
+						<Pause class="size-5 fill-current" />
+					) : (
+						<Play class="size-5 fill-current" />
+					)}
+				</button>
 				{actions}
 			</div>
 		) : null;

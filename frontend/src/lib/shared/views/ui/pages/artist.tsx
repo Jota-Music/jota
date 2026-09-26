@@ -136,7 +136,11 @@ export function ArtistPage() {
 					}
 					actions={
 						activeTab === "tracks" ? (
-							<TrackActions songs={tracks} onSelectAll={selectAll} />
+							<TrackActions
+								songs={tracks}
+								onSelectAll={selectAll}
+								reserve={isLoading}
+							/>
 						) : undefined
 					}
 				/>

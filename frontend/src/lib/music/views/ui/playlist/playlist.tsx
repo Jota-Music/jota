@@ -270,6 +270,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				link={ownerLink}
 				custom={custom}
 				songs={songs}
+				reserve={isLoading}
 				onRemove={() => {
 					removing.value =
 						selectedSongs.value.length > 0 ? selectedSongs.value : songs;
@@ -413,6 +414,7 @@ function PlaylistHeader({
 	link,
 	custom,
 	songs,
+	reserve,
 	onRemove,
 }: {
 	id: string;
@@ -424,6 +426,7 @@ function PlaylistHeader({
 	link?: { to: string; label: string };
 	custom: boolean;
 	songs: Song[];
+	reserve?: boolean;
 	onRemove: () => void;
 }) {
 	// queueSource instead of isQueue: membership walks the whole queue, so the
@@ -452,6 +455,7 @@ function PlaylistHeader({
 					onSelectAll={selectAll}
 					removable={custom}
 					onRemove={custom ? onRemove : undefined}
+					reserve={reserve}
 				/>
 			}
 		/>

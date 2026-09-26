@@ -56,6 +56,9 @@ type Props = {
 	onSelectAll?: (songs: Song[]) => void;
 	onDone?: () => void;
 	navigate?: (to: string) => void;
+	// reserve keeps the button in place while the list is still loading, so the
+	// header it sits in does not shift when the tracks land.
+	reserve?: boolean;
 };
 
 const GAP = 6;
@@ -193,6 +196,7 @@ export default function TrackActions({
 	onToggleSelect,
 	onSelectAll,
 	onDone,
+	reserve = false,
 }: Props) {
 	const open = useSignal(false);
 	const anchor = useSignal<DOMRect | null>(null);
@@ -255,11 +259,13 @@ export default function TrackActions({
 		};
 	}, [open.value, anchor.value]);
 
-	if (actions.length === 0) return null;
+	const empty = actions.length === 0;
+	if (empty && !reserve) return null;
 
 	const toggle = (e: MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
+		if (empty) return;
 		const rect = button.current?.getBoundingClientRect();
 		if (!rect) return;
 		if (open.value) close();
@@ -278,12 +284,13 @@ export default function TrackActions({
 				aria-label={t("music.track.actions")}
 				aria-haspopup="menu"
 				aria-expanded={open.value}
+				disabled={empty}
 				onPointerDown={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
 				}}
 				onClick={toggle}
-				class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-white"
+				class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-white disabled:cursor-default disabled:opacity-40"
 			>
 				<EllipsisVertical size={18} />
 			</button>

@@ -52,7 +52,13 @@ export function AlbumPage() {
 					}
 					playing={queueSource.value === id && isPlaying.value}
 					loading={queueSource.value === id && playbackLoading.value}
-					actions={<TrackActions songs={tracks} onSelectAll={selectAll} />}
+					actions={
+						<TrackActions
+							songs={tracks}
+							onSelectAll={selectAll}
+							reserve={isLoading}
+						/>
+					}
 				/>
 
 				{isError ? (
