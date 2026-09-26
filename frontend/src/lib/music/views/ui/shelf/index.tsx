@@ -18,7 +18,7 @@ import { useReorder } from "./hooks/use-reorder";
 import { defaultViewKey, useView } from "./hooks/use-view";
 import type { Item, Props } from "./types";
 
-export { FollowingHint, LocalHint, YouTubeHint } from "./hint";
+export { FollowingHint, LocalHint, RelayHint, YouTubeHint } from "./hint";
 export type { IconType, Item, Source } from "./types";
 
 export function Shelf({

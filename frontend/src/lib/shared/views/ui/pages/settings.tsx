@@ -1,4 +1,4 @@
-import { useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { AccountSettings } from "@/lib/auth/views/ui/account-settings";
 import { t } from "@/lib/shared/i18n";
 import { open } from "@/lib/shared/utils/open";
@@ -22,6 +22,16 @@ function openDeveloper(): void {
 
 function SettingsPage() {
 	const listRef = useRef<HTMLDivElement>(null);
+
+	// The sections scroll inside this list, not the window, so a #hash from a
+	// hint lands nowhere on its own: the browser only auto-scrolls on document
+	// load, never on a client-side mount. Before paint, so the page does not
+	// visibly start at the top and then jump.
+	useLayoutEffect(() => {
+		const id = window.location.hash.slice(1);
+		if (id === "") return;
+		document.getElementById(id)?.scrollIntoView({ block: "start" });
+	}, []);
 
 	return (
 		<AppShell rootClass="pb-6">

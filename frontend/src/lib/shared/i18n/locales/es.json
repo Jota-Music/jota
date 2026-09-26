@@ -309,6 +309,13 @@
 	"sync": {
 		"rooms": {
 			"empty": "No hay salas guardadas. Conéctate a una sala y guárdala desde el panel de Salas.",
+			"hint": {
+				"title": "Aún no hay servidor relay",
+				"body": "Las salas se alojan en un relay, así que necesitas uno antes de unirte o crear una sala.",
+				"step1": "Abre Ajustes y ve a la sección de Salas.",
+				"step2": "Indica la dirección del servidor relay.",
+				"step3": "Vuelve aquí y únete o crea una sala."
+			},
 			"joinHost": "Unirse o crear sala",
 			"leave": "Salir de la sala",
 			"connect": "Conectar",

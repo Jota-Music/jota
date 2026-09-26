@@ -1,5 +1,6 @@
-import { Heart, Library } from "lucide-preact";
-import type { ComponentChild } from "preact";
+import { Heart, Library, Settings, Turntable } from "lucide-preact";
+import type { ComponentChild, ComponentChildren } from "preact";
+import { useLocation } from "wouter-preact";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
@@ -12,6 +13,8 @@ interface HintProps {
 	title: string;
 	body: string;
 	steps: string[];
+	// action closes the hint by sending the user where the blocker is fixed.
+	action?: ComponentChildren;
 }
 
 export function Hint({
@@ -20,6 +23,7 @@ export function Hint({
 	title,
 	body,
 	steps,
+	action,
 }: HintProps) {
 	return (
 		<div
@@ -54,6 +58,8 @@ export function Hint({
 					</li>
 				))}
 			</ol>
+
+			{action}
 		</div>
 	);
 }
@@ -102,6 +108,37 @@ export function LocalHint() {
 				t("music.local.hint.step2"),
 				t("music.local.hint.step3"),
 			]}
+		/>
+	);
+}
+
+// A room needs a relay to exist at all, so an empty shelf with no relay is a
+// dead end: the copy has to name the blocker instead of inviting a join that
+// cannot happen.
+export function RelayHint() {
+	const [, setLocation] = useLocation();
+
+	return (
+		<Hint
+			icon={<Turntable size={24} />}
+			class="text-amber-500"
+			title={t("sync.rooms.hint.title")}
+			body={t("sync.rooms.hint.body")}
+			steps={[
+				t("sync.rooms.hint.step1"),
+				t("sync.rooms.hint.step2"),
+				t("sync.rooms.hint.step3"),
+			]}
+			action={
+				<button
+					type="button"
+					onClick={() => setLocation("/settings#relay")}
+					class="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700"
+				>
+					<Settings size={16} />
+					{t("sync.session.openSettings")}
+				</button>
+			}
 		/>
 	);
 }

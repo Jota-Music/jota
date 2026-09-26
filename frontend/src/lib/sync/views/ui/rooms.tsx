@@ -16,7 +16,7 @@ import {
 	WifiOff,
 } from "lucide-preact";
 import { useEffect } from "preact/hooks";
-import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
+import { type Item, RelayHint, Shelf } from "@/lib/music/views/ui/shelf";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import type { Action } from "@/lib/shared/views/ui/components/context-menu";
@@ -147,6 +147,9 @@ export function RoomsShelf() {
 
 	const list = rooms.data ?? [];
 	const locked = store.relayLocked.value;
+	// The settings form writes this signal untrimmed, so a field holding only
+	// spaces is still "no relay".
+	const relay = store.relayUrl.value.trim();
 	const status = store.status.value;
 	const role = store.role.value;
 	const current = store.room.value;
@@ -395,7 +398,7 @@ export function RoomsShelf() {
 					);
 				}}
 				isLoading={rooms.isLoading}
-				emptyMessage={t("sync.rooms.empty")}
+				emptyMessage={relay === "" ? <RelayHint /> : t("sync.rooms.empty")}
 				onRemove={onRemove}
 			/>
 		</>

@@ -309,6 +309,13 @@
 	"sync": {
 		"rooms": {
 			"empty": "No saved rooms. Connect to a room and save it from the Rooms panel.",
+			"hint": {
+				"title": "No relay server yet",
+				"body": "Rooms are hosted by a relay, so you need one before you can join or host a room.",
+				"step1": "Open Settings and go to the Rooms section.",
+				"step2": "Set the relay server address.",
+				"step3": "Come back here and join or host a room."
+			},
 			"joinHost": "Join or host a room",
 			"leave": "Leave room",
 			"connect": "Connect",
