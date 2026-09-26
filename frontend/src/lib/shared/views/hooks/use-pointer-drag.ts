@@ -1,9 +1,8 @@
 import type { RefObject } from "preact";
 import { useEffect, useRef } from "preact/hooks";
+import { useAutoscroll } from "@/lib/shared/views/hooks/use-autoscroll";
 
 const DRAG_START_PX = 4;
-const SCROLL_EDGE_PX = 48;
-const SCROLL_MAX_STEP = 16;
 
 type Options = {
 	begin: () => void;
@@ -14,27 +13,19 @@ type Options = {
 
 // Mouse-only pointer drag. Native HTML5 drag lets the browser own the cursor,
 // so the grabbing hand is only possible by driving the drag ourselves. Touch
-// keeps using native drag, which already works on coarse pointers.
+// keeps using native drag, which already works on coarse pointers, and runs
+// its own useAutoscroll.
 export function usePointerDrag({ begin, move, end, scroll }: Options) {
 	const active = useRef(false);
 	const moved = useRef(false);
 	const dragged = useRef(false);
 	const suppressClick = useRef(false);
 	const origin = useRef({ x: 0, y: 0 });
-	const frame = useRef(0);
 	const moveFrame = useRef(0);
 	const last = useRef<PointerEvent | null>(null);
 	const capture = useRef<{ el: Element; id: number } | null>(null);
 	const callbacks = useRef({ begin, move, end });
 	callbacks.current = { begin, move, end };
-	const scroller = useRef(scroll);
-	scroller.current = scroll;
-
-	const stopScroll = () => {
-		if (frame.current === 0) return;
-		cancelAnimationFrame(frame.current);
-		frame.current = 0;
-	};
 
 	// move may force layout (hit testing), so it runs at most once per frame
 	// instead of on every pointermove the browser delivers.
@@ -48,6 +39,8 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		if (moveFrame.current !== 0) return;
 		moveFrame.current = requestAnimationFrame(runMove);
 	};
+
+	const autoscroll = useAutoscroll(scroll, scheduleMove);
 
 	const stopMove = () => {
 		if (moveFrame.current === 0) return;
@@ -63,31 +56,6 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		runMove();
 	};
 
-	const tick = () => {
-		frame.current = requestAnimationFrame(tick);
-		const el = scroller.current?.current;
-		const e = last.current;
-		if (!el || !e) return;
-		const rect = el.getBoundingClientRect();
-		let delta = 0;
-		if (e.clientY < rect.top + SCROLL_EDGE_PX) {
-			delta = -Math.ceil(
-				((rect.top + SCROLL_EDGE_PX - e.clientY) / SCROLL_EDGE_PX) *
-					SCROLL_MAX_STEP,
-			);
-		} else if (e.clientY > rect.bottom - SCROLL_EDGE_PX) {
-			delta = Math.ceil(
-				((e.clientY - (rect.bottom - SCROLL_EDGE_PX)) / SCROLL_EDGE_PX) *
-					SCROLL_MAX_STEP,
-			);
-		}
-		delta = Math.max(-SCROLL_MAX_STEP, Math.min(SCROLL_MAX_STEP, delta));
-		if (delta === 0) return;
-		const before = el.scrollTop;
-		el.scrollTop = before + delta;
-		if (el.scrollTop !== before) scheduleMove();
-	};
-
 	const beginDrag = () => {
 		if (!active.current || moved.current) return;
 		moved.current = true;
@@ -98,8 +66,6 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		capture.current?.el.setPointerCapture(capture.current.id);
 		document.body.classList.add("pointer-dragging");
 		callbacks.current.begin();
-		stopScroll();
-		frame.current = requestAnimationFrame(tick);
 	};
 
 	useEffect(() => {
@@ -114,10 +80,11 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 			}
 			dragged.current = true;
 			scheduleMove();
+			autoscroll.track(e.clientY);
 		};
 
 		const onEnd = () => {
-			stopScroll();
+			autoscroll.stop();
 			flushMove();
 			if (!active.current) return;
 			active.current = false;
@@ -138,7 +105,6 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		window.addEventListener("pointerup", onEnd);
 		window.addEventListener("pointercancel", onEnd);
 		return () => {
-			stopScroll();
 			stopMove();
 			window.removeEventListener("pointermove", onMove);
 			window.removeEventListener("pointerup", onEnd);
