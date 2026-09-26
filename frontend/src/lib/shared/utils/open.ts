@@ -1,9 +1,5 @@
-import { OpenURL } from "@bindings/app";
-import { Browser } from "@wailsio/runtime";
+import { LogError, OpenURL } from "@bindings/app";
 
 export function open(url: string): Promise<void> {
-	if (navigator.userAgent.toLowerCase().includes("android")) {
-		return OpenURL(url);
-	}
-	return Browser.OpenURL(url);
+	return OpenURL(url).catch((error) => LogError(`open ${url}: ${error}`));
 }

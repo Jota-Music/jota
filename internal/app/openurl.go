@@ -2,8 +2,10 @@
 
 package app
 
-import "errors"
+import "github.com/wailsapp/wails/v3/pkg/application"
 
+// openExternal opens the URL in the system browser, using the platform opener
+// (xdg-open, open, rundll32) that wails already wraps.
 func openExternal(url string) error {
-	return errors.New("openExternal not supported on this platform")
+	return application.Get().Browser.OpenURL(url)
 }

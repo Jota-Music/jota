@@ -152,7 +152,7 @@ func (a *App) InstallUpdate() error {
 
 // OpenURL opens the URL in the system browser. On Android it uses the app's
 // native Intent.ACTION_VIEW so OAuth runs outside the WebView; on other
-// platforms the frontend opens the URL itself.
+// platforms the platform opener (xdg-open, open, rundll32) handles it.
 func (a *App) OpenURL(url string) error {
 	return openExternal(url)
 }
