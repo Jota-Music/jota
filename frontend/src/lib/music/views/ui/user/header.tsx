@@ -52,7 +52,9 @@ export function UserHeader({
 				</div>
 			)}
 
-			<div class="flex min-w-0 flex-col">
+			{/* flex-1 takes the leftover width so the actions stay flush right
+			    and the name still truncates instead of pushing them off. */}
+			<div class="flex min-w-0 flex-1 flex-col">
 				<h2 class="truncate text-xl font-semibold leading-tight">{name}</h2>
 				{showHandle && <p class="truncate text-sm text-zinc-500">{handle}</p>}
 			</div>
