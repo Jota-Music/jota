@@ -3,6 +3,7 @@ package music
 import "strings"
 
 type Source interface {
+	GetPlaylistSummary(id string) (PlaylistSummary, error)
 	GetFullPlaylist(id string) (Playlist, error)
 	RevalidateFullPlaylist(id string) error
 	GetSong(id string) (Song, error)
@@ -26,6 +27,10 @@ func (c *Catalog) source(id string) Source {
 		return c.local
 	}
 	return c.spotify
+}
+
+func (c *Catalog) GetPlaylistSummary(id string) (PlaylistSummary, error) {
+	return c.source(id).GetPlaylistSummary(id)
 }
 
 func (c *Catalog) GetFullPlaylist(id string) (Playlist, error) {

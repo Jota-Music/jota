@@ -6,6 +6,11 @@ type fakeSource struct {
 	calls []string
 }
 
+func (f *fakeSource) GetPlaylistSummary(id string) (PlaylistSummary, error) {
+	f.calls = append(f.calls, "summary:"+id)
+	return PlaylistSummary{}, nil
+}
+
 func (f *fakeSource) GetFullPlaylist(id string) (Playlist, error) {
 	f.calls = append(f.calls, "full:"+id)
 	return Playlist{}, nil
@@ -49,11 +54,21 @@ func TestCatalogRoutesByPrefix(t *testing.T) {
 	if _, err := c.GetSong("youtube:abc"); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := c.GetPlaylistSummary("youtube:PL1"); err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := c.GetFullPlaylist("local:xyz"); err != nil {
 		t.Fatal(err)
 	}
 	if err := c.RevalidateFullPlaylist("local:xyz"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.GetPlaylistSummary("local:xyz"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := c.GetPlaylistSummary("spotify:playlist:abc"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -62,9 +77,15 @@ func TestCatalogRoutesByPrefix(t *testing.T) {
 		"revalidate:spotify:playlist:ghi",
 		"full:spotify:playlist:jkl",
 		"song:4uLU6hMCjMI75M1A2tKUQC",
+		"summary:spotify:playlist:abc",
 	}
-	wantYoutube := []string{"full:youtube:abc", "revalidate:youtube:ghi", "song:youtube:abc"}
-	wantLocal := []string{"full:local:xyz", "revalidate:local:xyz"}
+	wantYoutube := []string{
+		"full:youtube:abc",
+		"revalidate:youtube:ghi",
+		"song:youtube:abc",
+		"summary:youtube:PL1",
+	}
+	wantLocal := []string{"full:local:xyz", "revalidate:local:xyz", "summary:local:xyz"}
 	assertCalls(t, "spotify", spotify.calls, wantSpotify)
 	assertCalls(t, "youtube", youtube.calls, wantYoutube)
 	assertCalls(t, "local", local.calls, wantLocal)

@@ -11,6 +11,33 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
+// GetPlaylistSummary resolves only the playlist metadata, skipping the track
+// fetch GetFullPlaylist does. The library store needs nothing else when it
+// keeps a playlist around.
+func (s *SpotifyService) GetPlaylistSummary(playlistID string) (music.PlaylistSummary, error) {
+	uri := normalizeID(playlistID, "playlist")
+	if !strings.HasPrefix(uri, URIPlaylistPrefix) {
+		return music.PlaylistSummary{}, fmt.Errorf("not a playlist: %s", playlistID)
+	}
+
+	sess := s.Session()
+	if sess == nil {
+		return music.PlaylistSummary{}, ErrNotConnected
+	}
+
+	meta, err := getPlaylistMetadata(context.Background(), sess, uri)
+	if err != nil {
+		return music.PlaylistSummary{}, err
+	}
+	return music.PlaylistSummary{
+		Id:       strings.TrimPrefix(uri, URIPlaylistPrefix),
+		Name:     meta.name,
+		Cover:    meta.cover,
+		Owner:    meta.owner,
+		Subtitle: meta.owner,
+	}, nil
+}
+
 func (s *SpotifyService) GetFullPlaylist(playlistID string) (music.Playlist, error) {
 	// Radio is a synthetic context, not a playlist: never cached, recomputed on
 	// every visit.

@@ -97,13 +97,19 @@ func (s *Service) List() ([]music.PlaylistSummary, error) {
 			}
 			return nil, err
 		}
-		out = append(out, music.PlaylistSummary{
-			Id:     pl.Id,
-			Name:   pl.Name,
-			Covers: s.covers(pl.Songs),
-		})
+		out = append(out, s.summary(pl))
 	}
 	return out, nil
+}
+
+// summary is the listing shape of a stored playlist: its name and the mosaic of
+// the covers of its first tracks.
+func (s *Service) summary(pl Playlist) music.PlaylistSummary {
+	return music.PlaylistSummary{
+		Id:     pl.Id,
+		Name:   pl.Name,
+		Covers: s.covers(pl.Songs),
+	}
 }
 
 // covers collects the album covers of the first tracks, skipping unresolved
@@ -265,6 +271,15 @@ func (s *Service) Reorder(id string, refs []string) error {
 	}
 	pl.Songs = out
 	return s.save(pl)
+}
+
+// GetPlaylistSummary implements music.Source.
+func (s *Service) GetPlaylistSummary(id string) (music.PlaylistSummary, error) {
+	pl, err := s.load(id)
+	if err != nil {
+		return music.PlaylistSummary{}, err
+	}
+	return s.summary(pl), nil
 }
 
 // GetFullPlaylist implements music.Source: it resolves each stored reference to

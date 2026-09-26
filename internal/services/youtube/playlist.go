@@ -366,6 +366,19 @@ func fetchPlaylistSummary(playlistID string) (music.PlaylistSummary, error) {
 	}, nil
 }
 
+func (s *Service) GetPlaylistSummary(id string) (music.PlaylistSummary, error) {
+	playlistID := normalizePlaylistId(id)
+	if playlistID == "" {
+		return music.PlaylistSummary{}, errors.New("invalid playlist id")
+	}
+	summary, err := fetchPlaylistSummary(playlistID)
+	if err != nil {
+		return music.PlaylistSummary{}, err
+	}
+	summary.Id = music.YouTubePrefix + playlistID
+	return summary, nil
+}
+
 func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 	playlistID := normalizePlaylistId(id)
 	if playlistID == "" {

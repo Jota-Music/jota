@@ -22,6 +22,15 @@ import * as update$0 from "../update/models.js";
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
+/**
+ * AddSavedPlaylist keeps an external playlist in the library. The id is resolved
+ * to its summary by the owning source, so the store holds what the source says
+ * rather than what the caller claimed.
+ */
+export function AddSavedPlaylist(id: string): $CancellablePromise<void> {
+    return $Call.ByID(2867864360, id);
+}
+
 export function AddSongsToPlaylist(id: string, refs: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(2712034592, id, refs);
 }
@@ -149,7 +158,7 @@ export function LogError(message: string): $CancellablePromise<void> {
 /**
  * OpenURL opens the URL in the system browser. On Android it uses the app's
  * native Intent.ACTION_VIEW so OAuth runs outside the WebView; on other
- * platforms the frontend opens the URL itself.
+ * platforms the platform opener (xdg-open, open, rundll32) handles it.
  */
 export function OpenURL(url: string): $CancellablePromise<void> {
     return $Call.ByID(3973583225, url);
