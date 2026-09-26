@@ -38,7 +38,7 @@ export function Grid({
 				>
 					<div
 						class={cn(
-							"group flex cursor-pointer select-none flex-col gap-2 overflow-hidden rounded-md p-1.5 transition-shadow duration-150 [-webkit-touch-callout:none] [contain-intrinsic-size:auto_220px] [content-visibility:auto]",
+							"group flex cursor-pointer select-none flex-col gap-2 overflow-hidden rounded-md p-1.5 transition-shadow duration-150 [-webkit-touch-callout:none]",
 							dragFrom.value === item.id && "opacity-40",
 							dragOver.value === item.id &&
 								dragFrom.value !== item.id &&
@@ -60,7 +60,7 @@ export function Grid({
 								{item.name}
 							</h3>
 							{item.subtitle && (
-								<p class="text-xs text-zinc-500">{item.subtitle}</p>
+								<p class="truncate text-xs text-zinc-500">{item.subtitle}</p>
 							)}
 						</div>
 					</div>
