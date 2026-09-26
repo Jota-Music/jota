@@ -6,6 +6,7 @@ import {
 	unfollowUser,
 } from "@/lib/music/app/follows";
 import { t } from "@/lib/shared/i18n";
+import { addError } from "@/lib/shared/views/stores/errors";
 import type { Action } from "@/lib/shared/views/ui/components/context-menu";
 
 // The store dedupes case-insensitively, so the read has to match.
@@ -24,14 +25,18 @@ export function useFollows(account: string) {
 
 	const invalidate = () => queryClient.invalidateQueries({ queryKey: key });
 
+	// A failed follow looks exactly like a broken button unless it is surfaced:
+	// mutate swallows the error, so the heart would just stay put.
 	const follow = useMutation({
 		mutationFn: (user: string) => followUser(account, user),
 		onSuccess: invalidate,
+		onError: (error) => addError(error, "follow"),
 	});
 
 	const unfollow = useMutation({
 		mutationFn: (user: string) => unfollowUser(account, user),
 		onSuccess: invalidate,
+		onError: (error) => addError(error, "unfollow"),
 	});
 
 	const users = query.data ?? [];
