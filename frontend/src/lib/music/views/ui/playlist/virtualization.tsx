@@ -25,6 +25,7 @@ import TrackArt from "@/lib/music/views/ui/track/track-art";
 import { t } from "@/lib/shared/i18n";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
+import { useAutoscroll } from "@/lib/shared/views/hooks/use-autoscroll";
 import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
@@ -223,6 +224,14 @@ export function Virtualization({
 		return Math.max(0, Math.min(songs.length - 1, Math.floor(rel / ROW_PX)));
 	};
 
+	const hover = (clientY: number) => {
+		const next = indexFromClientY(clientY);
+		if (dragOver.value !== next) dragOver.value = next;
+	};
+
+	const over = useRef(0);
+	const autoscroll = useAutoscroll(ref, () => hover(over.current));
+
 	const { start, captureClick } = usePointerDrag({
 		scroll: ref,
 		begin: () => {
@@ -230,10 +239,7 @@ export function Virtualization({
 			dragFrom.value = dragOrigin.current;
 			dragOver.value = dragOrigin.current;
 		},
-		move: (e) => {
-			const next = indexFromClientY(e.clientY);
-			if (dragOver.value !== next) dragOver.value = next;
-		},
+		move: (e) => hover(e.clientY),
 		end: (dragged) => {
 			const from = dragFrom.value;
 			const to = dragOver.value;
@@ -259,8 +265,9 @@ export function Virtualization({
 	const handleDragOverCapture = (e: DragEvent) => {
 		if (dragFrom.value == null) return;
 		e.preventDefault();
-		const next = indexFromClientY(e.clientY);
-		if (dragOver.value !== next) dragOver.value = next;
+		over.current = e.clientY;
+		autoscroll.track(e.clientY);
+		hover(e.clientY);
 	};
 
 	const handleDrop = (e: DragEvent) => {
@@ -268,6 +275,7 @@ export function Virtualization({
 		e.preventDefault();
 		const from = dragFrom.value;
 		const to = indexFromClientY(e.clientY);
+		autoscroll.stop();
 		endDrag();
 		if (from !== to) onReorder?.(from, to);
 	};
@@ -303,7 +311,10 @@ export function Virtualization({
 				}}
 				onDragOverCapture={handleDragOverCapture}
 				onDrop={handleDrop}
-				onDragEnd={endDrag}
+				onDragEnd={() => {
+					autoscroll.stop();
+					endDrag();
+				}}
 			>
 				{songs.length === 0 ? (
 					<div className="flex min-h-32 flex-1 items-center justify-center px-4 py-8 text-sm text-zinc-500">

@@ -27,6 +27,7 @@ import { currentIndex, queue, showQueue } from "@/lib/music/views/stores/queue";
 import TrackArt from "@/lib/music/views/ui/track/track-art";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import { useAutoscroll } from "@/lib/shared/views/hooks/use-autoscroll";
 import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
@@ -270,6 +271,16 @@ function Queue() {
 		return viewStart + local;
 	};
 
+	const hover = (clientY: number) => {
+		const next = indexFromClientY(clientY);
+		if (dragOver.value !== next) {
+			dragOver.value = next;
+		}
+	};
+
+	const over = useRef(0);
+	const autoscroll = useAutoscroll(ref, () => hover(over.current));
+
 	const handleDragOverCapture = (e: DragEvent) => {
 		if (dragFrom.value == null) return;
 		e.preventDefault();
@@ -281,10 +292,9 @@ function Queue() {
 				/* noop */
 			}
 		}
-		const next = indexFromClientY(e.clientY);
-		if (dragOver.value !== next) {
-			dragOver.value = next;
-		}
+		over.current = e.clientY;
+		autoscroll.track(e.clientY);
+		hover(e.clientY);
 	};
 
 	const handleDrop = (e: DragEvent) => {
@@ -292,6 +302,7 @@ function Queue() {
 		e.preventDefault();
 		const from = dragFrom.value;
 		const to = indexFromClientY(e.clientY);
+		autoscroll.stop();
 		endDrag();
 		if (from !== to) {
 			void moveQueue(from, to);
@@ -307,10 +318,7 @@ function Queue() {
 			dragFrom.value = source.current;
 			dragOver.value = source.current;
 		},
-		move: (e) => {
-			const next = indexFromClientY(e.clientY);
-			if (dragOver.value !== next) dragOver.value = next;
-		},
+		move: (e) => hover(e.clientY),
 		end: (dragged) => {
 			const from = dragFrom.value;
 			const to = dragOver.value;
@@ -376,7 +384,10 @@ function Queue() {
 					onClickCapture={captureClick}
 					onDragOverCapture={handleDragOverCapture}
 					onDrop={handleDrop}
-					onDragEnd={endDrag}
+					onDragEnd={() => {
+						autoscroll.stop();
+						endDrag();
+					}}
 				>
 					{songs.length === 0 ? (
 						<li class="flex min-h-40 list-none flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-zinc-500">

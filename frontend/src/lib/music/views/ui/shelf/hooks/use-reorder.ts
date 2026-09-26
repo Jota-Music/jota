@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals";
 import type { RefObject } from "preact";
 import { useRef } from "preact/hooks";
+import { useAutoscroll } from "@/lib/shared/views/hooks/use-autoscroll";
 import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 
 export const dragFrom = signal<string | null>(null);
@@ -48,6 +49,26 @@ export function useReorder({ count, listRef, onReorder }: Options) {
 		}
 	};
 
+	const source = useRef<string | null>(null);
+	const pointer = useRef({ x: 0, y: 0 });
+
+	const hover = (x: number, y: number) => {
+		const el = document.elementFromPoint(x, y);
+		const id = el
+			?.closest("[data-reorder-id]")
+			?.getAttribute("data-reorder-id");
+		if (id != null && dragOver.value !== id) dragOver.value = id;
+	};
+
+	const autoscroll = useAutoscroll(listRef, () =>
+		hover(pointer.current.x, pointer.current.y),
+	);
+
+	const endItemDrag = () => {
+		autoscroll.stop();
+		endDrag();
+	};
+
 	const overItem = (id: string, e: DragEvent) => {
 		if (dragFrom.value == null) return;
 		e.preventDefault();
@@ -59,6 +80,8 @@ export function useReorder({ count, listRef, onReorder }: Options) {
 				/* noop */
 			}
 		}
+		pointer.current = { x: e.clientX, y: e.clientY };
+		autoscroll.track(e.clientY);
 		if (dragOver.value !== id) dragOver.value = id;
 	};
 
@@ -66,11 +89,10 @@ export function useReorder({ count, listRef, onReorder }: Options) {
 		const from = dragFrom.value;
 		if (from == null) return;
 		e.preventDefault();
+		autoscroll.stop();
 		endDrag();
 		if (from !== id) onReorder?.(from, id);
 	};
-
-	const source = useRef<string | null>(null);
 
 	const { start, captureClick } = usePointerDrag({
 		scroll: listRef,
@@ -79,13 +101,7 @@ export function useReorder({ count, listRef, onReorder }: Options) {
 			dragFrom.value = source.current;
 			dragOver.value = source.current;
 		},
-		move: (e) => {
-			const el = document.elementFromPoint(e.clientX, e.clientY);
-			const id = el
-				?.closest("[data-reorder-id]")
-				?.getAttribute("data-reorder-id");
-			if (id != null && dragOver.value !== id) dragOver.value = id;
-		},
+		move: (e) => hover(e.clientX, e.clientY),
 		end: (dragged) => {
 			const from = dragFrom.value;
 			const to = dragOver.value;
@@ -110,7 +126,7 @@ export function useReorder({ count, listRef, onReorder }: Options) {
 		onDragStart: (e) => startDrag(id, e),
 		onDragOver: (e) => overItem(id, e),
 		onDrop: (e) => dropItem(id, e),
-		onDragEnd: endDrag,
+		onDragEnd: endItemDrag,
 	});
 
 	return { reorderable, dragProps, captureClick };
