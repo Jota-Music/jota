@@ -1,7 +1,7 @@
 import { Heart } from "lucide-preact";
 import { spotifyUser } from "@/lib/auth/views/stores/session";
 import { saveLabel, useSaved } from "@/lib/music/views/ui/playlist/saved";
-import { useFollows } from "@/lib/music/views/ui/user/follow";
+import { follows, useFollows } from "@/lib/music/views/ui/user/follow";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 
@@ -66,7 +66,7 @@ export function FollowButton({
 	const account = spotifyUser.value ?? "";
 	const { users, follow, unfollow } = useFollows(account);
 
-	const on = users.some((u) => u.toLowerCase() === id.toLowerCase());
+	const on = follows(users, id);
 	const label = on ? t("music.unfollow") : t("music.follow");
 
 	return (

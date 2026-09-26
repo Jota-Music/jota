@@ -24,6 +24,9 @@ type Entry = {
 	user?: string;
 	channel?: string;
 	artist?: string;
+	// follow is the key this entry has in the local follows store. Only
+	// local follows have one: the Spotify list is read-only.
+	follow?: string;
 	source?: Source;
 };
 
@@ -42,6 +45,7 @@ export function FollowingShelf({ account }: { account: string }) {
 	const {
 		users: followed,
 		isLoading: followedLoading,
+		toggle,
 		unfollow,
 	} = useFollows(account);
 
@@ -86,6 +90,7 @@ export function FollowingShelf({ account }: { account: string }) {
 				removable: true,
 				icon: YoutubeIcon,
 				channel,
+				follow: user,
 				source: "youtube",
 			});
 		} else {
@@ -99,6 +104,7 @@ export function FollowingShelf({ account }: { account: string }) {
 				name: handle,
 				removable: true,
 				icon: artist ? Mic2 : UserIcon,
+				follow: user,
 				...(artist ? { artist: handle } : { user: handle }),
 			});
 		}
@@ -165,6 +171,16 @@ export function FollowingShelf({ account }: { account: string }) {
 		]),
 	);
 
+	// Shelf ids are not store keys: a Spotify user is stored as a bare handle
+	// while the shelf prefixes it to route it, and an artist is stored with the
+	// prefix the shelf drops. Resolving it once keeps the menu and the hover
+	// button from disagreeing about what to unfollow.
+	const followById = new Map(
+		entries.flatMap((entry) =>
+			entry.follow ? [[entry.id.toLowerCase(), entry.follow] as const] : [],
+		),
+	);
+
 	const items: Item[] = entries.map((entry) => {
 		const profile = entry.user
 			? profileByUser.get(entry.user.toLowerCase())
@@ -182,6 +198,7 @@ export function FollowingShelf({ account }: { account: string }) {
 				entry.cover ?? profile?.imageUrl ?? info?.avatar ?? artist?.imageUrl,
 			removable: entry.removable,
 			icon: entry.icon,
+			menu: entry.follow ? [toggle(entry.follow)] : [],
 			source: entry.source,
 		};
 	});
@@ -195,12 +212,8 @@ export function FollowingShelf({ account }: { account: string }) {
 			emptyMessage={<FollowingHint />}
 			showLocal={false}
 			onRemove={(id) => {
-				for (const prefix of ["youtube:", "artist:", "user:"]) {
-					if (id.startsWith(prefix)) {
-						unfollow.mutate(id.slice(prefix.length));
-						return;
-					}
-				}
+				const key = followById.get(id.toLowerCase());
+				if (key) unfollow.mutate(key);
 			}}
 		/>
 	);

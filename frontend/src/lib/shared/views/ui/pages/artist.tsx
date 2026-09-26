@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Disc3, ListMusic, Loader } from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import { useParams } from "wouter-preact";
+import { spotifyUser } from "@/lib/auth/views/stores/session";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import type { AlbumSummary, Song } from "@/lib/music/model";
 import { playAlbum } from "@/lib/music/views/play";
@@ -19,6 +20,7 @@ import { FollowButton } from "@/lib/music/views/ui/follow";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
+import { useFollows } from "@/lib/music/views/ui/user/follow";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
@@ -71,6 +73,11 @@ function groupCounts(
 export function ArtistPage() {
 	const queryClient = useQueryClient();
 	const { id } = useParams<{ id: string }>();
+
+	// The follow is local, so it needs an account to live in, same as the
+	// button next to the play button disables itself without one.
+	const account = spotifyUser.value ?? "";
+	const { toggle } = useFollows(account);
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["artist", id],
@@ -140,6 +147,9 @@ export function ArtistPage() {
 						activeTab === "tracks" ? (
 							<TrackActions
 								songs={tracks}
+								playlistActions={
+									account && id ? [toggle(`artist:${id}`)] : undefined
+								}
 								onSelectAll={selectAll}
 								reserve={isLoading}
 							/>
