@@ -129,9 +129,14 @@ public class MainActivity extends AppCompatActivity {
     private void applySafeArea() {
         View container = findViewById(R.id.main_container);
         ViewCompat.setOnApplyWindowInsetsListener(container, (v, insets) -> {
-            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            int types = WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout();
+            Insets bars = insets.getInsets(types);
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-            return insets;
+            // Zero the handled types so the WebView stops forwarding them to CSS:
+            // env(safe-area-inset-*) is already covered by the padding above.
+            return new WindowInsetsCompat.Builder(insets)
+                    .setInsets(types, Insets.NONE)
+                    .build();
         });
     }
 
