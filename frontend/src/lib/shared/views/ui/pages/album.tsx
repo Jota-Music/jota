@@ -9,7 +9,8 @@ import {
 	isPlaying,
 	isLoading as playbackLoading,
 } from "@/lib/music/views/stores/audio";
-import { isQueue, playList } from "@/lib/music/views/stores/player";
+import { playList } from "@/lib/music/views/stores/player";
+import { queueSource } from "@/lib/music/views/stores/queue";
 import { selectAll } from "@/lib/music/views/stores/selection";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
@@ -49,8 +50,8 @@ export function AlbumPage() {
 							? () => void playList(tracks, id ?? null)
 							: undefined
 					}
-					playing={isQueue(tracks) && isPlaying.value}
-					loading={isQueue(tracks) && playbackLoading.value}
+					playing={queueSource.value === id && isPlaying.value}
+					loading={queueSource.value === id && playbackLoading.value}
 					actions={<TrackActions songs={tracks} onSelectAll={selectAll} />}
 				/>
 

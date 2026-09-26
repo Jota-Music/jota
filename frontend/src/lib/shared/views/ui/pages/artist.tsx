@@ -12,7 +12,8 @@ import {
 	isPlaying,
 	isLoading as playbackLoading,
 } from "@/lib/music/views/stores/audio";
-import { isQueue, playList } from "@/lib/music/views/stores/player";
+import { playList } from "@/lib/music/views/stores/player";
+import { queueSource } from "@/lib/music/views/stores/queue";
 import { clearSelection, selectAll } from "@/lib/music/views/stores/selection";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
@@ -120,12 +121,18 @@ export function ArtistPage() {
 					title={data?.name ?? t("pages.artist.defaultName")}
 					onPlay={
 						activeTab === "tracks" && tracks.length > 0
-							? () => void playList(tracks)
+							? () => void playList(tracks, id)
 							: undefined
 					}
-					playing={activeTab === "tracks" && isQueue(tracks) && isPlaying.value}
+					playing={
+						activeTab === "tracks" &&
+						queueSource.value === id &&
+						isPlaying.value
+					}
 					loading={
-						activeTab === "tracks" && isQueue(tracks) && playbackLoading.value
+						activeTab === "tracks" &&
+						queueSource.value === id &&
+						playbackLoading.value
 					}
 					actions={
 						activeTab === "tracks" ? (

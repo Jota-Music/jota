@@ -19,7 +19,8 @@ import {
 	isPlaying,
 	isLoading as playbackLoading,
 } from "@/lib/music/views/stores/audio";
-import { isQueue, playList } from "@/lib/music/views/stores/player";
+import { playList } from "@/lib/music/views/stores/player";
+import { queueSource } from "@/lib/music/views/stores/queue";
 import { expireRemoval, stageRemoval } from "@/lib/music/views/stores/removal";
 import {
 	clearSelection,
@@ -423,7 +424,9 @@ function PlaylistHeader({
 	songs: Song[];
 	onRemove: () => void;
 }) {
-	const active = isQueue(playable);
+	// queueSource instead of isQueue: membership walks the whole queue, so the
+	// header re-rendered and re-filtered the track list on every queue edit.
+	const active = queueSource.value === id;
 	return (
 		<PageHeader
 			cover={cover}
