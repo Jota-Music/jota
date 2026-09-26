@@ -2,7 +2,6 @@ import type { RefObject } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 
 const DRAG_START_PX = 4;
-const HOLD_MS = 100;
 const SCROLL_EDGE_PX = 48;
 const SCROLL_MAX_STEP = 16;
 
@@ -22,20 +21,14 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 	const dragged = useRef(false);
 	const suppressClick = useRef(false);
 	const origin = useRef({ x: 0, y: 0 });
-	const timer = useRef<number | null>(null);
 	const frame = useRef(0);
 	const moveFrame = useRef(0);
 	const last = useRef<PointerEvent | null>(null);
+	const capture = useRef<{ el: Element; id: number } | null>(null);
 	const callbacks = useRef({ begin, move, end });
 	callbacks.current = { begin, move, end };
 	const scroller = useRef(scroll);
 	scroller.current = scroll;
-
-	const stopTimer = () => {
-		if (timer.current == null) return;
-		clearTimeout(timer.current);
-		timer.current = null;
-	};
 
 	const stopScroll = () => {
 		if (frame.current === 0) return;
@@ -97,8 +90,12 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 
 	const beginDrag = () => {
 		if (!active.current || moved.current) return;
-		stopTimer();
 		moved.current = true;
+		// Capture only now, never on pointerdown. Capture retargets mousedown and
+		// mouseup to this element, and click/dblclick target the nearest common
+		// ancestor of those two: the scroller. An event dispatched at an ancestor
+		// never reaches the rows, so their click handlers would be dead.
+		capture.current?.el.setPointerCapture(capture.current.id);
 		document.body.classList.add("pointer-dragging");
 		callbacks.current.begin();
 		stopScroll();
@@ -120,12 +117,12 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		};
 
 		const onEnd = () => {
-			stopTimer();
 			stopScroll();
 			flushMove();
 			if (!active.current) return;
 			active.current = false;
 			last.current = null;
+			capture.current = null;
 			document.body.classList.remove("pointer-dragging");
 			const didDrag = dragged.current;
 			if (didDrag) {
@@ -141,7 +138,6 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		window.addEventListener("pointerup", onEnd);
 		window.addEventListener("pointercancel", onEnd);
 		return () => {
-			stopTimer();
 			stopScroll();
 			stopMove();
 			window.removeEventListener("pointermove", onMove);
@@ -157,8 +153,8 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		moved.current = false;
 		dragged.current = false;
 		origin.current = { x: e.clientX, y: e.clientY };
-		(e.currentTarget as Element | null)?.setPointerCapture?.(e.pointerId);
-		timer.current = window.setTimeout(beginDrag, HOLD_MS);
+		const el = e.currentTarget as Element | null;
+		capture.current = el?.setPointerCapture ? { el, id: e.pointerId } : null;
 		return true;
 	};
 
