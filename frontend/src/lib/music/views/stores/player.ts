@@ -37,15 +37,6 @@ import { playGate, publish } from "@/lib/music/views/stores/remote";
 // the YouTube API is blocked, so a wider window rides out longer outages.
 const PRELOAD_AHEAD = 4;
 
-const SKIP_DEBOUNCE_MS = 200;
-let skipTimer: ReturnType<typeof setTimeout> | null = null;
-
-function cancelSkip() {
-	if (skipTimer === null) return;
-	clearTimeout(skipTimer);
-	skipTimer = null;
-}
-
 export function preloadUpcomingSongs(songs: Song[], idx: number) {
 	const upcoming = songs.slice(idx + 1, idx + 1 + PRELOAD_AHEAD);
 	if (upcoming.length > 0) void AudioCache.preload(...upcoming);
@@ -113,8 +104,6 @@ async function playAtIndex(
 	if (i < 0 || i >= q.length) return;
 
 	const song = q[i];
-
-	cancelSkip();
 
 	currentIndex.value = i;
 	currentSong.value = song;
@@ -344,28 +333,16 @@ export async function reloadCurrent(): Promise<void> {
 	}
 }
 
-// Pressing next/previous fast must not resolve a stream per press: move the
-// position at once for instant feedback and let only the last press load.
-function scheduleSkip(i: number) {
-	const song = queue.value[i];
-	if (!song) return;
-	currentIndex.value = i;
-	currentSong.value = song;
-	persistQueue();
-	cancelSkip();
-	skipTimer = setTimeout(() => {
-		skipTimer = null;
-		if (queue.value[i]?.id !== song.id) return;
-		void playAtIndex(i);
-	}, SKIP_DEBOUNCE_MS);
-}
-
+// Pressing next/previous goes straight to the load. A debounce here pushed
+// play() past the user gesture, so WebKit rejected it and the queue sat silent
+// until the next click. Superseded loads are already dropped by the play
+// sequence, so rapid presses need no timer of their own.
 export async function nextSong() {
 	const q = queue.value;
 	if (q.length === 0) return;
 	const next = pick(q, currentIndex.value, repeat.value, 1);
 	if (next == null) return;
-	scheduleSkip(next);
+	await playAtIndex(next);
 }
 
 export async function prevSong() {
@@ -373,7 +350,7 @@ export async function prevSong() {
 	if (q.length === 0) return;
 	const prev = pick(q, currentIndex.value, repeat.value, -1);
 	if (prev == null) return;
-	scheduleSkip(prev);
+	await playAtIndex(prev);
 }
 
 setOnTrackEnded(() => {
