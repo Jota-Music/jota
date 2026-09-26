@@ -1383,13 +1383,17 @@ public class WailsBridge {
                 i.putExtra("json", json);
                 // The first update promotes the service to the foreground; later
                 // ones are plain commands so background updates don't trigger the
-                // Android 12+ foreground-service start restriction.
-                if (mediaServiceRunning) {
+                // Android 12+ foreground-service start restriction. The service
+                // outlives this bridge, so its own liveness is the source of
+                // truth: after an activity recreation the local flag is false
+                // while the service is still running, and promoting it again
+                // from the background throws.
+                if (mediaServiceRunning || MediaPlaybackService.isAlive()) {
                     activity.startService(i);
                 } else {
                     ContextCompat.startForegroundService(activity, i);
-                    mediaServiceRunning = true;
                 }
+                mediaServiceRunning = true;
             } catch (Exception e) {
                 mediaServiceRunning = false;
                 Log.e(TAG, "updateMediaSession failed", e);

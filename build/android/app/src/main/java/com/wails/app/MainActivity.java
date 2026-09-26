@@ -1003,8 +1003,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        MediaPlaybackService.setListener(null);
-        stopService(new Intent(this, MediaPlaybackService.class));
+        // Folding also lands here whenever the platform still recreates the
+        // activity. Only a real teardown may drop playback: killing the service
+        // here would tear the media session down and leave the notification
+        // dead while the new activity rebuilds an empty page.
+        if (isFinishing()) {
+            MediaPlaybackService.setListener(null);
+            stopService(new Intent(this, MediaPlaybackService.class));
+        }
         unregisterSystemEventReceivers();
         if (bridge != null) {
             bridge.shutdown();

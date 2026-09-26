@@ -57,6 +57,18 @@ public class MediaPlaybackService extends Service {
 
     private static volatile Listener listener;
 
+    /**
+     * Whether the service is actually alive. The bridge outlives individual
+     * activity instances, so its own "started" flag goes stale on a config
+     * change and would make it call startForegroundService for a service that is
+     * already in the foreground -- rejected on Android 12+ from the background.
+     */
+    private static volatile boolean alive;
+
+    public static boolean isAlive() {
+        return alive;
+    }
+
     public static void setListener(Listener value) {
         listener = value;
     }
@@ -87,6 +99,7 @@ public class MediaPlaybackService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        alive = true;
         session = new MediaSession(this, "jota");
         session.setActive(true);
         session.setCallback(
@@ -324,6 +337,7 @@ public class MediaPlaybackService extends Service {
 
     @Override
     public void onDestroy() {
+        alive = false;
         try {
             unregisterReceiver(noisyReceiver);
         } catch (Exception ignored) {
