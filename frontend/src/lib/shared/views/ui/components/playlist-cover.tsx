@@ -12,13 +12,7 @@ type Props = {
 export function PlaylistCover({ src, alt = "", imgClass, size = 320 }: Props) {
 	if (src) {
 		return (
-			<Image
-				src={cover(src, size)}
-				alt={alt}
-				loading="lazy"
-				decoding="async"
-				class={imgClass}
-			/>
+			<Image src={cover(src, size)} alt={alt} loading="lazy" class={imgClass} />
 		);
 	}
 	return (

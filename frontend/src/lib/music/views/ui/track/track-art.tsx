@@ -27,7 +27,6 @@ export function TrackArt({
 		<div class={cn("relative", className)}>
 			<Image
 				loading="lazy"
-				decoding="async"
 				src={cover(song.album?.covers?.[0], 80)}
 				alt={alt}
 				class={cn(imgClass, current && "brightness-40")}

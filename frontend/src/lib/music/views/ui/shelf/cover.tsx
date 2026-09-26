@@ -44,7 +44,6 @@ export function Cover({
 					alt={item.name}
 					draggable={false}
 					loading="lazy"
-					decoding="async"
 					class="h-full w-full object-cover opacity-80"
 				/>
 			) : (

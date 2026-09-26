@@ -21,7 +21,6 @@ export function Mosaic({ covers, alt = "", placeholder, size = 480 }: Props) {
 				src={cover(imgs[0], size)}
 				alt={alt}
 				loading="lazy"
-				decoding="async"
 				draggable={false}
 				class="h-full w-full object-cover"
 			/>
@@ -45,7 +44,6 @@ export function Mosaic({ covers, alt = "", placeholder, size = 480 }: Props) {
 					src={cover(src, tile)}
 					alt={alt}
 					loading="lazy"
-					decoding="async"
 					draggable={false}
 					class="h-full w-full object-cover"
 				/>
