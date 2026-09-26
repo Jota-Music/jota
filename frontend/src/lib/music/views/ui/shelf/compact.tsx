@@ -1,11 +1,15 @@
 import type { ComponentChildren } from "preact";
 import { Link } from "wouter-preact";
+import { hover } from "@/lib/music/views/ui/cover-hover";
+import { SourceBadge } from "@/lib/music/views/ui/shelf/badge";
+import { Cover } from "@/lib/music/views/ui/shelf/cover";
+import {
+	type DragProps,
+	dragFrom,
+	dragOver,
+} from "@/lib/music/views/ui/shelf/hooks/use-reorder";
+import type { Item } from "@/lib/music/views/ui/shelf/types";
 import { cn } from "@/lib/shared/utils/tw";
-import { hover } from "../cover-hover";
-import { SourceBadge } from "./badge";
-import { Cover } from "./cover";
-import { type DragProps, dragFrom, dragOver } from "./hooks/use-reorder";
-import type { Item } from "./types";
 
 interface CompactProps {
 	items: Item[];

@@ -1,4 +1,4 @@
-import { t } from ".";
+import { t } from "@/lib/shared/i18n";
 
 // Backend (Go/relay) errors cross the wire as plain English messages. Mapping
 // them to keys keeps the UI translatable without changing the Go contracts.

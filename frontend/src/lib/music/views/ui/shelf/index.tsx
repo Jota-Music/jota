@@ -4,22 +4,30 @@ import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { queueSource } from "@/lib/music/views/stores/queue";
+import { Compact } from "@/lib/music/views/ui/shelf/compact";
+import { Controls } from "@/lib/music/views/ui/shelf/controls";
+import { Grid } from "@/lib/music/views/ui/shelf/grid";
+import { LocalHint } from "@/lib/music/views/ui/shelf/hint";
+import { useReorder } from "@/lib/music/views/ui/shelf/hooks/use-reorder";
+import {
+	defaultViewKey,
+	useView,
+} from "@/lib/music/views/ui/shelf/hooks/use-view";
+import type { Item, Props } from "@/lib/music/views/ui/shelf/types";
 import { t } from "@/lib/shared/i18n";
 import {
 	type Action,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
-import { Compact } from "./compact";
-import { Controls } from "./controls";
-import { Grid } from "./grid";
-import { LocalHint } from "./hint";
-import { useReorder } from "./hooks/use-reorder";
-import { defaultViewKey, useView } from "./hooks/use-view";
-import type { Item, Props } from "./types";
 
-export { FollowingHint, LocalHint, RelayHint, YouTubeHint } from "./hint";
-export type { IconType, Item, Source } from "./types";
+export {
+	FollowingHint,
+	LocalHint,
+	RelayHint,
+	YouTubeHint,
+} from "@/lib/music/views/ui/shelf/hint";
+export type { IconType, Item, Source } from "@/lib/music/views/ui/shelf/types";
 
 export function Shelf({
 	items,

@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import type { SourceFilter, Variant } from "../types";
+import type { SourceFilter, Variant } from "@/lib/music/views/ui/shelf/types";
 
 export const defaultViewKey = "cover_grid_view";
 const filterKey = (viewKey: string) => `${viewKey}_source_filter`;

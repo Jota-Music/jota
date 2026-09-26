@@ -1,8 +1,8 @@
 import { Disc3 } from "lucide-preact";
+import type { IconType, Item } from "@/lib/music/views/ui/shelf/types";
 import { cover } from "@/lib/shared/utils/cover";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Mosaic } from "@/lib/shared/views/ui/components/mosaic";
-import type { IconType, Item } from "./types";
 
 export function Placeholder({
 	icon: Icon = Disc3,

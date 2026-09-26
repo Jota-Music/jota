@@ -1,9 +1,9 @@
 import { LayoutGrid, Library, List, Plus } from "lucide-preact";
+import type { SourceFilter, Variant } from "@/lib/music/views/ui/shelf/types";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
-import type { SourceFilter, Variant } from "./types";
 
 interface ControlsProps {
 	filterable: boolean;

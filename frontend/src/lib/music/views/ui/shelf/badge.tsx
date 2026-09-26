@@ -1,8 +1,8 @@
 import { Library } from "lucide-preact";
+import type { Source } from "@/lib/music/views/ui/shelf/types";
 import { t } from "@/lib/shared/i18n";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
-import type { Source } from "./types";
 
 export function SourceBadge({ source }: { source?: Source }) {
 	if (!source) return null;
