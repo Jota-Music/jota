@@ -81,9 +81,9 @@ export function Welcome() {
 					/>
 					<span
 						class={cn(
-							"flex size-4 items-center justify-center rounded border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-green-500/40",
+							"flex size-4 items-center justify-center rounded border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-(--dominant-color)/40",
 							mute.value
-								? "border-green-500 bg-green-500 text-zinc-950"
+								? "border-(--dominant-color) bg-(--dominant-color) text-(--binary-color)"
 								: "border-zinc-700 bg-zinc-900 text-transparent",
 						)}
 					>
