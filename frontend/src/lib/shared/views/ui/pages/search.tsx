@@ -2,8 +2,12 @@ import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Loader, Pause, Play } from "lucide-preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { Link, useLocation, useParams } from "wouter-preact";
-import { type SearchResult, searchSpotify } from "@/lib/music/app/search";
-import type { Song } from "@/lib/music/model";
+import {
+	type SearchResult,
+	searchResultToSong,
+	searchSpotify,
+	stripUriPrefix,
+} from "@/lib/music/app/search";
 import { playAlbum, playPlaylist } from "@/lib/music/views/play";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { queueSource } from "@/lib/music/views/stores/queue";
@@ -22,11 +26,6 @@ import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type SearchType = "user" | "track" | "album" | "playlist" | "artist";
 
-function stripUriPrefix(query: string, type: string): string {
-	const prefix = `spotify:${type}:`;
-	return query.startsWith(prefix) ? query.slice(prefix.length) : query;
-}
-
 const detailRoutes: Partial<Record<SearchType, (id: string) => string>> = {
 	artist: (id) => `/artist/${id}`,
 	album: (id) => `/album/${id}`,
@@ -36,7 +35,7 @@ const detailRoutes: Partial<Record<SearchType, (id: string) => string>> = {
 function SearchResultItem({ item }: { item: SearchResult }) {
 	const queryClient = useQueryClient();
 	const coverUrl = item.coverUrl ?? "";
-	const artists = (item.artists ?? []).join(", ");
+	const artists = (item.artists ?? []).map((a) => a.name).join(", ");
 	const isPlaylist = item.uri.startsWith("spotify:playlist:");
 	const isAlbum = item.uri.startsWith("spotify:album:");
 	const playlistId = stripUriPrefix(item.uri, "playlist");
@@ -106,29 +105,6 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 	);
 }
 
-function resultToSong(item: SearchResult): Song {
-	const id = stripUriPrefix(item.uri, "track");
-	const coverUrl = item.coverUrl ?? "";
-
-	return {
-		id,
-		name: item.name,
-		duration: 0,
-		url: "",
-		share: {
-			id,
-			url: `https://open.spotify.com/track/${id}`,
-		},
-		album: {
-			id: "",
-			title: "",
-			url: "",
-			covers: coverUrl ? [coverUrl] : [],
-		},
-		artists: (item.artists ?? []).map((name) => ({ name })),
-	};
-}
-
 function PlaylistGrid({ results }: { results: SearchResult[] }) {
 	return (
 		<div class="grid grid-cols-3 gap-0.5 md:gap-4">
@@ -185,7 +161,7 @@ export function SearchPage() {
 	const results = (data as SearchResult[]) ?? [];
 
 	if (type === "track") {
-		const songs = results.map(resultToSong);
+		const songs = results.map(searchResultToSong);
 
 		return (
 			<DefaultLayout class="gap-4">

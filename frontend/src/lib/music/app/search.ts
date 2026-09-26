@@ -14,6 +14,11 @@ import type {
 
 export type { SearchResult } from "@/lib/music/model";
 
+export function stripUriPrefix(query: string, type: string): string {
+	const prefix = `spotify:${type}:`;
+	return query.startsWith(prefix) ? query.slice(prefix.length) : query;
+}
+
 export async function searchSpotify(
 	type_: "user" | "track" | "album" | "playlist" | "artist",
 	query: string,
@@ -58,5 +63,27 @@ export function youtubeVideoToSong(video: Video): Song {
 		},
 		artists: [{ id: video.channelId, name: author, source: "youtube" }],
 		youtubeId: video.id,
+	};
+}
+
+export function searchResultToSong(item: SearchResult): Song {
+	const id = stripUriPrefix(item.uri, "track");
+
+	return {
+		id,
+		name: item.name,
+		duration: item.duration ?? 0,
+		url: "",
+		share: {
+			id,
+			url: `https://open.spotify.com/track/${id}`,
+		},
+		album: {
+			id: "",
+			title: "",
+			url: "",
+			covers: item.coverUrl ? [item.coverUrl] : [],
+		},
+		artists: item.artists ?? [],
 	};
 }
