@@ -106,13 +106,19 @@ const QueueRow = memo(function QueueRow({
 			title={reorderable ? t("music.queue.drag") : undefined}
 			role="none"
 			class={cn(
-				"flex h-full w-full select-none items-center gap-1 border-b border-zinc-900/80 px-1 sm:gap-2 sm:px-2",
+				"flex h-full w-full cursor-pointer select-none items-center gap-1 border-b border-zinc-900/80 px-1 sm:gap-2 sm:px-2",
 				isCurrent ? "bg-zinc-900/50" : "hover:bg-zinc-900/30",
 				isDragSource && "opacity-40",
 				isDropTarget &&
 					"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/40 ring-inset",
-				reorderable ? "cursor-pointer" : "cursor-default",
 			)}
+			onDblClick={(e) => {
+				// Jumping to a track is a double click, like every other track list.
+				// dblclick rather than e.detail: a trackpad click reports detail 1,
+				// and the album/artist links stop the click events they sit on.
+				if ((e.target as Element).closest("button, a")) return;
+				void playAt(globalIndex);
+			}}
 			onDragStart={(e) => startDrag(e, globalIndex)}
 			onDragEnd={endDrag}
 			onContextMenu={(e) => {
@@ -195,8 +201,7 @@ const QueueRow = memo(function QueueRow({
 					type="button"
 					draggable={false}
 					title={t("music.queue.playNow")}
-					disabled={isCurrent}
-					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-(--dominant-color) disabled:cursor-not-allowed disabled:opacity-30"
+					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-(--dominant-color)"
 					onClick={() => void playAt(globalIndex)}
 				>
 					<Play size={17} />

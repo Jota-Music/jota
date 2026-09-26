@@ -18,7 +18,11 @@ import { useLocation } from "wouter-preact";
 import { playlistSource } from "@/lib/music/app/playlist-source";
 import type { Song } from "@/lib/music/model";
 import { currentSong, isPlaying } from "@/lib/music/views/stores/audio";
-import { enqueueMany, playList } from "@/lib/music/views/stores/player";
+import {
+	enqueueMany,
+	playList,
+	toggleSong,
+} from "@/lib/music/views/stores/player";
 import {
 	clearSelection,
 	openPicker,
@@ -74,7 +78,7 @@ export function buildActions({
 	const single = list.length === 1 ? list[0] : null;
 	const done = () => void onDone?.();
 
-	// The track that is already playing toggles instead of restarting.
+	// The track that is already playing pauses instead of restarting.
 	const playing =
 		!!single && currentSong.value?.id === single.id && isPlaying.value;
 
@@ -83,7 +87,10 @@ export function buildActions({
 			icon: playing ? Pause : Play,
 			label: playing ? t("music.pause") : t("music.play"),
 			run: () => {
-				if (onPlay) onPlay();
+				// Activating the loaded track restarts it, so the pause action has
+				// to toggle on its own.
+				if (playing) void toggleSong();
+				else if (onPlay) onPlay();
 				else void playList(list);
 				done();
 			},

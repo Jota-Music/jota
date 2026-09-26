@@ -160,11 +160,11 @@ export async function playFromQueueSelection(
 	clicked: Song,
 	source: string | null = null,
 ) {
-	// Pressing play on the track that is already playing toggles it instead of
-	// restarting the same queue.
+	// Pressing play on the track that is already loaded restarts it instead of
+	// reloading the same queue.
 	if (isQueue(fullOrderedSongs) && currentSong.value?.id === clicked.id) {
 		if (source !== null) queueSource.value = source;
-		return toggleSong();
+		return restart();
 	}
 
 	const i = fullOrderedSongs.findIndex((s) => s.id === clicked.id);
@@ -296,7 +296,10 @@ export async function playAt(i: number): Promise<void> {
 	const q = queue.value;
 
 	if (i < 0 || i >= q.length) return;
-	if (i === currentIndex.value && hasLoaded(q[i].id)) return;
+	if (i === currentIndex.value) {
+		if (hasLoaded(q[i].id)) return restart();
+		return;
+	}
 
 	await playAtIndex(i);
 }
@@ -304,6 +307,13 @@ export async function playAt(i: number): Promise<void> {
 export async function toggleSong() {
 	publish({ action: isPlaying.value ? "pause" : "play" });
 	await togglePlayPause();
+}
+
+// Activating the track that is already loaded restarts it from the top: a row
+// means "play this from the beginning". A paused track resumes from zero.
+export async function restart(): Promise<void> {
+	commitSeek(0);
+	if (!isPlaying.value) await toggleSong();
 }
 
 // Reload the current track after its stream changed (a corrected YouTube id).
