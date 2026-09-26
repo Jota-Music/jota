@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
+import { parseSpotifyLink, spotifyRef } from "@/lib/music/app/spotify-link";
 
 const ARTIST = { type: "artist", id: "4Z8W4fKeB5YxbusRsdQVPb" } as const;
 const TRACK = { type: "track", id: "4cOdK2wGLETKBW3PvgPWqT" } as const;
@@ -39,4 +39,17 @@ test("accepts textual usernames", () => {
 		type: "user",
 		id: "jota",
 	});
+});
+
+// The search page receives a bare id: the header already resolved the pasted
+// link and left the type in the route.
+test("resolves a bare id against the search type", () => {
+	const id = "5wC2X3QsfCc8M3KVv0wkDa";
+	expect(spotifyRef("playlist", id)).toEqual({ type: "playlist", id });
+	expect(spotifyRef("album", ` ${id} `)).toEqual({ type: "album", id });
+	expect(spotifyRef("playlist", "Radiohead")).toBeNull();
+	expect(spotifyRef("nonsense", id)).toBeNull();
+	expect(
+		spotifyRef("playlist", `https://open.spotify.com/artist/${ARTIST.id}`),
+	).toEqual(ARTIST);
 });

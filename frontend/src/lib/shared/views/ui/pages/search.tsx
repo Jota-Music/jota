@@ -8,7 +8,7 @@ import {
 	searchSpotify,
 	stripUriPrefix,
 } from "@/lib/music/app/search";
-import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
+import { spotifyRef } from "@/lib/music/app/spotify-link";
 import { playAlbum, playPlaylist } from "@/lib/music/views/play";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { queueSource } from "@/lib/music/views/stores/queue";
@@ -134,7 +134,7 @@ export function SearchPage() {
 	// Spotify only resolves artists, albums and playlists by reference, so a
 	// bare name is not something the detail page can open.
 	const detailRoute = type ? DETAIL_ROUTES[type] : undefined;
-	const ref = parseSpotifyLink(query);
+	const ref = spotifyRef(type, query);
 	const redirectId = detailRoute && ref && ref.type === type ? ref.id : "";
 	const listRef = useRef<HTMLElement>(null);
 

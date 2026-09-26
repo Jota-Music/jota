@@ -47,3 +47,14 @@ export function parseSpotifyLink(query: string): SpotifyRef | null {
 	const [type, id] = segments;
 	return ref(type, id ?? "");
 }
+
+// A search route carries the type in its path, so a bare id is enough to open
+// the reference it names.
+export function spotifyRef(
+	type: string | undefined,
+	query: string,
+): SpotifyRef | null {
+	return (
+		parseSpotifyLink(query) ?? (isType(type) ? ref(type, query.trim()) : null)
+	);
+}
