@@ -29,19 +29,25 @@ export function useWindow<T extends HTMLElement>(
 		if (!el) return;
 
 		let frame = 0;
+		const read = () => {
+			setScrollTop(el.scrollTop);
+			setViewport(el.clientHeight);
+		};
+		// Scrolling and resizing are throttled to a frame, but the first read is
+		// not: a viewport of 0 would window the list to the overscan alone and
+		// then grow it a frame later, right after the first paint.
 		const sync = () => {
 			if (frame !== 0) return;
 			frame = requestAnimationFrame(() => {
 				frame = 0;
-				setScrollTop(el.scrollTop);
-				setViewport(el.clientHeight);
+				read();
 			});
 		};
 
 		const sizes = new ResizeObserver(sync);
 		sizes.observe(el);
 		el.addEventListener("scroll", sync, { passive: true });
-		sync();
+		read();
 		return () => {
 			if (frame !== 0) cancelAnimationFrame(frame);
 			sizes.disconnect();
