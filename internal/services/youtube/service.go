@@ -36,7 +36,7 @@ func (s *Service) ResolveAudio(song music.Song) (music.Audio, error) {
 			return audio, nil
 		}
 	}
-	audio, err := s.searchAudio(song.Id, audioQuery(song))
+	audio, err := s.searchAudio(song, audioQuery(song))
 	if err == nil {
 		return audio, nil
 	}
@@ -44,7 +44,7 @@ func (s *Service) ResolveAudio(song music.Song) (music.Audio, error) {
 	// A title-first query can come back empty; YouTube search indexes "artist
 	// title" better, so retry the other way before giving up.
 	if alt := audioQueryArtistFirst(song); alt != audioQuery(song) {
-		if retry, retryErr := s.searchAudio(song.Id, alt); retryErr == nil {
+		if retry, retryErr := s.searchAudio(song, alt); retryErr == nil {
 			return retry, nil
 		}
 	}
@@ -52,21 +52,22 @@ func (s *Service) ResolveAudio(song music.Song) (music.Audio, error) {
 	return audio, err
 }
 
-func (s *Service) searchAudio(cacheKey, search string) (music.Audio, error) {
+func (s *Service) searchAudio(song music.Song, search string) (music.Audio, error) {
+	cacheKey := song.Id
 	if cached := cachedAudioBySong(cacheKey); cached != nil {
 		return *cached, nil
 	}
 
-	ids, err := s.candidates(cacheKey, search)
+	videos, err := s.candidates(cacheKey, search, song)
 	if err != nil {
 		return music.Audio{}, err
 	}
 
 	var lastErr error
-	for _, youtubeId := range ids {
-		audio := cachedAudio(youtubeId)
+	for _, v := range videos {
+		audio := cachedAudio(v.ID)
 		if audio == nil {
-			audio, err = fetchAudio(youtubeId)
+			audio, err = fetchAudio(v.ID)
 			if err != nil {
 				lastErr = err
 				continue
@@ -74,7 +75,7 @@ func (s *Service) searchAudio(cacheKey, search string) (music.Audio, error) {
 		}
 
 		if search != "" {
-			_ = s.SetYoutubeId(cacheKey, youtubeId)
+			_ = s.SetYoutubeId(cacheKey, v.ID)
 		}
 		saveAudioBySong(cacheKey, *audio)
 		return *audio, nil

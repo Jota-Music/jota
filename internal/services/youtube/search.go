@@ -72,6 +72,7 @@ func extractVideos(sr searchResponse) []Video {
 				Title:     v.Title.first(),
 				Author:    v.ByLine.first(),
 				ChannelId: v.ByLine.browseID(),
+				Duration:  v.duration(),
 			})
 		}
 	}
@@ -234,19 +235,16 @@ func extractPlaylists(res searchResponse) []music.PlaylistSummary {
 	return out
 }
 
-func (s *Service) candidates(cacheKey, search string) ([]string, error) {
+// candidates returns the videos to try for a song, best match first. A cached
+// id stays pinned at the front: the user either picked it by hand or it was
+// stored by an earlier resolve, and ranking must not demote it behind a fresh
+// automatic pick.
+func (s *Service) candidates(cacheKey, search string, song music.Song) ([]Video, error) {
 	if search == "" {
 		if !isYoutubeId(cacheKey) {
 			return nil, errors.New("no search query and not a youtube id")
 		}
-		return []string{cacheKey}, nil
-	}
-
-	var ids []string
-	seen := map[string]bool{}
-	if cached, err := youtubeSourceBucket.GetString(cacheKey); err == nil && cached != "" {
-		ids = append(ids, cached)
-		seen[cached] = true
+		return []Video{{ID: cacheKey}}, nil
 	}
 
 	videos, err := s.Search(search)
@@ -254,16 +252,25 @@ func (s *Service) candidates(cacheKey, search string) ([]string, error) {
 		return nil, fmt.Errorf("search failed: %w", err)
 	}
 
+	var (
+		pinned []Video
+		found  []Video
+		seen   = map[string]bool{}
+	)
+	if cached, err := youtubeSourceBucket.GetString(cacheKey); err == nil && cached != "" {
+		pinned = append(pinned, Video{ID: cached})
+		seen[cached] = true
+	}
 	for _, v := range videos {
 		if v.ID != "" && !seen[v.ID] {
-			ids = append(ids, v.ID)
+			found = append(found, v)
 			seen[v.ID] = true
 		}
 	}
 
-	if len(ids) == 0 {
+	if len(pinned)+len(found) == 0 {
 		return nil, fmt.Errorf("no results for: %s", search)
 	}
 
-	return ids, nil
+	return append(pinned, rank(found, song)...), nil
 }

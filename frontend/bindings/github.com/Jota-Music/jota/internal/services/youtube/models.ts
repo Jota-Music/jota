@@ -6,4 +6,5 @@ export interface Video {
     "title": string;
     "author"?: string;
     "channelId"?: string;
+    "duration"?: number;
 }
