@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,6 +16,10 @@ import (
 )
 
 const maxMessageBytes = 16 << 20
+
+// probeRoom is a code that only exists to test a token. /rooms is read-only, so
+// an unknown code answers {"active":false} without creating or touching a room.
+const probeRoom = "jota-probe"
 
 // ErrTokenRequired is returned when the relay rejects the handshake with 401,
 // i.e. it has AUTH_TOKEN configured and we did not present a valid one.
@@ -151,34 +156,54 @@ func (s *Relay) read(ctx context.Context, conn *websocket.Conn) {
 }
 
 // Check probes /healthz. It returns whether the relay requires an auth token
-// so the UI can ask for one up front. Older relays return a plain 200 body, in
-// which case a token is assumed not to be required.
-func (s *Relay) Check(rawURL string) (bool, error) {
+// and, when it does, whether the token we hold is the one it accepts.
+// Older relays return a plain 200 body, in which case a token is assumed not to
+// be required.
+func (s *Relay) Check(rawURL string, token string) (bool, error) {
 	target, err := healthURL(rawURL)
 	if err != nil {
 		return false, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	status, body, err := get(target, "")
 	if err != nil {
 		return false, err
 	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return false, err
+	if status != http.StatusOK {
+		return false, statusError(status)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("relay returned %s", resp.Status)
-	}
-	var body struct {
+	var health struct {
 		Auth bool `json:"auth"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+	if err := json.Unmarshal(body, &health); err != nil {
 		return false, nil
 	}
-	return body.Auth, nil
+	if !health.Auth {
+		return false, nil
+	}
+	if token == "" {
+		return true, ErrTokenRequired
+	}
+	return true, probeToken(rawURL, token)
+}
+
+// probeToken asks /rooms for a code nobody holds, which the relay answers the
+// same way it gates /ws: with 401 when the bearer is not the configured one.
+// Anything else leaves the token unjudged (an unknown code answers 200, and a
+// relay without the endpoint answers 404): /healthz already proved the relay
+// is there, so there is nothing left to report.
+func probeToken(rawURL string, token string) error {
+	target, err := roomStatusURL(rawURL, probeRoom)
+	if err != nil {
+		return nil
+	}
+	status, _, err := get(target, token)
+	if err != nil {
+		return nil
+	}
+	if status == http.StatusUnauthorized {
+		return ErrTokenRequired
+	}
+	return nil
 }
 
 func endpoint(raw string, room string, role string) (string, error) {
@@ -242,28 +267,47 @@ func (s *Relay) RoomStatus(rawURL string, room string, token string) (RoomStatus
 	if err != nil {
 		return RoomStatus{}, err
 	}
+	status, body, err := get(target, token)
+	if err != nil {
+		return RoomStatus{}, err
+	}
+	if status != http.StatusOK {
+		return RoomStatus{}, statusError(status)
+	}
+	var out RoomStatus
+	if err := json.Unmarshal(body, &out); err != nil {
+		return RoomStatus{}, err
+	}
+	return out, nil
+}
+
+// get reads a relay endpoint with the shared timeout and auth header, so every
+// probe reaches the relay the same way. It returns the status and a bounded
+// body; the caller never has to close anything.
+func get(target string, token string) (int, []byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
-		return RoomStatus{}, err
+		return 0, nil, err
 	}
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return RoomStatus{}, err
+		return 0, nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return RoomStatus{}, fmt.Errorf("relay returned %s", resp.Status)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return 0, nil, err
 	}
-	var out RoomStatus
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return RoomStatus{}, err
-	}
-	return out, nil
+	return resp.StatusCode, body, nil
+}
+
+func statusError(status int) error {
+	return fmt.Errorf("relay returned %d %s", status, http.StatusText(status))
 }
 
 func relayURL(raw string) (*url.URL, error) {

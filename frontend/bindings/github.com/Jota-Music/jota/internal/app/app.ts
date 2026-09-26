@@ -292,8 +292,8 @@ export function SpotifyLoginAndWait(): $CancellablePromise<void> {
     return $Call.ByID(57797921);
 }
 
-export function SyncCheck(relayURL: string): $CancellablePromise<boolean> {
-    return $Call.ByID(3718808301, relayURL);
+export function SyncCheck(relayURL: string, token: string): $CancellablePromise<boolean> {
+    return $Call.ByID(3718808301, relayURL, token);
 }
 
 export function SyncConnect(relayURL: string, room: string, role: string, token: string, password: string): $CancellablePromise<void> {

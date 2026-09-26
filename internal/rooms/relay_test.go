@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -32,7 +33,7 @@ func TestCheckAuthFlag(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte(c.body))
 		}))
-		got, err := NewRelay(nil).Check(srv.URL)
+		got, err := NewRelay(nil).Check(srv.URL, "token")
 		srv.Close()
 		if err != nil {
 			t.Fatalf("Check(%q): %v", c.body, err)
@@ -40,6 +41,74 @@ func TestCheckAuthFlag(t *testing.T) {
 		if got != c.want {
 			t.Errorf("Check(%q) = %v, want %v", c.body, got, c.want)
 		}
+	}
+}
+
+// A relay behind AUTH_TOKEN answers 401 on /rooms, exactly as it does on /ws,
+// which is the only place a token can be judged. Everything but a 401 must
+// leave the token unjudged instead of failing the whole check.
+func TestCheckToken(t *testing.T) {
+	cases := []struct {
+		name      string
+		auth      bool
+		probeCode int
+		token     string
+		wantAuth  bool
+		wantErr   bool
+		wantProbe bool
+	}{
+		{name: "no auth", auth: false, token: "", wantAuth: false},
+		{name: "no auth ignores token", auth: false, token: "token", wantAuth: false},
+		{name: "missing token", auth: true, token: "", wantAuth: true, wantErr: true},
+		{name: "accepted", auth: true, probeCode: 200, token: "token", wantAuth: true, wantProbe: true},
+		{name: "rejected", auth: true, probeCode: 401, token: "token", wantAuth: true, wantErr: true, wantProbe: true},
+		{name: "unknown endpoint", auth: true, probeCode: 404, token: "token", wantAuth: true, wantProbe: true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			probed := false
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/healthz" {
+					probed = true
+					if r.URL.Path != "/rooms/"+probeRoom {
+						t.Errorf("probe path = %q, want /rooms/%s", r.URL.Path, probeRoom)
+					}
+					if got := r.Header.Get("Authorization"); got != "Bearer "+c.token {
+						t.Errorf("probe auth = %q, want %q", got, "Bearer "+c.token)
+					}
+					w.WriteHeader(c.probeCode)
+					_, _ = w.Write([]byte(`{"active":false}`))
+					return
+				}
+				_, _ = w.Write([]byte(fmt.Sprintf(`{"auth":%t}`, c.auth)))
+			}))
+			defer srv.Close()
+
+			got, err := NewRelay(nil).Check(srv.URL, c.token)
+			if (err != nil) != c.wantErr {
+				t.Fatalf("Check() error = %v, wantErr %v", err, c.wantErr)
+			}
+			if c.wantErr && !errors.Is(err, ErrTokenRequired) {
+				t.Fatalf("Check() error = %v, want ErrTokenRequired", err)
+			}
+			if got != c.wantAuth {
+				t.Errorf("Check() = %v, want %v", got, c.wantAuth)
+			}
+			if probed != c.wantProbe {
+				t.Errorf("probed /rooms = %v, want %v", probed, c.wantProbe)
+			}
+		})
+	}
+}
+
+func TestCheckUnreachable(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer srv.Close()
+
+	if _, err := NewRelay(nil).Check(srv.URL, ""); err == nil {
+		t.Fatal("a 502 relay should fail the check")
 	}
 }
 

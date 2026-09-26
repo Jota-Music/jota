@@ -2,8 +2,8 @@ package app
 
 import "github.com/Jota-Music/jota/internal/rooms"
 
-func (a *App) SyncCheck(relayURL string) (bool, error) {
-	return a.Sync.Check(relayURL)
+func (a *App) SyncCheck(relayURL string, token string) (bool, error) {
+	return a.Sync.Check(relayURL, token)
 }
 
 func (a *App) SyncConnect(relayURL string, room string, role string, token string, password string) error {

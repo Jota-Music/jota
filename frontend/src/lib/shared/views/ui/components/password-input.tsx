@@ -8,6 +8,7 @@ interface PasswordInputProps {
 	class?: string;
 	placeholder?: string;
 	value: string;
+	disabled?: boolean;
 	onValue: (value: string) => void;
 	onBlur?: () => void;
 	label?: string;
@@ -18,6 +19,7 @@ export function PasswordInput({
 	class: className,
 	placeholder,
 	value,
+	disabled,
 	onValue,
 	onBlur,
 	label,
@@ -33,6 +35,7 @@ export function PasswordInput({
 				placeholder={placeholder}
 				aria-label={label}
 				value={value}
+				disabled={disabled}
 				onInput={(e) => onValue(e.currentTarget.value)}
 				onBlur={onBlur}
 			/>

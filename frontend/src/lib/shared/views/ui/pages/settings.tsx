@@ -8,7 +8,7 @@ import { LanguageSettings } from "@/lib/shared/views/ui/components/language-sett
 import { LogsSettings } from "@/lib/shared/views/ui/components/logs-settings";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
-import { RelaySettings } from "@/lib/sync/views/ui/relay-settings";
+import { RelaySettings } from "@/lib/sync/views/ui/relay";
 import { AboutSettings } from "@/lib/update/views/about-settings";
 
 const GITHUB_URL = "https://github.com/salvadorsru";

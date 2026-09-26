@@ -8,6 +8,7 @@ import {
 import { Events } from "@wailsio/runtime";
 import { t } from "@/lib/shared/i18n";
 import { translateError } from "@/lib/shared/i18n/errors";
+import { set } from "@/lib/shared/utils/storage";
 import { addError } from "@/lib/shared/views/stores/errors";
 import type { ClientMessage, ServerMessage } from "@/lib/sync/model";
 import * as store from "@/lib/sync/views/stores";
@@ -97,8 +98,36 @@ Events.On("sync:message", (ev) => {
 	for (const fn of messageHandlers) fn(msg);
 });
 
-export async function check(url: string): Promise<boolean> {
-	return await SyncCheck(url);
+// A check reports two independent things: whether the relay answered at all,
+// and what it made of the token. The caller needs both, and neither is worth
+// throwing, so the verdict comes back as a value with a translated reason.
+export type RelayCheck = {
+	error: string;
+	token: "none" | "required" | "accepted" | "rejected";
+};
+
+export async function check(url: string, token: string): Promise<RelayCheck> {
+	try {
+		const auth = await SyncCheck(url, token);
+		return { error: "", token: auth ? "accepted" : "none" };
+	} catch (err) {
+		const message = String(err);
+		// The relay is what judges the token, so its complaint describes the
+		// field and not a missing relay: the URL did answer.
+		if (/token/i.test(message)) {
+			return { error: "", token: token === "" ? "required" : "rejected" };
+		}
+		return { error: translateError(message), token: "none" };
+	}
+}
+
+// save persists the relay the panel and the shelf will dial. The settings form
+// calls it when the user leaves a field, so what they see is what a restart
+// reads. A relay pinned by RELAY_API_URL is never written.
+export function save(): void {
+	if (store.relayLocked.value) return;
+	set("sync:relay", store.relayUrl.value.trim());
+	set("sync:token", store.token.value.trim());
 }
 
 // applyRelayOverride points the app at the relay pinned by RELAY_API_URL, so a
@@ -132,12 +161,9 @@ export async function connect(code: string): Promise<void> {
 	clearReconnect();
 	reconnectDelay = 0;
 	reset();
-	if (!store.relayLocked.value) {
-		localStorage.setItem("sync:relay", store.relayUrl.value.trim());
-		localStorage.setItem("sync:token", store.token.value.trim());
-	}
-	localStorage.setItem("sync:room", code);
-	localStorage.setItem("sync:password", store.password.value.trim());
+	save();
+	set("sync:room", code);
+	set("sync:password", store.password.value.trim());
 	joinedRoom = code;
 	lastRole = "";
 	try {

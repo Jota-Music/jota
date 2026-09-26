@@ -357,9 +357,11 @@
 			"placeholder": "relay.example.com",
 			"token": "Token de autenticación",
 			"tokenRequired": "Este relay requiere un token de autenticación.",
+			"tokenAccepted": "El relay aceptó este token.",
+			"pinned": "Fijado por RELAY_API_URL, los cambios no se guardan.",
 			"checking": "Comprobando…",
-			"reachable": "Accesible",
-			"unreachable": "No accesible"
+			"connected": "Conectado",
+			"notConnected": "No conectado"
 		}
 	},
 	"update": {
@@ -395,7 +397,8 @@
 			"roomFull": "la sala está llena",
 			"roomHasHost": "la sala ya tiene anfitrión",
 			"badPassword": "contraseña de sala incorrecta",
-			"tokenRequired": "Este relay requiere un token."
+			"tokenRequired": "Este relay requiere un token.",
+			"tokenRejected": "El relay rechazó este token."
 		}
 	}
 }
