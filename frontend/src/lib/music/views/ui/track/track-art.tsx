@@ -47,7 +47,9 @@ export function TrackArt({
 				) : (
 					<Pause
 						size={25}
-						class="absolute inset-0 z-10 m-auto fill-(--dominant-color) drop-shadow-md drop-shadow-black"
+						// Lucide strokes in currentColor, so the fill has to match the
+						// text color or the stroke shows as a light outline around the bars.
+						class="absolute inset-0 z-10 m-auto text-(--dominant-color) fill-current drop-shadow-md drop-shadow-black"
 					/>
 				))}
 		</div>
