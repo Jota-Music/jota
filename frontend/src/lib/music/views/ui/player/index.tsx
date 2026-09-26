@@ -15,6 +15,8 @@ import { usePlayer } from "@/lib/music/views/hooks/use-player";
 import { audioDuration, progress } from "@/lib/music/views/stores/audio";
 import { commitSeek, previewSeek } from "@/lib/music/views/stores/player";
 import {
+	canNext,
+	canPrev,
 	cycleRepeat,
 	repeat,
 	showQueue,
@@ -64,8 +66,6 @@ interface FullPlayerProps {
 	toggleSong: () => Promise<void>;
 	nextSong: () => Promise<void>;
 	prevSong: () => Promise<void>;
-	canPrev: boolean;
-	canNext: boolean;
 }
 
 const Disc = memo(function Disc({
@@ -76,8 +76,6 @@ const Disc = memo(function Disc({
 	toggleSong,
 	nextSong,
 	prevSong,
-	canPrev,
-	canNext,
 }: {
 	cover?: string;
 	disabled?: boolean;
@@ -86,8 +84,6 @@ const Disc = memo(function Disc({
 	toggleSong: () => Promise<void>;
 	nextSong: () => Promise<void>;
 	prevSong: () => Promise<void>;
-	canPrev: boolean;
-	canNext: boolean;
 }) {
 	return (
 		<CircularProgress
@@ -118,7 +114,7 @@ const Disc = memo(function Disc({
 				<div class="absolute inset-0 w-max h-max flex items-center justify-center gap-6 m-auto">
 					<button
 						type="button"
-						disabled={disabled || !canPrev}
+						disabled={disabled || !canPrev.value}
 						onClick={() => void prevSong()}
 						class="p-1 rounded-full transition drop-shadow-lg drop-shadow-black disabled:cursor-not-allowed cursor-pointer"
 					>
@@ -135,7 +131,7 @@ const Disc = memo(function Disc({
 
 					<button
 						type="button"
-						disabled={disabled || !canNext}
+						disabled={disabled || !canNext.value}
 						onClick={() => void nextSong()}
 						class="p-1 rounded-full transition drop-shadow-lg drop-shadow-black disabled:cursor-not-allowed cursor-pointer"
 					>
@@ -333,8 +329,6 @@ function NothingPlayingContent() {
 					toggleSong={noop}
 					nextSong={noop}
 					prevSong={noop}
-					canPrev={false}
-					canNext={false}
 				/>
 			</div>
 			<div class="flex-1 min-w-0 w-full">
@@ -362,8 +356,6 @@ export function Player() {
 	const hasSong = player != null;
 	const isLoading = player?.isLoading ?? false;
 	const isPlaying = player?.isPlaying ?? false;
-	const canPrev = player?.canPrev ?? false;
-	const canNext = player?.canNext ?? false;
 
 	const dragTracking = useRef({ startY: 0, active: false });
 	const modalListRef = useRef<HTMLDivElement>(null);
@@ -533,7 +525,7 @@ export function Player() {
 
 							<button
 								type="button"
-								disabled={!hasSong || !canPrev}
+								disabled={!hasSong || !canPrev.value}
 								onClick={() => void player?.prevSong()}
 								class="p-1.5 rounded-full transition disabled:cursor-not-allowed cursor-pointer text-white/80"
 							>
@@ -550,7 +542,7 @@ export function Player() {
 
 							<button
 								type="button"
-								disabled={!hasSong || !canNext}
+								disabled={!hasSong || !canNext.value}
 								onClick={() => void player?.nextSong()}
 								class="p-1.5 rounded-full transition disabled:cursor-not-allowed cursor-pointer text-white/80"
 							>

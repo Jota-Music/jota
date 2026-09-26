@@ -3,6 +3,8 @@ import { permute, random } from "@/lib/music/app/shuffle";
 import type { Song } from "@/lib/music/model";
 import {
 	applyShuffle,
+	canNext,
+	canPrev,
 	clampIndex,
 	currentIndex,
 	cycleRepeat,
@@ -102,4 +104,19 @@ test("replaceQueue keeps the position when the new queue is long enough", () => 
 	replaceQueue([song("a"), song("b"), song("c")]);
 
 	expect(currentIndex.value).toBe(0);
+});
+
+test("skip availability follows the position in the queue", () => {
+	queue.value = [song("a"), song("b"), song("c")];
+	currentIndex.value = 0;
+	expect(canPrev.value).toBe(false);
+	expect(canNext.value).toBe(true);
+
+	currentIndex.value = 2;
+	expect(canPrev.value).toBe(true);
+	expect(canNext.value).toBe(false);
+
+	currentIndex.value = -1;
+	expect(canPrev.value).toBe(false);
+	expect(canNext.value).toBe(false);
 });

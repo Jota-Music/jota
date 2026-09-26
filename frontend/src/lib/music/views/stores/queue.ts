@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import { permute, random, seed } from "@/lib/music/app/shuffle";
 import type { RepeatMode, Song } from "@/lib/music/model";
 import { publish } from "@/lib/music/views/stores/remote";
@@ -66,6 +66,14 @@ export const queue = signal<Song[]>(loadQueue());
 
 export const currentIndex = signal<number>(
 	clampIndex(loadIndex(), queue.value.length),
+);
+
+// Skip availability as computeds, so the skip buttons can subscribe to it
+// directly. Reading queue.value for the length instead would subscribe the whole
+// player to every queue edit (an added song re-renders it entirely).
+export const canPrev = computed(() => currentIndex.value > 0);
+export const canNext = computed(
+	() => currentIndex.value >= 0 && currentIndex.value < queue.value.length - 1,
 );
 
 // The playlist or album the current queue was started from, when known. Lets a

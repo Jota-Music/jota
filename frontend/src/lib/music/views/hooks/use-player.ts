@@ -11,7 +11,6 @@ import {
 	prevSong,
 	toggleSong,
 } from "@/lib/music/views/stores/player";
-import { currentIndex, queue } from "@/lib/music/views/stores/queue";
 import { binaryColor, dominantColor } from "@/lib/music/views/stores/theme";
 import {
 	getDominantColorFromImage,
@@ -50,9 +49,6 @@ export function usePlayer() {
 
 	if (!song) return null;
 
-	const idx = currentIndex.value;
-	const $queue = queue.value;
-
 	return {
 		song,
 		cover,
@@ -65,9 +61,5 @@ export function usePlayer() {
 		toggleSong,
 		nextSong,
 		prevSong,
-
-		// queue
-		canPrev: idx > 0,
-		canNext: idx < $queue.length - 1,
 	};
 }
