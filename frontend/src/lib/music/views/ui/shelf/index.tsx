@@ -12,14 +12,52 @@ import {
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { Compact } from "./compact";
 import { Controls } from "./controls";
+import { Placeholder } from "./cover";
 import { Grid } from "./grid";
 import { LocalHint } from "./hint";
 import { useReorder } from "./hooks/use-reorder";
 import { defaultViewKey, useView } from "./hooks/use-view";
-import type { Item, Props } from "./types";
+import type { Item, Props, Variant } from "./types";
 
 export { FollowingHint, LocalHint, RelayHint, YouTubeHint } from "./hint";
 export type { IconType, Item, Source } from "./types";
+
+const tiles = Array.from({ length: 9 }, (_, i) => i);
+
+// Reserves the space the loaded list will take, so the shelf does not jump
+// when the data lands.
+function Loading({ variant }: { variant: Variant }) {
+	return (
+		<div class="min-h-0 flex-1 overflow-hidden">
+			{variant === "grid" ? (
+				<div class="grid grid-cols-3 gap-0.5 px-1 pt-1 md:gap-4">
+					{tiles.map((i) => (
+						<div
+							key={i}
+							class="flex aspect-square w-full animate-pulse items-center justify-center rounded-md bg-zinc-900 text-zinc-700"
+						>
+							<Placeholder size={28} />
+						</div>
+					))}
+				</div>
+			) : (
+				<ul class="flex flex-col">
+					{tiles.map((i) => (
+						<li
+							key={i}
+							class="flex animate-pulse items-center gap-3 px-2 py-1.5"
+						>
+							<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-zinc-900 text-zinc-700">
+								<Placeholder size={14} />
+							</div>
+							<div class="h-3 w-1/3 rounded bg-zinc-900" />
+						</li>
+					))}
+				</ul>
+			)}
+		</div>
+	);
+}
 
 export function Shelf({
 	items,
@@ -121,9 +159,7 @@ export function Shelf({
 	return (
 		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
 			{isLoading ? (
-				<div class="flex flex-1 items-center justify-center p-8 text-sm text-zinc-400">
-					{t("common.loading")}
-				</div>
+				<Loading variant={variant} />
 			) : items.length === 0 ? (
 				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
 					{emptyMessage}
