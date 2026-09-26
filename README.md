@@ -24,14 +24,17 @@ the audio through YouTube, and start a room over a relay you own.
   play either from the same queue and search bar. Spotify is optional — the
   YouTube side works standalone.
 - **Browse Spotify.** Log in to browse playlists, albums, artists, tracks and
-  other users' public playlists, with search across all of them.
-- **YouTube first-class.** Search videos and playlists, save them to your home
-  shelf, or paste a link to jump straight in. Tracks resolve to a YouTube
-  stream at play time by saved ID or title/artist match — fix a wrong match by
-  hand.
+  other users' public playlists, with search across all of them — type a song,
+  an artist or paste a link.
+- **YouTube first-class.** Search videos, playlists and channels, save them to
+  your home shelf, or paste a link to jump straight in. Tracks resolve to a
+  YouTube stream at play time by saved ID or title/artist match — fix a wrong
+  match by hand.
+- **Song radio.** Turn any Spotify track into a station of similar songs and
+  play it like any other playlist.
 - **Full player.** Play/pause, seek, volume, shuffle and repeat, plus a queue
   you can add to, reorder and prune. Upcoming tracks preload so playback stays
-  smooth.
+  smooth, and Jota picks up where you left off after a reload or a restart.
 - **Native media controls.** Media keys, lock-screen and notification controls
   work on desktop and mobile.
 - **Rooms.** Save a room, see who is listening, and sync queue, play/pause,
@@ -45,13 +48,16 @@ the audio through YouTube, and start a room over a relay you own.
 - **Custom playlists.** Create your own local playlists and mix Spotify and
   YouTube tracks in them. Reorder by drag, see a mosaic cover, and broken
   tracks are flagged instead of breaking the list.
-- **Following.** A shelf merged from your Spotify follows and local friends,
-  shown alongside Playlists and Rooms on the home tab. Follow artists or
-  profiles to jump back easily.
+- **Following.** A shelf merged from your Spotify follows, YouTube channels and
+  local profiles, shown alongside Playlists and Rooms on the home tab. Follow
+  artists, channels or profiles to jump back easily.
 - **Liked Songs** surfaced in the home shelf when browsing Spotify.
+- **Discord rich presence.** Optional, off by default: show what you are
+  listening to in your Discord status.
 - **Auto-update.** Jota checks GitHub releases on launch and installs itself
-  in place (AppImage, macOS `.app`, Windows per-user) with SHA256SUMS
-  verification and progress; other channels fall back to the release page.
+  in place (AppImage, macOS `.app`, Windows per-user, Android APK) with
+  SHA256SUMS verification and progress; other channels fall back to the release
+  page.
 
 ## Screenshots
 
@@ -76,6 +82,7 @@ Requirements: Go 1.26+, Bun and `wails3`; on Linux also `webkit2gtk-4.1` and
 WEBKIT_DISABLE_DMABUF_RENDERER=1 wails3 dev    # live reload (vite on :9245)
 wails3 task build                              # binary → bin/jota
 wails3 task package                            # .deb + .rpm + archlinux → bin/
+wails3 task android                            # release APK → bin/jota.apk
 ```
 
 ## Download
@@ -89,7 +96,7 @@ Tagged releases ship:
 | Windows | NSIS `.exe` |
 | macOS | universal `.dmg` |
 
-On AppImage, macOS `.app` and Windows per-user, Jota checks for
+On AppImage, macOS `.app`, Windows per-user and Android, Jota checks for
 updates on launch and installs them in place; the download above is
 also where those channels fetch their next version.
 
