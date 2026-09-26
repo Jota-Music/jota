@@ -111,8 +111,6 @@
 			"failed": "Failed to load playlists for @{user}",
 			"noPlaylists": "No playlists found.",
 			"noVideos": "No videos found.",
-			"follow": "Follow user",
-			"unfollow": "Unfollow user",
 			"findOnYouTube": "Search this name on YouTube",
 			"videosTab": "Videos",
 			"playlistsTab": "Playlists"
@@ -177,6 +175,8 @@
 		"playAll": "Play all",
 		"play": "Play",
 		"pause": "Pause",
+		"follow": "Follow",
+		"unfollow": "Unfollow",
 		"followPlaylist": "Follow playlist",
 		"unfollowPlaylist": "Unfollow playlist",
 		"radio": {

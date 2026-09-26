@@ -1,13 +1,11 @@
 import { useQuery } from "@tanstack/preact-query";
-import { Heart, User as UserIcon } from "lucide-preact";
+import { User as UserIcon } from "lucide-preact";
 import { Link } from "wouter-preact";
-import { spotifyUser } from "@/lib/auth/views/stores/session";
 import type { UserSource } from "@/lib/music/app/get-user-playlists";
 import getUserProfile from "@/lib/music/app/get-user-profile";
-import { useFollows } from "@/lib/music/views/ui/user/follow";
+import { FollowButton } from "@/lib/music/views/ui/follow";
 import { t } from "@/lib/shared/i18n";
 import { cover } from "@/lib/shared/utils/cover";
-import { cn } from "@/lib/shared/utils/tw";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
@@ -23,7 +21,6 @@ export function UserHeader({
 	imageUrl?: string;
 }) {
 	const spotify = source === "spotify";
-	const account = spotifyUser.value ?? "";
 
 	const profile = useQuery({
 		queryKey: ["user-profile", identifier],
@@ -31,13 +28,7 @@ export function UserHeader({
 		enabled: spotify && !!identifier,
 	});
 
-	const { users, follow, unfollow } = useFollows(account);
-
 	const followKey = spotify ? identifier : `youtube:${identifier}`;
-
-	const isFollowing = users.some(
-		(u) => u.toLowerCase() === followKey.toLowerCase(),
-	);
 
 	const name = profile.data?.displayName || fallbackName || identifier;
 	const imageUrl = profile.data?.imageUrl || fallbackImage;
@@ -75,20 +66,7 @@ export function UserHeader({
 					<YoutubeIcon class="size-4" />
 				</Link>
 			)}
-			<button
-				type="button"
-				onClick={() => (isFollowing ? unfollow : follow).mutate(followKey)}
-				disabled={!account || follow.isPending || unfollow.isPending}
-				aria-label={
-					isFollowing ? t("pages.user.unfollow") : t("pages.user.follow")
-				}
-				class={cn(
-					"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 hover:text-white disabled:opacity-50",
-					isFollowing ? "text-red-400" : "text-zinc-400",
-				)}
-			>
-				<Heart size={14} class={isFollowing ? "fill-current" : ""} />
-			</button>
+			<FollowButton id={followKey} />
 		</header>
 	);
 }

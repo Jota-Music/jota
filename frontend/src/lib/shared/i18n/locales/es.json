@@ -111,8 +111,6 @@
 			"failed": "Error al cargar las listas de @{user}",
 			"noPlaylists": "No se encontraron listas.",
 			"noVideos": "No se encontraron vídeos.",
-			"follow": "Seguir usuario",
-			"unfollow": "Dejar de seguir",
 			"findOnYouTube": "Buscar este nombre en YouTube",
 			"videosTab": "Vídeos",
 			"playlistsTab": "Listas"
@@ -177,6 +175,8 @@
 		"playAll": "Reproducir todo",
 		"play": "Reproducir",
 		"pause": "Pausar",
+		"follow": "Seguir",
+		"unfollow": "Dejar de seguir",
 		"followPlaylist": "Seguir playlist",
 		"unfollowPlaylist": "Dejar de seguir playlist",
 		"radio": {

@@ -20,8 +20,8 @@ import {
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import type { PlaylistSummary, Song } from "@/lib/music/model";
 import { playPlaylist } from "@/lib/music/views/play";
+import { SaveButton } from "@/lib/music/views/ui/follow";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
-import { SaveButton } from "@/lib/music/views/ui/playlist/save-button";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
