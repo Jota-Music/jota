@@ -200,7 +200,10 @@ export function YouTubeSearchPage() {
 					/>
 				) : activeTab === "playlists" ? (
 					<div class="relative min-h-0 flex-1">
-						<section ref={listRef} class="h-full flex flex-col overflow-y-auto">
+						<section
+							ref={listRef}
+							class="h-full flex flex-col overflow-y-auto pr-[15px]"
+						>
 							{playlistsQuery.isLoading ? (
 								<div class="flex items-center gap-2 text-sm text-zinc-500">
 									<Loader size={14} class="animate-spin" />
@@ -236,7 +239,7 @@ export function YouTubeSearchPage() {
 						{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
 						<section
 							ref={listRef}
-							class="h-full flex flex-col overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950"
+							class="h-full flex flex-col overflow-y-auto pr-[15px] rounded-lg border border-zinc-800 bg-zinc-950"
 							onClick={(e) => {
 								const target = e.target as Element;
 								if (!target.closest("[data-row]")) clearSelection();

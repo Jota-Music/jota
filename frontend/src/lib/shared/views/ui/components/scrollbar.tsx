@@ -2,31 +2,32 @@ import type { RefObject } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 const MIN_THUMB_PX = 40;
-const GUTTER_PX = 15;
 const CORNER_PX = 2;
 
 type Metrics = { height: number; travel: number; max: number; inset: number };
 
-export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
+// gutter is the right padding the scroller already reserves in CSS; the thumb
+// only needs to align to it, never to write layout itself.
+export function Scrollbar({
+	target,
+	gutter = 15,
+}: {
+	target: RefObject<HTMLElement>;
+	gutter?: number;
+}) {
 	const bar = useRef<HTMLDivElement>(null);
 	const drag = useRef<{ y: number; top: number } | null>(null);
 	const metrics = useRef<Metrics>({ height: 0, travel: 0, max: 0, inset: 0 });
 
 	useLayoutEffect(() => {
-		const el = target.current;
 		const node = bar.current;
-		if (!el || !node) return;
-
-		const pad = Math.max(
-			Number.parseFloat(getComputedStyle(el).paddingRight) || 0,
-			GUTTER_PX,
-		);
-		el.style.paddingRight = `${pad}px`;
-		(node.firstElementChild as HTMLElement).style.marginRight =
-			`${(pad - 8) / 2}px`;
+		if (!node) return;
 
 		const m = metrics.current;
 		let frame = 0;
+		let watch = 0;
+		let el: HTMLElement;
+		let detach: (() => void) | undefined;
 
 		const place = () => {
 			frame = 0;
@@ -67,18 +68,35 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 			measure();
 		};
 
-		const mutations = new MutationObserver(observeContent);
-		mutations.observe(el, { childList: true });
-		observeContent();
+		const attach = () => {
+			const scroller = target.current;
+			// The scroller can mount a frame later, as in a modal animating in.
+			// This effect only reruns when `target` changes identity, so bailing
+			// here would leave the observers off for good.
+			if (!scroller) {
+				watch = requestAnimationFrame(attach);
+				return;
+			}
+			el = scroller;
 
-		el.addEventListener("scroll", sync, { passive: true });
+			const mutations = new MutationObserver(observeContent);
+			mutations.observe(el, { childList: true });
+			observeContent();
+
+			el.addEventListener("scroll", sync, { passive: true });
+			detach = () => {
+				mutations.disconnect();
+				sizes.disconnect();
+				el.removeEventListener("scroll", sync);
+			};
+		};
+
+		attach();
+
 		return () => {
 			if (frame !== 0) cancelAnimationFrame(frame);
-			el.removeEventListener("scroll", sync);
-			sizes.disconnect();
-			mutations.disconnect();
-			el.style.paddingRight = "";
-			(node.firstElementChild as HTMLElement).style.marginRight = "";
+			if (watch !== 0) cancelAnimationFrame(watch);
+			detach?.();
 		};
 	}, [target]);
 
@@ -119,7 +137,10 @@ export function Scrollbar({ target }: { target: RefObject<HTMLElement> }) {
 			onPointerCancel={onUp}
 			onLostPointerCapture={onUp}
 		>
-			<div class="ml-auto h-full w-2 rounded-full bg-(--scrollbar-thumb) transition-colors pointer-fine:hover:bg-(--scrollbar-thumb-hover)" />
+			<div
+				class="ml-auto h-full w-2 rounded-full bg-(--scrollbar-thumb) transition-colors pointer-fine:hover:bg-(--scrollbar-thumb-hover)"
+				style={{ marginRight: `${(gutter - 8) / 2}px` }}
+			/>
 		</div>
 	);
 }

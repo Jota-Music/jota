@@ -302,7 +302,7 @@ export function Virtualization({
 			{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
 			<div
 				ref={ref}
-				className="h-full overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950"
+				className="h-full overflow-y-auto pr-[15px] rounded-lg border border-zinc-800 bg-zinc-950"
 				onPointerDown={handlePointerDown}
 				onClickCapture={captureClick}
 				onClick={(e) => {

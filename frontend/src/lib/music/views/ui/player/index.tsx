@@ -597,7 +597,7 @@ export function Player() {
 							<NothingPlayingContent />
 						)}
 					</div>
-					<Scrollbar target={modalListRef} />
+					<Scrollbar target={modalListRef} gutter={24} />
 				</div>
 			</Modal>
 		</>

@@ -225,7 +225,7 @@ export function SearchPage() {
 				<div class="relative min-h-0 flex-1">
 					<section
 						ref={listRef}
-						class="h-full flex flex-col gap-3 overflow-y-auto pb-8"
+						class="h-full flex flex-col gap-3 overflow-y-auto pr-[15px] pb-8"
 					>
 						{isLoading ? (
 							<div class="flex items-center gap-2 text-sm text-zinc-500">

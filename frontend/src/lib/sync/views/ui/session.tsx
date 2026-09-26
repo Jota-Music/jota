@@ -73,7 +73,7 @@ export function SyncPanel() {
 				<div ref={listRef} class="h-full overflow-y-auto px-4 py-4">
 					<SessionForm />
 				</div>
-				<Scrollbar target={listRef} />
+				<Scrollbar target={listRef} gutter={16} />
 			</div>
 		</Modal>
 	);

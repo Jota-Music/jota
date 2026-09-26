@@ -30,7 +30,7 @@ export function ErrorBar() {
 					</div>
 				))}
 			</div>
-			<Scrollbar target={listRef} />
+			<Scrollbar target={listRef} gutter={16} />
 		</div>
 	);
 }

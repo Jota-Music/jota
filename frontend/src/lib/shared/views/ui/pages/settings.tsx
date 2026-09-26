@@ -38,7 +38,7 @@ function SettingsPage() {
 			<div class="relative min-h-0 flex-1">
 				<div
 					ref={listRef}
-					class="h-full flex flex-col gap-4 overflow-y-auto py-5 md:gap-6 md:py-6"
+					class="h-full flex flex-col gap-4 overflow-y-auto pr-[15px] py-5 md:gap-6 md:py-6"
 				>
 					<header class="space-y-1">
 						<h1 class="text-xl font-bold text-zinc-100">
