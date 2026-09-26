@@ -6,29 +6,31 @@ import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 interface HintProps {
 	icon: ComponentChild;
-	blob: string;
-	badge: string;
+	// The blob, the ring and the icon all read this from currentColor, so a
+	// single text-<hue> class tints the whole hint.
+	class: string;
 	title: string;
 	body: string;
 	steps: string[];
 }
 
-export function Hint({ icon, blob, badge, title, body, steps }: HintProps) {
+export function Hint({
+	icon,
+	class: className,
+	title,
+	body,
+	steps,
+}: HintProps) {
 	return (
-		<div class="relative flex w-full max-w-sm flex-col items-center gap-5 px-6 py-8 text-center">
-			<div
-				class={cn(
-					"pointer-events-none absolute top-0 size-32 rounded-full blur-3xl",
-					blob,
-				)}
-			/>
+		<div
+			class={cn(
+				"relative flex w-full max-w-sm flex-col items-center gap-5 px-6 py-8 text-center",
+				className,
+			)}
+		>
+			<div class="pointer-events-none absolute top-0 size-32 rounded-full bg-current/20 blur-3xl" />
 
-			<div
-				class={cn(
-					"relative flex size-12 items-center justify-center rounded-full ring-1 ring-inset",
-					badge,
-				)}
-			>
+			<div class="relative flex size-12 items-center justify-center rounded-full bg-current/10 ring-1 ring-inset ring-current/25">
 				{icon}
 			</div>
 
@@ -59,9 +61,8 @@ export function Hint({ icon, blob, badge, title, body, steps }: HintProps) {
 export function YouTubeHint() {
 	return (
 		<Hint
-			icon={<YoutubeIcon class="size-6 text-red-500" />}
-			blob="bg-red-600/20"
-			badge="bg-red-500/10 ring-red-500/25"
+			icon={<YoutubeIcon class="size-6" />}
+			class="text-red-500"
 			title={t("music.hint.title")}
 			body={t("music.hint.body")}
 			steps={[
@@ -76,9 +77,8 @@ export function YouTubeHint() {
 export function FollowingHint() {
 	return (
 		<Hint
-			icon={<Heart class="size-6 text-fuchsia-500 fill-fuchsia-500/20" />}
-			blob="bg-fuchsia-600/20"
-			badge="bg-fuchsia-500/10 ring-fuchsia-500/25"
+			icon={<Heart class="size-6 fill-current/20" />}
+			class="text-fuchsia-500"
 			title={t("music.following.hint.title")}
 			body={t("music.following.hint.body")}
 			steps={[
@@ -93,9 +93,8 @@ export function FollowingHint() {
 export function LocalHint() {
 	return (
 		<Hint
-			icon={<Library class="size-6 text-emerald-400" />}
-			blob="bg-emerald-500/20"
-			badge="bg-emerald-500/10 ring-emerald-500/25"
+			icon={<Library size={24} />}
+			class="text-emerald-500"
 			title={t("music.local.hint.title")}
 			body={t("music.local.hint.body")}
 			steps={[
