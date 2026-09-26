@@ -34,11 +34,11 @@ function SettingsPage() {
 	}, []);
 
 	return (
-		<AppShell rootClass="pb-6">
+		<AppShell rootClass="pb-[calc(3.5rem+0.5rem+env(safe-area-inset-bottom))] md:pb-6">
 			<div class="relative min-h-0 flex-1">
 				<div
 					ref={listRef}
-					class="h-full flex flex-col gap-6 overflow-y-auto py-6"
+					class="h-full flex flex-col gap-4 overflow-y-auto py-5 md:gap-6 md:py-6"
 				>
 					<header class="space-y-1">
 						<h1 class="text-xl font-bold text-zinc-100">
@@ -55,7 +55,7 @@ function SettingsPage() {
 					<AboutSettings />
 					<LogsSettings />
 
-					<footer class="mt-auto pt-6 text-center text-xs text-zinc-600">
+					<footer class="mt-auto pt-5 text-center text-xs text-zinc-600 md:pt-6">
 						{t("settings.developedBy")}{" "}
 						<button
 							type="button"
