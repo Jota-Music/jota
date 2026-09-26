@@ -15,6 +15,7 @@ import {
 import { playList } from "@/lib/music/views/stores/player";
 import { queueSource } from "@/lib/music/views/stores/queue";
 import { clearSelection, selectAll } from "@/lib/music/views/stores/selection";
+import { FollowButton } from "@/lib/music/views/ui/follow";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
@@ -119,6 +120,7 @@ export function ArtistPage() {
 				<PageHeader
 					cover={data?.imageUrl}
 					title={data?.name ?? t("pages.artist.defaultName")}
+					beforePlay={id ? <FollowButton id={`artist:${id}`} /> : undefined}
 					onPlay={
 						activeTab === "tracks" && tracks.length > 0
 							? () => void playList(tracks, id)

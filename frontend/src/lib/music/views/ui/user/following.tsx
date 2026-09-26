@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/preact-query";
 import { Mic2, User as UserIcon } from "lucide-preact";
+import { getArtist } from "@/lib/music/app/get-artist";
 import { getChannelInfo } from "@/lib/music/app/get-channel";
 import getFollowing from "@/lib/music/app/get-following";
 import getFriends from "@/lib/music/app/get-friends";
@@ -22,6 +23,7 @@ type Entry = {
 	icon: IconType;
 	user?: string;
 	channel?: string;
+	artist?: string;
 	source?: Source;
 };
 
@@ -87,7 +89,18 @@ export function FollowingShelf({ account }: { account: string }) {
 				source: "youtube",
 			});
 		} else {
-			addUser(user, true);
+			const artist = user.startsWith("artist:");
+			const handle = artist ? user.slice("artist:".length) : user;
+			const key = `${artist ? "artist:" : "user:"}${handle}`;
+			if (seen.has(key.toLowerCase())) continue;
+			seen.add(key.toLowerCase());
+			entries.push({
+				id: key,
+				name: handle,
+				removable: true,
+				icon: artist ? Mic2 : UserIcon,
+				...(artist ? { artist: handle } : { user: handle }),
+			});
 		}
 	}
 
@@ -138,6 +151,20 @@ export function FollowingShelf({ account }: { account: string }) {
 		]),
 	);
 
+	const artistTargets = entries.filter((entry) => entry.artist && !entry.cover);
+	const artists = useQueries({
+		queries: artistTargets.map((entry) => ({
+			queryKey: ["artist", entry.artist],
+			queryFn: () => getArtist(entry.artist ?? ""),
+		})),
+	});
+	const artistById = new Map(
+		artistTargets.map((entry, index) => [
+			(entry.artist ?? "").toLowerCase(),
+			artists[index]?.data,
+		]),
+	);
+
 	const items: Item[] = entries.map((entry) => {
 		const profile = entry.user
 			? profileByUser.get(entry.user.toLowerCase())
@@ -145,10 +172,14 @@ export function FollowingShelf({ account }: { account: string }) {
 		const info = entry.channel
 			? infoByChannel.get(entry.channel.toLowerCase())
 			: undefined;
+		const artist = entry.artist
+			? artistById.get(entry.artist.toLowerCase())
+			: undefined;
 		return {
 			id: entry.id,
-			name: profile?.displayName || info?.name || entry.name,
-			cover: entry.cover ?? profile?.imageUrl ?? info?.avatar,
+			name: profile?.displayName || info?.name || artist?.name || entry.name,
+			cover:
+				entry.cover ?? profile?.imageUrl ?? info?.avatar ?? artist?.imageUrl,
 			removable: entry.removable,
 			icon: entry.icon,
 			source: entry.source,
@@ -164,10 +195,11 @@ export function FollowingShelf({ account }: { account: string }) {
 			emptyMessage={<FollowingHint />}
 			showLocal={false}
 			onRemove={(id) => {
-				if (id.startsWith("youtube:")) {
-					unfollow.mutate(id);
-				} else if (id.startsWith("user:")) {
-					unfollow.mutate(id.slice("user:".length));
+				for (const prefix of ["youtube:", "artist:", "user:"]) {
+					if (id.startsWith(prefix)) {
+						unfollow.mutate(id.slice(prefix.length));
+						return;
+					}
 				}
 			}}
 		/>
