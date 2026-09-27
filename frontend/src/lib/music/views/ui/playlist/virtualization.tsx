@@ -14,7 +14,7 @@ import {
 import { playFromQueueSelection } from "@/lib/music/views/stores/player";
 import {
 	clearSelection,
-	selectedSongs,
+	selectedIds,
 	selectionActive,
 	toggleSelection,
 } from "@/lib/music/views/stores/selection";
@@ -207,7 +207,7 @@ export function Virtualization({
 	);
 	const reorderable = !!onReorder && songs.length > 1;
 	const selection = selectionActive.value;
-	const selected = new Set(selectedSongs.value.map((s) => s.id));
+	const selected = selectedIds.value;
 	const dragOrigin = useRef<number | null>(null);
 
 	const indexFromClientY = (clientY: number) => {

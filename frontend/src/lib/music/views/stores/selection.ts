@@ -2,6 +2,12 @@ import { computed, signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 
 export const selectedSongs = signal<Song[]>([]);
+// Membership is asked once per visible row and once per action, so a linear
+// scan over the selection made selecting everything in a big playlist
+// quadratic. One set per selection change keeps every lookup flat.
+export const selectedIds = computed(
+	() => new Set(selectedSongs.value.map((s) => s.id)),
+);
 export const selectionActive = computed(() => selectedSongs.value.length > 0);
 export const selectionAnchor = signal<number | null>(null);
 
@@ -11,7 +17,7 @@ export function setSelection(songs: Song[]) {
 
 export function toggleSelection(song: Song) {
 	const current = selectedSongs.value;
-	const exists = current.some((s) => s.id === song.id);
+	const exists = selectedIds.value.has(song.id);
 	selectedSongs.value = exists
 		? current.filter((s) => s.id !== song.id)
 		: [...current, song];
@@ -30,7 +36,7 @@ export function clearSelection() {
 }
 
 export function selectAll(songs: Song[]) {
-	const ids = new Set(selectedSongs.value.map((s) => s.id));
+	const ids = selectedIds.value;
 	const added = songs.filter((s) => !ids.has(s.id));
 	if (added.length > 0)
 		selectedSongs.value = [...selectedSongs.value, ...added];

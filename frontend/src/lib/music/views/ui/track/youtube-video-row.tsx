@@ -1,7 +1,7 @@
 import type { Song } from "@/lib/music/model";
 import { rowSelect } from "@/lib/music/views/hooks/row-select";
 import {
-	selectedSongs,
+	selectedIds,
 	toggleSelection,
 } from "@/lib/music/views/stores/selection";
 import TrackActions, {
@@ -27,7 +27,7 @@ export function YouTubeVideoRow({
 	onClick,
 	showChannel = true,
 }: Props) {
-	const selected = selectedSongs.value.some((s) => s.id === song.id);
+	const selected = selectedIds.value.has(song.id);
 
 	const { onClick: onRowClick } = rowSelect({
 		song,

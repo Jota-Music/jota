@@ -26,6 +26,7 @@ import {
 import {
 	clearSelection,
 	openPicker,
+	selectedIds,
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
 import { openYoutubeEditor } from "@/lib/music/views/stores/youtube-editor";
@@ -123,9 +124,7 @@ export function buildActions({
 		},
 	);
 	if ((onSelectAll || batch) && list.length > 1) {
-		const allSelected = list.every((song) =>
-			selectedSongs.value.some((s) => s.id === song.id),
-		);
+		const allSelected = list.every((song) => selectedIds.value.has(song.id));
 		actions.push({
 			icon: allSelected ? Square : ListChecks,
 			label: allSelected
@@ -139,7 +138,7 @@ export function buildActions({
 		});
 	}
 	if (onToggleSelect && single) {
-		const isSelected = selectedSongs.value.some((s) => s.id === single.id);
+		const isSelected = selectedIds.value.has(single.id);
 		actions.push({
 			icon: isSelected ? Square : SquareCheck,
 			label: isSelected ? t("music.custom.deselect") : t("music.custom.select"),
