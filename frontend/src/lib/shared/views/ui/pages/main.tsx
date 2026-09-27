@@ -5,10 +5,8 @@ import { useLocation } from "wouter-preact";
 import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
 import { getUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
-import { getOrder, saveOrder } from "@/lib/music/app/order";
 import { playlistSource } from "@/lib/music/app/playlist-source";
 import { deletePlaylist, getPlaylists } from "@/lib/music/app/playlists";
-import { applyOrder, move } from "@/lib/music/app/reorder";
 import { playPlaylist } from "@/lib/music/views/play";
 import { expireRemoval } from "@/lib/music/views/stores/removal";
 import { SaveButton } from "@/lib/music/views/ui/follow";
@@ -17,6 +15,8 @@ import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { CreatePlaylistModal } from "@/lib/music/views/ui/playlists/create";
 import { type Item, Shelf, YouTubeHint } from "@/lib/music/views/ui/shelf";
 import { FollowingShelf } from "@/lib/music/views/ui/user/following";
+import { getOrder, saveOrder } from "@/lib/shared/app/order";
+import { applyOrder, move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
 import { addError } from "@/lib/shared/views/stores/errors";
 import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
@@ -54,8 +54,8 @@ export function MainPage() {
 	});
 
 	const orderQuery = useQuery({
-		queryKey: ["playlist-order", spotifyHandle],
-		queryFn: () => getOrder(spotifyHandle),
+		queryKey: ["shelf-order", "library", spotifyHandle],
+		queryFn: () => getOrder("library", spotifyHandle),
 	});
 
 	const removeCustom = useMutation({
@@ -115,8 +115,8 @@ export function MainPage() {
 			fromId,
 			toId,
 		);
-		queryClient.setQueryData(["playlist-order", spotifyHandle], next);
-		void saveOrder(spotifyHandle, next);
+		queryClient.setQueryData(["shelf-order", "library", spotifyHandle], next);
+		void saveOrder("library", spotifyHandle, next);
 	};
 
 	const remove = (id: string) => {

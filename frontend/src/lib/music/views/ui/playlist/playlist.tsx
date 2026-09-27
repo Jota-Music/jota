@@ -13,7 +13,6 @@ import {
 	removeSongFromPlaylist,
 	reorderPlaylist,
 } from "@/lib/music/app/playlists";
-import { move } from "@/lib/music/app/reorder";
 import type { Playlist, Song } from "@/lib/music/model";
 import {
 	isPlaying,
@@ -32,6 +31,7 @@ import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
+import { move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
