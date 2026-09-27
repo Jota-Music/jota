@@ -7,6 +7,14 @@ import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 export const dragFrom = signal<string | null>(null);
 export const dragOver = signal<string | null>(null);
 
+// Reorder mode is a touch-only mode: on coarse pointers the long-press that
+// opens the item menu is the same gesture the browser uses to start a drag.
+export const sortMode = signal(false);
+
+export function toggleSortMode() {
+	sortMode.value = !sortMode.value;
+}
+
 export const COARSE = window.matchMedia("(pointer: coarse)").matches;
 
 export interface DragProps {
@@ -27,6 +35,10 @@ type Options = {
 
 export function useReorder({ count, listRef, onReorder }: Options) {
 	const reorderable = !!onReorder && count > 1;
+	// Desktop drags from anywhere, always. Touch needs the toggle, and while
+	// sorting the item menu steps aside for the drag.
+	const canSort = reorderable && COARSE;
+	const sorting = canSort && sortMode.value;
 
 	const endDrag = () => {
 		dragFrom.value = null;
@@ -121,7 +133,7 @@ export function useReorder({ count, listRef, onReorder }: Options) {
 
 	const dragProps = (id: string): DragProps => ({
 		"data-reorder-id": id,
-		draggable: reorderable && COARSE,
+		draggable: sorting,
 		onPointerDown: handlePointerDown(id),
 		onDragStart: (e) => startDrag(id, e),
 		onDragOver: (e) => overItem(id, e),
@@ -129,5 +141,5 @@ export function useReorder({ count, listRef, onReorder }: Options) {
 		onDragEnd: endItemDrag,
 	});
 
-	return { reorderable, dragProps, captureClick };
+	return { reorderable, canSort, sorting, dragProps, captureClick };
 }

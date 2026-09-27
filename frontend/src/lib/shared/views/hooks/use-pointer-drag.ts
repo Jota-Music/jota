@@ -13,8 +13,7 @@ type Options = {
 
 // Mouse-only pointer drag. Native HTML5 drag lets the browser own the cursor,
 // so the grabbing hand is only possible by driving the drag ourselves. Touch
-// keeps using native drag, which already works on coarse pointers, and runs
-// its own useAutoscroll.
+// only reorders the library shelf, through native drag behind its sort mode.
 export function usePointerDrag({ begin, move, end, scroll }: Options) {
 	const active = useRef(false);
 	const moved = useRef(false);

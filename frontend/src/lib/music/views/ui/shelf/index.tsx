@@ -1,5 +1,5 @@
 import { Pause, Play, Plus, Trash2 } from "lucide-preact";
-import { useRef } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
 import { isPlaying } from "@/lib/music/views/stores/audio";
@@ -8,7 +8,11 @@ import { Compact } from "@/lib/music/views/ui/shelf/compact";
 import { Controls } from "@/lib/music/views/ui/shelf/controls";
 import { Grid } from "@/lib/music/views/ui/shelf/grid";
 import { LocalHint } from "@/lib/music/views/ui/shelf/hint";
-import { useReorder } from "@/lib/music/views/ui/shelf/hooks/use-reorder";
+import {
+	sortMode,
+	toggleSortMode,
+	useReorder,
+} from "@/lib/music/views/ui/shelf/hooks/use-reorder";
 import {
 	defaultViewKey,
 	useView,
@@ -51,7 +55,15 @@ export function Shelf({
 		setFilter,
 	} = useView(viewKey);
 	const listRef = useRef<HTMLDivElement>(null);
-	const { dragProps, captureClick } = useReorder({
+	// Sort mode belongs to the screen that offers it: leaving the library drops
+	// it, so it never leaks in hidden on a shelf that cannot reorder.
+	useEffect(
+		() => () => {
+			sortMode.value = false;
+		},
+		[],
+	);
+	const { canSort, sorting, dragProps, captureClick } = useReorder({
 		count: items.length,
 		listRef,
 		onReorder,
@@ -60,6 +72,12 @@ export function Shelf({
 	// A right-click (or touch long-press) opens the item's own actions instead
 	// of the browser context menu.
 	const openItemMenu = (item: Item) => (e: MouseEvent) => {
+		// While sorting, the long-press belongs to the drag: swallow it instead
+		// of opening a menu on top of a reorder.
+		if (sorting) {
+			e.preventDefault();
+			return;
+		}
 		const actions: Action[] = [];
 		if (onPlay) {
 			const playing = queueSource.value === item.id && isPlaying.value;
@@ -157,6 +175,8 @@ export function Shelf({
 						setFilter={setFilter}
 						variant={variant}
 						setVariant={setVariant}
+						sortMode={canSort ? sortMode.value : undefined}
+						onSortMode={canSort ? toggleSortMode : undefined}
 						onCreate={onCreate}
 						showLocal={showLocal}
 					/>

@@ -1,4 +1,4 @@
-import { LayoutGrid, Library, List, Plus } from "lucide-preact";
+import { GripVertical, LayoutGrid, Library, List, Plus } from "lucide-preact";
 import type { SourceFilter, Variant } from "@/lib/music/views/ui/shelf/types";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -11,6 +11,8 @@ interface ControlsProps {
 	setFilter: (next: SourceFilter) => void;
 	variant: Variant;
 	setVariant: (next: Variant) => void;
+	sortMode?: boolean;
+	onSortMode?: () => void;
 	onCreate?: () => void;
 	showLocal?: boolean;
 }
@@ -21,6 +23,8 @@ export function Controls({
 	setFilter,
 	variant,
 	setVariant,
+	sortMode,
+	onSortMode,
 	onCreate,
 	showLocal = true,
 }: ControlsProps) {
@@ -102,12 +106,31 @@ export function Controls({
 				)}
 			</div>
 			<div class="flex overflow-hidden rounded-md border border-zinc-800">
+				{onSortMode && (
+					<button
+						type="button"
+						onClick={onSortMode}
+						aria-pressed={sortMode}
+						title={t("music.shelf.sortMode")}
+						aria-label={t("music.shelf.sortMode")}
+						class={cn(
+							"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
+							sortMode
+								? "bg-zinc-800 text-white"
+								: "text-zinc-500 hover:text-white",
+						)}
+					>
+						<GripVertical size={18} class="md:hidden" />
+						<GripVertical size={14} class="hidden md:block" />
+					</button>
+				)}
 				<button
 					type="button"
 					onClick={() => setVariant("grid")}
 					aria-label={t("music.shelf.gridView")}
 					class={cn(
 						"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
+						onSortMode && "border-l border-zinc-800",
 						variant === "grid"
 							? "bg-zinc-800 text-white"
 							: "text-zinc-500 hover:text-white",

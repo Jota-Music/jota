@@ -192,6 +192,7 @@
 			"noSpotify": "No hay listas de Spotify.",
 			"gridView": "Vista de cuadrícula",
 			"compactView": "Vista compacta",
+			"sortMode": "Vista de ordenación",
 			"source": {
 				"spotify": "Spotify",
 				"youtube": "YouTube"
@@ -209,7 +210,7 @@
 			"emptyShort": "vacía",
 			"empty": "Cola vacía.",
 			"emptyHint": "Elige una lista y haz clic en una canción para empezar.",
-			"drag": "Arrastra la fila para reordenar",
+			"drag": "Arrastra para reordenar",
 			"failed": "No se pudo reproducir esta canción",
 			"playNow": "Reproducir ahora",
 			"moveDown": "Bajar una posición",

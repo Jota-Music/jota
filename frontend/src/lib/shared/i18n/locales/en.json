@@ -192,6 +192,7 @@
 			"noSpotify": "No Spotify playlists.",
 			"gridView": "Grid view",
 			"compactView": "Compact view",
+			"sortMode": "Reorder view",
 			"source": {
 				"spotify": "Spotify",
 				"youtube": "YouTube"
@@ -209,7 +210,7 @@
 			"emptyShort": "empty",
 			"empty": "Empty queue.",
 			"emptyHint": "Pick a playlist and click a track to start.",
-			"drag": "Drag row to reorder",
+			"drag": "Drag to reorder",
 			"failed": "Could not play this track",
 			"playNow": "Play now",
 			"moveDown": "Move down one position",
