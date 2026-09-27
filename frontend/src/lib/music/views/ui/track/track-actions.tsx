@@ -1,4 +1,3 @@
-import { useSignal } from "@preact/signals";
 import {
 	EllipsisVertical,
 	ListChecks,
@@ -12,8 +11,6 @@ import {
 	SquarePlus,
 	Trash2,
 } from "lucide-preact";
-import { createPortal } from "preact/compat";
-import { useLayoutEffect, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { playlistSource } from "@/lib/music/app/playlist-source";
 import type { Song } from "@/lib/music/model";
@@ -31,9 +28,10 @@ import {
 } from "@/lib/music/views/stores/selection";
 import { openYoutubeEditor } from "@/lib/music/views/stores/youtube-editor";
 import { t } from "@/lib/shared/i18n";
-import { bottomBarHeight } from "@/lib/shared/utils/layout";
-import { cn } from "@/lib/shared/utils/tw";
-import type { Action } from "@/lib/shared/views/ui/components/context-menu";
+import {
+	type Action,
+	openContextMenu,
+} from "@/lib/shared/views/ui/components/context-menu";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 const YoutubeMenuIcon: LucideIcon = ({ class: cls, size }) => (
@@ -61,8 +59,6 @@ type Props = {
 	// header it sits in does not shift when the tracks land.
 	reserve?: boolean;
 };
-
-const GAP = 6;
 
 export function buildActions({
 	songs,
@@ -197,10 +193,6 @@ export default function TrackActions({
 	onDone,
 	reserve = false,
 }: Props) {
-	const open = useSignal(false);
-	const anchor = useSignal<DOMRect | null>(null);
-	const button = useRef<HTMLButtonElement>(null);
-	const menu = useRef<HTMLDivElement>(null);
 	const [, navigate] = useLocation();
 
 	const { actions, count } = buildActions({
@@ -216,128 +208,34 @@ export default function TrackActions({
 		navigate,
 	});
 
-	const close = () => {
-		open.value = false;
-		anchor.value = null;
-	};
-
-	useLayoutEffect(() => {
-		if (!open.value) return;
-		const el = menu.current;
-		if (!el || !anchor.value) return;
-
-		const width = el.offsetWidth;
-		const bar = bottomBarHeight();
-		const below = anchor.value.bottom + GAP;
-		const fits = below + el.offsetHeight <= window.innerHeight - GAP - bar;
-		el.style.left = `${anchor.value.right - width}px`;
-		el.style.top = `${fits ? below : Math.max(GAP, anchor.value.top - el.offsetHeight - GAP)}px`;
-		el.querySelector("button")?.focus();
-
-		const onDown = (e: PointerEvent) => {
-			const target = e.target as Node;
-			if (!el.contains(target) && !button.current?.contains(target)) close();
-		};
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				close();
-				button.current?.focus();
-			}
-		};
-		const onScroll = () => close();
-		const onResize = () => close();
-		document.addEventListener("pointerdown", onDown, true);
-		document.addEventListener("keydown", onKey);
-		window.addEventListener("scroll", onScroll, true);
-		window.addEventListener("resize", onResize);
-		return () => {
-			document.removeEventListener("pointerdown", onDown, true);
-			document.removeEventListener("keydown", onKey);
-			window.removeEventListener("scroll", onScroll, true);
-			window.removeEventListener("resize", onResize);
-		};
-	}, [open.value, anchor.value]);
-
 	const empty = actions.length === 0;
 	if (empty && !reserve) return null;
 
 	const toggle = (e: MouseEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
 		if (empty) return;
-		const rect = button.current?.getBoundingClientRect();
-		if (!rect) return;
-		if (open.value) close();
-		else {
-			anchor.value = rect;
-			open.value = true;
-		}
+		e.stopPropagation();
+		openContextMenu(
+			actions,
+			e,
+			count > 0 ? t("music.custom.selected", { count }) : undefined,
+		);
 	};
 
 	return (
-		<>
-			<button
-				ref={button}
-				type="button"
-				title={t("music.track.actions")}
-				aria-label={t("music.track.actions")}
-				aria-haspopup="menu"
-				aria-expanded={open.value}
-				disabled={empty}
-				onPointerDown={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-				}}
-				onClick={toggle}
-				class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-white disabled:cursor-default disabled:opacity-40"
-			>
-				<EllipsisVertical size={18} />
-			</button>
-
-			{open.value &&
-				anchor.value &&
-				createPortal(
-					<div
-						ref={menu}
-						role="menu"
-						aria-label={t("music.track.actions")}
-						class="fixed z-50 w-56 rounded-lg border border-zinc-800 bg-zinc-950 py-1 shadow-xl"
-						style={{ top: 0, left: 0 }}
-					>
-						{count > 0 && (
-							<>
-								<div class="px-4 pt-2 pb-1 text-left text-balance text-xs font-medium text-zinc-500">
-									{t("music.custom.selected", { count })}
-								</div>
-								<div class="mx-2 mb-1 border-t border-zinc-800" />
-							</>
-						)}
-						{actions.map((action) => (
-							<button
-								key={action.label}
-								type="button"
-								role="menuitem"
-								onClick={() => {
-									close();
-									action.run();
-								}}
-								class={cn(
-									"flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-balance text-sm transition-colors",
-									action.danger
-										? "text-red-400 hover:bg-red-950/40"
-										: "text-zinc-300 hover:bg-zinc-800/80 hover:text-white",
-								)}
-							>
-								<action.icon
-									size={16}
-									class={action.danger ? "text-red-400" : "text-zinc-500"}
-								/>
-								{action.label}
-							</button>
-						))}
-					</div>,
-					document.body,
-				)}
-		</>
+		<button
+			type="button"
+			title={t("music.track.actions")}
+			aria-label={t("music.track.actions")}
+			aria-haspopup="menu"
+			disabled={empty}
+			onPointerDown={(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+			}}
+			onClick={toggle}
+			class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-white disabled:cursor-default disabled:opacity-40"
+		>
+			<EllipsisVertical size={18} />
+		</button>
 	);
 }
