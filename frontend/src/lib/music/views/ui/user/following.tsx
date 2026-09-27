@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from "@tanstack/preact-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Mic2, User as UserIcon } from "lucide-preact";
 import { getArtist } from "@/lib/music/app/get-artist";
 import { getChannelInfo } from "@/lib/music/app/get-channel";
@@ -14,6 +14,8 @@ import {
 	type Source,
 } from "@/lib/music/views/ui/shelf";
 import { useFollows } from "@/lib/music/views/ui/user/follow";
+import { getOrder, saveOrder } from "@/lib/shared/app/order";
+import { applyOrder, move } from "@/lib/shared/app/reorder";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 type Entry = {
@@ -43,6 +45,7 @@ function link(id: string): string {
 // Following merges the account's own follows with the friends stored locally,
 // so the shelf is populated on login without the user adding anything.
 export function FollowingShelf({ account }: { account: string }) {
+	const queryClient = useQueryClient();
 	const {
 		users: followed,
 		isLoading: followedLoading,
@@ -58,6 +61,12 @@ export function FollowingShelf({ account }: { account: string }) {
 	const following = useQuery({
 		queryKey: ["following", account],
 		queryFn: getFollowing,
+		enabled: !!account,
+	});
+
+	const orderQuery = useQuery({
+		queryKey: ["shelf-order", "following", account],
+		queryFn: () => getOrder("following", account),
 		enabled: !!account,
 	});
 
@@ -178,7 +187,7 @@ export function FollowingShelf({ account }: { account: string }) {
 		),
 	);
 
-	const items: Item[] = entries.map((entry) => {
+	const unsorted: Item[] = entries.map((entry) => {
 		const profile = entry.user
 			? profileByUser.get(entry.user.toLowerCase())
 			: undefined;
@@ -199,6 +208,18 @@ export function FollowingShelf({ account }: { account: string }) {
 		};
 	});
 
+	const items = applyOrder(unsorted, orderQuery.data ?? []);
+
+	const reorder = (fromId: string, toId: string) => {
+		const next = move(
+			items.map((item) => item.id),
+			fromId,
+			toId,
+		);
+		queryClient.setQueryData(["shelf-order", "following", account], next);
+		void saveOrder("following", account, next);
+	};
+
 	return (
 		<Shelf
 			items={items}
@@ -207,6 +228,7 @@ export function FollowingShelf({ account }: { account: string }) {
 			isLoading={followedLoading || friends.isLoading || following.isLoading}
 			emptyMessage={<FollowingHint />}
 			showLocal={false}
+			onReorder={reorder}
 			// Everything on this shelf is a follow, so the hover control is the
 			// heart itself instead of a generic remove button.
 			leading={(id) => {

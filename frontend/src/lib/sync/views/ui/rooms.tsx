@@ -17,6 +17,8 @@ import {
 } from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import { type Item, RelayHint, Shelf } from "@/lib/music/views/ui/shelf";
+import { getOrder, saveOrder } from "@/lib/shared/app/order";
+import { applyOrder, move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import type { Action } from "@/lib/shared/views/ui/components/context-menu";
@@ -144,6 +146,10 @@ function lockSize(size: number): number {
 export function RoomsShelf() {
 	const queryClient = useQueryClient();
 	const rooms = useQuery({ queryKey: ["rooms"], queryFn: listRooms });
+	const orderQuery = useQuery({
+		queryKey: ["shelf-order", "rooms"],
+		queryFn: () => getOrder("rooms", ""),
+	});
 
 	const list = rooms.data ?? [];
 	const locked = store.relayLocked.value;
@@ -218,6 +224,13 @@ export function RoomsShelf() {
 
 	const rows: Room[] = ephemeral ? [ephemeral, ...list] : list;
 
+	// The room we are in but have not saved leads the shelf and is not part of
+	// the saved order, so it is pinned back to the front after ordering.
+	const sorted: Room[] = applyOrder(rows, orderQuery.data ?? []);
+	const ordered: Room[] = ephemeral
+		? [ephemeral, ...sorted.filter((room) => room.id !== ACTIVE_ID)]
+		: sorted;
+
 	const apply = (room: Room) => {
 		if (!locked) {
 			store.relayUrl.value = room.relayUrl;
@@ -252,7 +265,7 @@ export function RoomsShelf() {
 		remove.mutate(id);
 	};
 
-	const items: Item[] = rows.map((room) => {
+	const items: Item[] = ordered.map((room) => {
 		const query = statusById.get(room.id);
 		const isActive = room.code === activeCode;
 		const live: Live =
@@ -316,13 +329,23 @@ export function RoomsShelf() {
 	const buttonClass =
 		"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md bg-black/70 text-zinc-300";
 
+	const reorder = (fromId: string, toId: string) => {
+		const next = move(
+			ordered.map((room) => room.id),
+			fromId,
+			toId,
+		);
+		queryClient.setQueryData(["shelf-order", "rooms"], next);
+		void saveOrder("rooms", "", next);
+	};
+
 	return (
 		<>
 			<div class="flex shrink-0 items-center">
 				<button
 					type="button"
 					onClick={() => (store.showSync.value = true)}
-					class="flex items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer"
+					class="flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer"
 				>
 					<LogIn size={16} />
 					{t("sync.rooms.joinHost")}
@@ -333,6 +356,7 @@ export function RoomsShelf() {
 				to={() => "/"}
 				viewKey="rooms_view"
 				onSelect={open}
+				onReorder={reorder}
 				actions={(id) => {
 					const room = rows.find((r) => r.id === id);
 					if (!room) return null;
