@@ -406,7 +406,8 @@
 			"roomHasHost": "room already has a host",
 			"badPassword": "invalid room password",
 			"tokenRequired": "This relay requires a token.",
-			"tokenRejected": "The relay rejected this token."
+			"tokenRejected": "The relay rejected this token.",
+			"unreachable": "Could not reach the relay. Check the address and your connection."
 		}
 	}
 }

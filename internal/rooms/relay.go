@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -24,6 +25,13 @@ const probeRoom = "jota-probe"
 // ErrTokenRequired is returned when the relay rejects the handshake with 401,
 // i.e. it has AUTH_TOKEN configured and we did not present a valid one.
 var ErrTokenRequired = errors.New("relay requires a token")
+
+// ErrUnreachable is what the UI gets when the relay cannot be reached at all: a
+// bad address, a relay that is down, a network that is gone. The error from the
+// dial names the request and the host that failed and is logged instead, because
+// `GET("http://relay.example/healthz"): dial tcp: ...` is not something a user
+// can act on.
+var ErrUnreachable = errors.New("relay unreachable")
 
 // Relay is the WebSocket client for a Jota relay. Message shapes are documented
 // in Jota-Music/relay's README. Keep the JSON contract in sync with
@@ -80,7 +88,8 @@ func (s *Relay) Connect(rawURL string, room string, role string, token string, p
 		if resp != nil && resp.StatusCode == http.StatusUnauthorized {
 			return ErrTokenRequired
 		}
-		return err
+		log.Printf("relay: dial %s: %v", target, err)
+		return ErrUnreachable
 	}
 	conn.SetReadLimit(maxMessageBytes)
 
@@ -296,7 +305,8 @@ func get(target string, token string) (int, []byte, error) {
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return 0, nil, err
+		log.Printf("relay: get %s: %v", target, err)
+		return 0, nil, ErrUnreachable
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))

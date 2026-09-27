@@ -16,6 +16,7 @@ const BACKEND: Record<string, string> = {
 	"room is full": "errors.relay.roomFull",
 	"room already has a host": "errors.relay.roomHasHost",
 	"invalid room password": "errors.relay.badPassword",
+	"relay unreachable": "errors.relay.unreachable",
 	"every recovery attempt failed": "errors.recoveryFailed",
 	"the browser needs a click to allow playback": "errors.playbackBlocked",
 	"consensus timeout": "errors.consensusTimeout",

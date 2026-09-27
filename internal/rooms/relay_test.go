@@ -3,6 +3,7 @@ package rooms
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,6 +18,25 @@ func TestConnectTokenRequired(t *testing.T) {
 	err := NewRelay(nil).Connect(srv.URL, "room", "host", "", "")
 	if !errors.Is(err, ErrTokenRequired) {
 		t.Fatalf("got %v, want ErrTokenRequired", err)
+	}
+}
+
+// A relay that is not there must arrive as ErrUnreachable, not as the dialer's
+// own text: the panel shows whatever error it gets, and only the caller can log
+// the request that failed.
+func TestUnreachableRelay(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	dead := "http://" + ln.Addr().String()
+	ln.Close()
+
+	if _, err := NewRelay(nil).Check(dead, ""); !errors.Is(err, ErrUnreachable) {
+		t.Errorf("Check = %v, want ErrUnreachable", err)
+	}
+	if err := NewRelay(nil).Connect(dead, "room", "host", "", ""); !errors.Is(err, ErrUnreachable) {
+		t.Errorf("Connect = %v, want ErrUnreachable", err)
 	}
 }
 

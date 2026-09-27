@@ -118,7 +118,11 @@ export async function check(url: string, token: string): Promise<RelayCheck> {
 		if (/token/i.test(String(err))) {
 			return { error: "", token: token === "" ? "required" : "rejected" };
 		}
-		return { error: translateError(err), token: "none" };
+		// Whatever else went wrong (an address that is not a relay, a relay
+		// that is down, a network that is gone) is the same news for the user
+		// and reads as a wall of Go text, so it goes to the log instead.
+		logError(err, "relay check");
+		return { error: t("errors.relay.unreachable"), token: "none" };
 	}
 }
 

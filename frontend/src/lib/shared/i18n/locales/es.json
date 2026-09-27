@@ -406,7 +406,8 @@
 			"roomHasHost": "la sala ya tiene anfitrión",
 			"badPassword": "contraseña de sala incorrecta",
 			"tokenRequired": "Este relay requiere un token.",
-			"tokenRejected": "El relay rechazó este token."
+			"tokenRejected": "El relay rechazó este token.",
+			"unreachable": "No se pudo contactar con el relay. Revisa la dirección y tu conexión."
 		}
 	}
 }
