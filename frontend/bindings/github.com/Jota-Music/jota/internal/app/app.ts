@@ -91,8 +91,12 @@ export function GetFullPlaylist(id: string): $CancellablePromise<music$0.Playlis
     return $Call.ByID(3017102079, id);
 }
 
-export function GetPlaylistOrder(account: string): $CancellablePromise<string[] | null> {
-    return $Call.ByID(104727978, account);
+/**
+ * GetOrder returns the user's custom order of ids for a shelf, by scope and,
+ * for a shelf that belongs to one, by account.
+ */
+export function GetOrder(scope: string, account: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(3921062484, scope, account);
 }
 
 export function GetPlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
@@ -232,8 +236,11 @@ export function SaveLogs(): $CancellablePromise<string> {
     return $Call.ByID(2876203262);
 }
 
-export function SavePlaylistOrder(account: string, ids: string[] | null): $CancellablePromise<void> {
-    return $Call.ByID(1174849349, account, ids);
+/**
+ * SaveOrder stores the user's custom order of ids for a shelf.
+ */
+export function SaveOrder(scope: string, account: string, ids: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(3527388623, scope, account, ids);
 }
 
 export function SaveRoom(room: rooms$0.Room): $CancellablePromise<rooms$0.Room[] | null> {

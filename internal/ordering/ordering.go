@@ -10,9 +10,14 @@ import (
 
 var bucket = kv.UseBucket("ordering")
 
-// Service stores the user's custom order for the library shelf. The order is
-// local to Jota and scoped by the owning account, so different accounts keep
-// separate orders. It only holds ids; it never edits the source playlists.
+// Library is the scope of the home library shelf. Its order predates scopes and
+// is still stored under the bare account key, so List falls back to it.
+const Library = "library"
+
+// Service stores the user's custom order for a shelf. Orders are local to Jota
+// and keyed by the shelf's scope plus, when the shelf belongs to one, the owning
+// account, so different shelves and different accounts keep separate orders. It
+// only holds ids; it never edits the source collection.
 type Service struct {
 	mu sync.Mutex
 }
@@ -21,18 +26,22 @@ func New() *Service {
 	return &Service{}
 }
 
-func normalizeAccount(account string) string {
-	return strings.ToLower(strings.TrimSpace(account))
+func normalize(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
-func (s *Service) List(account string) (Order, error) {
-	account = normalizeAccount(account)
+// key groups orders by shelf. A shelf with no account, like the rooms shelf, is
+// app-wide, so its scope alone keys it.
+func key(scope, account string) string {
 	if account == "" {
-		return nil, nil
+		return "scope:" + scope
 	}
+	return account + ":" + scope
+}
 
+func read(key string) (Order, error) {
 	var ids Order
-	if err := bucket.GetObject(account, &ids); err != nil {
+	if err := bucket.GetObject(key, &ids); err != nil {
 		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
 			return nil, nil
 		}
@@ -41,9 +50,26 @@ func (s *Service) List(account string) (Order, error) {
 	return ids, nil
 }
 
-func (s *Service) Save(account string, ids Order) error {
-	account = normalizeAccount(account)
-	if account == "" {
+func (s *Service) List(scope string, account string) (Order, error) {
+	scope = normalize(scope)
+	account = normalize(account)
+	if scope == "" {
+		return nil, nil
+	}
+
+	ids, err := read(key(scope, account))
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 && account != "" && scope == Library {
+		return read(account)
+	}
+	return ids, nil
+}
+
+func (s *Service) Save(scope string, account string, ids Order) error {
+	scope = normalize(scope)
+	if scope == "" {
 		return nil
 	}
 
@@ -63,5 +89,5 @@ func (s *Service) Save(account string, ids Order) error {
 		seen[id] = struct{}{}
 		out = append(out, id)
 	}
-	return bucket.SetObject(account, out)
+	return bucket.SetObject(key(scope, normalize(account)), out)
 }
