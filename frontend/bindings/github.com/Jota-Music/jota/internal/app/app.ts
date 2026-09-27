@@ -179,11 +179,22 @@ export function RamMB(): $CancellablePromise<number> {
 }
 
 /**
+ * RelayConfig reports the relay the user saved, if any. It lives in the store
+ * and not in the webview's localStorage because that storage belongs to the
+ * webview profile: a reinstall, a change of app id or a dev build on another
+ * origin all start from an empty one, and the relay is the first thing the user
+ * has to type again.
+ */
+export function RelayConfig(): $CancellablePromise<$models.Relay> {
+    return $Call.ByID(1267408107);
+}
+
+/**
  * RelayOverride reports the relay pinned through RELAY_API_URL/RELAY_API_TOKEN,
  * if any. The frontend applies it over the user's saved relay so a dev build can
  * point at a local relay.
  */
-export function RelayOverride(): $CancellablePromise<$models.RelayOverride> {
+export function RelayOverride(): $CancellablePromise<$models.Relay> {
     return $Call.ByID(577785897);
 }
 
@@ -241,6 +252,15 @@ export function SaveLogs(): $CancellablePromise<string> {
  */
 export function SaveOrder(scope: string, account: string, ids: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(3527388623, scope, account, ids);
+}
+
+/**
+ * SaveRelay persists the relay the settings form shows. A relay pinned by the
+ * environment is not the user's to store, and an empty URL is not a relay, so
+ * both leave the saved one alone.
+ */
+export function SaveRelay(url: string, token: string): $CancellablePromise<void> {
+    return $Call.ByID(1794597130, url, token);
 }
 
 export function SaveRoom(room: rooms$0.Room): $CancellablePromise<rooms$0.Room[] | null> {

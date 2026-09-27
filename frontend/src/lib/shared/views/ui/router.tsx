@@ -11,7 +11,7 @@ import { isPlaying } from "@/lib/music/views/stores/audio";
 import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
 import SettingsPage from "@/lib/shared/views/ui/pages/settings";
-import { applyRelayOverride } from "@/lib/sync/app/transport";
+import { loadRelay } from "@/lib/sync/app/transport";
 import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
 
 const PlaylistPage = lazy(() =>
@@ -91,7 +91,7 @@ function Router() {
 		void syncYouTubeStatus();
 		void loadVersion();
 		void checkUpdate();
-		void applyRelayOverride();
+		void loadRelay();
 	}, []);
 
 	useEffect(() => {

@@ -1,5 +1,7 @@
 import {
+	RelayConfig,
 	RelayOverride,
+	SaveRelay,
 	SyncCheck,
 	SyncConnect,
 	SyncSend,
@@ -9,7 +11,7 @@ import { Events } from "@wailsio/runtime";
 import { t } from "@/lib/shared/i18n";
 import { translateError } from "@/lib/shared/i18n/errors";
 import { set } from "@/lib/shared/utils/storage";
-import { addError } from "@/lib/shared/views/stores/errors";
+import { addError, logError } from "@/lib/shared/views/stores/errors";
 import type { ClientMessage, ServerMessage } from "@/lib/sync/model";
 import * as store from "@/lib/sync/views/stores";
 
@@ -120,24 +122,42 @@ export async function check(url: string, token: string): Promise<RelayCheck> {
 	}
 }
 
-// save persists the relay the panel and the shelf will dial. The settings form
-// calls it when the user leaves a field, so what they see is what a restart
-// reads. A relay pinned by RELAY_API_URL is never written.
+// save persists the relay the panel and the shelf will dial. The store is the
+// home that survives a reinstall, so it is what a restart reads; localStorage
+// only paints the form on the next launch without waiting for the store. A relay
+// pinned by RELAY_API_URL is never written.
 export function save(): void {
 	if (store.relayLocked.value) return;
-	set("sync:relay", store.relayUrl.value.trim());
-	set("sync:token", store.token.value.trim());
+	const url = store.relayUrl.value.trim();
+	const token = store.token.value.trim();
+	set("sync:relay", url);
+	set("sync:token", token);
+	// A store that is down costs the user their relay on the next install, but
+	// there is nothing they could do about it mid-session: log it, never show it.
+	SaveRelay(url, token).catch((err) => logError(err, "relay"));
 }
 
-// applyRelayOverride points the app at the relay pinned by RELAY_API_URL, so a
-// dev build can test against a local relay instead of the saved one.
-export async function applyRelayOverride(): Promise<void> {
+// loadRelay points the app at the relay it should dial: the one pinned by
+// RELAY_API_URL if the environment has one, else the saved one. An install made
+// before the relay moved to the store still holds it in localStorage, so a store
+// with nothing in it gets seeded from the form once.
+export async function loadRelay(): Promise<void> {
 	const override = await RelayOverride();
-	const url = override.url?.trim();
-	if (!url) return;
+	const pinned = override.url?.trim();
+	if (pinned) {
+		store.relayUrl.value = pinned;
+		store.token.value = override.token?.trim() ?? "";
+		store.relayLocked.value = true;
+		return;
+	}
+	const saved = await RelayConfig();
+	const url = saved.url?.trim() ?? "";
+	if (url === "") {
+		save();
+		return;
+	}
 	store.relayUrl.value = url;
-	store.token.value = override.token?.trim() ?? "";
-	store.relayLocked.value = true;
+	store.token.value = saved.token?.trim() ?? "";
 }
 
 async function dial(code: string, role: "host" | "guest" | ""): Promise<void> {

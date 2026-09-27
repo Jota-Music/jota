@@ -28,7 +28,7 @@ import (
 type App struct {
 	ctx       context.Context
 	version   string
-	relay     RelayOverride
+	relay     Relay
 	Spotify   *spotify.SpotifyService
 	Catalog   *music.Catalog
 	YouTube   *youtube.Service
@@ -45,9 +45,8 @@ type App struct {
 	discordErr string
 }
 
-// RelayOverride pins a relay for local testing. An empty URL means the user's
-// saved relay is used.
-type RelayOverride struct {
+// Relay is the endpoint the app dials: a URL and the token that relay wants.
+type Relay struct {
 	URL   string `json:"url"`
 	Token string `json:"token"`
 }
@@ -63,7 +62,7 @@ func New(version string) *App {
 	playlistsSvc.SetResolver(catalog.GetSong)
 	app := &App{
 		version: version,
-		relay: RelayOverride{
+		relay: Relay{
 			URL:   strings.TrimSpace(cfg.RelayAPIURL),
 			Token: strings.TrimSpace(cfg.RelayAPIToken),
 		},
@@ -160,6 +159,36 @@ func (a *App) OpenURL(url string) error {
 // RelayOverride reports the relay pinned through RELAY_API_URL/RELAY_API_TOKEN,
 // if any. The frontend applies it over the user's saved relay so a dev build can
 // point at a local relay.
-func (a *App) RelayOverride() RelayOverride {
+func (a *App) RelayOverride() Relay {
 	return a.relay
+}
+
+// RelayConfig reports the relay the user saved, if any. It lives in the store
+// and not in the webview's localStorage because that storage belongs to the
+// webview profile: a reinstall, a change of app id or a dev build on another
+// origin all start from an empty one, and the relay is the first thing the user
+// has to type again.
+func (a *App) RelayConfig() Relay {
+	var saved Relay
+	if err := settings.GetObject("relay", &saved); err != nil {
+		return Relay{}
+	}
+	return saved
+}
+
+// SaveRelay persists the relay the settings form shows. A relay pinned by the
+// environment is not the user's to store, and an empty URL is not a relay, so
+// both leave the saved one alone.
+func (a *App) SaveRelay(url string, token string) error {
+	if a.relay.URL != "" {
+		return nil
+	}
+	url = strings.TrimSpace(url)
+	if url == "" {
+		return nil
+	}
+	return settings.SetObject("relay", Relay{
+		URL:   url,
+		Token: strings.TrimSpace(token),
+	})
 }

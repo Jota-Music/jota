@@ -7,6 +7,6 @@ export {
 };
 
 export type {
-    RelayOverride,
+    Relay,
     SpotifyStatus
 } from "./models.js";
