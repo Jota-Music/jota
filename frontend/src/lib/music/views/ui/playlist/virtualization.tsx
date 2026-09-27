@@ -4,7 +4,7 @@ import { memo } from "preact/compat";
 import { useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import type { Song } from "@/lib/music/model";
-import { coarse, rowSelect } from "@/lib/music/views/hooks/row-select";
+import { rowSelect } from "@/lib/music/views/hooks/row-select";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
 import {
 	currentSong,
@@ -25,7 +25,6 @@ import TrackArt from "@/lib/music/views/ui/track/track-art";
 import { t } from "@/lib/shared/i18n";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
-import { useAutoscroll } from "@/lib/shared/views/hooks/use-autoscroll";
 import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
@@ -137,12 +136,7 @@ function PlaylistRow({
 					/>
 					{reorderable && (
 						<span
-							class={cn(
-								"pointer-events-none absolute top-1 left-1 flex size-5 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-zinc-300",
-								coarse
-									? "opacity-100"
-									: "opacity-0 transition-opacity group-hover:opacity-100",
-							)}
+							class="pointer-events-none absolute top-1 left-1 flex size-5 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100"
 							aria-hidden
 						>
 							<GripVertical size={13} />
@@ -229,9 +223,6 @@ export function Virtualization({
 		if (dragOver.value !== next) dragOver.value = next;
 	};
 
-	const over = useRef(0);
-	const autoscroll = useAutoscroll(ref, () => hover(over.current));
-
 	const { start, captureClick } = usePointerDrag({
 		scroll: ref,
 		begin: () => {
@@ -262,40 +253,6 @@ export function Virtualization({
 		dragOrigin.current = index;
 	};
 
-	const handleDragOverCapture = (e: DragEvent) => {
-		if (dragFrom.value == null) return;
-		e.preventDefault();
-		over.current = e.clientY;
-		autoscroll.track(e.clientY);
-		hover(e.clientY);
-	};
-
-	const handleDrop = (e: DragEvent) => {
-		if (dragFrom.value == null) return;
-		e.preventDefault();
-		const from = dragFrom.value;
-		const to = indexFromClientY(e.clientY);
-		autoscroll.stop();
-		endDrag();
-		if (from !== to) onReorder?.(from, to);
-	};
-
-	const startDrag = (e: DragEvent, index: number) => {
-		if (!reorderable || selection) {
-			e.preventDefault();
-			return;
-		}
-		dragFrom.value = index;
-		const dt = e.dataTransfer;
-		if (!dt) return;
-		try {
-			dt.setData("text/plain", String(index));
-			dt.effectAllowed = "move";
-		} catch {
-			/* noop */
-		}
-	};
-
 	return (
 		<div className="relative min-h-0 flex-1">
 			{/* biome-ignore lint/a11y/noStaticElementInteractions: drag-to-reorder container */}
@@ -308,12 +265,6 @@ export function Virtualization({
 				onClick={(e) => {
 					const target = e.target as Element;
 					if (!target.closest("[data-playlist-index]")) clearSelection();
-				}}
-				onDragOverCapture={handleDragOverCapture}
-				onDrop={handleDrop}
-				onDragEnd={() => {
-					autoscroll.stop();
-					endDrag();
 				}}
 			>
 				{songs.length === 0 ? (
@@ -331,7 +282,6 @@ export function Virtualization({
 							const song = songs[virtualRow.index];
 
 							return (
-								// biome-ignore lint/a11y/noStaticElementInteractions: draggable row wrapper
 								<div
 									key={`${song.id}-${virtualRow.index}`}
 									data-playlist-index={virtualRow.index}
@@ -340,8 +290,6 @@ export function Virtualization({
 										height: `${virtualRow.size}px`,
 										transform: `translateY(${virtualRow.start}px)`,
 									}}
-									draggable={reorderable && coarse}
-									onDragStart={(e) => startDrag(e, virtualRow.index)}
 								>
 									<PlaylistRowMemo
 										song={song}

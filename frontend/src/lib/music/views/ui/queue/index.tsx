@@ -27,7 +27,6 @@ import { currentIndex, queue, showQueue } from "@/lib/music/views/stores/queue";
 import TrackArt from "@/lib/music/views/ui/track/track-art";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
-import { useAutoscroll } from "@/lib/shared/views/hooks/use-autoscroll";
 import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
@@ -44,28 +43,6 @@ const COARSE = window.matchMedia("(pointer: coarse)").matches;
 
 const dragFrom = signal<number | null>(null);
 const dragOver = signal<number | null>(null);
-
-function startDrag(e: DragEvent, globalIndex: number) {
-	const target = e.target;
-	if (target instanceof Element && target.closest("button") != null) {
-		e.preventDefault();
-		return;
-	}
-	if (queue.value.length <= 1) {
-		e.preventDefault();
-		return;
-	}
-	dragFrom.value = globalIndex;
-	dragOver.value = globalIndex;
-	const dt = e.dataTransfer;
-	if (!dt) return;
-	try {
-		dt.setData("text/plain", String(globalIndex));
-		dt.effectAllowed = "move";
-	} catch {
-		/* noop */
-	}
-}
 
 function endDrag() {
 	dragFrom.value = null;
@@ -102,7 +79,6 @@ const QueueRow = memo(function QueueRow({
 
 	return (
 		<div
-			draggable={reorderable && COARSE}
 			data-drag-self={reorderable || undefined}
 			title={reorderable ? t("music.queue.drag") : undefined}
 			role="none"
@@ -120,9 +96,14 @@ const QueueRow = memo(function QueueRow({
 				if ((e.target as Element).closest("button, a")) return;
 				void playAt(globalIndex);
 			}}
-			onDragStart={(e) => startDrag(e, globalIndex)}
-			onDragEnd={endDrag}
 			onContextMenu={(e) => {
+				// Every action is already a button on the row, and the long-press
+				// that opens the menu is also the browser's drag gesture, so touch
+				// has no use for it.
+				if (COARSE) {
+					e.preventDefault();
+					return;
+				}
 				const actions: Action[] = [
 					{
 						icon: Play,
@@ -153,6 +134,7 @@ const QueueRow = memo(function QueueRow({
 				openContextMenu(actions, e);
 			}}
 		>
+			{/* Decorative on desktop, where the whole row drags with the mouse. */}
 			<div
 				class={cn(
 					"hidden shrink-0 touch-none rounded p-0.5 text-zinc-600 sm:flex",
@@ -278,37 +260,6 @@ function Queue() {
 		}
 	};
 
-	const over = useRef(0);
-	const autoscroll = useAutoscroll(ref, () => hover(over.current));
-
-	const handleDragOverCapture = (e: DragEvent) => {
-		if (dragFrom.value == null) return;
-		e.preventDefault();
-		const dt = e.dataTransfer;
-		if (dt) {
-			try {
-				dt.dropEffect = "move";
-			} catch {
-				/* noop */
-			}
-		}
-		over.current = e.clientY;
-		autoscroll.track(e.clientY);
-		hover(e.clientY);
-	};
-
-	const handleDrop = (e: DragEvent) => {
-		if (dragFrom.value == null) return;
-		e.preventDefault();
-		const from = dragFrom.value;
-		const to = indexFromClientY(e.clientY);
-		autoscroll.stop();
-		endDrag();
-		if (from !== to) {
-			void moveQueue(from, to);
-		}
-	};
-
 	const source = useRef<number | null>(null);
 
 	const { start, captureClick } = usePointerDrag({
@@ -382,12 +333,6 @@ function Queue() {
 					aria-label={t("music.queue.aria")}
 					onPointerDown={handlePointerDown}
 					onClickCapture={captureClick}
-					onDragOverCapture={handleDragOverCapture}
-					onDrop={handleDrop}
-					onDragEnd={() => {
-						autoscroll.stop();
-						endDrag();
-					}}
 				>
 					{songs.length === 0 ? (
 						<li class="flex min-h-40 list-none flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-zinc-500">
