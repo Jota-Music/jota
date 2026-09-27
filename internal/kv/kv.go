@@ -36,7 +36,7 @@ func EnsureStarted() error {
 		return openErr
 	}
 
-	baseDir, err := storageBaseDir()
+	baseDir, err := Dir()
 	if err != nil {
 		openErr = err
 		return err
