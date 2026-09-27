@@ -23,6 +23,10 @@ const BACKEND: Record<string, string> = {
 
 export function translateError(error: unknown): string {
 	const message = error instanceof Error ? error.message : String(error);
-	const key = BACKEND[message];
-	return key ? t(key) : message;
+	// A binding rejection is an Error whose String() carries the class name
+	// ("RuntimeError: room is full"), so the map is consulted without it too:
+	// the name is an implementation detail the user should never read.
+	const bare = message.replace(/^\w*(Error|Exception): /, "");
+	const key = BACKEND[bare];
+	return key ? t(key) : bare;
 }

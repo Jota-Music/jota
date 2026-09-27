@@ -111,13 +111,12 @@ export async function check(url: string, token: string): Promise<RelayCheck> {
 		const auth = await SyncCheck(url, token);
 		return { error: "", token: auth ? "accepted" : "none" };
 	} catch (err) {
-		const message = String(err);
 		// The relay is what judges the token, so its complaint describes the
 		// field and not a missing relay: the URL did answer.
-		if (/token/i.test(message)) {
+		if (/token/i.test(String(err))) {
 			return { error: "", token: token === "" ? "required" : "rejected" };
 		}
-		return { error: translateError(message), token: "none" };
+		return { error: translateError(err), token: "none" };
 	}
 }
 
@@ -170,14 +169,13 @@ export async function connect(code: string): Promise<void> {
 		await dial(code, "");
 	} catch (err) {
 		stop();
-		const msg = String(err);
-		if (/token/i.test(msg)) {
+		if (/token/i.test(String(err))) {
 			store.tokenRequired.value = true;
 			store.error.value = t("errors.relay.tokenRequired");
 		} else {
-			store.error.value = translateError(msg);
+			store.error.value = translateError(err);
 		}
-		addError(store.error.value, "room");
+		addError(err, "room");
 	}
 }
 
