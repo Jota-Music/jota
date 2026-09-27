@@ -6,4 +6,6 @@
     <!-- Release APK staged by the update pipeline, handed to the system
          package installer. -->
     <files-path name="updates" path="updates/" />
+    <!-- Log copy staged by SaveLogs, handed to the system share chooser. -->
+    <files-path name="logs" path="logs/" />
 </paths>

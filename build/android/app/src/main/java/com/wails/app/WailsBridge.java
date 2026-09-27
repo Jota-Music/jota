@@ -461,7 +461,10 @@ public class WailsBridge {
     // MARK: - Mobile features (Phase A)
 
     /**
-     * Present the Android share chooser. json: {"text": "...", "url": "..."}.
+     * Present the Android share chooser. json: {"text": "...", "url": "..."} or
+     * {"file": "<abs path>"} to attach a file. Attached files must live in a
+     * directory declared in res/xml/file_paths.xml, so the FileProvider can hand
+     * a readable content:// URI to the receiver.
      */
     public void share(final String json) {
         mainHandler.post(() -> {
@@ -469,18 +472,30 @@ public class WailsBridge {
                 JSONObject opts = new JSONObject(json);
                 String text = opts.optString("text", "");
                 String url = opts.optString("url", "");
+                String file = opts.optString("file", "");
                 StringBuilder body = new StringBuilder();
                 if (!text.isEmpty()) body.append(text);
                 if (!url.isEmpty()) {
                     if (body.length() > 0) body.append("\n");
                     body.append(url);
                 }
-                if (body.length() == 0) return;
                 Intent send = new Intent(Intent.ACTION_SEND);
-                send.setType("text/plain");
-                send.putExtra(Intent.EXTRA_TEXT, body.toString());
+                if (!file.isEmpty()) {
+                    Uri uri = androidx.core.content.FileProvider.getUriForFile(activity,
+                            activity.getPackageName() + ".fileprovider", new File(file));
+                    send.setType("application/octet-stream");
+                    send.putExtra(Intent.EXTRA_STREAM, uri);
+                    send.setClipData(ClipData.newRawUri("", uri));
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    if (body.length() > 0) send.putExtra(Intent.EXTRA_TEXT, body.toString());
+                } else {
+                    if (body.length() == 0) return;
+                    send.setType("text/plain");
+                    send.putExtra(Intent.EXTRA_TEXT, body.toString());
+                }
                 Intent chooser = Intent.createChooser(send, null);
                 chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 activity.startActivity(chooser);
             } catch (Exception e) {
                 Log.e(TAG, "share failed", e);
