@@ -5,7 +5,7 @@ import {
 	CircleAlert,
 	GripVertical,
 	ListMusic,
-	Play,
+	MoreVertical,
 	Trash2,
 } from "lucide-preact";
 import { memo } from "preact/compat";
@@ -77,73 +77,59 @@ const QueueRow = memo(function QueueRow({
 	const reorderable = songsLength > 1;
 	const canMoveDown = globalIndex < songsLength - 1;
 
+	const actions = (): Action[] => {
+		const out: Action[] = [];
+		if (canMoveDown) {
+			out.push({
+				icon: ChevronDown,
+				label: t("music.queue.moveDown"),
+				run: () => void moveQueue(globalIndex, globalIndex + 1),
+			});
+		}
+		if (canSnapBelow) {
+			out.push({
+				icon: ArrowUpFromLine,
+				label: t("music.queue.snapBelow"),
+				run: () => void moveAfterCurrent(globalIndex),
+			});
+		}
+		out.push({
+			icon: Trash2,
+			label: t("music.queue.remove"),
+			danger: true,
+			run: () => void unqueue(globalIndex),
+		});
+		return out;
+	};
+
 	return (
 		<div
 			data-drag-self={reorderable || undefined}
 			title={reorderable ? t("music.queue.drag") : undefined}
 			role="none"
 			class={cn(
-				"flex h-full w-full cursor-pointer select-none items-center gap-1 border-b border-zinc-900/80 px-1 sm:gap-2 sm:px-2",
+				"flex h-full w-full cursor-pointer select-none items-center gap-2 border-b border-zinc-900/80 px-1 sm:px-2",
 				isCurrent ? "bg-zinc-900/50" : "hover:bg-zinc-900/30",
+				// The queue captures the pointer on the list, not the row, so the
+				// closed hand is set on the rows themselves.
+				dragFrom.value != null && "cursor-grabbing!",
 				isDragSource && "opacity-40",
 				isDropTarget &&
 					"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/40 ring-inset",
 			)}
-			onDblClick={(e) => {
-				// Jumping to a track is a double click, like every other track list.
-				// dblclick rather than e.detail: a trackpad click reports detail 1,
-				// and the album/artist links stop the click events they sit on.
+			onClick={(e) => {
 				if ((e.target as Element).closest("button, a")) return;
 				void playAt(globalIndex);
 			}}
 			onContextMenu={(e) => {
-				// Every action is already a button on the row, and the long-press
-				// that opens the menu is also the browser's drag gesture, so touch
-				// has no use for it.
+				// Touch reaches the same actions through the row's menu button.
 				if (COARSE) {
 					e.preventDefault();
 					return;
 				}
-				const actions: Action[] = [
-					{
-						icon: Play,
-						label: t("music.queue.playNow"),
-						run: () => void playAt(globalIndex),
-					},
-				];
-				if (canMoveDown) {
-					actions.push({
-						icon: ChevronDown,
-						label: t("music.queue.moveDown"),
-						run: () => void moveQueue(globalIndex, globalIndex + 1),
-					});
-				}
-				if (canSnapBelow) {
-					actions.push({
-						icon: ArrowUpFromLine,
-						label: t("music.queue.snapBelow"),
-						run: () => void moveAfterCurrent(globalIndex),
-					});
-				}
-				actions.push({
-					icon: Trash2,
-					label: t("music.queue.remove"),
-					danger: true,
-					run: () => void unqueue(globalIndex),
-				});
-				openContextMenu(actions, e);
+				openContextMenu(actions(), e);
 			}}
 		>
-			{/* Decorative on desktop, where the whole row drags with the mouse. */}
-			<div
-				class={cn(
-					"hidden shrink-0 touch-none rounded p-0.5 text-zinc-600 sm:flex",
-					songsLength <= 1 && "opacity-30",
-				)}
-				aria-hidden
-			>
-				<GripVertical size={16} />
-			</div>
 			<span class="w-5 shrink-0 text-center text-[11px] tabular-nums text-zinc-600 sm:w-6 sm:text-xs mr-3">
 				{globalIndex + 1}
 			</span>
@@ -179,16 +165,9 @@ const QueueRow = memo(function QueueRow({
 				</p>
 			</div>
 
-			<div class="flex shrink-0 items-center gap-0 sm:gap-0.5">
-				<button
-					type="button"
-					draggable={false}
-					title={t("music.queue.playNow")}
-					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-(--dominant-color)"
-					onClick={() => void playAt(globalIndex)}
-				>
-					<Play size={17} />
-				</button>
+			{/* Touch has no room for three buttons per row, so it gets the same
+			    actions behind one menu button. */}
+			<div class="hidden shrink-0 items-center gap-0.5 sm:flex">
 				<button
 					type="button"
 					draggable={false}
@@ -218,6 +197,31 @@ const QueueRow = memo(function QueueRow({
 				>
 					<Trash2 size={17} />
 				</button>
+			</div>
+
+			<button
+				type="button"
+				draggable={false}
+				title={t("music.queue.actions")}
+				aria-label={t("music.queue.actions")}
+				class="flex shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white sm:hidden"
+				onClick={(e) => openContextMenu(actions(), e)}
+			>
+				<MoreVertical size={17} />
+			</button>
+
+			{/* Desktop drags from anywhere, so the grip is only decorative there.
+			    Touch drags from the grip alone, leaving the artist and album
+			    links tappable. */}
+			<div
+				data-drag-handle
+				class={cn(
+					"ml-0.5 flex shrink-0 touch-none rounded p-0.5 text-zinc-600",
+					songsLength <= 1 && "opacity-30",
+				)}
+				aria-hidden
+			>
+				<GripVertical size={16} />
 			</div>
 		</div>
 	);
@@ -264,6 +268,7 @@ function Queue() {
 
 	const { start, captureClick } = usePointerDrag({
 		scroll: ref,
+		touch: true,
 		begin: () => {
 			if (source.current == null) return;
 			dragFrom.value = source.current;
@@ -284,6 +289,10 @@ function Queue() {
 		if (songs.length <= 1) return;
 		const target = e.target as Element;
 		if (target.closest("button")) return;
+		// A finger has no hover to aim with, so it only drags from the grip; the
+		// rest of the row stays tappable down to the artist and album links.
+		if (e.pointerType !== "mouse" && !target.closest("[data-drag-handle]"))
+			return;
 		const row = target.closest("[data-queue-index]");
 		if (!row) return;
 		const index = Number(row.getAttribute("data-queue-index"));
@@ -308,10 +317,8 @@ function Queue() {
 			open={showQueue.value}
 			close={closeQueue}
 			labelledBy="queue-panel-title"
-			closeLabel={t("music.queue.close")}
-			hideClose
 		>
-			<ModalHeader close={closeQueue} closeLabel={t("music.queue.close")}>
+			<ModalHeader>
 				<ListMusic size={22} class="shrink-0 text-(--dominant-color)" />
 				<h2 id="queue-panel-title" class="sr-only">
 					{t("music.queue.title")}

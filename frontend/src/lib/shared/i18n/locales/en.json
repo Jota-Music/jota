@@ -212,9 +212,9 @@
 			"emptyHint": "Pick a playlist and click a track to start.",
 			"drag": "Drag to reorder",
 			"failed": "Could not play this track",
-			"playNow": "Play now",
 			"moveDown": "Move down one position",
-			"snapBelow": "Place just below the playing track",
+			"snapBelow": "Place after current",
+			"actions": "Row actions",
 			"remove": "Remove from queue",
 			"aria": "Queue",
 			"close": "Close queue"

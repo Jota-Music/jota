@@ -3,19 +3,32 @@ import { useEffect, useRef } from "preact/hooks";
 import { useAutoscroll } from "@/lib/shared/views/hooks/use-autoscroll";
 
 const DRAG_START_PX = 4;
+const HOLD_MS = 250;
 
 type Options = {
 	begin: () => void;
 	move: (e: PointerEvent) => void;
 	end: (dragged: boolean) => void;
 	scroll?: RefObject<HTMLElement | null>;
+	// Touch reorders behind a long-press: a finger that moves straight away is
+	// a scroll, and holding still is the row's own gesture, never a drag.
+	touch?: boolean;
 };
 
-// Mouse-only pointer drag. Native HTML5 drag lets the browser own the cursor,
-// so the grabbing hand is only possible by driving the drag ourselves. Touch
-// only reorders the library shelf, through native drag behind its sort mode.
-export function usePointerDrag({ begin, move, end, scroll }: Options) {
+// Pointer drag. Native HTML5 drag lets the browser own the cursor, so the
+// grabbing hand is only possible by driving the drag ourselves. The shelf
+// keeps native drag behind its sort mode, where the long-press that opens an
+// item menu is the same gesture the browser starts a drag with.
+export function usePointerDrag({
+	begin,
+	move,
+	end,
+	scroll,
+	touch = false,
+}: Options) {
 	const active = useRef(false);
+	const armed = useRef(false);
+	const hold = useRef(0);
 	const moved = useRef(false);
 	const dragged = useRef(false);
 	const suppressClick = useRef(false);
@@ -67,9 +80,18 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		callbacks.current.begin();
 	};
 
+	const clearHold = () => {
+		if (hold.current === 0) return;
+		clearTimeout(hold.current);
+		hold.current = 0;
+	};
+
 	useEffect(() => {
 		const onMove = (e: PointerEvent) => {
 			if (!active.current) return;
+			// Moving before the hold completes means the finger is scrolling, not
+			// dragging.
+			clearHold();
 			last.current = e;
 			if (!moved.current) {
 				const dx = e.clientX - origin.current.x;
@@ -83,10 +105,12 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 		};
 
 		const onEnd = () => {
+			clearHold();
 			autoscroll.stop();
 			flushMove();
 			if (!active.current) return;
 			active.current = false;
+			armed.current = false;
 			last.current = null;
 			capture.current = null;
 			document.body.classList.remove("pointer-dragging");
@@ -100,26 +124,46 @@ export function usePointerDrag({ begin, move, end, scroll }: Options) {
 			callbacks.current.end(didDrag);
 		};
 
+		// A held finger scrolls the pane on its own, so the drag owns the touch
+		// only once the long-press has armed it.
+		const onTouchMove = (e: TouchEvent) => {
+			if (armed.current) e.preventDefault();
+		};
+
 		window.addEventListener("pointermove", onMove);
 		window.addEventListener("pointerup", onEnd);
 		window.addEventListener("pointercancel", onEnd);
+		window.addEventListener("touchmove", onTouchMove, { passive: false });
 		return () => {
+			clearHold();
 			stopMove();
 			window.removeEventListener("pointermove", onMove);
 			window.removeEventListener("pointerup", onEnd);
 			window.removeEventListener("pointercancel", onEnd);
+			window.removeEventListener("touchmove", onTouchMove);
 			document.body.classList.remove("pointer-dragging");
 		};
 	}, []);
 
 	const start = (e: PointerEvent) => {
-		if (e.pointerType !== "mouse" || e.button !== 0) return false;
+		if (e.pointerType === "mouse") {
+			if (e.button !== 0) return false;
+		} else if (!touch) {
+			return false;
+		}
 		active.current = true;
+		armed.current = false;
 		moved.current = false;
 		dragged.current = false;
 		origin.current = { x: e.clientX, y: e.clientY };
 		const el = e.currentTarget as Element | null;
 		capture.current = el?.setPointerCapture ? { el, id: e.pointerId } : null;
+		if (e.pointerType !== "mouse") {
+			hold.current = window.setTimeout(() => {
+				hold.current = 0;
+				armed.current = true;
+			}, HOLD_MS);
+		}
 		return true;
 	};
 

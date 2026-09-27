@@ -212,9 +212,9 @@
 			"emptyHint": "Elige una lista y haz clic en una canción para empezar.",
 			"drag": "Arrastra para reordenar",
 			"failed": "No se pudo reproducir esta canción",
-			"playNow": "Reproducir ahora",
 			"moveDown": "Bajar una posición",
-			"snapBelow": "Colocar justo debajo de la canción en curso",
+			"snapBelow": "Colocar tras la actual",
+			"actions": "Acciones de la fila",
 			"remove": "Quitar de la cola",
 			"aria": "Cola",
 			"close": "Cerrar la cola"
