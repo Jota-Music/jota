@@ -37,14 +37,9 @@ export function CreatePlaylistModal({
 	};
 
 	return (
-		<Modal
-			open={open}
-			close={closeAndReset}
-			labelledBy="create-playlist-title"
-			hideClose
-		>
+		<Modal open={open} close={closeAndReset} labelledBy="create-playlist-title">
 			<div class="flex flex-col">
-				<ModalHeader close={closeAndReset}>
+				<ModalHeader>
 					<h2
 						id="create-playlist-title"
 						class="text-sm font-semibold text-white"

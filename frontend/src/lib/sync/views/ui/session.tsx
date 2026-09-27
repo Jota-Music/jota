@@ -34,13 +34,8 @@ export function SyncPanel() {
 			open={showSync.value}
 			close={() => (showSync.value = false)}
 			labelledBy="sync-panel-title"
-			closeLabel={t("sync.session.close")}
-			hideClose
 		>
-			<ModalHeader
-				close={() => (showSync.value = false)}
-				closeLabel={t("sync.session.close")}
-			>
+			<ModalHeader>
 				<Turntable
 					size={22}
 					class={cn(

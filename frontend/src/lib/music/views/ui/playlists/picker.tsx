@@ -76,14 +76,9 @@ export function PlaylistPicker() {
 		(name.value.trim() !== "" || targets.value.size > 0) && songs.length > 0;
 
 	return (
-		<Modal
-			open={open}
-			close={close}
-			labelledBy="playlist-picker-title"
-			hideClose
-		>
+		<Modal open={open} close={close} labelledBy="playlist-picker-title">
 			<div class="flex min-h-0 flex-col">
-				<ModalHeader close={close}>
+				<ModalHeader>
 					<div class="flex flex-col">
 						<h2
 							id="playlist-picker-title"

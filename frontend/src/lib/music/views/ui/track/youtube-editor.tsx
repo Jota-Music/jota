@@ -62,19 +62,10 @@ export default function YoutubeEditor() {
 	}
 
 	return (
-		<Modal
-			open={open}
-			close={closeYoutubeEditor}
-			labelledBy="youtube-id-title"
-			closeLabel={t("music.youtubeId.close")}
-			hideClose
-		>
+		<Modal open={open} close={closeYoutubeEditor} labelledBy="youtube-id-title">
 			{song && (
 				<div class="flex flex-col">
-					<ModalHeader
-						close={closeYoutubeEditor}
-						closeLabel={t("music.youtubeId.close")}
-					>
+					<ModalHeader>
 						<h2 id="youtube-id-title" class="text-sm font-semibold text-white">
 							{t("music.youtubeId.title")}
 						</h2>
