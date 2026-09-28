@@ -32,7 +32,7 @@ export function SignInPrompt() {
 			close={() => dismissYouTubeSignInSuggestion()}
 			labelledBy="youtube-signin-title"
 		>
-			<div class="flex flex-col items-center gap-4 px-6 pb-6 text-center">
+			<div class="flex flex-col items-center gap-4 px-6 pt-6 pb-6 text-center">
 				<YoutubeIcon width={36} height={36} class="text-[#FF0000]" />
 				<div class="space-y-1">
 					<h2 id="youtube-signin-title" class="text-lg font-bold text-zinc-100">

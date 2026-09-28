@@ -24,7 +24,7 @@ export function ConfirmModal({
 
 	return (
 		<Modal open={open} close={close} labelledBy="confirm-title">
-			<div class="flex flex-col items-center gap-5 px-6 pb-6">
+			<div class="flex flex-col items-center gap-5 px-6 pt-6 pb-6">
 				<p id="confirm-title" class="text-center text-sm text-zinc-200">
 					{t("common.confirm")}
 				</p>

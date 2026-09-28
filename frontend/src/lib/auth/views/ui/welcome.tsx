@@ -38,7 +38,7 @@ export function Welcome() {
 			close={() => dismissWelcome(mute.value)}
 			labelledBy="welcome-title"
 		>
-			<div class="flex flex-col items-center gap-4 px-6 pb-6 text-center">
+			<div class="flex flex-col items-center gap-4 px-6 pt-6 pb-6 text-center">
 				<SpotifyIcon size={32} class="text-green-500" />
 				<div class="space-y-1">
 					<h2 id="welcome-title" class="text-lg font-bold text-zinc-100">
