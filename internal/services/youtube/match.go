@@ -4,6 +4,7 @@ import (
 	"math"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -151,7 +152,9 @@ func uploadPenalty(v Video, song music.Song) float64 {
 func missingTokens(title string, song music.Song) float64 {
 	want := map[string]bool{}
 	for _, token := range tokens(bracketed.ReplaceAllString(song.Name, " ")) {
-		want[token] = true
+		if !isYear(token) {
+			want[token] = true
+		}
 	}
 	if len(want) == 0 {
 		return 0
@@ -179,6 +182,18 @@ func durationGap(candidate, song int) float64 {
 	}
 	gap := math.Abs(float64(candidate-song)) / float64(song)
 	return math.Min(gap*durationWeight, durationPenaltyMax)
+}
+
+// isYear reports a bare four-digit year. Spotify hangs the remaster year onto
+// the title ("Blinding Lights - Remastered 2024") and almost no upload repeats
+// it, so demanding it would bury the right video one whole song's penalty down
+// the list. A year says nothing about which song this is.
+func isYear(token string) bool {
+	if len(token) != 4 {
+		return false
+	}
+	_, err := strconv.Atoi(token)
+	return err == nil
 }
 
 func tokens(s string) []string {

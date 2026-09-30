@@ -124,6 +124,17 @@ func TestMissingTokens(t *testing.T) {
 	if got := missingTokens("The Official Video", music.Song{Name: "The (Official)"}); got != 0 {
 		t.Fatalf("empty token set = %v, want 0", got)
 	}
+	// Spotify hangs the remaster year onto the title with a dash, outside the
+	// brackets, and no upload repeats it: demanding "2024" would put the right
+	// upload 200 points below a stranger's.
+	remaster := music.Song{Name: "Blinding Lights - Remastered 2024"}
+	if got := missingTokens("The Weeknd - Blinding Lights (Official Audio)", remaster); got != 0 {
+		t.Fatalf("remaster year = %v, want 0", got)
+	}
+	// The year is the only thing dropped, not the title itself.
+	if got := missingTokens("The Weeknd - Save Your Tears", remaster); got != 2*missingTokenPenalty {
+		t.Fatalf("renamed track = %v, want %v", got, 2*missingTokenPenalty)
+	}
 }
 
 // A subtitled lyric re-upload runs within a second of the studio length, so
