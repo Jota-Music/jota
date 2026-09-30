@@ -57,6 +57,35 @@ func TestRankPrefersTheStudioLength(t *testing.T) {
 	}
 }
 
+// Reik never published a music video for "Ahora Sin Ti", so YouTube's shelf for
+// it is one official upload and a wall of fans. The official one is the band's
+// own VEVO channel and the label named it "(Cover Audio)", because Reik released
+// someone else's song as a single. Reading "cover" as a version keyword demoted
+// the one authoritative upload below a fan re-upload.
+func TestRankPrefersTheArtistsOwnCover(t *testing.T) {
+	song := music.Song{Name: "Ahora Sin Ti", Duration: 181, Artists: []music.Artist{{Name: "Reik"}}}
+	candidates := []Video{
+		video("Reik - Ahora Sin Ti (Cover Audio)", 181),
+		video("Ahora Sin Ti letra", 180),
+		video("Reik - Ahora sin ti", 188),
+		video("Reik - Ahora Sin Ti (Video Oficial) 2018 Estreno", 183),
+		video("Reik ahora sin ti LYRICS", 184),
+		video("Reik - Ahora Sin Ti", 180),
+		video("Ahora Sin Ti", 222),
+	}
+
+	// The app reads the author from shortBylineText, which shortens reikVEVO to
+	// "Reik" — the channel still matches the artist exactly.
+	candidates[0].Author = "Reik"
+	candidates[1].Author = "REIK"
+	candidates[6].Author = "Dorathy Pipes - Topic"
+
+	got := rank(candidates, song)[0]
+	if got.Title != "Reik - Ahora Sin Ti (Cover Audio)" {
+		t.Fatalf("picked %q by %q", got.Title, got.Author)
+	}
+}
+
 // The Voice performance ranks first for "Fast Car": a different artist at half
 // the length. The duration gap has to push it down. Note the remaining v1 gap:
 // Black Pumas is a cover by another band that happens to run 282s, so length

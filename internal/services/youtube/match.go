@@ -70,13 +70,19 @@ var topicSuffixes = []string{"- topic", "- tema", "- temas"}
 var officialSuffixes = []string{"official", "oficial", "vevo"}
 
 // versionWords mark a video as something other than the studio master: a live
-// cut, a cover, a reworked or degraded copy. They are matched against the
-// already normalised title, so "Live" reads as "live" while "Live It Up"
-// keeps all of its words.
+// cut, a reworked or degraded copy. They are matched against the already
+// normalised title, so "Live" reads as "live" while "Live It Up" keeps all of
+// its words.
+//
+// "cover" is deliberately absent. Every other word describes a derivative, which
+// by definition is not the first release, but an artist who releases a cover as
+// a single owns the master of it — and labels name that upload "(Cover Audio)"
+// on the artist's own VEVO channel. Penalising it buried Reik's official
+// "Ahora Sin Ti (Cover Audio)" under a fan's re-upload for want of one word.
 var versionWords = map[string]bool{
 	"live": true, "vivo": true, "directo": true, "concert": true,
 	"concierto": true, "unplugged": true, "acoustic": true, "acustico": true,
-	"cover": true, "karaoke": true, "instrumental": true, "orchestral": true,
+	"karaoke": true, "instrumental": true, "orchestral": true,
 	"remix": true, "edit": true, "bootleg": true, "mashup": true, "medley": true,
 	"slowed": true, "sped": true, "nightcore": true, "reverb": true, "reversed": true,
 	"loop": true, "extended": true, "reaction": true, "tutorial": true,
