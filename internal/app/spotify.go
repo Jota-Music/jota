@@ -20,11 +20,21 @@ func (a *App) SpotifyGetStatus() SpotifyStatus {
 // in their browser, Spotify redirects to the local callback server which
 // captures the code and completes the login. SpotifyLoginAndWait blocks
 // until the flow finishes (success or timeout).
+//
+// hold() runs across the whole flow: the redirect target is a loopback
+// listener inside this process, so on Android the app must survive being
+// backgrounded for the browser to be able to hand the code back.
 func (a *App) SpotifyLogin() (string, error) {
-	return a.Spotify.StartupLogin()
+	url, err := a.Spotify.StartupLogin()
+	if err != nil {
+		return "", err
+	}
+	hold()
+	return url, nil
 }
 
 func (a *App) SpotifyLoginAndWait() error {
+	defer release()
 	return a.Spotify.CompleteLogin()
 }
 
