@@ -16,19 +16,58 @@ import (
 // version, and a live cut can land within 2% of the studio duration, so
 // duration alone can never prove two tracks are the same song.
 //
-// The title and duration signals are 0 for a perfect match, so the official
-// channel takes a negative weight to break the ties they leave behind, and the
-// version/lyric signals take positive weights on top of whatever gap they
-// already have.
+// The title and duration signals are 0 for a perfect match, so the uploader
+// takes negative weights to break the ties they leave behind, and the version
+// signal takes a positive weight on top of whatever gap it already has.
 const (
 	missingTokenPenalty = 200
 	durationWeight      = 100
 	durationPenaltyMax  = 150
-	lyricChannelPenalty = 20
 	keywordPenalty      = 30
 	keywordPenaltyMax   = 90
-	officialBonus       = -10
 )
+
+// Uploader tiers, best first. The artist posting their own release is the
+// master; a "- Topic" channel restates the record with no editor's cuts and no
+// filler; a random channel is nothing in particular; a karaoke or subtitled
+// re-upload is described by its video, not the track, so its running time is
+// the video's and not the track's and it looks like a perfect length match.
+//
+// A topic channel sits below the artist's own because a channel named after an
+// artist can be impersonated, while a "- Topic" channel is one YouTube opened
+// itself. The lyric tier is the only one that has to clear a real duration gap
+// to be harmless, which is why it outweighs the topic bonus.
+const (
+	channelPenalty = -25
+	topicPenalty   = -15
+	lyricPenalty   = 40
+)
+
+// How far the uploader's trust survives a length disagreement. Within
+// tierFull the tier applies whole; by tierGone the length is so far off that the
+// uploader says nothing about it, and the bonus fades in between. Without the
+// fade an artist posting a different take — "Yesterday (Take 1)" on The
+// Beatles' own channel — outranks the studio master, because the tier is there
+// to break ties and not to argue with a quarter of the track missing.
+const (
+	tierFull = 0.03
+	tierGone = 0.15
+)
+
+// topicSuffixes are what YouTube appends to the channel it auto-opens for an
+// artist. It localises that suffix — "- Topic" in English, "- Tema" in Spanish
+// and Portuguese, "– Thema" in German, "(tema)" in Italian, "– тема" in Russian,
+// and in Polish and Arabic it leads with the word instead — so the list cannot
+// be complete. It does not have to be: clientContext pins the search language to
+// English, and a topic channel that slips past this list is merely unranked
+// rather than misfiled.
+var topicSuffixes = []string{"- topic", "- tema", "- temas"}
+
+// officialSuffixes are the words YouTube and the labels put after the artist's
+// name on a channel the artist really owns. Anything else carrying the artist's
+// name is someone else's: "Trueno and MILO J", "Bizarrap and Daddy Yankee" or
+// "WOS DS3" all begin with the name and none of them are the artist.
+var officialSuffixes = []string{"official", "oficial", "vevo"}
 
 // versionWords mark a video as something other than the studio master: a live
 // cut, a cover, a reworked or degraded copy. They are matched against the
@@ -97,10 +136,25 @@ func rank(videos []Video, song music.Song) []Video {
 }
 
 func penalty(v Video, song music.Song) float64 {
+	gap := durationGap(v.Duration, song.Duration)
 	return missingTokens(v.Title, song) +
-		durationGap(v.Duration, song.Duration) +
+		min(gap*durationWeight, durationPenaltyMax) +
 		versionPenalty(v.Title) +
-		uploadPenalty(v, song)
+		trust(uploadPenalty(v, song), gap)
+}
+
+// trust scales an uploader tier by how close the video's length is to the
+// track's, so the tier only ever breaks ties and never overrides a length that
+// says it is a different recording. A gap the two ends cannot measure leaves the
+// tier whole, because then length has said nothing either way.
+func trust(tier, gap float64) float64 {
+	switch {
+	case tier >= 0 || gap <= tierFull:
+		return tier
+	case gap >= tierGone:
+		return 0
+	}
+	return tier * (tierGone - gap) / (tierGone - tierFull)
 }
 
 // versionPenalty penalises a title that announces a live cut, a cover or a
@@ -116,31 +170,46 @@ func versionPenalty(title string) float64 {
 	return math.Min(float64(hits)*keywordPenalty, keywordPenaltyMax)
 }
 
-// uploadPenalty rewards a video uploaded by the artist themselves and demotes
-// the karaoke and subtitled re-uploads, whose title and running time both
-// describe the video rather than the record. The lyric words are looked for in
-// the raw title because the tokeniser strips them as noise before matching.
+// uploadPenalty scores who uploaded the video. The lyric words are looked for
+// in the raw title because the tokeniser strips them as noise before matching,
+// and they are checked first and on their own: a lyric video on the artist's own
+// channel is still a lyric video.
 func uploadPenalty(v Video, song music.Song) float64 {
 	channel := strings.ToLower(strings.TrimSpace(v.Author))
 	title := strings.ToLower(v.Title)
 
 	for _, word := range lyricChannels {
 		if strings.Contains(channel, word) || strings.Contains(title, word) {
-			return lyricChannelPenalty
+			return lyricPenalty
 		}
 	}
 
 	if channel == "" {
 		return 0
 	}
+
+	for _, suffix := range topicSuffixes {
+		if strings.HasSuffix(channel, suffix) {
+			return topicPenalty
+		}
+	}
+
 	for _, artist := range song.Artists {
 		if artist.Name == "" {
 			continue
 		}
-		// "Queen", "Queen Official" and "Queen - Topic" are all the artist.
+		// The channel the artist owns is the bare name — YouTube tells labels to
+		// keep it that way — plus the conventions labels and YouTube do append.
+		// A name that merely starts with the artist's is a collaboration channel
+		// or a fan's, and must not inherit the artist's trust.
 		name := strings.ToLower(artist.Name)
-		if channel == name || strings.HasPrefix(channel, name+" ") {
-			return officialBonus
+		if channel == name {
+			return channelPenalty
+		}
+		for _, suffix := range officialSuffixes {
+			if channel == name+suffix || strings.HasPrefix(channel, name+" "+suffix) {
+				return channelPenalty
+			}
 		}
 	}
 	return 0
@@ -174,14 +243,13 @@ func missingTokens(title string, song music.Song) float64 {
 	return float64(missing) * missingTokenPenalty
 }
 
-// durationGap penalises the relative difference between the video's length and
-// the track's, which demotes live cuts, extended loops and edited highlights.
+// durationGap is the relative difference between the video's length and the
+// track's, which demotes live cuts, extended loops and edited highlights.
 func durationGap(candidate, song int) float64 {
 	if candidate <= 0 || song <= 0 {
 		return 0
 	}
-	gap := math.Abs(float64(candidate-song)) / float64(song)
-	return math.Min(gap*durationWeight, durationPenaltyMax)
+	return math.Abs(float64(candidate-song)) / float64(song)
 }
 
 // isYear reports a bare four-digit year. Spotify hangs the remaster year onto

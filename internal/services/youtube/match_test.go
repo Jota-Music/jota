@@ -179,19 +179,82 @@ func TestVersionPenalty(t *testing.T) {
 func TestUploadPenalty(t *testing.T) {
 	song := music.Song{Artists: []music.Artist{{Name: "Queen"}}}
 
-	if got := uploadPenalty(Video{Author: "Queen Official"}, song); got != officialBonus {
-		t.Fatalf("artist channel = %v, want %v", got, officialBonus)
+	if got := uploadPenalty(Video{Author: "Queen Official"}, song); got != channelPenalty {
+		t.Fatalf("artist channel = %v, want %v", got, channelPenalty)
 	}
-	if got := uploadPenalty(Video{Author: "Queen - Topic"}, song); got != officialBonus {
-		t.Fatalf("topic channel = %v, want %v", got, officialBonus)
+	if got := uploadPenalty(Video{Author: "QueenVEVO"}, song); got != channelPenalty {
+		t.Fatalf("vevo channel = %v, want %v", got, channelPenalty)
+	}
+	if got := uploadPenalty(Video{Author: "Queen Oficial"}, song); got != channelPenalty {
+		t.Fatalf("oficial channel = %v, want %v", got, channelPenalty)
+	}
+	// Carrying the artist's name is not the same as being the artist: these all
+	// turned up under a channel search for the name and none of them is them.
+	for _, channel := range []string{"WOS DS3", "Trueno and MILO J", "Rosalia Fandom", "Khea Mohale"} {
+		artist := music.Song{Artists: []music.Artist{{Name: strings.Fields(channel)[0]}}}
+		if got := uploadPenalty(Video{Author: channel}, artist); got != 0 {
+			t.Fatalf("%q = %v, want 0", channel, got)
+		}
+	}
+	// A topic channel is trustworthy but not the artist, so it ranks below them.
+	if got := uploadPenalty(Video{Author: "Queen - Topic"}, song); got != topicPenalty {
+		t.Fatalf("topic channel = %v, want %v", got, topicPenalty)
+	}
+	// YouTube localises the suffix, so the Spanish and Portuguese channels are
+	// the same tier.
+	if got := uploadPenalty(Video{Author: "Queen - Temas"}, song); got != topicPenalty {
+		t.Fatalf("temas channel = %v, want %v", got, topicPenalty)
 	}
 	if got := uploadPenalty(Video{Author: "7clouds"}, song); got != 0 {
 		t.Fatalf("unrelated channel = %v, want 0", got)
 	}
 	// The marker counts in the title too, under a channel with no tell.
 	sub := Video{Title: "Queen - Song (Sub. Español + Lyrics)", Author: "sweetblue."}
-	if got := uploadPenalty(sub, song); got != lyricChannelPenalty {
-		t.Fatalf("lyric upload = %v, want %v", got, lyricChannelPenalty)
+	if got := uploadPenalty(sub, song); got != lyricPenalty {
+		t.Fatalf("lyric upload = %v, want %v", got, lyricPenalty)
+	}
+	// A lyric video wins over its own uploader: the artist posting one is still
+	// a lyric video, and its running time is the video's.
+	own := Video{Title: "Queen - Song (Official Lyric Video)", Author: "Queen Official"}
+	if got := uploadPenalty(own, song); got != lyricPenalty {
+		t.Fatalf("lyric upload by the artist = %v, want %v", got, lyricPenalty)
+	}
+	// The lyric tier has to be enough to sink an exact length, because that is
+	// exactly what a lyric video looks like.
+	exact := Video{Title: "Song (Lyrics)", Author: "Letras y Letra", Duration: 219}
+	if penalty(exact, music.Song{Name: "Song", Duration: 219}) <= 0 {
+		t.Fatal("an exact-length lyric upload must score above a neutral one")
+	}
+}
+
+// The artist posting a different take is still the artist, but the tier breaks
+// ties and cannot argue with a length that is a quarter off: the studio master
+// is only listed with the song, while "Take 1" carries the channel's name.
+func TestTierDoesNotOutweighALengthGap(t *testing.T) {
+	song := music.Song{
+		Name:     "Yesterday",
+		Duration: 175,
+		Artists:  []music.Artist{{Name: "The Beatles"}},
+	}
+	candidates := []Video{
+		{ID: "a", Title: "Yesterday (Remastered 2009)", Author: "The Beatles", Duration: 126},
+		{ID: "b", Title: "The Beatles - Yesterday", Author: "The Beatles", Duration: 175},
+	}
+
+	got := first(t, candidates, song)
+	if got.ID != "b" {
+		t.Fatalf("picked %q at the wrong length", got.Title)
+	}
+	// The tier still has to count when the length agrees, or the whole uploader
+	// ladder would be dead weight.
+	if trust(channelPenalty, 0.02) != channelPenalty {
+		t.Fatal("a near-exact length must keep the tier whole")
+	}
+	if trust(channelPenalty, 0.5) != 0 {
+		t.Fatal("a 50% gap must void the tier")
+	}
+	if trust(lyricPenalty, 0.5) != lyricPenalty {
+		t.Fatal("demoting a lyric upload must never be traded away for length")
 	}
 }
 
