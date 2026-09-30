@@ -11,7 +11,7 @@ function DefaultLayout({
 
 	return (
 		<AppShell
-			mainClass={cn("pb-36", compact ? "md:pb-20" : "md:pb-0", className)}
+			mainClass={className}
 			player={
 				<div
 					class={cn(

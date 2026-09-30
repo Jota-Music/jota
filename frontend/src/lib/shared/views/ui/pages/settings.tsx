@@ -34,7 +34,7 @@ function SettingsPage() {
 	}, []);
 
 	return (
-		<AppShell rootClass="pb-[calc(3.5rem+0.5rem+env(safe-area-inset-bottom))] md:pb-6">
+		<AppShell>
 			<div class="relative min-h-0 flex-1">
 				<div
 					ref={listRef}

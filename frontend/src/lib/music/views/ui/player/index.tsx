@@ -353,6 +353,16 @@ function NothingPlayingContent() {
 
 export function Player() {
 	const player = usePlayer();
+
+	return (
+		<div class={compactPlayer.value ? "hidden" : "hidden md:block"}>
+			{player ? <FullPlayerContent {...player} /> : <NothingPlayingContent />}
+		</div>
+	);
+}
+
+export function PlayerBar() {
+	const player = usePlayer();
 	const hasSong = player != null;
 	const isLoading = player?.isLoading ?? false;
 	const isPlaying = player?.isPlaying ?? false;
@@ -399,14 +409,6 @@ export function Player() {
 
 	return (
 		<>
-			<div class={compactPlayer.value ? "hidden" : "hidden md:block"}>
-				{hasSong ? (
-					<FullPlayerContent {...player} />
-				) : (
-					<NothingPlayingContent />
-				)}
-			</div>
-
 			<div
 				class={cn(
 					"block fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-60 md:z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out",

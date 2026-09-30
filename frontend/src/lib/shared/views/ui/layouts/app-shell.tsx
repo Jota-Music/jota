@@ -7,6 +7,7 @@ import {
 	clearSelection,
 	selectionActive,
 } from "@/lib/music/views/stores/selection";
+import { compactPlayer, PlayerBar } from "@/lib/music/views/ui/player";
 import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
 import Queue from "@/lib/music/views/ui/queue";
 import YoutubeEditor from "@/lib/music/views/ui/track/youtube-editor";
@@ -23,12 +24,10 @@ import { UpdateBanner } from "@/lib/update/views/banner";
 export function AppShell({
 	children,
 	player,
-	rootClass,
 	mainClass,
 }: {
 	children: ComponentChildren;
 	player?: ComponentChildren;
-	rootClass?: string;
 	mainClass?: string;
 }) {
 	const region = useRef<HTMLDivElement>(null);
@@ -48,7 +47,7 @@ export function AppShell({
 
 	return (
 		<OverlayHost.Provider value={region}>
-			<div class={cn("h-dvh min-h-0 flex flex-col", rootClass)}>
+			<div class="h-dvh min-h-0 flex flex-col">
 				<div class="flex flex-col bg-stone-950">
 					<Header />
 					<UpdateBanner />
@@ -63,13 +62,17 @@ export function AppShell({
 
 					<main
 						class={cn(
-							"flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-4 md:px-0 mx-auto",
+							"flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-4 md:px-0 mx-auto pb-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))]",
+							compactPlayer.value
+								? "md:pb-[calc(var(--player-compact)+1.5rem)]"
+								: "md:pb-0",
 							mainClass,
 						)}
 					>
 						{children}
 					</main>
 
+					<PlayerBar />
 					<Queue />
 					<PlaylistPicker />
 					<YoutubeEditor />
