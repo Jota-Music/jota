@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -213,7 +214,7 @@ func (s *Service) AddSongs(id string, refs []string) error {
 	}
 
 	for _, ref := range refs {
-		if !contains(pl.Songs, ref) {
+		if !slices.Contains(pl.Songs, ref) {
 			pl.Songs = append(pl.Songs, ref)
 		}
 	}
@@ -313,13 +314,4 @@ func (s *Service) RevalidateFullPlaylist(id string) error {
 
 func (s *Service) GetSong(id string) (music.Song, error) {
 	return music.Song{}, errors.New("local playlists are not a song source")
-}
-
-func contains(list []string, value string) bool {
-	for _, item := range list {
-		if item == value {
-			return true
-		}
-	}
-	return false
 }

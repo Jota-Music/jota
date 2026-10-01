@@ -151,13 +151,7 @@ func clampWidth(raw string) int {
 	if err != nil || width <= 0 {
 		return defaultWidth
 	}
-	if width < minWidth {
-		return minWidth
-	}
-	if width > maxWidth {
-		return maxWidth
-	}
-	return width
+	return min(max(width, minWidth), maxWidth)
 }
 
 func bucketWidth(width int) int {
