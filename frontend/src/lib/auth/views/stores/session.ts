@@ -30,10 +30,6 @@ export async function syncSpotifyStatus(): Promise<void> {
 	}
 }
 
-export function clearDegraded(): void {
-	spotifyDegraded.value = false;
-}
-
 // Manual retry for the degraded banner. The backend watcher is the safety net;
 // this just lets the user not wait out the backoff.
 export async function retrySpotify(): Promise<boolean> {
