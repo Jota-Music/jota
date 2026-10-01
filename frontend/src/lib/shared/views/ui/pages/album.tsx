@@ -30,6 +30,13 @@ export function AlbumPage() {
 	const tracks = (data as Song[]) ?? [];
 	const cover = tracks[0]?.album?.covers?.[0];
 	const albumName = tracks[0]?.album?.title ?? t("pages.album.defaultName");
+	const year = tracks[0]?.album?.year;
+	const subtitle = [
+		year ? String(year) : null,
+		t("music.trackCount", { count: tracks.length }),
+	]
+		.filter(Boolean)
+		.join(" · ");
 	const artists = tracks[0]?.artists ?? [];
 	const artist = artists.find((a) => a.id);
 	const link = artist
@@ -42,7 +49,7 @@ export function AlbumPage() {
 				<PageHeader
 					cover={cover}
 					title={albumName}
-					subtitle={t("music.trackCount", { count: tracks.length })}
+					subtitle={subtitle}
 					link={link}
 					linkReserve
 					onPlay={
