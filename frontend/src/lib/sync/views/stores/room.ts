@@ -50,11 +50,11 @@ let playWait: {
 
 // Host session id (from the relay), so a member can drop frames from a previous
 // session. The queue is broadcast on every local edit; `joined` gates that until
-// the room has injected its own queue, and `suppressQueue` swallows the echo of
-// a queue applied from the room.
+// the room has injected its own queue, and `suppressedQueueRef` swallows the echo
+// of a queue applied from the room.
 let roomEpoch = "";
 let joined = false;
-let suppressQueue = false;
+let suppressedQueueRef: Song[] | null = null;
 let joinAt = 0;
 
 // The seat holder publishes its playback as the drift reference. The seat is
@@ -306,8 +306,9 @@ function applyQueue(input: string | Song[]): void {
 		return;
 	}
 	if (!Array.isArray(parsed)) return;
-	suppressQueue = true;
-	replaceQueue(parsed as Song[]);
+	const songs = parsed as Song[];
+	suppressedQueueRef = songs;
+	replaceQueue(songs);
 }
 
 function broadcastQueue(): void {
@@ -435,7 +436,7 @@ transport.onClosed(() => {
 	pendingStart.value = false;
 	roomEpoch = "";
 	joined = false;
-	suppressQueue = false;
+	suppressedQueueRef = null;
 	store.joined.value = false;
 });
 
@@ -450,8 +451,8 @@ effect(() => {
 // not echoed back.
 effect(() => {
 	const q = queue.value;
-	if (suppressQueue) {
-		suppressQueue = false;
+	if (suppressedQueueRef === q) {
+		suppressedQueueRef = null;
 		return;
 	}
 	if (!joined || !live()) return;
