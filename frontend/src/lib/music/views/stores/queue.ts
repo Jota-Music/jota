@@ -71,10 +71,22 @@ export const currentIndex = signal<number>(
 // Skip availability as computeds, so the skip buttons can subscribe to it
 // directly. Reading queue.value for the length instead would subscribe the whole
 // player to every queue edit (an added song re-renders it entirely).
-export const canPrev = computed(() => currentIndex.value > 0);
-export const canNext = computed(
-	() => currentIndex.value >= 0 && currentIndex.value < queue.value.length - 1,
-);
+// Repeat on: skipping always has a target (next/prev wrap to the other end), so
+// the buttons stay enabled even at the queue boundaries and match what
+// nextSong/prevSong actually do.
+export const canPrev = computed(() => {
+	const i = currentIndex.value;
+	const n = queue.value.length;
+	if (i < 0 || i >= n) return false;
+	return repeat.value !== "off" || i > 0;
+});
+
+export const canNext = computed(() => {
+	const i = currentIndex.value;
+	const n = queue.value.length;
+	if (i < 0 || i >= n) return false;
+	return repeat.value !== "off" || i < n - 1;
+});
 
 // The playlist or album the current queue was started from, when known. Lets a
 // card's play button reflect (and toggle) its own playback.
