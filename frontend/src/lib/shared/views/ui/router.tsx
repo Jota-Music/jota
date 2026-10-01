@@ -10,7 +10,6 @@ import { lazy, Suspense } from "preact/compat";
 import { useEffect } from "preact/hooks";
 import { Route, Switch } from "wouter-preact";
 import {
-	clearDegraded,
 	spotifyUser,
 	syncSpotifyStatus,
 } from "@/lib/auth/views/stores/session";
@@ -88,7 +87,9 @@ Events.On("refresh:updated", () => void queryClient.invalidateQueries());
 // stale bytes from the store. Revalidate over the live session first, then drop
 // the queries so open views pick the fresh values up.
 Events.On("spotify:reconnected", async () => {
-	clearDegraded();
+	// The session is live again, so flip `connected` too. Clearing only
+	// `degraded` would hide the banner while every gate stayed closed.
+	await syncSpotifyStatus();
 	const handle = spotifyUser.value;
 	if (handle) {
 		try {

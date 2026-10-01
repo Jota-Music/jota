@@ -131,8 +131,10 @@ func (s *SpotifyService) reconnectLoop() {
 	wait := 15 * time.Second
 	for {
 		time.Sleep(wait)
-		if wait < 5*time.Minute {
-			wait *= 4
+		if next := wait * 4; next < 5*time.Minute {
+			wait = next
+		} else {
+			wait = 5 * time.Minute
 		}
 		// degraded is the only reason to keep trying. It clears on an
 		// interactive login, which stops the watcher from restoring the old
