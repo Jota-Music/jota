@@ -6,7 +6,7 @@ import {
 	X,
 } from "lucide-preact";
 import { t } from "@/lib/shared/i18n";
-import { open } from "@/lib/shared/utils/open";
+import { browse } from "@/lib/shared/utils/open";
 import {
 	dismissed,
 	install,
@@ -39,9 +39,7 @@ export function UpdateBanner() {
 			) : (
 				<button
 					type="button"
-					onClick={() =>
-						info.installable ? void install() : void open(info.url)
-					}
+					onClick={() => (info.installable ? void install() : browse(info.url))}
 					class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-(--dominant-color) px-3 py-1 text-xs font-semibold text-(--binary-color) transition-opacity hover:opacity-85"
 				>
 					{info.installable ? (

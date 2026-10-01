@@ -1,7 +1,7 @@
 import { Download, ExternalLink, Info, Loader2 } from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
-import { open } from "@/lib/shared/utils/open";
+import { browse } from "@/lib/shared/utils/open";
 import {
 	checkUpdate,
 	install,
@@ -53,7 +53,7 @@ export function AboutSettings() {
 						type="button"
 						title={t("update.viewRelease")}
 						aria-label={t("update.viewRelease")}
-						onClick={() => void open(RELEASES_URL)}
+						onClick={() => browse(RELEASES_URL)}
 						class="shrink-0 cursor-pointer text-zinc-500 transition-colors hover:text-zinc-200"
 					>
 						<Github size={16} />
@@ -78,7 +78,7 @@ function UpdateAction() {
 		<button
 			type="button"
 			disabled={installing.value}
-			onClick={() => (info.installable ? void install() : void open(info.url))}
+			onClick={() => (info.installable ? void install() : browse(info.url))}
 			class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-(--dominant-color) px-3 py-2 text-xs font-semibold text-(--binary-color) transition-opacity hover:opacity-85 disabled:opacity-50"
 		>
 			{installing.value ? (

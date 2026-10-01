@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { AccountSettings } from "@/lib/auth/views/ui/account-settings";
 import { t } from "@/lib/shared/i18n";
-import { open } from "@/lib/shared/utils/open";
+import { browse } from "@/lib/shared/utils/open";
 import { DiscordSettings } from "@/lib/shared/views/ui/components/discord-settings";
 import { IdleSettings } from "@/lib/shared/views/ui/components/idle-settings";
 import { LanguageSettings } from "@/lib/shared/views/ui/components/language-settings";
@@ -17,7 +17,7 @@ const isAndroid =
 	typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
 
 function openDeveloper(): void {
-	void open(GITHUB_URL);
+	browse(GITHUB_URL);
 }
 
 function SettingsPage() {
