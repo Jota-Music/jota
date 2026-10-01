@@ -56,6 +56,13 @@ var installMu sync.Mutex
 func New(version string) *App {
 	cfg := env.Load()
 	spotifySvc := spotify.NewSpotifyService(cfg.SpotifyClientID)
+	// Late-bound like the relay emit below: Watch fires long after New returns,
+	// so the application is resolvable by then.
+	spotifySvc.OnReconnect(func() {
+		if app := application.Get(); app != nil {
+			app.Event.Emit("spotify:reconnected")
+		}
+	})
 	youTubeSvc := youtube.NewService()
 	playlistsSvc := playlists.New(nil)
 	catalog := music.NewCatalog(spotifySvc, youTubeSvc, playlistsSvc)
@@ -98,6 +105,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	} else {
 		log.Printf("spotify: connected as %s", a.Spotify.Username())
 	}
+	a.Spotify.Watch()
 	refresh.Start(func() {
 		app := application.Get()
 		if app != nil {

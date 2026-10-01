@@ -11,7 +11,8 @@ import (
 // RefreshCatalog refetches every cached catalog entry in the background and
 // rewrites only the ones that changed. Playlists keep their cheap revision
 // check; everything else compares a fingerprint of the fetched content. Without
-// a session the pass is skipped wholesale.
+// a live session the pass is skipped wholesale, which is what lets a degraded
+// service keep serving a cache that only ages until Watch reconnects.
 func (s *SpotifyService) RefreshCatalog() error {
 	if s.Session() == nil {
 		return nil
@@ -32,6 +33,8 @@ func (s *SpotifyService) RefreshCatalog() error {
 			kv.Refreshable(musicBucket, key, func() (music.UserProfile, error) {
 				return s.userProfile(username)
 			})
+		case strings.HasPrefix(key, "following:v1:"):
+			kv.Refreshable(musicBucket, key, s.follows)
 		case strings.HasPrefix(key, "artist-discography:"):
 			uri := strings.TrimPrefix(key, "artist-discography:")
 			kv.Refreshable(musicBucket, key, func() (music.ArtistDiscography, error) {

@@ -4,12 +4,14 @@ import "github.com/Jota-Music/jota/internal/music"
 
 type SpotifyStatus struct {
 	Connected bool   `json:"connected"`
+	Degraded  bool   `json:"degraded"`
 	User      string `json:"user"`
 }
 
 func (a *App) SpotifyGetStatus() SpotifyStatus {
 	return SpotifyStatus{
 		Connected: a.Spotify.IsConnected(),
+		Degraded:  a.Spotify.IsDegraded(),
 		User:      a.Spotify.Username(),
 	}
 }
@@ -60,6 +62,16 @@ func (a *App) GetFriends() ([]string, error) {
 
 func (a *App) GetFollowing() ([]music.Follow, error) {
 	return a.Spotify.GetFollowing()
+}
+
+func (a *App) RevalidateFollowing() {
+	a.Spotify.RevalidateFollowing()
+}
+
+// SpotifyReconnect retries the session restore on demand, for the degraded
+// banner's retry button. It reports whether the session is back.
+func (a *App) SpotifyReconnect() bool {
+	return a.Spotify.Reconnect()
 }
 
 func (a *App) Search(query string, searchType string) ([]music.SearchResult, error) {

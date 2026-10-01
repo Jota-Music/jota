@@ -23,6 +23,14 @@ const (
 	credsKey     = "global"
 	bucketName   = "spotify-global"
 	loginTimeout = 5 * time.Minute
+
+	// restoreAttempts is how often Connect retries a stored session. Restoring
+	// is best-effort: the watcher retries in the background, so blocking
+	// startup here only delays the UI.
+	restoreAttempts = 1
+	// reconnectTimeout bounds one background attempt so a blackholed network
+	// cannot park the watcher forever.
+	reconnectTimeout = 10 * time.Second
 )
 
 var sessionBucket = kv.UseBucket(bucketName)
@@ -37,9 +45,18 @@ type SpotifyService struct {
 	sess *session.Session
 	done bool
 
+	// username survives a failed restore so a degraded service still reads the
+	// cache written for this account instead of the "default" bucket.
+	username string
+	degraded bool
+	watching bool
+
 	clientID  string
 	pendingMu sync.Mutex
 	pending   *pendingLogin
+
+	// onReconnect fires when the watcher brings a degraded service back.
+	onReconnect func()
 }
 
 type pendingLogin struct {
@@ -74,23 +91,70 @@ func (s *SpotifyService) Connect(ctx context.Context) error {
 			_ = sessionBucket.Delete(credsKey)
 			return ErrNotConnected
 		}
+		s.username = creds.Username
 		log.Printf("spotify: stored credentials found for %s", creds.Username)
-		sess, err := s.newSession(ctx, session.StoredCredentials{Username: creds.Username, Data: data})
+		sess, err := s.newSession(ctx, session.StoredCredentials{Username: creds.Username, Data: data}, restoreAttempts)
 		if err == nil {
 			s.sess = sess
+			s.degraded = false
 			log.Printf("spotify: connected as %s", sess.Username())
 			return nil
 		}
+		// Spotify is unreachable but we have an account, so the cached catalog
+		// is still usable. Serve it and let Watch retry in the background.
+		s.degraded = true
 		log.Printf("spotify: failed to restore session: %v", err)
+		return ErrNotConnected
 	}
 
 	log.Printf("spotify: no stored credentials (%v), serving disconnected; log in from the app", err)
 	return ErrNotConnected
 }
 
-func (s *SpotifyService) newSession(ctx context.Context, creds any) (*session.Session, error) {
+// Watch retries a degraded restore until it succeeds, then reports it through
+// onReconnect. It is a no-op while connected and exits on Disconnect.
+func (s *SpotifyService) Watch() {
+	s.mu.Lock()
+	if s.watching {
+		s.mu.Unlock()
+		return
+	}
+	s.watching = true
+	s.mu.Unlock()
+
+	go s.reconnectLoop()
+}
+
+func (s *SpotifyService) reconnectLoop() {
+	// ponytail: fixed ladder 15s -> 1m -> 4m -> 5m, no jitter; a real fleet
+	// would want backoff with jitter.
+	wait := 15 * time.Second
+	for {
+		time.Sleep(wait)
+		if wait < 5*time.Minute {
+			wait *= 4
+		}
+		// degraded is the only reason to keep trying. It clears on an
+		// interactive login, which stops the watcher from restoring the old
+		// session underneath CompleteLogin.
+		if s.IsConnected() || !s.IsDegraded() || s.isFinished() {
+			return
+		}
+		if !s.Reconnect() {
+			log.Printf("spotify: reconnect attempt failed")
+			continue
+		}
+		log.Printf("spotify: reconnected after outage")
+		if s.onReconnect != nil {
+			s.onReconnect()
+		}
+		return
+	}
+}
+
+func (s *SpotifyService) newSession(ctx context.Context, creds any, attempts int) (*session.Session, error) {
 	var lastErr error
-	for attempt := 1; attempt <= 8; attempt++ {
+	for attempt := 1; attempt <= attempts; attempt++ {
 		sess, err := session.NewSessionFromOptions(ctx, &session.Options{
 			Log:         &browserLogger{},
 			DeviceType:  devicespb.DeviceType_COMPUTER,
@@ -101,10 +165,26 @@ func (s *SpotifyService) newSession(ctx context.Context, creds any) (*session.Se
 			return sess, nil
 		}
 		lastErr = err
-		log.Printf("spotify: session creation failed (attempt %d/8): %v", attempt, err)
-		time.Sleep(3 * time.Second)
+		log.Printf("spotify: session creation failed (attempt %d/%d): %v", attempt, attempts, err)
+		if attempt < attempts {
+			time.Sleep(3 * time.Second)
+		}
 	}
 	return nil, lastErr
+}
+
+// OnReconnect registers the callback fired when Watch recovers the session.
+func (s *SpotifyService) OnReconnect(fn func()) {
+	s.onReconnect = fn
+}
+
+// Reconnect retries the restore with the background timeout applied, so no
+// caller can block on a blackholed network. It reports whether the session is
+// live again.
+func (s *SpotifyService) Reconnect() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), reconnectTimeout)
+	defer cancel()
+	return s.Connect(ctx) == nil
 }
 
 func (s *SpotifyService) Session() *session.Session {
@@ -117,7 +197,7 @@ func (s *SpotifyService) Username() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.sess == nil {
-		return ""
+		return s.username
 	}
 	return s.sess.Username()
 }
@@ -128,6 +208,20 @@ func (s *SpotifyService) IsConnected() bool {
 	return s.sess != nil
 }
 
+// IsDegraded reports a stored account whose session could not be restored.
+// The cached catalog still works, unlike IsConnected's live-session requirement.
+func (s *SpotifyService) IsDegraded() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.degraded
+}
+
+func (s *SpotifyService) isFinished() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.done
+}
+
 func (s *SpotifyService) Disconnect() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -135,6 +229,8 @@ func (s *SpotifyService) Disconnect() error {
 		s.sess.Close()
 		s.sess = nil
 	}
+	s.username = ""
+	s.degraded = false
 	s.done = true
 	return sessionBucket.Delete(credsKey)
 }
@@ -146,6 +242,7 @@ func (s *SpotifyService) StartupLogin() (string, error) {
 		s.sess = nil
 	}
 	s.done = false
+	s.degraded = false
 	s.mu.Unlock()
 
 	cbServer, err := newCallbackServer()
@@ -257,7 +354,7 @@ func (s *SpotifyService) CompleteLogin() error {
 	sess, err := s.newSession(context.Background(), session.SpotifyTokenCredentials{
 		Username: username,
 		Token:    token.AccessToken,
-	})
+	}, 8)
 	if err != nil {
 		log.Printf("spotify: session creation failed: %v", err)
 		return fmt.Errorf("failed connecting session: %w", err)
@@ -265,6 +362,8 @@ func (s *SpotifyService) CompleteLogin() error {
 
 	s.mu.Lock()
 	s.sess = sess
+	s.username = sess.Username()
+	s.degraded = false
 	s.mu.Unlock()
 
 	if err := saveCreds(sess.Username(), sess.StoredCredentials()); err != nil {
