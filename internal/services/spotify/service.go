@@ -247,7 +247,12 @@ func (s *SpotifyService) StartupLogin() (string, error) {
 	s.degraded = false
 	s.mu.Unlock()
 
-	cbServer, err := newCallbackServer()
+	verifier := oauth2.GenerateVerifier()
+	// The state is only ever compared against itself on the loopback callback,
+	// so it just has to be unpredictable. It ties the redirect to this request
+	// and keeps a stray hit on the port from delivering a foreign code.
+	state := oauth2.GenerateVerifier()
+	cbServer, err := newCallbackServer(state)
 	if err != nil {
 		log.Printf("spotify: StartupLogin failed: %v", err)
 		return "", fmt.Errorf("failed to start callback server: %w", err)
@@ -262,8 +267,7 @@ func (s *SpotifyService) StartupLogin() (string, error) {
 		Endpoint:    spotifyoauth2.Endpoint,
 	}
 
-	verifier := oauth2.GenerateVerifier()
-	authURL := oauthConf.AuthCodeURL("", oauth2.S256ChallengeOption(verifier))
+	authURL := oauthConf.AuthCodeURL(state, oauth2.S256ChallengeOption(verifier))
 
 	p := &pendingLogin{
 		verifier:    verifier,
