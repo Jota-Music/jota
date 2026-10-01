@@ -28,6 +28,7 @@ type Album struct {
 	Title  string   `json:"title"`
 	Url    string   `json:"url"`
 	Covers []string `json:"covers"`
+	Year   int32    `json:"year,omitempty"`
 }
 
 type Artist struct {

@@ -30,7 +30,11 @@ func tracksFromAlbum(album *metadatapb.Album) []Track {
 	for _, disc := range album.GetDisc() {
 		for _, tr := range disc.GetTrack() {
 			if tr != nil {
-				tracks = append(tracks, trackFromProto(tr))
+				t := trackFromProto(tr)
+				if t.Year == 0 {
+					t.Year = album.GetDate().GetYear()
+				}
+				tracks = append(tracks, t)
 			}
 		}
 	}

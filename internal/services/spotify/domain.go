@@ -23,6 +23,7 @@ type Track struct {
 	AlbumURI   string
 	CoverURL   string
 	Duration   int
+	Year       int32
 }
 
 type AlbumRef struct {

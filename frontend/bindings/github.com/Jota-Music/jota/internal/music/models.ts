@@ -6,6 +6,7 @@ export interface Album {
     "title": string;
     "url": string;
     "covers": string[] | null;
+    "year"?: number;
 }
 
 export interface AlbumSummary {

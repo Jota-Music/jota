@@ -45,6 +45,9 @@ func mergeTrackFromProto(t *Track, track *metadatapb.Track) {
 		if t.CoverURL == "" {
 			t.CoverURL = coverURLFromAlbum(album)
 		}
+		if t.Year == 0 {
+			t.Year = album.GetDate().GetYear()
+		}
 	}
 	if t.Duration == 0 {
 		t.Duration = int(track.GetDuration())

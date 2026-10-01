@@ -218,6 +218,7 @@ func trackToSong(t Track) music.Song {
 			Title:  t.Album,
 			Url:    t.AlbumURI,
 			Covers: covers,
+			Year:   t.Year,
 		},
 		Artists: artists,
 	}
