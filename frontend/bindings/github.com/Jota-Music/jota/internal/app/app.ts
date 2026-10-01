@@ -243,9 +243,10 @@ export function RevalidateYouTubeChannel(channel: string): $CancellablePromise<v
 }
 
 /**
- * SaveLogs asks the user where to save a copy of the log, so a crash report can
- * be shared. It returns the chosen path, or an empty string when the dialog is
- * dismissed.
+ * SaveLogs has no counterpart on Android: a save dialog cannot hand back a
+ * filesystem path there. The log is staged inside the app files dir (exposed to
+ * the system by the "logs" FileProvider path) and handed to the share chooser
+ * as a file attachment instead.
  */
 export function SaveLogs(): $CancellablePromise<string> {
     return $Call.ByID(2876203262);
