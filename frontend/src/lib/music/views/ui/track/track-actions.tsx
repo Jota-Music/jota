@@ -26,7 +26,7 @@ import {
 	selectedIds,
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
-import { openYoutubeEditor } from "@/lib/music/views/stores/youtube-editor";
+import { editingSong } from "@/lib/music/views/stores/youtube-editor";
 import { t } from "@/lib/shared/i18n";
 import {
 	type Action,
@@ -161,7 +161,7 @@ export function buildActions({
 				? t("music.youtubeId.edit")
 				: t("music.youtubeId.add"),
 			run: () => {
-				openYoutubeEditor(single);
+				editingSong.value = single;
 				done();
 			},
 		});

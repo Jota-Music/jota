@@ -5,10 +5,7 @@ import { getYouTubeId, updateYoutubeId } from "@/lib/music/app/get-audio";
 import { currentSong, setYoutube } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import { reloadCurrent } from "@/lib/music/views/stores/player";
-import {
-	closeYoutubeEditor,
-	editingSong,
-} from "@/lib/music/views/stores/youtube-editor";
+import { editingSong } from "@/lib/music/views/stores/youtube-editor";
 import { t } from "@/lib/shared/i18n";
 import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
@@ -45,7 +42,7 @@ export default function YoutubeEditor() {
 		const youtube = formData.get("youtube") as string;
 
 		if (song.youtubeId === youtube) {
-			closeYoutubeEditor();
+			editingSong.value = null;
 			return;
 		}
 
@@ -58,11 +55,15 @@ export default function YoutubeEditor() {
 			await reloadCurrent();
 		}
 
-		closeYoutubeEditor();
+		editingSong.value = null;
 	}
 
 	return (
-		<Modal open={open} close={closeYoutubeEditor} labelledBy="youtube-id-title">
+		<Modal
+			open={open}
+			close={() => (editingSong.value = null)}
+			labelledBy="youtube-id-title"
+		>
 			{song && (
 				<div class="flex flex-col">
 					<ModalHeader>
@@ -90,7 +91,7 @@ export default function YoutubeEditor() {
 								}}
 								onKeyDown={(e) => {
 									if (e.key === "Escape") {
-										closeYoutubeEditor();
+										editingSong.value = null;
 									}
 								}}
 							/>
