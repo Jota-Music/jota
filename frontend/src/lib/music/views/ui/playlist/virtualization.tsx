@@ -163,7 +163,7 @@ function PlaylistRow({
 						) : (
 							<>
 								<ArtistLinks artists={song.artists} />
-								{song.album?.title && (
+								{song.album?.title && song.album.id !== sourceId && (
 									<>
 										{" • "}
 										<AlbumLink album={song.album} />
