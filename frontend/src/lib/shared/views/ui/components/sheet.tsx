@@ -109,7 +109,7 @@ export function Sheet({
 	return createPortal(
 		<div
 			class={cn(
-				"z-50 md:z-[120] flex items-end justify-center p-0",
+				"z-50 md:z-120 flex items-end justify-center p-0",
 				centered && "sm:items-center sm:p-4",
 				host ? "absolute inset-0" : "fixed inset-0",
 				mobileOnly && "md:hidden",
