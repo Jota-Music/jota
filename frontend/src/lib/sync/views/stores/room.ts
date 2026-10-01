@@ -102,7 +102,6 @@ function answerJoin(from: string): void {
 // instead of adopting a stale relay cache from a previous session.
 function inherit(): boolean {
 	if (store.role.value !== "host" || !currentSong.value) return false;
-	broadcastQueue();
 	transport.send({ t: "state", ...currentPlayback() });
 	pendingStart.value = false;
 	return true;
@@ -223,15 +222,17 @@ async function applySnapshot(
 	joined = true;
 	store.joined.value = true;
 
+	// The host owns the queue whether or not it has anything loaded: adopting
+	// the relay cache instead is how a stale queue outlives the session that
+	// wrote it. A guest takes the room's queue, which is the only queue there is.
+	if (store.role.value === "host") {
+		broadcastQueue();
+	} else if (m.queue) {
+		applyQueue(m.queue);
+	}
+
 	if (inherit()) return;
 	const seq = roundSeq;
-
-	if (m.queue) {
-		applyQueue(m.queue);
-	} else if (store.role.value === "host") {
-		// A fresh room inherits the host queue.
-		broadcastQueue();
-	}
 
 	const p = m.state;
 	if (!p || (p.songId == null && !p.song)) {
