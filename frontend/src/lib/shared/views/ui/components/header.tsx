@@ -15,7 +15,10 @@ import {
 } from "lucide-preact";
 import { useCallback } from "preact/hooks";
 import { Link, useLocation } from "wouter-preact";
-import { spotifyConnected } from "@/lib/auth/views/stores/session";
+import {
+	spotifyConnected,
+	spotifyDegraded,
+} from "@/lib/auth/views/stores/session";
 import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
 import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import { removal, undoRemoval } from "@/lib/music/views/stores/removal";
@@ -266,7 +269,7 @@ export function Header() {
 							<div class="flex h-11 w-max items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
 								<SourceToggle
 									source={liveSource}
-									showSpotify={spotifyConnected.value}
+									showSpotify={spotifyConnected.value || spotifyDegraded.value}
 									onSelect={(v) => {
 										source.value = v;
 									}}
@@ -307,7 +310,7 @@ export function Header() {
 							<div class="flex h-10 items-stretch overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 transition-all focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600">
 								<SourceToggle
 									source={liveSource}
-									showSpotify={spotifyConnected.value}
+									showSpotify={spotifyConnected.value || spotifyDegraded.value}
 									onSelect={(v) => {
 										source.value = v;
 									}}

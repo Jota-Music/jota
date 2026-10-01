@@ -1,12 +1,22 @@
-import { IdleReload, RamMB, ReloadWindow } from "@bindings/app";
+import {
+	IdleReload,
+	RamMB,
+	ReloadWindow,
+	RevalidateFollowing,
+} from "@bindings/app";
 import { QueryClient, QueryClientProvider } from "@tanstack/preact-query";
 import { Events } from "@wailsio/runtime";
 import { lazy, Suspense } from "preact/compat";
 import { useEffect } from "preact/hooks";
 import { Route, Switch } from "wouter-preact";
-import { syncSpotifyStatus } from "@/lib/auth/views/stores/session";
+import {
+	clearDegraded,
+	spotifyUser,
+	syncSpotifyStatus,
+} from "@/lib/auth/views/stores/session";
 import { syncYouTubeStatus } from "@/lib/auth/views/stores/youtube";
 import { RequireSpotify } from "@/lib/auth/views/ui/spotify-connect";
+import { revalidateUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
@@ -73,6 +83,21 @@ const queryClient = new QueryClient({
 // queries so open views pick up changes on their next render. Unmounted queries
 // are not refetched, so untouched views keep their cached snapshot.
 Events.On("refresh:updated", () => void queryClient.invalidateQueries());
+
+// Cache entries never expire, so invalidating alone would just refetch the same
+// stale bytes from the store. Revalidate over the live session first, then drop
+// the queries so open views pick the fresh values up.
+Events.On("spotify:reconnected", async () => {
+	clearDegraded();
+	const handle = spotifyUser.value;
+	if (handle) {
+		try {
+			await revalidateUserPlaylists("spotify", handle);
+			await RevalidateFollowing();
+		} catch {}
+	}
+	await queryClient.invalidateQueries();
+});
 
 const IDLE_SHED_MS = 5 * 60 * 1000;
 
@@ -145,13 +170,13 @@ function Router() {
 						</RequireSpotify>
 					</Route>
 					<Route path="/radio/:id">
-						<RequireSpotify>
+						<RequireSpotify live>
 							<RadioPage />
 						</RequireSpotify>
 					</Route>
 					<Route path="/search/youtube/:query" component={YouTubeSearchPage} />
 					<Route path="/search/:type/:query">
-						<RequireSpotify>
+						<RequireSpotify live>
 							<SearchPage />
 						</RequireSpotify>
 					</Route>

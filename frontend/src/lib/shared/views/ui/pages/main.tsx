@@ -2,7 +2,11 @@ import { useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Disc3 } from "lucide-preact";
 import { useLocation } from "wouter-preact";
-import { spotifyConnected, spotifyUser } from "@/lib/auth/views/stores/session";
+import {
+	spotifyConnected,
+	spotifyDegraded,
+	spotifyUser,
+} from "@/lib/auth/views/stores/session";
 import { getUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import { playlistSource } from "@/lib/music/app/playlist-source";
@@ -43,7 +47,7 @@ export function MainPage() {
 	const spotifyQuery = useQuery({
 		queryKey: ["user-playlists", "spotify", spotifyHandle],
 		queryFn: () => getUserPlaylists("spotify", spotifyHandle),
-		enabled: spotifyConnected.value,
+		enabled: spotifyConnected.value || spotifyDegraded.value,
 	});
 
 	const { saved, isLoading: loadingSaved } = useSaved();

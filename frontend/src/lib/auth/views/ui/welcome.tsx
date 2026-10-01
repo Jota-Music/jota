@@ -3,6 +3,7 @@ import { Check } from "lucide-preact";
 import {
 	loginSpotifyAndWait,
 	spotifyConnected,
+	spotifyDegraded,
 	spotifyReady,
 } from "@/lib/auth/views/stores/session";
 import {
@@ -20,7 +21,14 @@ export function Welcome() {
 	const mute = useSignal(false);
 
 	useSignalEffect(() => {
-		if (spotifyReady.value && !spotifyConnected.value && !welcomeDismissed()) {
+		// A degraded account already has one; the connect modal would only be
+		// noise on top of the offline banner.
+		if (
+			spotifyReady.value &&
+			!spotifyConnected.value &&
+			!spotifyDegraded.value &&
+			!welcomeDismissed()
+		) {
 			welcomeOpen.value = true;
 		}
 	});

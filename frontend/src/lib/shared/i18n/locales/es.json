@@ -142,7 +142,10 @@
 			"connect": "Conectar con Spotify",
 			"prompt": "Conecta con Spotify para usar esto.",
 			"completeLogin": "Completa el inicio de sesión de Spotify y vuelve aquí.",
-			"couldNotConnect": "No se pudo conectar con Spotify."
+			"couldNotConnect": "No se pudo conectar con Spotify.",
+			"offline": "Spotify no responde — mostrando tu biblioteca guardada",
+			"retry": "Reintentar",
+			"offlineLimited": "Spotify no responde y esto necesita conexión. Tu biblioteca guardada sigue funcionando."
 		},
 		"youtube": {
 			"signInTitle": "Inicia sesión en YouTube",
@@ -167,7 +170,8 @@
 			"disconnect": "Desconectar",
 			"youtubeHint": "YouTube — necesario para vídeos con restricción de edad",
 			"signedIn": "Sesión iniciada",
-			"signOut": "Cerrar sesión"
+			"signOut": "Cerrar sesión",
+			"cachedAs": "Biblioteca guardada de"
 		}
 	},
 	"music": {

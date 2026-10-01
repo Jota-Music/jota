@@ -142,7 +142,10 @@
 			"connect": "Connect with Spotify",
 			"prompt": "Connect with Spotify to use this.",
 			"completeLogin": "Complete Spotify login, then return here.",
-			"couldNotConnect": "Could not connect to Spotify."
+			"couldNotConnect": "Could not connect to Spotify.",
+			"offline": "Spotify is unreachable — showing your saved library",
+			"retry": "Retry",
+			"offlineLimited": "Spotify is unreachable, and this needs a live connection. Your saved library still works."
 		},
 		"youtube": {
 			"signInTitle": "Sign in to YouTube",
@@ -167,7 +170,8 @@
 			"disconnect": "Disconnect",
 			"youtubeHint": "YouTube — needed for age-restricted videos",
 			"signedIn": "Signed in",
-			"signOut": "Sign out"
+			"signOut": "Sign out",
+			"cachedAs": "Saved library of"
 		}
 	},
 	"music": {

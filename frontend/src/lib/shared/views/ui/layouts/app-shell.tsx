@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
+import { DegradedBanner } from "@/lib/auth/views/ui/degraded-banner";
 import { SignInPrompt } from "@/lib/auth/views/ui/sign-in-prompt";
 import { Welcome } from "@/lib/auth/views/ui/welcome";
 import {
@@ -51,6 +52,7 @@ export function AppShell({
 				<div class="flex flex-col bg-stone-950">
 					<Header />
 					<UpdateBanner />
+					<DegradedBanner />
 					<SignInPrompt />
 				</div>
 

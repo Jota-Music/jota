@@ -11,5 +11,6 @@ export interface Relay {
 
 export interface SpotifyStatus {
     "connected": boolean;
+    "degraded": boolean;
     "user": string;
 }

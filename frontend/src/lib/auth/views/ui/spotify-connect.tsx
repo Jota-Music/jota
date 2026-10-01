@@ -4,6 +4,7 @@ import type { ComponentChildren } from "preact";
 import {
 	loginSpotifyAndWait,
 	spotifyConnected,
+	spotifyDegraded,
 } from "@/lib/auth/views/stores/session";
 import { t } from "@/lib/shared/i18n";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
@@ -48,13 +49,31 @@ export function SpotifyConnect() {
 	);
 }
 
-export function RequireSpotify({ children }: { children: ComponentChildren }) {
+export function RequireSpotify({
+	children,
+	live = false,
+}: {
+	children: ComponentChildren;
+	live?: boolean;
+}) {
 	if (spotifyConnected.value) return <>{children}</>;
+	// Cached routes keep working off the stored catalog. Routes marked live
+	// (search, radio) have no cache to fall back on, so they stay walled.
+	if (!live && spotifyDegraded.value) return <>{children}</>;
 	return (
 		<DefaultLayout class="gap-6">
 			<div class="flex min-h-0 flex-1 items-center justify-center">
-				<SpotifyConnect />
+				{spotifyDegraded.value ? <SpotifyUnavailable /> : <SpotifyConnect />}
 			</div>
 		</DefaultLayout>
+	);
+}
+
+function SpotifyUnavailable() {
+	return (
+		<div class="flex flex-col items-center gap-3 text-center">
+			<SpotifyIcon size={24} class="text-amber-500/70" />
+			<p class="text-sm text-zinc-400">{t("auth.spotify.offlineLimited")}</p>
+		</div>
 	);
 }

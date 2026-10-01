@@ -2,6 +2,7 @@ import { UserRound } from "lucide-preact";
 import {
 	disconnectSpotify,
 	spotifyConnected,
+	spotifyDegraded,
 	spotifyUser,
 } from "@/lib/auth/views/stores/session";
 import {
@@ -21,10 +22,14 @@ export function AccountSettings() {
 					{t("auth.account.title")}
 				</h2>
 			</div>
-			{spotifyConnected.value ? (
+			{spotifyConnected.value || spotifyDegraded.value ? (
 				<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
 					<div class="min-w-0">
-						<p class="text-xs text-zinc-500">{t("auth.account.connectedAs")}</p>
+						<p class="text-xs text-zinc-500">
+							{spotifyDegraded.value
+								? t("auth.account.cachedAs")
+								: t("auth.account.connectedAs")}
+						</p>
 						<p class="truncate text-sm text-zinc-100">
 							{spotifyUser.value ?? "Spotify"}
 						</p>

@@ -226,6 +226,10 @@ export function ResolveAudio(song: music$0.Song): $CancellablePromise<music$0.Au
     return $Call.ByID(1456476822, song);
 }
 
+export function RevalidateFollowing(): $CancellablePromise<void> {
+    return $Call.ByID(1169650278);
+}
+
 export function RevalidateFullPlaylist(id: string): $CancellablePromise<void> {
     return $Call.ByID(3671769412, id);
 }
@@ -319,6 +323,10 @@ export function SpotifyGetStatus(): $CancellablePromise<$models.SpotifyStatus> {
  * in their browser, Spotify redirects to the local callback server which
  * captures the code and completes the login. SpotifyLoginAndWait blocks
  * until the flow finishes (success or timeout).
+ * 
+ * hold() runs across the whole flow: the redirect target is a loopback
+ * listener inside this process, so on Android the app must survive being
+ * backgrounded for the browser to be able to hand the code back.
  */
 export function SpotifyLogin(): $CancellablePromise<string> {
     return $Call.ByID(2894717079);
@@ -326,6 +334,14 @@ export function SpotifyLogin(): $CancellablePromise<string> {
 
 export function SpotifyLoginAndWait(): $CancellablePromise<void> {
     return $Call.ByID(57797921);
+}
+
+/**
+ * SpotifyReconnect retries the session restore on demand, for the degraded
+ * banner's retry button. It reports whether the session is back.
+ */
+export function SpotifyReconnect(): $CancellablePromise<boolean> {
+    return $Call.ByID(4133825283);
 }
 
 export function SyncCheck(relayURL: string, token: string): $CancellablePromise<boolean> {

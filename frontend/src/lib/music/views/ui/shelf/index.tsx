@@ -1,6 +1,9 @@
 import { Pause, Play, Plus, Trash2 } from "lucide-preact";
 import { useEffect, useRef } from "preact/hooks";
-import { spotifyConnected } from "@/lib/auth/views/stores/session";
+import {
+	spotifyConnected,
+	spotifyDegraded,
+} from "@/lib/auth/views/stores/session";
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { queueSource } from "@/lib/music/views/stores/queue";
@@ -189,7 +192,9 @@ export function Shelf({
 						>
 							{filteredItems.length === 0 ? (
 								<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
-									{sourceFilter === "spotify" && !spotifyConnected.value ? (
+									{sourceFilter === "spotify" &&
+									!spotifyConnected.value &&
+									!spotifyDegraded.value ? (
 										<SpotifyConnect />
 									) : sourceFilter === "spotify" ? (
 										t("music.shelf.noSpotify")
