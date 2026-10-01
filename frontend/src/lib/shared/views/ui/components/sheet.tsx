@@ -6,6 +6,7 @@ import { useContext, useEffect, useRef } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { useSheetDrag } from "@/lib/shared/views/hooks/use-sheet-drag";
+import { hold } from "@/lib/shared/views/stores/overlays";
 
 export const OverlayHost = createContext<RefObject<HTMLDivElement> | null>(
 	null,
@@ -69,6 +70,16 @@ export function Sheet({
 	const backdropRef = useRef<HTMLButtonElement>(null);
 	const host = useContext(OverlayHost)?.current ?? null;
 	const dragging = useSheetDrag(panelRef, backdropRef, close, mounted.value);
+
+	// Most call sites pass an inline arrow, so `close` changes identity on
+	// every render; the overlay stack needs the live one, not the first.
+	const closeRef = useRef(close);
+	closeRef.current = close;
+
+	useEffect(() => {
+		if (!open) return;
+		return hold(() => closeRef.current());
+	}, [open]);
 
 	const clearInline = () => {
 		const el = panelRef.current;

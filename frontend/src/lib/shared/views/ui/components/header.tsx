@@ -25,6 +25,7 @@ import { removal, undoRemoval } from "@/lib/music/views/stores/removal";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { back, canForward, forward } from "@/lib/shared/views/stores/history";
+import { dismiss, held } from "@/lib/shared/views/stores/overlays";
 import { WindowControlsBar } from "@/lib/shared/views/ui/components/window-controls-bar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
@@ -108,7 +109,14 @@ export function Header() {
 		[setLocation],
 	);
 
+	// At the root there is nowhere to go back to, but an open overlay still
+	// answers the press, so the button stays live while one is held.
+	const root = location === "/";
+
 	const goBack = useCallback(() => {
+		// An open sheet or modal owns the press; only fall through to history
+		// once the overlay stack is empty.
+		if (dismiss()) return;
 		if (!back()) {
 			setLocation("/");
 		}
@@ -139,14 +147,12 @@ export function Header() {
 					<button
 						type="button"
 						onClick={goBack}
-						disabled={location === "/"}
+						disabled={root && !held.value}
 						title={t("nav.back")}
 						class={cn(
-							"flex aspect-square h-full items-center justify-center cursor-pointer transition-colors",
-							location === "/"
-								? "text-zinc-400 disabled:opacity-30"
-								: "text-zinc-400 hover:text-zinc-100",
-							location !== "/" && "hover:text-zinc-100",
+							"flex aspect-square h-full items-center justify-center cursor-pointer transition-colors text-zinc-400",
+							!(root && !held.value) && "hover:text-zinc-100",
+							root && !held.value && "disabled:opacity-30",
 						)}
 					>
 						<ArrowLeft class="size-5 md:size-4" />

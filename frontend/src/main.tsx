@@ -2,6 +2,7 @@ import { effect } from "@preact/signals";
 import { render } from "preact";
 import { t } from "@/lib/shared/i18n";
 import { logError } from "@/lib/shared/views/stores/errors";
+import { dismiss } from "@/lib/shared/views/stores/overlays";
 import { Boundary } from "@/lib/shared/views/ui/components/boundary";
 import Router from "@/lib/shared/views/ui/router";
 import "@wailsio/runtime";
@@ -27,6 +28,17 @@ window.addEventListener("error", (e) =>
 window.addEventListener("unhandledrejection", (e) =>
 	logError(e.reason, "unhandled rejection"),
 );
+
+declare global {
+	interface Window {
+		__jotaBack?: () => boolean;
+	}
+}
+
+// The Android back button would otherwise walk WebView history and swap the
+// route out from under an open sheet; it asks the page first and only goes
+// back when nothing was holding.
+window.__jotaBack = dismiss;
 
 const appRoot = document.getElementById("app");
 if (!appRoot) throw new Error("Missing #app root");

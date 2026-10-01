@@ -1038,10 +1038,26 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
+        if (webView == null) {
             super.onBackPressed();
+            return;
         }
+        // Overlays live in JS state rather than in history, so a plain goBack()
+        // would swap the route out from under an open one. Ask the page first:
+        // __jotaBack dismisses the topmost overlay and reports whether it had
+        // one to close. super refers to the enclosing activity here, not to the
+        // lambda (JLS 15.27.2), so the fallback still exits as before.
+        webView.evaluateJavascript(
+                "window.__jotaBack ? !!window.__jotaBack() : false",
+                handled -> {
+                    if (handled != null && "true".equals(handled)) {
+                        return;
+                    }
+                    if (webView.canGoBack()) {
+                        webView.goBack();
+                    } else {
+                        super.onBackPressed();
+                    }
+                });
     }
 }
