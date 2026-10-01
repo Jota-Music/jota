@@ -75,15 +75,12 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 			<div class="group cursor-pointer overflow-hidden rounded-md">
 				<div class="flex flex-col gap-2">
 					<div class="relative aspect-square w-full overflow-hidden rounded-md">
-						{coverUrl ? (
-							<Image
-								src={cover(coverUrl, 320)}
-								alt={item.name}
-								class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
-							/>
-						) : (
-							<div class="h-full w-full bg-zinc-900" />
-						)}
+						<Image
+							src={cover(coverUrl, 320)}
+							alt={item.name}
+							class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
+							fallback={<div class="h-full w-full bg-zinc-900" />}
+						/>
 						{isPlaylist && (
 							<>
 								<div class={cn(hover, "left-1 top-1")}>

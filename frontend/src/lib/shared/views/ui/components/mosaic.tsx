@@ -23,6 +23,11 @@ export function Mosaic({ covers, alt = "", placeholder, size = 480 }: Props) {
 				loading="lazy"
 				draggable={false}
 				class="h-full w-full object-cover"
+				fallback={
+					<div class="flex h-full w-full items-center justify-center text-zinc-600">
+						{placeholder}
+					</div>
+				}
 			/>
 		);
 	}
@@ -46,6 +51,11 @@ export function Mosaic({ covers, alt = "", placeholder, size = 480 }: Props) {
 					loading="lazy"
 					draggable={false}
 					class="h-full w-full object-cover"
+					fallback={
+						<div class="flex h-full w-full items-center justify-center text-zinc-600">
+							{placeholder}
+						</div>
+					}
 				/>
 			))}
 			{imgs.length === 3 && (

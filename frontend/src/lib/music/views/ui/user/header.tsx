@@ -40,17 +40,16 @@ export function UserHeader({
 
 	return (
 		<header class="flex shrink-0 items-center gap-4">
-			{imageUrl ? (
-				<Image
-					src={cover(imageUrl, 128)}
-					alt={name}
-					class="h-16 w-16 shrink-0 rounded-full object-cover"
-				/>
-			) : (
-				<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-zinc-500">
-					<UserIcon size={26} />
-				</div>
-			)}
+			<Image
+				src={cover(imageUrl, 128)}
+				alt={name}
+				class="h-16 w-16 shrink-0 rounded-full object-cover"
+				fallback={
+					<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-zinc-500">
+						<UserIcon size={26} />
+					</div>
+				}
+			/>
 
 			{/* flex-1 takes the leftover width so the actions stay flush right
 			    and the name still truncates instead of pushing them off. */}

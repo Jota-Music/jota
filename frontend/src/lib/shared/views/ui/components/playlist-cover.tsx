@@ -10,15 +10,18 @@ type Props = {
 };
 
 export function PlaylistCover({ src, alt = "", imgClass, size = 320 }: Props) {
-	if (src) {
-		return (
-			<Image src={cover(src, size)} alt={alt} loading="lazy" class={imgClass} />
-		);
-	}
 	return (
-		<div class="flex h-full w-full items-center justify-center bg-zinc-900 text-zinc-600">
-			<ListMusic size={28} />
-		</div>
+		<Image
+			src={cover(src, size)}
+			alt={alt}
+			loading="lazy"
+			class={imgClass}
+			fallback={
+				<div class="flex h-full w-full items-center justify-center bg-zinc-900 text-zinc-600">
+					<ListMusic size={28} />
+				</div>
+			}
+		/>
 	);
 }
 

@@ -79,16 +79,17 @@ export function PageHeader({
 						placeholder={<Disc3 size={16} />}
 					/>
 				</div>
-			) : cover ? (
+			) : (
 				<Image
 					src={coverImage(cover, 128)}
 					alt=""
 					class="h-16 w-16 shrink-0 rounded-md object-cover"
+					fallback={
+						<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-zinc-500">
+							<Disc3 size={28} />
+						</div>
+					}
 				/>
-			) : (
-				<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-zinc-500">
-					<Disc3 size={28} />
-				</div>
 			)}
 			<div class="min-w-0">
 				<h2 class="truncate text-xl font-semibold leading-tight">{title}</h2>

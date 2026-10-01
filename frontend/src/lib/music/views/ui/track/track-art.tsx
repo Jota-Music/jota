@@ -30,6 +30,11 @@ export function TrackArt({
 				src={cover(song.album?.covers?.[0], 80)}
 				alt={alt}
 				class={cn(imgClass, current && "brightness-40")}
+				fallback={
+					<div class="flex h-full w-full items-center justify-center bg-zinc-900 text-zinc-600">
+						<Music size={18} />
+					</div>
+				}
 			/>
 
 			{current &&

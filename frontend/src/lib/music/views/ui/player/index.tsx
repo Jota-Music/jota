@@ -96,20 +96,19 @@ const Disc = memo(function Disc({
 			class="text-current mx-auto w-48"
 		>
 			<div class="relative aspect-square w-full">
-				{cover ? (
-					<Image
-						src={coverImage(cover, 384)}
-						alt=""
-						draggable={false}
-						class={cn(
-							"absolute inset-0 h-full w-full object-cover rounded-2xl shadow-lg opacity-40 animate-[spin_120s_linear_infinite] select-none",
-							!isPlaying && "[animation-play-state:paused]",
-						)}
-						style="-webkit-user-drag: none"
-					/>
-				) : (
-					<div class="absolute inset-0 h-full w-full rounded-full bg-stone-800" />
-				)}
+				<Image
+					src={coverImage(cover, 384)}
+					alt=""
+					draggable={false}
+					class={cn(
+						"absolute inset-0 h-full w-full object-cover rounded-2xl shadow-lg opacity-40 animate-[spin_120s_linear_infinite] select-none",
+						!isPlaying && "[animation-play-state:paused]",
+					)}
+					style="-webkit-user-drag: none"
+					fallback={
+						<div class="absolute inset-0 h-full w-full rounded-full bg-stone-800" />
+					}
+				/>
 
 				<div class="absolute inset-0 w-max h-max flex items-center justify-center gap-6 m-auto">
 					<button
@@ -454,6 +453,9 @@ export function PlayerBar() {
 										draggable={false}
 										class="w-full h-full object-cover rounded-lg shadow-lg select-none"
 										style="-webkit-user-drag: none"
+										fallback={
+											<div class="w-full h-full rounded-lg bg-stone-800" />
+										}
 									/>
 									<div class="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10" />
 								</div>

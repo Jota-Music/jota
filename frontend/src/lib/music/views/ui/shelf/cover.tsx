@@ -25,6 +25,10 @@ export function Cover({
 	iconSize: number;
 	imageSize?: number;
 }) {
+	const fallback = item.placeholder?.(size) ?? (
+		<Placeholder icon={item.icon} size={iconSize} />
+	);
+
 	return (
 		<>
 			{item.covers?.length ? (
@@ -32,26 +36,21 @@ export function Cover({
 					covers={item.covers}
 					alt={item.name}
 					size={imageSize}
-					placeholder={
-						item.placeholder?.(size) ?? (
-							<Placeholder icon={item.icon} size={iconSize} />
-						)
-					}
+					placeholder={fallback}
 				/>
-			) : item.cover ? (
+			) : (
 				<Image
 					src={cover(item.cover, imageSize)}
 					alt={item.name}
 					draggable={false}
 					loading="lazy"
 					class="h-full w-full object-cover opacity-80"
+					fallback={
+						<div class="flex h-full w-full items-center justify-center text-zinc-600">
+							{fallback}
+						</div>
+					}
 				/>
-			) : (
-				<div class="flex h-full w-full items-center justify-center text-zinc-600">
-					{item.placeholder?.(size) ?? (
-						<Placeholder icon={item.icon} size={iconSize} />
-					)}
-				</div>
 			)}
 			{item.overlay && (
 				<div class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/60">
