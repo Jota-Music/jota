@@ -15,8 +15,27 @@ the audio through YouTube, and start a room over a relay you own.
 **No cloud. No tracking. No subscriptions.**
 
 [![CI](https://github.com/Jota-Music/jota/actions/workflows/ci.yml/badge.svg)](https://github.com/Jota-Music/jota/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Jota-Music/jota)](https://github.com/Jota-Music/jota/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-4ea94b.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.26-00add8.svg)](go.mod)
+
+## Download
+
+Pre-built binaries for every platform on the [Releases page](https://github.com/Jota-Music/jota/releases):
+
+| Platform | Artifacts |
+|----------|-----------|
+| Linux | `.deb`, `.rpm`, `.AppImage`, `.flatpak`, `PKGBUILD` (AUR) |
+| Android | `.apk` |
+| Windows | NSIS `.exe` |
+| macOS | universal `.dmg` |
+
+On AppImage, macOS `.app`, Windows per-user and Android, Jota checks for
+updates on launch and installs them in place.
+
+> [!WARNING]
+> The Windows `.exe` and macOS `.dmg` are unsigned and may be flagged or blocked
+> by SmartScreen and Gatekeeper.
 
 ## Features
 
@@ -70,7 +89,7 @@ the audio through YouTube, and start a room over a relay you own.
 </p>
 
 <p align="center">
-  <img src="assets/screenshot-player.png" width="640" alt="Full player">
+  <img src="assets/screenshot-rooms.png" width="640" alt="Rooms — sync queue and play/pause across devices">
 </p>
 
 ## Get started
@@ -85,51 +104,11 @@ wails3 task package                            # .deb + .rpm + archlinux → bin
 wails3 task android                            # release APK → bin/jota.apk
 ```
 
-## Download
-
-Tagged releases ship:
-
-| Platform | Artifacts |
-|----------|-----------|
-| Linux | `.deb`, `.rpm`, `.AppImage`, `.flatpak`, `PKGBUILD` `(AUR)` |
-| Android | `.apk` |
-| Windows | NSIS `.exe` |
-| macOS | universal `.dmg` |
-
-On AppImage, macOS `.app`, Windows per-user and Android, Jota checks for
-updates on launch and installs them in place; the download above is
-also where those channels fetch their next version.
-
-> [!WARNING]
-> The Windows `.exe` and macOS `.dmg` are unsigned and may be flagged or blocked
-> by SmartScreen and Gatekeeper.
-
 ## Cloudflare WARP
 
-Running Jota behind Cloudflare WARP can make playback and API calls sluggish:
-the free client routes all traffic through Cloudflare's edge (MTU 1300 and extra
-RTT per request), and audio streams ride the tunnel too. On this repo's Linux
-setup, `apresolve.spotify.com` connected in ~6s through the tunnel vs ~0.03s
-direct.
-
-On a personal (non-managed) WARP client, exclude the music domains so their
-traffic goes direct:
-
-```bash
-warp-cli tunnel host add "*.spotify.com"
-warp-cli tunnel host add "*.scdn.co"
-warp-cli tunnel host add "*.youtube.com"
-warp-cli tunnel host add "*.googlevideo.com"
-warp-cli tunnel host add "*.ytimg.com"
-warp-cli disconnect          # re-negotiate the tunnel
-warp-cli connect
-warp-cli tunnel host list    # confirm the exclusions are stored
-```
-
-Host wildcards cover the rotating IPs underneath (Spotify access points and
-`googlevideo` hosts), so re-runs are not needed. The local relay (`127.0.0.1`)
-never goes through the tunnel. On Zero Trust-managed clients, split tunnels are
-controlled by org policy (dashboard/MDM), not `warp-cli`.
+Running Jota behind Cloudflare WARP can make playback sluggish — see the
+[WARP troubleshooting guide](https://github.com/Jota-Music/jota/wiki/Cloudflare-WARP)
+for the fix.
 
 ## Roadmap
 
