@@ -1,5 +1,5 @@
 import { pick } from "@/lib/music/app/playback";
-import { pinAfter, sameQueue } from "@/lib/music/app/queue";
+import { insertAfter, pinAfter, sameQueue } from "@/lib/music/app/queue";
 import { permute, random, seed } from "@/lib/music/app/shuffle";
 import type { Song } from "@/lib/music/model";
 import {
@@ -22,7 +22,6 @@ import {
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
 import {
-	clampIndex,
 	currentIndex,
 	persistQueue,
 	pingQueue,
@@ -192,31 +191,35 @@ export function playList(songs: Song[], source: string | null = null) {
 	return playAll(songs, source);
 }
 
-let enqueueAnchor = -1;
+// The id of the song the last local enqueue landed on, so consecutive adds stack
+// after each other. Kept as an id, not an index: a queue swapped by the room
+// keeps its meaning.
 let enqueueAnchorId: string | null = null;
 
 export function enqueueMany(songs: Song[]) {
 	if (songs.length === 0) return;
 
-	// A position left over from a longer queue would insert at the end and stay
-	// out of range, so reconcile it before it decides where the songs land.
-	if (currentIndex.value < 0 || currentIndex.value >= queue.value.length) {
-		currentIndex.value = clampIndex(currentIndex.value, queue.value.length);
-	}
+	const q = queue.value;
+	const current =
+		currentIndex.value >= 0 && currentIndex.value < q.length
+			? q[currentIndex.value]
+			: null;
+	// The previous enqueue is only a valid anchor while it sits at or after the
+	// playing track. An older one that ended up behind it would drop the songs
+	// above the queue panel's viewport, so fall back to the playing track.
+	const anchor = enqueueAnchorId
+		? q.findIndex((song) => song.id === enqueueAnchorId)
+		: -1;
+	const afterId =
+		anchor !== -1 && (!current || anchor >= currentIndex.value)
+			? enqueueAnchorId
+			: current
+				? current.id
+				: (q[q.length - 1]?.id ?? null);
 
-	const q = [...queue.value];
-	const anchored =
-		enqueueAnchorId != null && q[enqueueAnchor]?.id === enqueueAnchorId;
-	const at = anchored
-		? enqueueAnchor + 1
-		: currentIndex.value >= 0 && currentIndex.value < q.length
-			? currentIndex.value + 1
-			: q.length;
-	if (anchored && at > q.length) return;
-	q.splice(at, 0, ...songs);
-	enqueueAnchor = at + songs.length - 1;
+	const { queue: next, index } = insertAfter(q, songs, afterId);
 	enqueueAnchorId = songs[songs.length - 1]?.id ?? null;
-	queue.value = q;
+	queue.value = next;
 	persistQueue();
 	pingQueue();
 
@@ -224,7 +227,7 @@ export function enqueueMany(songs: Song[]) {
 	// rewrote the whole queue (O(n) copy + a full notification + a persist). The
 	// tracks are warmed by playAtIndex when the queue reaches them.
 	if (currentSong.value === null) {
-		void playAtIndex(at);
+		void playAtIndex(index);
 		return;
 	}
 
