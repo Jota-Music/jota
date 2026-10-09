@@ -8,6 +8,7 @@ const QUEUE_STORAGE_KEY = "music-queue";
 const INDEX_STORAGE_KEY = "music-queue-index";
 const SHUFFLE_STORAGE_KEY = "music-shuffle";
 const REPEAT_STORAGE_KEY = "music-repeat";
+const QUEUE_SOURCE_STORAGE_KEY = "music-queue-source";
 
 function loadQueue(): Song[] {
 	const raw = read(QUEUE_STORAGE_KEY);
@@ -52,6 +53,14 @@ function saveRepeat(v: RepeatMode) {
 	write(REPEAT_STORAGE_KEY, v);
 }
 
+function loadQueueSource(): string | null {
+	return read(QUEUE_SOURCE_STORAGE_KEY) || null;
+}
+
+function saveQueueSource(v: string | null) {
+	write(QUEUE_SOURCE_STORAGE_KEY, v ?? "");
+}
+
 // The index may outlive the queue it points into: a room snapshot replaces the
 // queue with a shorter one, and a stale index persists in storage across
 // reloads. An out-of-range index breaks pick(), leaves the panel with nothing to
@@ -89,8 +98,9 @@ export const canNext = computed(() => {
 });
 
 // The playlist or album the current queue was started from, when known. Lets a
-// card's play button reflect (and toggle) its own playback.
-export const queueSource = signal<string | null>(null);
+// card's play button reflect (and toggle) its own playback. Restored like the
+// queue, so the association survives a reload.
+export const queueSource = signal<string | null>(loadQueueSource());
 
 export const shuffle = signal<boolean>(loadShuffle());
 
@@ -142,6 +152,7 @@ function flushQueue() {
 	saveDirty = false;
 	saveQueue(queue.value);
 	saveIndex(currentIndex.value);
+	saveQueueSource(queueSource.value);
 }
 
 export function toggleShuffle() {
