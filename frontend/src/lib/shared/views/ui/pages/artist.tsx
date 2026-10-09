@@ -30,6 +30,8 @@ const view = signal<string>("tracks");
 
 const groupOrder = ["album", "single", "compilation"] as const;
 
+const GROUP_KEYS = ["album", "single", "compilation", "appears_on"];
+
 const GROUP_LABELS: Record<string, string> = {
 	album: "pages.artist.groups.album",
 	single: "pages.artist.groups.single",
@@ -98,7 +100,10 @@ export function ArtistPage() {
 	}, [id]);
 
 	const counts = groupCounts(disco?.albums);
-	const tabs = ["tracks", ...groupKeysOf(disco?.albums)];
+	const tabs = [
+		"tracks",
+		...new Set([...GROUP_KEYS, ...groupKeysOf(disco?.albums)]),
+	];
 	const activeTab = tabs.includes(view.value) ? view.value : "tracks";
 
 	useEffect(() => {
@@ -157,8 +162,8 @@ export function ArtistPage() {
 					}
 				/>
 
-				<div class="grid shrink-0 grid-cols-2 gap-2 md:grid-cols-4">
-					{tabs.map((tab) =>
+				<div class="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-6">
+					{tabs.map((tab, i) =>
 						tab === "tracks" ? (
 							<button
 								key="tracks"
@@ -167,7 +172,7 @@ export function ArtistPage() {
 									view.value = "tracks";
 								}}
 								class={cn(
-									"flex h-9 w-full cursor-pointer items-center justify-start gap-2 rounded-md border px-3 text-sm transition-colors",
+									"col-span-full flex h-9 cursor-pointer items-center justify-start gap-2 rounded-md border px-3 text-sm transition-colors sm:col-span-3",
 									activeTab === "tracks"
 										? "border-zinc-600 bg-zinc-900 text-white"
 										: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white",
@@ -180,11 +185,13 @@ export function ArtistPage() {
 							<button
 								key={tab}
 								type="button"
+								disabled={!!disco && !counts[tab]}
 								onClick={() => {
 									view.value = tab;
 								}}
 								class={cn(
-									"flex h-9 w-full cursor-pointer items-center justify-start gap-2 rounded-md border px-3 text-sm transition-colors",
+									"flex h-9 cursor-pointer items-center justify-start gap-2 rounded-md border px-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+									i >= 2 ? "sm:col-span-2" : "sm:col-span-3",
 									activeTab === tab
 										? "border-zinc-600 bg-zinc-900 text-white"
 										: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white",
@@ -192,20 +199,18 @@ export function ArtistPage() {
 							>
 								<Disc3 size={14} />
 								{groupLabel(tab)}
+								{discoLoading && (
+									<Loader
+										size={14}
+										class="animate-spin text-zinc-500"
+										aria-label={t("pages.artist.loadingDiscography")}
+									/>
+								)}
 								{counts[tab] !== undefined && (
 									<span class="text-xs text-zinc-500">({counts[tab]})</span>
 								)}
 							</button>
 						),
-					)}
-					{discoLoading && (
-						<div class="flex items-center justify-start">
-							<Loader
-								size={16}
-								class="animate-spin text-zinc-500"
-								aria-label={t("pages.artist.loadingDiscography")}
-							/>
-						</div>
 					)}
 				</div>
 
