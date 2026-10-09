@@ -15,7 +15,6 @@ export function sameQueue(a: Song[], b: Song[]): boolean {
 	return true;
 }
 
-
 export function isOwnList(
 	source: string | null,
 	queueSource: string | null,

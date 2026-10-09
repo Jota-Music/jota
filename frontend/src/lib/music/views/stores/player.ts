@@ -149,7 +149,6 @@ export async function playFromQueueSelection(
 	clicked: Song,
 	source: string | null = null,
 ) {
-
 	if (
 		currentSong.value?.id === clicked.id &&
 		isOwnList(source, queueSource.value, fullOrderedSongs, queue.value)
