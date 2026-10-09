@@ -1,4 +1,4 @@
-import type { Song } from "@/lib/music/model";
+import type { QueueAction, Song } from "@/lib/music/model";
 
 // Shuffle permutes the queue, so a source list matches the queue by membership,
 // not by order. Counts each id so duplicates are compared correctly.
@@ -34,4 +34,56 @@ export function pinAfter(
 
 	next.splice(Math.min(current + 1, next.length), 0, item);
 	return { queue: next, index: current };
+}
+
+// Inserts songs right after the song with `afterId`, so the enqueuing device and
+// every receiver land them on the same spot without shipping a whole snapshot.
+// A null id means the head; an id that is gone means the end.
+export function insertAfter(
+	queue: Song[],
+	songs: Song[],
+	afterId: string | null,
+): { queue: Song[]; index: number } {
+	const at =
+		afterId == null ? -1 : queue.findIndex((song) => song.id === afterId);
+	const index = afterId == null ? 0 : at === -1 ? queue.length : at + 1;
+	const next = [...queue];
+	next.splice(index, 0, ...songs);
+	return { queue: next, index };
+}
+
+// Reports the incremental edit that turns `prev` into `next`, when one exists: a
+// contiguous insertion, or a resolved YouTube id on a single track. Anything else
+// (a removal, a reorder, a whole new queue) returns null and is sent as a full
+// snapshot instead.
+export function delta(prev: Song[], next: Song[]): QueueAction | null {
+	if (next.length > prev.length) {
+		let start = 0;
+		while (start < prev.length && prev[start].id === next[start].id) start++;
+		const extra = next.length - prev.length;
+		for (let i = start; i < prev.length; i++) {
+			if (prev[i].id !== next[i + extra].id) return null;
+		}
+		return {
+			action: "enqueue",
+			songs: next.slice(start, start + extra),
+			afterId: start > 0 ? next[start - 1].id : null,
+		};
+	}
+	if (next.length !== prev.length) return null;
+
+	let changed = -1;
+	for (let i = 0; i < prev.length; i++) {
+		if (prev[i].id !== next[i].id) return null;
+		if (prev[i].youtubeId !== next[i].youtubeId) {
+			if (changed !== -1) return null;
+			changed = i;
+		}
+	}
+	if (changed === -1) return null;
+	return {
+		action: "youtube",
+		id: next[changed].id,
+		youtubeId: next[changed].youtubeId ?? "",
+	};
 }

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { pinAfter, sameQueue } from "@/lib/music/app/queue";
+import { delta, insertAfter, pinAfter, sameQueue } from "@/lib/music/app/queue";
 import type { Song } from "@/lib/music/model";
 
 const base = {
@@ -10,8 +10,8 @@ const base = {
 	artists: [],
 } satisfies Partial<Song>;
 
-function song(id: string): Song {
-	return { id, name: id, ...base };
+function song(id: string, youtubeId?: string): Song {
+	return { id, name: id, ...base, youtubeId };
 }
 
 test("pinAfter moves a song next to the current one", () => {
@@ -42,4 +42,47 @@ test("sameQueue respects duplicates", () => {
 test("sameQueue rejects different lengths and ids", () => {
 	expect(sameQueue([song("a")], [song("a"), song("b")])).toBe(false);
 	expect(sameQueue([song("a")], [song("b")])).toBe(false);
+});
+
+test("insertAfter lands the songs after the named track", () => {
+	const out = insertAfter([song("a"), song("b"), song("c")], [song("x")], "a");
+	expect(out.queue.map((s) => s.id)).toEqual(["a", "x", "b", "c"]);
+	expect(out.index).toBe(1);
+});
+
+test("insertAfter puts a null anchor at the head and a gone id at the end", () => {
+	expect(
+		insertAfter([song("a"), song("b")], [song("x")], null).queue.map(
+			(s) => s.id,
+		),
+	).toEqual(["x", "a", "b"]);
+	expect(
+		insertAfter([song("a"), song("b")], [song("x")], "gone").queue.map(
+			(s) => s.id,
+		),
+	).toEqual(["a", "b", "x"]);
+});
+
+test("delta reports a contiguous insertion with its anchor", () => {
+	expect(
+		delta([song("a"), song("b")], [song("a"), song("x"), song("b")]),
+	).toEqual({ action: "enqueue", songs: [song("x")], afterId: "a" });
+	expect(delta([song("a")], [song("x"), song("a")])).toEqual({
+		action: "enqueue",
+		songs: [song("x")],
+		afterId: null,
+	});
+});
+
+test("delta reports a single resolved YouTube id", () => {
+	const op = delta([song("a"), song("b")], [song("a"), song("b", "vid")]);
+	expect(op).toEqual({ action: "youtube", id: "b", youtubeId: "vid" });
+});
+
+test("delta refuses removals, reorders and unchanged queues", () => {
+	expect(delta([song("a"), song("b")], [song("b"), song("a")])).toBeNull();
+	expect(delta([song("a"), song("b")], [song("a")])).toBeNull();
+	expect(delta([song("a")], [song("a")])).toBeNull();
+	// A removal plus an insertion is not one incremental edit.
+	expect(delta([song("a"), song("b")], [song("b"), song("x")])).toBeNull();
 });

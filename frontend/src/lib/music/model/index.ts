@@ -40,10 +40,15 @@ export type ArtistDiscography = Omit<GeneratedArtistDiscography, "albums"> & {
 	albums: AlbumSummary[];
 };
 
-// A control is applied locally and broadcast to the room. Track changes and
-// queue edits are not controls: they go through the load round and the shared
-// queue respectively.
+// A control is applied locally and broadcast to the room. Track changes go
+// through the load round; the shared queue travels as a snapshot, except for the
+// incremental queue edits below, which ride the control message so a single
+// enqueue does not rewrite every member's queue.
 export type RepeatMode = "off" | "all" | "one";
+
+export type QueueAction =
+	| { action: "enqueue"; songs: Song[]; afterId: string | null }
+	| { action: "youtube"; id: string; youtubeId: string };
 
 export type ControlAction =
 	| { action: "play" }
@@ -51,4 +56,5 @@ export type ControlAction =
 	| { action: "stop" }
 	| { action: "seek"; positionMs: number }
 	| { action: "shuffle"; on: boolean; seed?: number }
-	| { action: "repeat"; mode: RepeatMode };
+	| { action: "repeat"; mode: RepeatMode }
+	| QueueAction;
