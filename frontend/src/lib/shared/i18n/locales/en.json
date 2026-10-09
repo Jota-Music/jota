@@ -243,7 +243,8 @@
 			"addQueue": "Add to queue",
 			"noSongs": "No songs",
 			"broken": "This song is no longer available at its source.",
-			"brokenLabel": "Unavailable"
+			"brokenLabel": "Unavailable",
+			"jumpToCurrent": "Jump to current song"
 		},
 		"player": {
 			"enableShuffle": "Enable shuffle",

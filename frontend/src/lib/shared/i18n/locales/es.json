@@ -243,7 +243,8 @@
 			"addQueue": "Añadir a la cola",
 			"noSongs": "Sin canciones",
 			"broken": "Esta canción ya no está disponible en su origen.",
-			"brokenLabel": "No disponible"
+			"brokenLabel": "No disponible",
+			"jumpToCurrent": "Ir a la canción actual"
 		},
 		"player": {
 			"enableShuffle": "Activar aleatorio",

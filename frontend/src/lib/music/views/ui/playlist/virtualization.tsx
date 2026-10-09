@@ -1,7 +1,13 @@
 import { computed, signal } from "@preact/signals";
-import { GripVertical, TriangleAlert } from "lucide-preact";
+import {
+	ChevronDown,
+	ChevronUp,
+	GripVertical,
+	Music,
+	TriangleAlert,
+} from "lucide-preact";
 import { memo } from "preact/compat";
-import { useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import type { Song } from "@/lib/music/model";
 import { rowSelect } from "@/lib/music/views/hooks/row-select";
@@ -23,12 +29,14 @@ import TrackActions, {
 } from "@/lib/music/views/ui/track/track-actions";
 import TrackArt from "@/lib/music/views/ui/track/track-art";
 import { t } from "@/lib/shared/i18n";
+import { cover } from "@/lib/shared/utils/cover";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
 import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
+import { Image } from "@/lib/shared/views/ui/components/image";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 type Props = {
@@ -253,6 +261,33 @@ export function Virtualization({
 		dragOrigin.current = index;
 	};
 
+	// Open the list centered on the song that is already playing, if it belongs
+	// here. Runs once per mount: re-running on `songs` would steal the scroll
+	// position from the user on every reorder or filter change.
+	useLayoutEffect(() => {
+		const el = ref.current;
+		if (!el) return;
+		const index = songs.findIndex((song) => song.id === currentId.value);
+		if (index < 0) return;
+		el.scrollTop = index * ROW_PX - el.clientHeight / 2 + ROW_PX / 2;
+	}, []);
+
+	const song = currentSong.value;
+	const jumpTo = song ? songs.findIndex((s) => s.id === song.id) : -1;
+	const first = items.length > 0 ? items[0].index : -1;
+	const last = items.length > 0 ? items[items.length - 1].index : -1;
+	const above = jumpTo >= 0 && jumpTo < first;
+	const below = jumpTo >= 0 && jumpTo > last;
+
+	const jump = () => {
+		const el = ref.current;
+		if (!el || jumpTo < 0) return;
+		el.scrollTo({
+			top: jumpTo * ROW_PX - el.clientHeight / 2 + ROW_PX / 2,
+			behavior: "smooth",
+		});
+	};
+
 	return (
 		<div className="relative min-h-0 flex-1">
 			{/* biome-ignore lint/a11y/noStaticElementInteractions: drag-to-reorder container */}
@@ -315,6 +350,31 @@ export function Virtualization({
 			</div>
 
 			<Scrollbar target={ref} />
+
+			<button
+				type="button"
+				title={t("music.track.jumpToCurrent")}
+				aria-label={t("music.track.jumpToCurrent")}
+				onClick={jump}
+				class={cn(
+					"absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 cursor-pointer items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900/90 py-1.5 pr-2.5 pl-1.5 text-xs text-zinc-300 shadow-lg transition-opacity hover:bg-zinc-800",
+					above || below ? "opacity-100" : "pointer-events-none opacity-0",
+				)}
+			>
+				<Image
+					loading="lazy"
+					src={cover(song?.album?.covers?.[0], 40)}
+					alt=""
+					class="size-5 rounded-full"
+					fallback={
+						<div class="flex size-5 items-center justify-center rounded-full bg-zinc-800 text-zinc-500">
+							<Music size={12} />
+						</div>
+					}
+				/>
+				<span class="max-w-40 truncate">{song?.name}</span>
+				{above ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+			</button>
 		</div>
 	);
 }
