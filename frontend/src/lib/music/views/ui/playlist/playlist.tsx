@@ -456,6 +456,7 @@ function PlaylistHeader({
 					removable={custom}
 					onRemove={custom ? onRemove : undefined}
 					reserve={reserve}
+					onPlay={() => void playList(playable, id)}
 				/>
 			}
 		/>

@@ -64,6 +64,7 @@ export function AlbumPage() {
 							songs={tracks}
 							onSelectAll={selectAll}
 							reserve={isLoading}
+							onPlay={() => void playList(tracks, id ?? null)}
 						/>
 					}
 				/>

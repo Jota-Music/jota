@@ -157,6 +157,7 @@ export function ArtistPage() {
 								}
 								onSelectAll={selectAll}
 								reserve={isLoading}
+								onPlay={() => void playList(tracks, id)}
 							/>
 						) : undefined
 					}

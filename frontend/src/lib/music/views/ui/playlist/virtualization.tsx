@@ -191,6 +191,7 @@ function PlaylistRow({
 						removable={removable}
 						onRemove={onRemove}
 						onToggleSelect={toggleSelection}
+						onPlay={() => void playFromQueueSelection(songs, song, sourceId)}
 					/>
 				)}
 				<div className="tabular-nums text-xs text-zinc-500">
