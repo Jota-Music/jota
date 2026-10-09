@@ -15,6 +15,17 @@ export function sameQueue(a: Song[], b: Song[]): boolean {
 	return true;
 }
 
+
+export function isOwnList(
+	source: string | null,
+	queueSource: string | null,
+	songs: Song[],
+	queue: Song[],
+): boolean {
+	if (source != null) return source === queueSource;
+	return sameQueue(queue, songs);
+}
+
 export function pinAfter(
 	queue: Song[],
 	index: number,

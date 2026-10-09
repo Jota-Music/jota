@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test";
-import { delta, insertAfter, pinAfter, sameQueue } from "@/lib/music/app/queue";
+import {
+	delta,
+	insertAfter,
+	isOwnList,
+	pinAfter,
+	sameQueue,
+} from "@/lib/music/app/queue";
 import type { Song } from "@/lib/music/model";
 
 const base = {
@@ -42,6 +48,31 @@ test("sameQueue respects duplicates", () => {
 test("sameQueue rejects different lengths and ids", () => {
 	expect(sameQueue([song("a")], [song("a"), song("b")])).toBe(false);
 	expect(sameQueue([song("a")], [song("b")])).toBe(false);
+});
+
+test("isOwnList matches the queue's source, ignoring the queue shape", () => {
+	// A queue that gained a track (an enqueue) is still playing the list it
+	// came from: the header play button must toggle instead of restarting.
+	expect(
+		isOwnList(
+			"x",
+			"x",
+			[song("a"), song("b")],
+			[song("a"), song("b"), song("c")],
+		),
+	).toBe(true);
+	expect(
+		isOwnList("y", "x", [song("a"), song("b")], [song("a"), song("b")]),
+	).toBe(false);
+});
+
+test("isOwnList falls back to membership without a source", () => {
+	expect(
+		isOwnList(null, null, [song("a"), song("b")], [song("b"), song("a")]),
+	).toBe(true);
+	expect(isOwnList(null, null, [song("a")], [song("a"), song("b")])).toBe(
+		false,
+	);
 });
 
 test("insertAfter lands the songs after the named track", () => {

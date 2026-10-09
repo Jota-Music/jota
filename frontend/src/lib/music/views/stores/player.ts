@@ -1,5 +1,5 @@
 import { pick } from "@/lib/music/app/playback";
-import { insertAfter, pinAfter, sameQueue } from "@/lib/music/app/queue";
+import { insertAfter, isOwnList, pinAfter } from "@/lib/music/app/queue";
 import { permute, random, seed } from "@/lib/music/app/shuffle";
 import type { Song } from "@/lib/music/model";
 import {
@@ -149,10 +149,15 @@ export async function playFromQueueSelection(
 	clicked: Song,
 	source: string | null = null,
 ) {
-	// Pressing play on the track that is already loaded restarts it instead of
-	// reloading the same queue.
-	if (isQueue(fullOrderedSongs) && currentSong.value?.id === clicked.id) {
-		if (source !== null) queueSource.value = source;
+
+	if (
+		currentSong.value?.id === clicked.id &&
+		isOwnList(source, queueSource.value, fullOrderedSongs, queue.value)
+	) {
+		if (source !== null) {
+			queueSource.value = source;
+			persistQueue();
+		}
 		return restart();
 	}
 
@@ -176,16 +181,20 @@ export async function playAll(songs: Song[], source: string | null = null) {
 	await playAtIndex(0);
 }
 
-export function isQueue(songs: Song[]) {
-	return sameQueue(queue.value, songs);
-}
-
-// A header play control starts the whole list unless that exact queue is already
-// loaded. Membership alone would no-op on a cold start, when the queue is
-// restored from storage but no track is loaded.
+// A header play control starts the whole list unless it is the queue's list:
+// source alone would no-op on a cold start, when the queue is restored from
+// storage but no track is loaded, and membership alone would break the moment
+// an enqueue or a removal changes the queue, replacing it and restarting a
+// list that is already playing.
 export function playList(songs: Song[], source: string | null = null) {
-	if (isQueue(songs) && currentSong.value) {
-		if (source !== null) queueSource.value = source;
+	if (
+		currentSong.value &&
+		isOwnList(source, queueSource.value, songs, queue.value)
+	) {
+		if (source !== null) {
+			queueSource.value = source;
+			persistQueue();
+		}
 		return toggleSong();
 	}
 	return playAll(songs, source);
