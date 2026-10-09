@@ -106,6 +106,16 @@ test("replaceQueue keeps the position when the new queue is long enough", () => 
 	expect(currentIndex.value).toBe(0);
 });
 
+test("replaceQueue follows the playing track when it shifts", () => {
+	queue.value = [song("a"), song("b"), song("c")];
+	currentIndex.value = 2;
+
+	replaceQueue([song("x"), song("a"), song("b"), song("c")], "c");
+
+	expect(currentIndex.value).toBe(3);
+	expect(queue.value[currentIndex.value].id).toBe("c");
+});
+
 test("skip availability follows the position in the queue", () => {
 	setRepeat("off");
 	queue.value = [song("a"), song("b"), song("c")];

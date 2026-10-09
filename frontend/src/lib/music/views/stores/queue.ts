@@ -104,10 +104,15 @@ export function pingQueue() {
 	queuePulse.value++;
 }
 
-// Swap the whole queue (a room snapshot) and keep the position inside it.
-export function replaceQueue(songs: Song[]) {
+// Swap the whole queue (a room snapshot) and keep the position on the same
+// track: `anchorId` is the playing song, re-found in the new order so an insert
+// ahead of it does not slide the highlight onto a different row. Without an
+// anchor the position is only clamped into range.
+export function replaceQueue(songs: Song[], anchorId?: string | null) {
 	queue.value = songs;
-	currentIndex.value = clampIndex(currentIndex.value, songs.length);
+	const at = anchorId ? songs.findIndex((song) => song.id === anchorId) : -1;
+	currentIndex.value =
+		at !== -1 ? at : clampIndex(currentIndex.value, songs.length);
 	persistQueue();
 }
 

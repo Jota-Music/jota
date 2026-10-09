@@ -1,5 +1,6 @@
 import { SetYouTubeId } from "@bindings/app";
 import { effect } from "@preact/signals";
+import { delta, insertAfter } from "@/lib/music/app/queue";
 import type { ControlAction, Song } from "@/lib/music/model";
 import {
 	currentSong,
@@ -20,6 +21,7 @@ import {
 	applyShuffle,
 	currentIndex,
 	nextRepeat,
+	persistQueue,
 	queue,
 	repeat,
 	replaceQueue,
@@ -49,12 +51,16 @@ let playWait: {
 } | null = null;
 
 // Host session id (from the relay), so a member can drop frames from a previous
-// session. The queue is broadcast on every local edit; `joined` gates that until
+// session. Local queue edits are diffed against `lastQueue`: an incremental one
+// rides a control op, anything else is a full snapshot. `joined` gates that until
 // the room has injected its own queue, and `suppressedQueueRef` swallows the echo
 // of a queue applied from the room.
 let roomEpoch = "";
 let joined = false;
 let suppressedQueueRef: Song[] | null = null;
+let lastQueue: Song[] | null = null;
+let memberCount = 0;
+let joinTimer: number | null = null;
 let joinAt = 0;
 
 // The seat holder publishes its playback as the drift reference. The seat is
@@ -71,9 +77,23 @@ function live(): boolean {
 	return store.status.value === "open" && store.role.value !== "off";
 }
 
+function clearJoin(): void {
+	if (joinTimer == null) return;
+	clearTimeout(joinTimer);
+	joinTimer = null;
+}
+
+// A join the relay never answers would leave `joined` false forever, silently
+// swallowing every queue edit, so a silent snapshot is asked for again.
 function requestJoin(): void {
 	joinAt = Date.now();
 	transport.send({ t: "join", at: joinAt });
+	clearJoin();
+	joinTimer = window.setTimeout(() => {
+		joinTimer = null;
+		if (joined) return;
+		requestJoin();
+	}, 4000);
 }
 
 function currentPlayback(): Playback {
@@ -220,6 +240,7 @@ async function applySnapshot(
 ): Promise<void> {
 	clock.sync(joinAt, m.echo, m.at);
 	joined = true;
+	clearJoin();
 	store.joined.value = true;
 
 	// The host owns the queue whether or not it has anything loaded: adopting
@@ -308,12 +329,17 @@ function applyQueue(input: string | Song[]): void {
 	}
 	if (!Array.isArray(parsed)) return;
 	const songs = parsed as Song[];
+	lastQueue = songs;
+	// Re-broadcasts and the relay cache echo the queue we already hold; swapping
+	// it for an identical array would only re-render the whole panel.
+	if (JSON.stringify(songs) === JSON.stringify(queue.value)) return;
 	suppressedQueueRef = songs;
-	replaceQueue(songs);
+	replaceQueue(songs, currentSong.value?.id);
 }
 
 function broadcastQueue(): void {
 	if (!live()) return;
+	lastQueue = queue.value;
 	transport.send({ t: "queue", data: JSON.stringify(queue.value) });
 }
 
@@ -338,6 +364,27 @@ function applyControl(a: ControlAction): void {
 		case "repeat":
 			setRepeat(a.mode ?? nextRepeat(repeat.value));
 			break;
+		case "enqueue": {
+			// A remote add lands where the sender put it, without replacing (or
+			// re-rendering) the rest of the queue.
+			const { queue: next } = insertAfter(queue.value, a.songs, a.afterId);
+			suppressedQueueRef = next;
+			lastQueue = next;
+			replaceQueue(next, currentSong.value?.id);
+			break;
+		}
+		case "youtube": {
+			const items = queue.value;
+			const idx = items.findIndex((song) => song.id === a.id);
+			if (idx === -1 || items[idx].youtubeId === a.youtubeId) break;
+			const next = items.slice();
+			next[idx] = { ...next[idx], youtubeId: a.youtubeId };
+			suppressedQueueRef = next;
+			lastQueue = next;
+			queue.value = next;
+			persistQueue();
+			break;
+		}
 	}
 }
 
@@ -390,6 +437,13 @@ function handleMessage(msg: ServerMessage): void {
 		case "members":
 			store.peers.value = msg.count;
 			if (msg.epoch && msg.epoch !== roomEpoch) roomEpoch = msg.epoch;
+			// Queue ops do not feed the relay cache, so a newcomer's join snapshot
+			// could miss recent adds: the host refreshes the cached queue whenever
+			// the membership grows.
+			if (msg.count > memberCount && joined && store.role.value === "host") {
+				broadcastQueue();
+			}
+			memberCount = msg.count;
 			return;
 		case "join":
 			answerJoin(msg.from);
@@ -433,11 +487,14 @@ transport.onOpen(() => {
 
 transport.onClosed(() => {
 	cancelWait();
+	clearJoin();
 	consensusGen = null;
 	pendingStart.value = false;
 	roomEpoch = "";
 	joined = false;
 	suppressedQueueRef = null;
+	lastQueue = null;
+	memberCount = 0;
 	store.joined.value = false;
 });
 
@@ -448,15 +505,25 @@ effect(() => {
 	playGate.value = on ? start : null;
 });
 
-// Any local queue edit is broadcast to the room; a queue applied from the room is
-// not echoed back.
+// Any local queue edit reaches the room; a queue applied from the room is not
+// echoed back.
 effect(() => {
 	const q = queue.value;
 	if (suppressedQueueRef === q) {
 		suppressedQueueRef = null;
+		lastQueue = q;
 		return;
 	}
 	if (!joined || !live()) return;
+	// An incremental edit (an added song, a resolved id) rides a control op, so
+	// adding one track no longer rewrites every member's queue. Anything
+	// structural is still sent whole, which also refreshes the relay's join cache.
+	const op = lastQueue ? delta(lastQueue, q) : null;
+	lastQueue = q;
+	if (op) {
+		transport.send({ t: "control", ...op });
+		return;
+	}
 	transport.send({ t: "queue", data: JSON.stringify(q) });
 });
 
