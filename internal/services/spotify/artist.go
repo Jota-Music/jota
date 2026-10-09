@@ -77,6 +77,7 @@ func albumRefsFromArtist(artist *metadatapb.Artist) []AlbumRef {
 		{"album", artist.GetAlbumGroup()},
 		{"single", artist.GetSingleGroup()},
 		{"compilation", artist.GetCompilationGroup()},
+		{"appears_on", artist.GetAppearsOnGroup()},
 	}
 	var out []AlbumRef
 	for _, s := range sections {
