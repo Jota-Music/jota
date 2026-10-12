@@ -7,4 +7,5 @@ export interface Video {
     "author"?: string;
     "channelId"?: string;
     "duration"?: number;
+    "official"?: boolean;
 }

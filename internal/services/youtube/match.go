@@ -36,10 +36,12 @@ const (
 // A topic channel sits below the artist's own because a channel named after an
 // artist can be impersonated, while a "- Topic" channel is one YouTube opened
 // itself. The lyric tier is the only one that has to clear a real duration gap
-// to be harmless, which is why it outweighs the topic bonus.
+// to be harmless, which is why it outweighs the topic bonus. The topic tier must
+// stay below the credit bonus by more than a full duration gap, so naming the
+// artist in a title can never tie the official upload.
 const (
 	channelPenalty = -30
-	topicPenalty   = -20
+	topicPenalty   = -28
 	creditBonus    = -20
 	lyricPenalty   = 40
 )
@@ -246,13 +248,20 @@ func creditPenalty(v Video, song music.Song, tier float64) float64 {
 	return 0
 }
 
-// uploadPenalty scores who uploaded the video. The lyric words are looked for
-// in the raw title because the tokeniser strips them as noise before matching,
-// and they are checked first and on their own: a lyric video on the artist's own
-// channel is still a lyric video.
+// uploadPenalty scores who uploaded the video. The official artist badge, when
+// YouTube sends it, settles the channel before anything else: it is the artist's
+// own upload even when the title says "lyrics", and without that a same-title
+// upload by another artist outranks the master. When there is no badge, the lyric
+// words are looked for in the raw title — the tokeniser strips them as noise
+// before matching — and checked first and on their own, because a lyric channel
+// restates the song and its running time is the video's, not the track's.
 func uploadPenalty(v Video, song music.Song) float64 {
 	channel := strings.ToLower(strings.TrimSpace(v.Author))
 	title := strings.ToLower(v.Title)
+
+	if v.Official {
+		return channelPenalty
+	}
 
 	for _, word := range lyricChannels {
 		if strings.Contains(channel, word) || strings.Contains(title, word) {

@@ -77,6 +77,7 @@ func extractVideos(sr searchResponse) []Video {
 				Author:    v.ByLine.first(),
 				ChannelId: v.ByLine.browseID(),
 				Duration:  v.duration(),
+				Official:  v.official(),
 			})
 		}
 	}

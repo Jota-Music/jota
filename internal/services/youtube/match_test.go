@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -318,6 +319,17 @@ func TestUploadPenalty(t *testing.T) {
 			t.Fatalf("%q = %v, want 0", channel, got)
 		}
 	}
+	// The official artist badge is YouTube's own declaration, so it settles the
+	// channel even when the byline cannot be read as the artist's own name.
+	if got := uploadPenalty(Video{Author: "OficialLuisMiguel", Official: true}, song); got != channelPenalty {
+		t.Fatalf("badged channel = %v, want %v", got, channelPenalty)
+	}
+	// The badge outranks the lyric words: the artist's own upload titled
+	// "(Lyrics Video)" is the master, not a lyric channel's restatement.
+	badgedLyric := Video{Title: "Queen - Song (Lyrics Video)", Author: "OficialLuisMiguel", Official: true}
+	if got := uploadPenalty(badgedLyric, song); got != channelPenalty {
+		t.Fatalf("badged lyric video = %v, want %v", got, channelPenalty)
+	}
 	// A topic channel is trustworthy but not the artist, so it ranks below them.
 	if got := uploadPenalty(Video{Author: "Queen - Topic"}, song); got != topicPenalty {
 		t.Fatalf("topic channel = %v, want %v", got, topicPenalty)
@@ -391,5 +403,82 @@ func TestTokens(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("tokens = %v, want %v", got, want)
 		}
+	}
+}
+
+// The reported bug: YouTube Music answers the query with the artist's own
+// channel under a byline ("OficialLuisMiguel") the suffix matcher cannot read,
+// while a re-upload names the artist in its title and matches the track's length
+// exactly. Only the official artist badge tells them apart.
+func TestRankPrefersTheBadgedOfficial(t *testing.T) {
+	song := music.Song{
+		Name:     "El tiempo que te quede libre",
+		Duration: 146,
+		Artists:  []music.Artist{{Name: "Luis Miguel"}},
+	}
+	candidates := []Video{
+		{ID: "official", Title: "El tiempo que te quede libre", Author: "OficialLuisMiguel", Duration: 147, Official: true},
+		{ID: "reupload", Title: "LUIS MIGUEL - El tiempo que te quede libre", Author: "Crispy Duck", Duration: 146},
+	}
+
+	got := first(t, candidates, song)
+	if got.ID != "official" {
+		t.Fatalf("picked %q by %q, want the official upload", got.Title, got.Author)
+	}
+}
+
+// A song can be uploaded to the artist's own channel as a lyric video while a
+// different artist has a track with the same title. The badge says which channel
+// is the artist's, so the official upload must win even though its title says
+// "lyrics".
+func TestRankPrefersTheOfficialLyricVideo(t *testing.T) {
+	song := music.Song{Name: "Reflejos", Duration: 201, Artists: []music.Artist{{Name: "Jere"}}}
+	candidates := []Video{
+		{ID: "official", Title: "JERE - Reflejos ( Lyrics Vídeo )", Author: "JERE", Duration: 206, Official: true},
+		{ID: "impostor", Title: "Reflejos", Author: "Jerix - Topic", Duration: 228},
+	}
+
+	got := first(t, candidates, song)
+	if got.ID != "official" {
+		t.Fatalf("picked %q by %q, want the official upload", got.Title, got.Author)
+	}
+}
+
+// Without a badge the topic channel is the official signal, and naming the
+// artist in a stranger's title must not tie it.
+func TestTopicBeatsTitleCredit(t *testing.T) {
+	song := music.Song{Name: "Song", Duration: 200, Artists: []music.Artist{{Name: "Artist"}}}
+	candidates := []Video{
+		{ID: "topic", Title: "Song", Author: "Artist - Topic", Duration: 204},
+		{ID: "reupload", Title: "Artist - Song", Author: "Some Channel", Duration: 200},
+	}
+
+	got := first(t, candidates, song)
+	if got.ID != "topic" {
+		t.Fatalf("picked %q by %q, want the topic channel", got.Title, got.Author)
+	}
+}
+
+func TestExtractVideosReadsOfficialBadge(t *testing.T) {
+	var sr searchResponse
+	fixture := `{"contents":{"sectionListRenderer":{"contents":[{"itemSectionRenderer":{"contents":[
+		{"compactVideoRenderer":{"videoId":"official","title":{"runs":[{"text":"Song"}]},"shortBylineText":{"runs":[{"text":"OficialArtist"}]},
+			"ownerBadges":[{"metadataBadgeRenderer":{"icon":{"iconType":"OFFICIAL_ARTIST_BADGE"},"style":"BADGE_STYLE_TYPE_VERIFIED_ARTIST"}}]}},
+		{"compactVideoRenderer":{"videoId":"verified","title":{"runs":[{"text":"Song (Lyrics)"}]},"shortBylineText":{"runs":[{"text":"7clouds"}]},
+			"ownerBadges":[{"metadataBadgeRenderer":{"icon":{"iconType":"CHECK_CIRCLE_THICK"},"style":"BADGE_STYLE_TYPE_VERIFIED"}}]}}
+	]}}]}}}`
+	if err := json.Unmarshal([]byte(fixture), &sr); err != nil {
+		t.Fatal(err)
+	}
+
+	videos := extractVideos(sr)
+	if len(videos) != 2 {
+		t.Fatalf("extracted %d videos, want 2", len(videos))
+	}
+	if !videos[0].Official {
+		t.Fatal("OFFICIAL_ARTIST_BADGE must mark the video official")
+	}
+	if videos[1].Official {
+		t.Fatal("a plain verified channel must not be marked official")
 	}
 }

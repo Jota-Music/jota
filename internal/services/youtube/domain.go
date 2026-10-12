@@ -6,4 +6,5 @@ type Video struct {
 	Author    string `json:"author,omitempty"`
 	ChannelId string `json:"channelId,omitempty"`
 	Duration  int    `json:"duration,omitempty"`
+	Official  bool   `json:"official,omitempty"`
 }

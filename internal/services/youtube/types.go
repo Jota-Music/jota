@@ -31,11 +31,33 @@ type playerResponse struct {
 }
 
 type compactVideoRenderer struct {
-	VideoID    string    `json:"videoId"`
-	Title      text      `json:"title"`
-	ByLine     text      `json:"shortBylineText"`
-	LengthText text      `json:"lengthText"`
-	Thumbnail  thumbnail `json:"thumbnail"`
+	VideoID     string    `json:"videoId"`
+	Title       text      `json:"title"`
+	ByLine      text      `json:"shortBylineText"`
+	LengthText  text      `json:"lengthText"`
+	Thumbnail   thumbnail `json:"thumbnail"`
+	OwnerBadges []struct {
+		MetadataBadgeRenderer struct {
+			Icon struct {
+				IconType string `json:"iconType"`
+			} `json:"icon"`
+			Style string `json:"style"`
+		} `json:"metadataBadgeRenderer"`
+	} `json:"ownerBadges"`
+}
+
+// official reports YouTube's "Official Artist Channel" badge, the signal that
+// attributes the video to the artist's own channel. A plain "Verified" badge is
+// a different thing — lyric channels carry it too — so only the artist badge
+// counts.
+func (v compactVideoRenderer) official() bool {
+	for _, b := range v.OwnerBadges {
+		badge := b.MetadataBadgeRenderer
+		if badge.Icon.IconType == "OFFICIAL_ARTIST_BADGE" || badge.Style == "BADGE_STYLE_TYPE_VERIFIED_ARTIST" {
+			return true
+		}
+	}
+	return false
 }
 
 func (v compactVideoRenderer) duration() int {
