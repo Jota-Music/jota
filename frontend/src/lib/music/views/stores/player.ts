@@ -1,5 +1,5 @@
 import { pick } from "@/lib/music/app/playback";
-import { insertAfter, isOwnList, pinAfter } from "@/lib/music/app/queue";
+import { insertAt, isOwnList, pinAfter } from "@/lib/music/app/queue";
 import { permute, random, seed } from "@/lib/music/app/shuffle";
 import type { Song } from "@/lib/music/model";
 import {
@@ -199,34 +199,17 @@ export function playList(songs: Song[], source: string | null = null) {
 	return playAll(songs, source);
 }
 
-// The id of the song the last local enqueue landed on, so consecutive adds stack
-// after each other. Kept as an id, not an index: a queue swapped by the room
-// keeps its meaning.
-let enqueueAnchorId: string | null = null;
-
+// Adds to the queue land right after the playing track, so they are the next to
+// play. Nothing is anchored to a previous add: once playback moves on, an old
+// anchor would drop the new songs far below instead of next.
 export function enqueueMany(songs: Song[]) {
 	if (songs.length === 0) return;
 
 	const q = queue.value;
-	const current =
-		currentIndex.value >= 0 && currentIndex.value < q.length
-			? q[currentIndex.value]
-			: null;
-	// The previous enqueue is only a valid anchor while it sits at or after the
-	// playing track. An older one that ended up behind it would drop the songs
-	// above the queue panel's viewport, so fall back to the playing track.
-	const anchor = enqueueAnchorId
-		? q.findIndex((song) => song.id === enqueueAnchorId)
-		: -1;
-	const afterId =
-		anchor !== -1 && (!current || anchor >= currentIndex.value)
-			? enqueueAnchorId
-			: current
-				? current.id
-				: (q[q.length - 1]?.id ?? null);
+	const current = currentIndex.value >= 0 && currentIndex.value < q.length;
+	const at = current ? currentIndex.value + 1 : q.length;
+	const next = insertAt(q, songs, at);
 
-	const { queue: next, index } = insertAfter(q, songs, afterId);
-	enqueueAnchorId = songs[songs.length - 1]?.id ?? null;
 	queue.value = next;
 	persistQueue();
 	pingQueue();
@@ -235,7 +218,7 @@ export function enqueueMany(songs: Song[]) {
 	// rewrote the whole queue (O(n) copy + a full notification + a persist). The
 	// tracks are warmed by playAtIndex when the queue reaches them.
 	if (currentSong.value === null) {
-		void playAtIndex(index);
+		void playAtIndex(at);
 		return;
 	}
 

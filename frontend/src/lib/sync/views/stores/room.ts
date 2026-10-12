@@ -1,6 +1,6 @@
 import { SetYouTubeId } from "@bindings/app";
 import { effect } from "@preact/signals";
-import { delta, insertAfter } from "@/lib/music/app/queue";
+import { delta, insertAt } from "@/lib/music/app/queue";
 import type { ControlAction, Song } from "@/lib/music/model";
 import {
 	currentSong,
@@ -366,8 +366,9 @@ function applyControl(a: ControlAction): void {
 			break;
 		case "enqueue": {
 			// A remote add lands where the sender put it, without replacing (or
-			// re-rendering) the rest of the queue.
-			const { queue: next } = insertAfter(queue.value, a.songs, a.afterId);
+			// re-rendering) the rest of the queue. The position rides the message,
+			// so a repeated id cannot send it to a different row here.
+			const next = insertAt(queue.value, a.songs, a.at);
 			suppressedQueueRef = next;
 			lastQueue = next;
 			replaceQueue(next, currentSong.value?.id);

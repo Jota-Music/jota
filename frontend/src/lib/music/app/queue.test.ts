@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	delta,
-	insertAfter,
+	insertAt,
 	isOwnList,
 	pinAfter,
 	sameQueue,
@@ -75,33 +75,28 @@ test("isOwnList falls back to membership without a source", () => {
 	);
 });
 
-test("insertAfter lands the songs after the named track", () => {
-	const out = insertAfter([song("a"), song("b"), song("c")], [song("x")], "a");
-	expect(out.queue.map((s) => s.id)).toEqual(["a", "x", "b", "c"]);
-	expect(out.index).toBe(1);
+test("insertAt lands the songs at the given position", () => {
+	expect(
+		insertAt([song("a"), song("b"), song("c")], [song("x")], 1).map(
+			(s) => s.id,
+		),
+	).toEqual(["a", "x", "b", "c"]);
 });
 
-test("insertAfter puts a null anchor at the head and a gone id at the end", () => {
+test("insertAt clamps a position past the end", () => {
 	expect(
-		insertAfter([song("a"), song("b")], [song("x")], null).queue.map(
-			(s) => s.id,
-		),
-	).toEqual(["x", "a", "b"]);
-	expect(
-		insertAfter([song("a"), song("b")], [song("x")], "gone").queue.map(
-			(s) => s.id,
-		),
+		insertAt([song("a"), song("b")], [song("x")], 9).map((s) => s.id),
 	).toEqual(["a", "b", "x"]);
 });
 
-test("delta reports a contiguous insertion with its anchor", () => {
+test("delta reports a contiguous insertion with its position", () => {
 	expect(
 		delta([song("a"), song("b")], [song("a"), song("x"), song("b")]),
-	).toEqual({ action: "enqueue", songs: [song("x")], afterId: "a" });
+	).toEqual({ action: "enqueue", songs: [song("x")], at: 1 });
 	expect(delta([song("a")], [song("x"), song("a")])).toEqual({
 		action: "enqueue",
 		songs: [song("x")],
-		afterId: null,
+		at: 0,
 	});
 });
 

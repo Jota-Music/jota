@@ -47,7 +47,7 @@ export type ArtistDiscography = Omit<GeneratedArtistDiscography, "albums"> & {
 export type RepeatMode = "off" | "all" | "one";
 
 export type QueueAction =
-	| { action: "enqueue"; songs: Song[]; afterId: string | null }
+	| { action: "enqueue"; songs: Song[]; at: number }
 	| { action: "youtube"; id: string; youtubeId: string };
 
 export type ControlAction =

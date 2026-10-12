@@ -46,20 +46,12 @@ export function pinAfter(
 	return { queue: next, index: current };
 }
 
-// Inserts songs right after the song with `afterId`, so the enqueuing device and
-// every receiver land them on the same spot without shipping a whole snapshot.
-// A null id means the head; an id that is gone means the end.
-export function insertAfter(
-	queue: Song[],
-	songs: Song[],
-	afterId: string | null,
-): { queue: Song[]; index: number } {
-	const at =
-		afterId == null ? -1 : queue.findIndex((song) => song.id === afterId);
-	const index = afterId == null ? 0 : at === -1 ? queue.length : at + 1;
+// Inserts songs at an explicit position. The position is clamped, so a receiver
+// whose queue is shorter than the sender's appends instead of dropping them.
+export function insertAt(queue: Song[], songs: Song[], at: number): Song[] {
 	const next = [...queue];
-	next.splice(index, 0, ...songs);
-	return { queue: next, index };
+	next.splice(Math.max(0, Math.min(at, next.length)), 0, ...songs);
+	return next;
 }
 
 // Reports the incremental edit that turns `prev` into `next`, when one exists: a
@@ -77,7 +69,7 @@ export function delta(prev: Song[], next: Song[]): QueueAction | null {
 		return {
 			action: "enqueue",
 			songs: next.slice(start, start + extra),
-			afterId: start > 0 ? next[start - 1].id : null,
+			at: start,
 		};
 	}
 	if (next.length !== prev.length) return null;
