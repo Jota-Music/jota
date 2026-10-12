@@ -1,18 +1,8 @@
-import { Disc3 } from "lucide-preact";
-import type { IconType, Item } from "@/lib/music/views/ui/shelf/types";
+import type { Item } from "@/lib/music/views/ui/shelf/types";
 import { cover } from "@/lib/shared/utils/cover";
+import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Mosaic } from "@/lib/shared/views/ui/components/mosaic";
-
-function Placeholder({
-	icon: Icon = Disc3,
-	size,
-}: {
-	icon?: IconType;
-	size: number;
-}) {
-	return <Icon size={size} />;
-}
 
 export function Cover({
 	item,
@@ -25,9 +15,9 @@ export function Cover({
 	iconSize: number;
 	imageSize?: number;
 }) {
-	const fallback = item.placeholder?.(size) ?? (
-		<Placeholder icon={item.icon} size={iconSize} />
-	);
+	const fallback =
+		item.placeholder?.(size) ??
+		(item.icon ? <item.icon size={iconSize} /> : <CoverFallback />);
 
 	return (
 		<>

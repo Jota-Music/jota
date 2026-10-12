@@ -2,6 +2,7 @@ import { Loader, Music, Pause } from "lucide-preact";
 import type { Song } from "@/lib/music/model";
 import { cover } from "@/lib/shared/utils/cover";
 import { cn } from "@/lib/shared/utils/tw";
+import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 
 type Props = {
@@ -30,11 +31,7 @@ export function TrackArt({
 				src={cover(song.album?.covers?.[0], 80)}
 				alt={alt}
 				class={cn(imgClass, current && "brightness-40")}
-				fallback={
-					<div class="flex h-full w-full items-center justify-center bg-zinc-900 text-zinc-600">
-						<Music size={18} />
-					</div>
-				}
+				fallback={<CoverFallback class={imgClass} />}
 			/>
 
 			{current &&

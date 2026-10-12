@@ -1,5 +1,5 @@
-import { ListMusic } from "lucide-preact";
 import { cover } from "@/lib/shared/utils/cover";
+import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 
 type Props = {
@@ -16,11 +16,7 @@ export function PlaylistCover({ src, alt = "", imgClass, size = 320 }: Props) {
 			alt={alt}
 			loading="lazy"
 			class={imgClass}
-			fallback={
-				<div class="flex h-full w-full items-center justify-center bg-zinc-900 text-zinc-600">
-					<ListMusic size={28} />
-				</div>
-			}
+			fallback={<CoverFallback class={imgClass} />}
 		/>
 	);
 }

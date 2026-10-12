@@ -34,6 +34,7 @@ import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
+import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import Progress from "@/lib/shared/views/ui/components/progress";
@@ -105,9 +106,7 @@ const Disc = memo(function Disc({
 						!isPlaying && "[animation-play-state:paused]",
 					)}
 					style="-webkit-user-drag: none"
-					fallback={
-						<div class="absolute inset-0 h-full w-full rounded-full bg-stone-800" />
-					}
+					fallback={<CoverFallback class="absolute inset-0 rounded-full" />}
 				/>
 
 				<div class="absolute inset-0 w-max h-max flex items-center justify-center gap-6 m-auto">
@@ -454,7 +453,7 @@ export function PlayerBar() {
 										class="w-full h-full object-cover rounded-lg shadow-lg select-none"
 										style="-webkit-user-drag: none"
 										fallback={
-											<div class="w-full h-full rounded-lg bg-stone-800" />
+											<CoverFallback class="h-full w-full rounded-lg" />
 										}
 									/>
 									<div class="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10" />

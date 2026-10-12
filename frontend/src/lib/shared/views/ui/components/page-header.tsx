@@ -1,8 +1,9 @@
-import { Disc3, Loader, Pause, Play } from "lucide-preact";
+import { Loader, Pause, Play } from "lucide-preact";
 import type { ComponentChildren } from "preact";
 import { Link } from "wouter-preact";
 import { t } from "@/lib/shared/i18n";
 import { cover as coverImage } from "@/lib/shared/utils/cover";
+import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Mosaic } from "@/lib/shared/views/ui/components/mosaic";
 
@@ -73,22 +74,14 @@ export function PageHeader({
 		<header class="flex shrink-0 items-center gap-4">
 			{covers?.length ? (
 				<div class="h-16 w-16 shrink-0 overflow-hidden rounded-md">
-					<Mosaic
-						covers={covers}
-						size={128}
-						placeholder={<Disc3 size={16} />}
-					/>
+					<Mosaic covers={covers} size={128} placeholder={<CoverFallback />} />
 				</div>
 			) : (
 				<Image
 					src={coverImage(cover, 128)}
 					alt=""
 					class="h-16 w-16 shrink-0 rounded-md object-cover"
-					fallback={
-						<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-zinc-900 text-zinc-500">
-							<Disc3 size={28} />
-						</div>
-					}
+					fallback={<CoverFallback class="h-16 w-16 shrink-0 rounded-md" />}
 				/>
 			)}
 			<div class="min-w-0">

@@ -3,7 +3,6 @@ import {
 	ChevronDown,
 	ChevronUp,
 	GripVertical,
-	Music,
 	TriangleAlert,
 } from "lucide-preact";
 import { memo } from "preact/compat";
@@ -36,6 +35,7 @@ import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
+import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
@@ -367,11 +367,7 @@ export function Virtualization({
 					src={cover(song?.album?.covers?.[0], 40)}
 					alt=""
 					class="size-5 rounded-full"
-					fallback={
-						<div class="flex size-5 items-center justify-center rounded-full bg-zinc-800 text-zinc-500">
-							<Music size={12} />
-						</div>
-					}
+					fallback={<CoverFallback class="size-5 shrink-0 rounded-full" />}
 				/>
 				<span class="max-w-40 truncate">{song?.name}</span>
 				{above ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
