@@ -94,7 +94,9 @@ function watchEnd(a: HTMLAudioElement) {
 			stopEndWatch();
 			return;
 		}
-		if (a.paused) {
+		// A seek parks currentTime while the new range loads; that is buffering,
+		// not a dead stream, so it must not trip the stall watchdog.
+		if (a.paused || a.seeking) {
 			last = -1;
 			still = 0;
 			return;
@@ -869,6 +871,10 @@ function bindEvents(a: HTMLAudioElement) {
 
 	a.ontimeupdate = () => {
 		if (audio !== a) return;
+		// While a seek is in flight the element still reports the old position;
+		// keep the bar on the target the user picked and the loader on until it
+		// lands, instead of clearing loading and snapping back.
+		if (a.seeking) return;
 		// Belt and braces: a frame advancing means the wait is over, even if a
 		// WebKit quirk swallowed the `playing` event.
 		isLoading.value = false;
