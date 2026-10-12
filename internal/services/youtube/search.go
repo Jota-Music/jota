@@ -15,6 +15,10 @@ var youtubeSourceBucket = kv.UseBucket("youtube-source")
 
 const searchEndpoint = "https://www.youtube.com/youtubei/v1/search"
 
+// searchFn is the innertube search, swapped in tests so a resolve that already
+// has a linked id can be checked without reaching YouTube.
+var searchFn = search
+
 // search runs an innertube search with an optional filter param and decodes
 // the shared response envelope. The music endpoint is used for plain video
 // search; the web endpoint for the playlist/channel filtered queries.
@@ -52,7 +56,7 @@ func (s *Service) Search(query string) ([]Video, error) {
 		}
 	}
 
-	sr, err := search("https://music.youtube.com/youtubei/v1/search", query, "")
+	sr, err := searchFn("https://music.youtube.com/youtubei/v1/search", query, "")
 	if err != nil {
 		return nil, err
 	}

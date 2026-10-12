@@ -58,30 +58,55 @@ func (s *Service) searchAudio(song music.Song, search string) (music.Audio, erro
 		return *cached, nil
 	}
 
+	// The linked id is the video an earlier resolve settled on — the user's
+	// manual pick or the previous automatic one, and ranking must not demote it
+	// behind a fresh pick. Playing it first skips the search, the slowest step of
+	// a resolve; searching for alternatives is only worth it once it fails.
+	var lastErr error
+	tried := ""
+	if id := s.YoutubeId(cacheKey); id != "" {
+		tried = id
+		audio, err := s.play(cacheKey, id)
+		if err == nil {
+			return *audio, nil
+		}
+		lastErr = err
+	}
+
 	videos, err := s.candidates(cacheKey, search, song)
 	if err != nil {
 		return music.Audio{}, err
 	}
 
-	var lastErr error
 	for _, v := range videos {
-		audio := cachedAudio(v.ID)
-		if audio == nil {
-			audio, err = fetchAudio(v.ID)
-			if err != nil {
-				lastErr = err
-				continue
-			}
+		if v.ID == tried {
+			continue
 		}
-
-		if search != "" {
-			_ = s.SetYoutubeId(cacheKey, v.ID)
+		audio, err := s.play(cacheKey, v.ID)
+		if err != nil {
+			lastErr = err
+			continue
 		}
-		saveAudioBySong(cacheKey, *audio)
 		return *audio, nil
 	}
 
 	return music.Audio{}, lastErr
+}
+
+// play resolves one candidate and records it as the song's source, so the next
+// resolve skips the search. fetchAudio already serves the cached stream when it
+// is still valid, so a separate cache read here would only probe googlevideo
+// twice for the same URL.
+func (s *Service) play(cacheKey, videoID string) (*music.Audio, error) {
+	audio, err := fetchAudio(videoID)
+	if err != nil {
+		return nil, err
+	}
+	if cacheKey != "" {
+		_ = s.SetYoutubeId(cacheKey, videoID)
+		saveAudioBySong(cacheKey, *audio)
+	}
+	return audio, nil
 }
 
 // YoutubeId returns the YouTube video linked to a song, or "" when none.
