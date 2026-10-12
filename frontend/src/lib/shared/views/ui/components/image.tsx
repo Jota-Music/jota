@@ -39,6 +39,18 @@ export function Image({
 		}
 	};
 
+	// WebKit can complete a cached image synchronously while src is assigned,
+	// before the load handler is attached, which would leave the shimmer stuck
+	// forever. When the element is already resolved, settle from its state.
+	const settled = (el: HTMLImageElement | null) => {
+		if (!el?.complete) return;
+		if (el.naturalWidth > 0) {
+			setLoad((l) => (l.ready ? l : { ...l, ready: true, failed: false }));
+		} else {
+			setLoad((l) => (l.failed ? l : { ...l, failed: true }));
+		}
+	};
+
 	// No source and a failed source look the same to a reader: there is no
 	// artwork to show, so stop pretending something is on its way.
 	if (!src || load.failed) return <>{fallback ?? null}</>;
@@ -50,6 +62,7 @@ export function Image({
 			alt={alt ?? ""}
 			onLoad={bound}
 			onError={bound}
+			ref={settled}
 			class={cn(cls, !load.ready && "shimmer")}
 			style={typeof style === "object" ? style : undefined}
 		/>
