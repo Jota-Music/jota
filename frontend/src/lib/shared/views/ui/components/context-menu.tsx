@@ -144,7 +144,7 @@ function FloatingMenu() {
 		<div
 			ref={ref}
 			role="menu"
-			class="fixed z-50 w-56 rounded-lg border border-zinc-800 bg-zinc-950 py-1 shadow-xl"
+			class="fixed z-300 w-56 rounded-lg border border-zinc-800 bg-zinc-950 py-1 shadow-xl"
 			style={{ top: 0, left: 0 }}
 		>
 			{header(menu)}
