@@ -8,7 +8,6 @@ import {
 } from "@/lib/auth/views/stores/session";
 import { t } from "@/lib/shared/i18n";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
-import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function SpotifyConnect() {
 	const busy = useSignal(false);
@@ -61,11 +60,9 @@ export function RequireSpotify({
 	// (search, radio) have no cache to fall back on, so they stay walled.
 	if (!live && spotifyDegraded.value) return <>{children}</>;
 	return (
-		<DefaultLayout class="gap-6">
-			<div class="flex min-h-0 flex-1 items-center justify-center">
-				{spotifyDegraded.value ? <SpotifyUnavailable /> : <SpotifyConnect />}
-			</div>
-		</DefaultLayout>
+		<div class="flex min-h-0 flex-1 items-center justify-center">
+			{spotifyDegraded.value ? <SpotifyUnavailable /> : <SpotifyConnect />}
+		</div>
 	);
 }
 

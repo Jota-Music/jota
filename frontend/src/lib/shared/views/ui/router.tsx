@@ -17,7 +17,10 @@ import { syncYouTubeStatus } from "@/lib/auth/views/stores/youtube";
 import { RequireSpotify } from "@/lib/auth/views/ui/spotify-connect";
 import { revalidateUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isPlaying } from "@/lib/music/views/stores/audio";
+import { compactPlayer, Player } from "@/lib/music/views/ui/player";
+import { cn } from "@/lib/shared/utils/tw";
 import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
+import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
 import SettingsPage from "@/lib/shared/views/ui/pages/settings";
 import { loadRelay } from "@/lib/sync/app/transport";
@@ -157,44 +160,60 @@ function Router() {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<Suspense fallback={null}>
-				<Switch>
-					<Route path="/playlist/:id" component={PlaylistPage} />
-					<Route path="/artist/:id">
-						<RequireSpotify>
-							<ArtistPage />
-						</RequireSpotify>
-					</Route>
-					<Route path="/album/:id">
-						<RequireSpotify>
-							<AlbumPage />
-						</RequireSpotify>
-					</Route>
-					<Route path="/radio/:id">
-						<RequireSpotify live>
-							<RadioPage />
-						</RequireSpotify>
-					</Route>
-					<Route path="/search/youtube/:query" component={YouTubeSearchPage} />
-					<Route path="/search/:type/:query">
-						<RequireSpotify live>
-							<SearchPage />
-						</RequireSpotify>
-					</Route>
-					<Route path="/settings" component={SettingsPage} />
-					<Route path="/spotify/user/:username">
-						<RequireSpotify>
-							<UserPage />
-						</RequireSpotify>
-					</Route>
-					<Route path="/youtube/user/:channelId" component={UserPage} />
-					<Route path="/playlists" component={MainPage} />
-					<Route path="/following" component={MainPage} />
-					<Route path="/rooms" component={MainPage} />
-					<Route path="/" component={MainPage} />
-					<Route component={NotFoundPage} />
-				</Switch>
-			</Suspense>
+			<AppShell
+				player={
+					<div
+						class={cn(
+							"shrink-0 w-full max-w-2xl md:mx-auto relative",
+							!compactPlayer.value && "md:mt-6 md:pb-6",
+						)}
+					>
+						<Player />
+					</div>
+				}
+			>
+				<Suspense fallback={null}>
+					<Switch>
+						<Route path="/playlist/:id" component={PlaylistPage} />
+						<Route path="/artist/:id">
+							<RequireSpotify>
+								<ArtistPage />
+							</RequireSpotify>
+						</Route>
+						<Route path="/album/:id">
+							<RequireSpotify>
+								<AlbumPage />
+							</RequireSpotify>
+						</Route>
+						<Route path="/radio/:id">
+							<RequireSpotify live>
+								<RadioPage />
+							</RequireSpotify>
+						</Route>
+						<Route
+							path="/search/youtube/:query"
+							component={YouTubeSearchPage}
+						/>
+						<Route path="/search/:type/:query">
+							<RequireSpotify live>
+								<SearchPage />
+							</RequireSpotify>
+						</Route>
+						<Route path="/settings" component={SettingsPage} />
+						<Route path="/spotify/user/:username">
+							<RequireSpotify>
+								<UserPage />
+							</RequireSpotify>
+						</Route>
+						<Route path="/youtube/user/:channelId" component={UserPage} />
+						<Route path="/playlists" component={MainPage} />
+						<Route path="/following" component={MainPage} />
+						<Route path="/rooms" component={MainPage} />
+						<Route path="/" component={MainPage} />
+						<Route component={NotFoundPage} />
+					</Switch>
+				</Suspense>
+			</AppShell>
 			<ContextMenu />
 		</QueryClientProvider>
 	);

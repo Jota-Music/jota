@@ -35,7 +35,6 @@ import { cn } from "@/lib/shared/utils/tw";
 import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
-import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type Tab = "videos" | "playlists" | "channels";
 
@@ -147,119 +146,117 @@ export function YouTubeSearchPage() {
 	const hasResults = tabs.length > 0;
 
 	return (
-		<DefaultLayout class="gap-4">
-			<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
-				<header class="flex shrink-0 flex-col gap-3">
-					<h2 class="text-xl font-semibold leading-tight">{query}</h2>
-					{tabs.length > 1 && (
-						<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-							{tabs.map((tab) => {
-								const Icon = TAB_ICONS[tab];
-								return (
-									<button
-										key={tab}
-										type="button"
-										title={t(TAB_TITLES[tab])}
-										onClick={() => {
-											picked.value = { query, tab };
-										}}
-										class={cn(
-											"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
-											activeTab === tab
-												? "bg-zinc-800 text-white"
-												: "text-zinc-500 hover:text-zinc-300",
-										)}
-									>
-										<Icon size={16} />
-									</button>
-								);
-							})}
-						</div>
-					)}
-				</header>
-
-				<SelectionBar />
-
-				{!hasResults && !loading ? (
-					<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
-				) : activeTab === "channels" ? (
-					<Shelf
-						items={channels.map((channel) => ({
-							id: channel.id,
-							name: channel.name,
-							cover: channel.avatar,
-						}))}
-						to={(id) => `/youtube/user/${id}`}
-						viewKey="youtube_search_channels"
-						isLoading={channelsQuery.isLoading}
-						emptyMessage={t(
-							channelsQuery.isError
-								? "pages.youtube.failed"
-								: "pages.youtube.noChannels",
-						)}
-					/>
-				) : activeTab === "playlists" ? (
-					<div class="relative min-h-0 flex-1">
-						<section
-							ref={listRef}
-							class="h-full flex flex-col overflow-y-auto pr-[15px]"
-						>
-							{playlistsQuery.isLoading ? (
-								<div class="flex items-center gap-2 text-sm text-zinc-500">
-									<Loader size={14} class="animate-spin" />
-									{t("common.loading")}
-								</div>
-							) : playlistsQuery.isError ? (
-								<p class="text-red-400">{t("pages.youtube.failed")}</p>
-							) : playlists.length === 0 ? (
-								<p class="text-sm text-zinc-500">
-									{t("pages.youtube.noPlaylists")}
-								</p>
-							) : (
-								<div class="grid grid-cols-2 gap-3 pt-1 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
-									{playlists.map((playlist) => (
-										<PlaylistCard key={playlist.id} playlist={playlist} />
-									))}
-								</div>
-							)}
-						</section>
-						<Scrollbar target={listRef} />
-					</div>
-				) : videosQuery.isLoading ? (
-					<div class="flex items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-						<Loader size={24} class="animate-spin" />
-					</div>
-				) : videosQuery.isError ? (
-					<p class="text-red-400">{t("pages.youtube.failed")}</p>
-				) : songs.length === 0 ? (
-					<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
-				) : (
-					<div class="relative min-h-0 flex-1">
-						{/* biome-ignore lint/a11y/noStaticElementInteractions: empty area clears the selection */}
-						{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
-						<section
-							ref={listRef}
-							class="h-full flex flex-col overflow-y-auto pr-[15px] rounded-lg border border-zinc-800 bg-zinc-950"
-							onClick={(e) => {
-								const target = e.target as Element;
-								if (!target.closest("[data-row]")) clearSelection();
-							}}
-						>
-							{songs.map((song, index) => (
-								<YouTubeVideoRow
-									key={song.id}
-									song={song}
-									songs={songs}
-									index={index}
-									onClick={() => handleClick(song)}
-								/>
-							))}
-						</section>
-						<Scrollbar target={listRef} />
+		<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
+			<header class="flex shrink-0 flex-col gap-3">
+				<h2 class="text-xl font-semibold leading-tight">{query}</h2>
+				{tabs.length > 1 && (
+					<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+						{tabs.map((tab) => {
+							const Icon = TAB_ICONS[tab];
+							return (
+								<button
+									key={tab}
+									type="button"
+									title={t(TAB_TITLES[tab])}
+									onClick={() => {
+										picked.value = { query, tab };
+									}}
+									class={cn(
+										"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
+										activeTab === tab
+											? "bg-zinc-800 text-white"
+											: "text-zinc-500 hover:text-zinc-300",
+									)}
+								>
+									<Icon size={16} />
+								</button>
+							);
+						})}
 					</div>
 				)}
-			</div>
-		</DefaultLayout>
+			</header>
+
+			<SelectionBar />
+
+			{!hasResults && !loading ? (
+				<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
+			) : activeTab === "channels" ? (
+				<Shelf
+					items={channels.map((channel) => ({
+						id: channel.id,
+						name: channel.name,
+						cover: channel.avatar,
+					}))}
+					to={(id) => `/youtube/user/${id}`}
+					viewKey="youtube_search_channels"
+					isLoading={channelsQuery.isLoading}
+					emptyMessage={t(
+						channelsQuery.isError
+							? "pages.youtube.failed"
+							: "pages.youtube.noChannels",
+					)}
+				/>
+			) : activeTab === "playlists" ? (
+				<div class="relative min-h-0 flex-1">
+					<section
+						ref={listRef}
+						class="h-full flex flex-col overflow-y-auto pr-[15px]"
+					>
+						{playlistsQuery.isLoading ? (
+							<div class="flex items-center gap-2 text-sm text-zinc-500">
+								<Loader size={14} class="animate-spin" />
+								{t("common.loading")}
+							</div>
+						) : playlistsQuery.isError ? (
+							<p class="text-red-400">{t("pages.youtube.failed")}</p>
+						) : playlists.length === 0 ? (
+							<p class="text-sm text-zinc-500">
+								{t("pages.youtube.noPlaylists")}
+							</p>
+						) : (
+							<div class="grid grid-cols-2 gap-3 pt-1 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
+								{playlists.map((playlist) => (
+									<PlaylistCard key={playlist.id} playlist={playlist} />
+								))}
+							</div>
+						)}
+					</section>
+					<Scrollbar target={listRef} />
+				</div>
+			) : videosQuery.isLoading ? (
+				<div class="flex items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+					<Loader size={24} class="animate-spin" />
+				</div>
+			) : videosQuery.isError ? (
+				<p class="text-red-400">{t("pages.youtube.failed")}</p>
+			) : songs.length === 0 ? (
+				<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
+			) : (
+				<div class="relative min-h-0 flex-1">
+					{/* biome-ignore lint/a11y/noStaticElementInteractions: empty area clears the selection */}
+					{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
+					<section
+						ref={listRef}
+						class="h-full flex flex-col overflow-y-auto pr-[15px] rounded-lg border border-zinc-800 bg-zinc-950"
+						onClick={(e) => {
+							const target = e.target as Element;
+							if (!target.closest("[data-row]")) clearSelection();
+						}}
+					>
+						{songs.map((song, index) => (
+							<YouTubeVideoRow
+								key={song.id}
+								song={song}
+								songs={songs}
+								index={index}
+								onClick={() => handleClick(song)}
+							/>
+						))}
+					</section>
+					<Scrollbar target={listRef} />
+				</div>
+			)}
+		</div>
 	);
 }
 

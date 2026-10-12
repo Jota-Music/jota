@@ -28,7 +28,6 @@ import {
 import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
-import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type SearchType = "user" | "track" | "album" | "playlist" | "artist";
 
@@ -165,20 +164,14 @@ export function SearchPage() {
 
 	if (detailRoute && !redirectId) {
 		return (
-			<DefaultLayout class="gap-6">
-				<p class="text-sm text-zinc-500">
-					{t("pages.search.referenceOnly", { type: t(`search.type.${type}`) })}
-				</p>
-			</DefaultLayout>
+			<p class="text-sm text-zinc-500">
+				{t("pages.search.referenceOnly", { type: t(`search.type.${type}`) })}
+			</p>
 		);
 	}
 
 	if (isError) {
-		return (
-			<DefaultLayout class="gap-6">
-				<p class="text-red-400">{t("pages.search.failed")}</p>
-			</DefaultLayout>
-		);
+		return <p class="text-red-400">{t("pages.search.failed")}</p>;
 	}
 
 	const results = (data as SearchResult[]) ?? [];
@@ -187,60 +180,54 @@ export function SearchPage() {
 		const songs = results.map(searchResultToSong);
 
 		return (
-			<DefaultLayout class="gap-4">
-				<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
-					<header class="shrink-0">
-						<h2 class="text-xl font-semibold leading-tight">{query}</h2>
-					</header>
+			<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
+				<header class="shrink-0">
+					<h2 class="text-xl font-semibold leading-tight">{query}</h2>
+				</header>
 
-					{isLoading ? (
-						<div class="flex items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-							<Loader size={24} class="animate-spin" />
-						</div>
-					) : songs.length === 0 ? (
-						<p class="text-sm text-zinc-500">{t("common.noResults")}</p>
-					) : (
-						<Virtualization songs={songs} />
-					)}
-				</div>
-			</DefaultLayout>
+				{isLoading ? (
+					<div class="flex items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+						<Loader size={24} class="animate-spin" />
+					</div>
+				) : songs.length === 0 ? (
+					<p class="text-sm text-zinc-500">{t("common.noResults")}</p>
+				) : (
+					<Virtualization songs={songs} />
+				)}
+			</div>
 		);
 	}
 
 	return (
-		<DefaultLayout class="gap-4">
-			<div class="flex flex-col gap-4 min-h-0 flex-1">
-				{type === "user" ? (
-					<UserHeader source="spotify" identifier={query} />
-				) : (
-					<header class="shrink-0">
-						<h2 class="text-xl font-semibold leading-tight">
-							{t("pages.search.playlistsBy", { query })}
-						</h2>
-					</header>
-				)}
+		<div class="flex flex-col gap-4 min-h-0 flex-1">
+			{type === "user" ? (
+				<UserHeader source="spotify" identifier={query} />
+			) : (
+				<header class="shrink-0">
+					<h2 class="text-xl font-semibold leading-tight">
+						{t("pages.search.playlistsBy", { query })}
+					</h2>
+				</header>
+			)}
 
-				<div class="relative min-h-0 flex-1">
-					<section
-						ref={listRef}
-						class="h-full flex flex-col gap-3 overflow-y-auto pr-[15px] pb-8"
-					>
-						{isLoading ? (
-							<div class="flex items-center gap-2 text-sm text-zinc-500">
-								<Loader size={14} class="animate-spin" />
-								{t("common.loading")}
-							</div>
-						) : results.length === 0 ? (
-							<p class="text-sm text-zinc-500">
-								{t("pages.search.noPlaylists")}
-							</p>
-						) : (
-							<PlaylistGrid results={results} />
-						)}
-					</section>
-					<Scrollbar target={listRef} />
-				</div>
+			<div class="relative min-h-0 flex-1">
+				<section
+					ref={listRef}
+					class="h-full flex flex-col gap-3 overflow-y-auto pr-[15px] pb-8"
+				>
+					{isLoading ? (
+						<div class="flex items-center gap-2 text-sm text-zinc-500">
+							<Loader size={14} class="animate-spin" />
+							{t("common.loading")}
+						</div>
+					) : results.length === 0 ? (
+						<p class="text-sm text-zinc-500">{t("pages.search.noPlaylists")}</p>
+					) : (
+						<PlaylistGrid results={results} />
+					)}
+				</section>
+				<Scrollbar target={listRef} />
 			</div>
-		</DefaultLayout>
+		</div>
 	);
 }

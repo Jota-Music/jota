@@ -16,7 +16,6 @@ import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { t } from "@/lib/shared/i18n";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
-import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 export function AlbumPage() {
 	const { id } = useParams<{ id: string }>();
@@ -44,45 +43,43 @@ export function AlbumPage() {
 		: undefined;
 
 	return (
-		<DefaultLayout class="gap-4">
-			<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6">
-				<PageHeader
-					cover={cover}
-					title={albumName}
-					subtitle={subtitle}
-					link={link}
-					linkReserve
-					onPlay={
-						tracks.length > 0
-							? () => void playList(tracks, id ?? null)
-							: undefined
-					}
-					playing={queueSource.value === id && isPlaying.value}
-					loading={queueSource.value === id && playbackLoading.value}
-					actions={
-						<TrackActions
-							songs={tracks}
-							onSelectAll={selectAll}
-							reserve={isLoading}
-							onPlay={() => void playList(tracks, id ?? null)}
-						/>
-					}
-				/>
+		<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6">
+			<PageHeader
+				cover={cover}
+				title={albumName}
+				subtitle={subtitle}
+				link={link}
+				linkReserve
+				onPlay={
+					tracks.length > 0
+						? () => void playList(tracks, id ?? null)
+						: undefined
+				}
+				playing={queueSource.value === id && isPlaying.value}
+				loading={queueSource.value === id && playbackLoading.value}
+				actions={
+					<TrackActions
+						songs={tracks}
+						onSelectAll={selectAll}
+						reserve={isLoading}
+						onPlay={() => void playList(tracks, id ?? null)}
+					/>
+				}
+			/>
 
-				{isError ? (
-					<div class="flex items-center gap-2 p-4 text-sm text-red-400">
-						{t("pages.album.failed")}
-					</div>
-				) : isLoading ? (
-					<div class="flex min-h-0 flex-1 items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-						<Loader size={24} class="animate-spin" />
-					</div>
-				) : tracks.length === 0 ? (
-					<p class="text-sm text-zinc-500">{t("pages.album.noTracks")}</p>
-				) : (
-					<Virtualization songs={tracks} sourceId={id} />
-				)}
-			</div>
-		</DefaultLayout>
+			{isError ? (
+				<div class="flex items-center gap-2 p-4 text-sm text-red-400">
+					{t("pages.album.failed")}
+				</div>
+			) : isLoading ? (
+				<div class="flex min-h-0 flex-1 items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+					<Loader size={24} class="animate-spin" />
+				</div>
+			) : tracks.length === 0 ? (
+				<p class="text-sm text-zinc-500">{t("pages.album.noTracks")}</p>
+			) : (
+				<Virtualization songs={tracks} sourceId={id} />
+			)}
+		</div>
 	);
 }

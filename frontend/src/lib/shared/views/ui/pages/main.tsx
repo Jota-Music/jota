@@ -24,7 +24,6 @@ import { applyOrder, move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
 import { addError } from "@/lib/shared/views/stores/errors";
 import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
-import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 import { RoomsShelf } from "@/lib/sync/views/ui/rooms";
 
 type Tab = "playlists" | "following" | "rooms";
@@ -134,7 +133,7 @@ export function MainPage() {
 	};
 
 	return (
-		<DefaultLayout class="gap-6">
+		<>
 			<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
 				{tab === "following" ? (
 					<FollowingShelf account={spotifyHandle} />
@@ -183,6 +182,6 @@ export function MainPage() {
 				}}
 				onConfirm={confirmRemove}
 			/>
-		</DefaultLayout>
+		</>
 	);
 }

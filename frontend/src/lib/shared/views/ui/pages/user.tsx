@@ -28,7 +28,6 @@ import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
-import DefaultLayout from "@/lib/shared/views/ui/layouts/default";
 
 type Tab = "playlists" | "videos";
 
@@ -105,19 +104,17 @@ export function UserPage() {
 
 	if (playlistsQuery.isError || (youtube && videosQuery.isError)) {
 		return (
-			<DefaultLayout>
-				<div class="flex flex-col items-start gap-3 p-6 text-sm">
-					<p class="text-red-400">{t("pages.user.failed", { user: id })}</p>
-					<button
-						type="button"
-						onClick={handleRefresh}
-						title={t("common.retry")}
-						class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white transition-colors"
-					>
-						<RefreshCw size={14} />
-					</button>
-				</div>
-			</DefaultLayout>
+			<div class="flex flex-col items-start gap-3 p-6 text-sm">
+				<p class="text-red-400">{t("pages.user.failed", { user: id })}</p>
+				<button
+					type="button"
+					onClick={handleRefresh}
+					title={t("common.retry")}
+					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white transition-colors"
+				>
+					<RefreshCw size={14} />
+				</button>
+			</div>
 		);
 	}
 
@@ -221,52 +218,50 @@ export function UserPage() {
 		);
 
 	return (
-		<DefaultLayout class="gap-6">
-			<div class="flex flex-col gap-6 min-h-0 flex-1 pb-6">
-				<UserHeader
-					source={source}
-					identifier={id}
-					name={infoQuery.data?.name}
-					imageUrl={infoQuery.data?.avatar}
-				/>
+		<div class="flex flex-col gap-6 min-h-0 flex-1 pb-6">
+			<UserHeader
+				source={source}
+				identifier={id}
+				name={infoQuery.data?.name}
+				imageUrl={infoQuery.data?.avatar}
+			/>
 
-				{youtube && (
-					<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-						<button
-							type="button"
-							title={t("pages.user.videosTab")}
-							onClick={() => {
-								activeTab.value = "videos";
-							}}
-							class={cn(
-								"flex h-8 cursor-pointer items-center justify-center rounded-md transition-colors px-3",
-								activeTab.value === "videos"
-									? "bg-zinc-800 text-white"
-									: "text-zinc-500 hover:text-zinc-300",
-							)}
-						>
-							<ListVideo size={16} />
-						</button>
-						<button
-							type="button"
-							title={t("pages.user.playlistsTab")}
-							onClick={() => {
-								activeTab.value = "playlists";
-							}}
-							class={cn(
-								"flex h-8 cursor-pointer items-center justify-center rounded-md transition-colors px-3",
-								activeTab.value === "playlists"
-									? "bg-zinc-800 text-white"
-									: "text-zinc-500 hover:text-zinc-300",
-							)}
-						>
-							<ListMusic size={16} />
-						</button>
-					</div>
-				)}
+			{youtube && (
+				<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+					<button
+						type="button"
+						title={t("pages.user.videosTab")}
+						onClick={() => {
+							activeTab.value = "videos";
+						}}
+						class={cn(
+							"flex h-8 cursor-pointer items-center justify-center rounded-md transition-colors px-3",
+							activeTab.value === "videos"
+								? "bg-zinc-800 text-white"
+								: "text-zinc-500 hover:text-zinc-300",
+						)}
+					>
+						<ListVideo size={16} />
+					</button>
+					<button
+						type="button"
+						title={t("pages.user.playlistsTab")}
+						onClick={() => {
+							activeTab.value = "playlists";
+						}}
+						class={cn(
+							"flex h-8 cursor-pointer items-center justify-center rounded-md transition-colors px-3",
+							activeTab.value === "playlists"
+								? "bg-zinc-800 text-white"
+								: "text-zinc-500 hover:text-zinc-300",
+						)}
+					>
+						<ListMusic size={16} />
+					</button>
+				</div>
+			)}
 
-				{content}
-			</div>
-		</DefaultLayout>
+			{content}
+		</div>
 	);
 }
