@@ -118,7 +118,7 @@ async function playAtIndex(
 	}
 
 	// play() exhausts this track's recovery ladder before returning "failed".
-	const result = await play(song);
+	const result = await play(song, hasLoaded(song.id) ? 0 : undefined);
 	if (queue.value[currentIndex.value]?.id !== song.id) return;
 
 	// A newer play() superseded this one right after the track switched: nothing
