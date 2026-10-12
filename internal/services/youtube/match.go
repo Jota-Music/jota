@@ -38,8 +38,9 @@ const (
 // itself. The lyric tier is the only one that has to clear a real duration gap
 // to be harmless, which is why it outweighs the topic bonus.
 const (
-	channelPenalty = -25
-	topicPenalty   = -15
+	channelPenalty = -30
+	topicPenalty   = -20
+	creditBonus    = -20
 	lyricPenalty   = 40
 )
 
@@ -50,7 +51,7 @@ const (
 // Beatles' own channel — outranks the studio master, because the tier is there
 // to break ties and not to argue with a quarter of the track missing.
 const (
-	tierFull = 0.03
+	tierFull = 0.05
 	tierGone = 0.15
 )
 
@@ -87,6 +88,16 @@ var versionWords = map[string]bool{
 	"slowed": true, "sped": true, "nightcore": true, "reverb": true, "reversed": true,
 	"loop": true, "extended": true, "reaction": true, "tutorial": true,
 	"review": true, "session": true, "rehearsal": true, "compilacion": true,
+	"lofi": true, "8d": true, "boosted": true, "muffled": true,
+	"demo": true, "tiktok": true,
+}
+
+// coverWords announce a re-recording rather than the master: a fan's cover, a
+// tribute, a remake. They are held apart from versionWords because the word only
+// gives someone away when the uploader is not the artist, so the penalty is
+// applied through coverPenalty against the uploader's tier.
+var coverWords = map[string]bool{
+	"cover": true, "version": true, "tribute": true, "remake": true,
 }
 
 // lyricChannels publish karaoke and lyric videos. They restate the song, so
@@ -96,9 +107,11 @@ var lyricChannels = []string{"lyric", "lyrics", "letra", "letras", "lirik", "par
 
 // accented folds the accented vowels Jota actually meets (Spanish and English
 // titles) onto ASCII, so "químicamente" and "quimicamente" compare equal
-// without pulling in golang.org/x/text.
+// without pulling in golang.org/x/text. It also folds the "lo-fi" spellings onto
+// one token, so the quality marker matches whatever separator the uploader used.
 var accented = strings.NewReplacer(
 	"á", "a", "é", "e", "í", "i", "ó", "o", "ú", "u", "ü", "u", "ñ", "n",
+	"lo-fi", "lofi", "lo fi", "lofi",
 )
 
 // bracketed matches the tails Spotify hangs off a title, as in
@@ -143,10 +156,13 @@ func rank(videos []Video, song music.Song) []Video {
 
 func penalty(v Video, song music.Song) float64 {
 	gap := durationGap(v.Duration, song.Duration)
+	tier := uploadPenalty(v, song)
 	return missingTokens(v.Title, song) +
 		min(gap*durationWeight, durationPenaltyMax) +
 		versionPenalty(v.Title) +
-		trust(uploadPenalty(v, song), gap)
+		coverPenalty(v.Title, tier) +
+		creditPenalty(v, song, tier) +
+		trust(tier, gap)
 }
 
 // trust scales an uploader tier by how close the video's length is to the
@@ -163,9 +179,11 @@ func trust(tier, gap float64) float64 {
 	return tier * (tierGone - gap) / (tierGone - tierFull)
 }
 
-// versionPenalty penalises a title that announces a live cut, a cover or a
-// reworked copy. The count is capped so one word cannot bury a video that
-// otherwise matches the track exactly.
+// versionPenalty penalises a title that announces a live cut, a reworked take or
+// a degraded re-upload. The count is capped so one word cannot bury a video that
+// otherwise matches the track exactly. Covers are handled separately by
+// coverPenalty, because naming one only gives the uploader away when it is not
+// the artist.
 func versionPenalty(title string) float64 {
 	var hits int
 	for _, token := range tokens(title) {
@@ -174,6 +192,58 @@ func versionPenalty(title string) float64 {
 		}
 	}
 	return math.Min(float64(hits)*keywordPenalty, keywordPenaltyMax)
+}
+
+// coverPenalty penalises a title that announces a re-recording — a cover, a
+// tribute, a remake — but only when the uploader is neither the artist nor their
+// Topic channel. The artist's own "(Cover Audio)" single is the master and must
+// not be demoted for naming itself honestly; the same word on a stranger's
+// channel is the tell that this is not the original recording.
+func coverPenalty(title string, tier float64) float64 {
+	if tier < 0 {
+		return 0
+	}
+	var hits int
+	for _, token := range tokens(title) {
+		if coverWords[token] {
+			hits++
+		}
+	}
+	return math.Min(float64(hits)*keywordPenalty, keywordPenaltyMax)
+}
+
+// creditPenalty rewards an upload whose title names the song's artist, the
+// "Artist - Song" convention official and re-uploaded masters use. The channel
+// alone is not enough: a label posts under its own name and a fan channel can
+// borrow the artist's, so the title is where the performer is actually stated.
+// It only fires when the channel was not recognised, so it never stacks on the
+// uploader tier, and it is what separates the original from a different artist's
+// take on the same title when both match the length.
+func creditPenalty(v Video, song music.Song, tier float64) float64 {
+	if tier < 0 {
+		return 0
+	}
+	have := map[string]bool{}
+	for _, token := range tokens(v.Title) {
+		have[token] = true
+	}
+	for _, artist := range song.Artists {
+		want := tokens(artist.Name)
+		if len(want) == 0 {
+			continue
+		}
+		named := true
+		for _, token := range want {
+			if !have[token] {
+				named = false
+				break
+			}
+		}
+		if named {
+			return creditBonus
+		}
+	}
+	return 0
 }
 
 // uploadPenalty scores who uploaded the video. The lyric words are looked for

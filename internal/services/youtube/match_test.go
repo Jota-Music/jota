@@ -86,11 +86,104 @@ func TestRankPrefersTheArtistsOwnCover(t *testing.T) {
 	}
 }
 
+// A fan's cover shares the title and the exact length of the track, so only the
+// uploader gives it away. The artist's own "(Cover Audio)" test above fixes the
+// other side: the same word on the artist's own channel stays the master.
+func TestRankDemotesAFanCover(t *testing.T) {
+	song := music.Song{
+		Name:     "Havana",
+		Duration: 219,
+		Artists:  []music.Artist{{Name: "Camila Cabello"}},
+	}
+	candidates := []Video{
+		{ID: "fan", Title: "Camila Cabello - Havana (cover)", Author: "Random Covers", Duration: 219},
+		{ID: "master", Title: "Camila Cabello - Havana", Author: "Camila Cabello", Duration: 219},
+	}
+
+	got := first(t, candidates, song)
+	if got.ID != "master" {
+		t.Fatalf("picked %q by %q, want the artist's own upload", got.Title, got.Author)
+	}
+}
+
+func TestCoverPenalty(t *testing.T) {
+	if got := coverPenalty("Song (Cover)", 0); got != keywordPenalty {
+		t.Fatalf("untrusted cover = %v, want %v", got, keywordPenalty)
+	}
+	// The artist's own cover is the master, not a fan re-upload.
+	if got := coverPenalty("Song (Cover Audio)", channelPenalty); got != 0 {
+		t.Fatalf("artist cover = %v, want 0", got)
+	}
+	if got := coverPenalty("Song (Cover) (Tribute)", 0); got != 2*keywordPenalty {
+		t.Fatalf("cover + tribute = %v, want %v", got, 2*keywordPenalty)
+	}
+}
+
+// A "8D audio", a "lo-fi" flip or a "bass boosted" upload restates the song at
+// its own length but is not the original recording, so the plain upload has to
+// win.
+func TestRankDemotesDegradedReuploads(t *testing.T) {
+	song := music.Song{Name: "Havana", Duration: 219}
+	candidates := []Video{
+		video("Camila Cabello - Havana (8D AUDIO)", 219),
+		video("Camila Cabello - Havana (slowed + reverb)", 219),
+		video("Camila Cabello - Havana (Lo-Fi)", 219),
+		video("Camila Cabello - Havana (Bass Boosted)", 219),
+		video("Camila Cabello - Havana", 219),
+	}
+
+	got := first(t, candidates, song)
+	if got.Title != "Camila Cabello - Havana" {
+		t.Fatalf("picked %q, want the plain upload", got.Title)
+	}
+}
+
+// "Te Quise Olvidar" is MDO's hit, co-written and first recorded by Carlos
+// Baute. YouTube answers "Te Quise Olvidar MDO" with a shelf where MDO's uploads
+// sit on channels that do not carry the band's name, while Baute's own audio is
+// four seconds closer to the track's length. Only the title says who is singing,
+// so without the credit Baute wins on duration alone.
+func TestRankPrefersTheTitledArtist(t *testing.T) {
+	song := music.Song{
+		Name:     "Te Quise Olvidar",
+		Duration: 263,
+		Artists:  []music.Artist{{Name: "MDO"}},
+	}
+	candidates := []Video{
+		{ID: "baute", Title: "Te Quise Olvidar - Carlos Baute (Audio HQ)", Author: "Frankjvs", Duration: 259},
+		{ID: "mdo", Title: "MDO - Te Quise Olvidar (Audio)", Author: "MDOisback", Duration: 268},
+		{ID: "mdo-video", Title: "MDO - Te Quise Olvidar (Video Oficial)", Author: "MdoSME", Duration: 274},
+	}
+
+	got := first(t, candidates, song)
+	if got.ID != "mdo" {
+		t.Fatalf("picked %q by %q, want MDO's own upload", got.Title, got.Author)
+	}
+}
+
+func TestCreditPenalty(t *testing.T) {
+	song := music.Song{Artists: []music.Artist{{Name: "The Weeknd"}}}
+
+	if got := creditPenalty(Video{Title: "The Weeknd - Blinding Lights"}, song, 0); got != creditBonus {
+		t.Fatalf("titled artist = %v, want %v", got, creditBonus)
+	}
+	// The artist's own channel already carries the trust; the credit must not
+	// stack on top of it.
+	if got := creditPenalty(Video{Title: "The Weeknd - Blinding Lights"}, song, channelPenalty); got != 0 {
+		t.Fatalf("trusted channel = %v, want 0", got)
+	}
+	// A title that names no one, or someone else, earns nothing.
+	if got := creditPenalty(Video{Title: "Blinding Lights (Audio)"}, song, 0); got != 0 {
+		t.Fatalf("untitled = %v, want 0", got)
+	}
+	if got := creditPenalty(Video{Title: "Blinding Lights - Dua Lipa"}, song, 0); got != 0 {
+		t.Fatalf("other artist = %v, want 0", got)
+	}
+}
+
 // The Voice performance ranks first for "Fast Car": a different artist at half
-// the length. The duration gap has to push it down. Note the remaining v1 gap:
-// Black Pumas is a cover by another band that happens to run 282s, so length
-// alone still prefers it over the 267s official upload. Catching that needs the
-// channel and version-keyword signals planned for v2.
+// the length. The duration gap has to push it down, and the Black Pumas cover
+// that happens to run close to the track's length is caught by its own title.
 func TestRankRejectsAMismatchedLength(t *testing.T) {
 	song := music.Song{Name: "Fast Car", Duration: 296}
 	candidates := []Video{
