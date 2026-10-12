@@ -35,6 +35,7 @@ import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import CircularProgress from "@/lib/shared/views/ui/components/circular-progress";
+import { closeContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
@@ -387,6 +388,10 @@ export function PlayerBar() {
 	useEffect(() => {
 		if (showQueue.value) playerModalOpen.value = false;
 	}, [showQueue.value]);
+
+	useEffect(() => {
+		if (playerModalOpen.value) closeContextMenu();
+	}, [playerModalOpen.value]);
 
 	const onBarPointerDown = (e: PointerEvent) => {
 		const target = e.target as HTMLElement;

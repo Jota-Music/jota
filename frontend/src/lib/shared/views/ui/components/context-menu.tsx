@@ -40,7 +40,7 @@ export function openContextMenu(
 	request.value = { actions, x: e.clientX, y: e.clientY, header, abovePlayer };
 }
 
-function closeContextMenu() {
+export function closeContextMenu() {
 	request.value = null;
 }
 
