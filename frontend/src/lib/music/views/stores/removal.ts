@@ -17,7 +17,7 @@ export function stageRemoval(next: Removal) {
 	removal.value = next;
 }
 
-export function dismissRemoval() {
+function dismissRemoval() {
 	removal.value = null;
 }
 

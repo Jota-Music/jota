@@ -4,7 +4,7 @@ import { cover } from "@/lib/shared/utils/cover";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Mosaic } from "@/lib/shared/views/ui/components/mosaic";
 
-export function Placeholder({
+function Placeholder({
 	icon: Icon = Disc3,
 	size,
 }: {

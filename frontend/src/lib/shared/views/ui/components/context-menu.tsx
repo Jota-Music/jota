@@ -38,7 +38,7 @@ export function openContextMenu(
 	request.value = { actions, x: e.clientX, y: e.clientY, header };
 }
 
-export function closeContextMenu() {
+function closeContextMenu() {
 	request.value = null;
 }
 
