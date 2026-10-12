@@ -58,6 +58,7 @@ type Props = {
 	// reserve keeps the button in place while the list is still loading, so the
 	// header it sits in does not shift when the tracks land.
 	reserve?: boolean;
+	abovePlayer?: boolean;
 };
 
 export function buildActions({
@@ -192,6 +193,7 @@ export default function TrackActions({
 	onSelectAll,
 	onDone,
 	reserve = false,
+	abovePlayer = true,
 }: Props) {
 	const [, navigate] = useLocation();
 
@@ -218,6 +220,7 @@ export default function TrackActions({
 			actions,
 			e,
 			count > 0 ? t("music.custom.selected", { count }) : undefined,
+			abovePlayer,
 		);
 	};
 

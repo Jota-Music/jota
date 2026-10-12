@@ -18,6 +18,7 @@ type Request = {
 	x: number;
 	y: number;
 	header?: string;
+	abovePlayer: boolean;
 };
 
 const GAP = 6;
@@ -32,10 +33,11 @@ export function openContextMenu(
 	actions: Action[],
 	e: MouseEvent,
 	header?: string,
+	abovePlayer = true,
 ) {
 	if (actions.length === 0) return;
 	e.preventDefault();
-	request.value = { actions, x: e.clientX, y: e.clientY, header };
+	request.value = { actions, x: e.clientX, y: e.clientY, header, abovePlayer };
 }
 
 function closeContextMenu() {
@@ -140,7 +142,12 @@ function FloatingMenu() {
 function ActionSheet() {
 	const menu = request.value;
 	return (
-		<Sheet open={!!menu} close={closeContextMenu} centered={false}>
+		<Sheet
+			open={!!menu}
+			close={closeContextMenu}
+			centered={false}
+			abovePlayer={menu?.abovePlayer ?? true}
+		>
 			{menu && header(menu)}
 			{menu?.actions.map(item)}
 		</Sheet>
@@ -148,7 +155,8 @@ function ActionSheet() {
 }
 
 export function ContextMenu() {
-	return COARSE ? <ActionSheet /> : <FloatingMenu />;
+	const menu = request.value;
+	return menu && COARSE ? <ActionSheet /> : <FloatingMenu />;
 }
 
 export default ContextMenu;

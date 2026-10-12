@@ -26,6 +26,7 @@ import {
 import QueueButton from "@/lib/music/views/ui/player/queue-button";
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
 import Toggle from "@/lib/music/views/ui/player/toggle";
+import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { t } from "@/lib/shared/i18n";
 import { cover as coverImage } from "@/lib/shared/utils/cover";
@@ -67,6 +68,7 @@ interface FullPlayerProps {
 	toggleSong: () => Promise<void>;
 	nextSong: () => Promise<void>;
 	prevSong: () => Promise<void>;
+	abovePlayer?: boolean;
 }
 
 const Disc = memo(function Disc({
@@ -178,7 +180,7 @@ function SeekBar({
 }
 
 function FullPlayerContent(props: FullPlayerProps) {
-	const { song, isLoading, isPlaying, toggleSong } = props;
+	const { song, abovePlayer, isLoading, isPlaying, toggleSong } = props;
 
 	return (
 		<section class="w-full max-w-2xl mx-auto relative z-10 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-center text-(--dominant-color)">
@@ -208,6 +210,8 @@ function FullPlayerContent(props: FullPlayerProps) {
 				</div>
 
 				<PlayerControlsRow
+					song={song}
+					abovePlayer={abovePlayer}
 					isLoading={isLoading}
 					isPlaying={isPlaying}
 					toggleSong={toggleSong}
@@ -219,6 +223,8 @@ function FullPlayerContent(props: FullPlayerProps) {
 
 type ControlsRowProps = {
 	disabled?: boolean;
+	song?: Song;
+	abovePlayer?: boolean;
 	isLoading: boolean;
 	isPlaying: boolean;
 	toggleSong: () => Promise<void>;
@@ -226,6 +232,8 @@ type ControlsRowProps = {
 
 function PlayerControlsRow({
 	disabled = false,
+	song,
+	abovePlayer = true,
 	isLoading,
 	isPlaying,
 	toggleSong,
@@ -291,6 +299,14 @@ function PlayerControlsRow({
 			<VolumeControl />
 
 			<QueueButton class="hover:bg-white/10" />
+
+			{song && (
+				<TrackActions
+					songs={[song]}
+					abovePlayer={abovePlayer}
+					onPlay={() => void toggleSong()}
+				/>
+			)}
 
 			<button
 				type="button"
@@ -556,6 +572,13 @@ export function PlayerBar() {
 						<div class="flex items-center gap-0.5">
 							<QueueButton class="max-md:hidden" />
 
+							{player && (
+								<TrackActions
+									songs={[player.song]}
+									onPlay={() => void player.toggleSong()}
+								/>
+							)}
+
 							<button
 								type="button"
 								aria-label={t("music.player.expand")}
@@ -587,7 +610,7 @@ export function PlayerBar() {
 						class="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4"
 					>
 						{hasSong ? (
-							<FullPlayerContent {...player} />
+							<FullPlayerContent {...player} abovePlayer={false} />
 						) : (
 							<NothingPlayingContent />
 						)}
