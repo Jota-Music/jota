@@ -7,7 +7,6 @@ import { IdleSettings } from "@/lib/shared/views/ui/components/idle-settings";
 import { LanguageSettings } from "@/lib/shared/views/ui/components/language-settings";
 import { LogsSettings } from "@/lib/shared/views/ui/components/logs-settings";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
-import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { RelaySettings } from "@/lib/sync/views/ui/relay";
 import { AboutSettings } from "@/lib/update/views/about-settings";
 
@@ -34,41 +33,37 @@ function SettingsPage() {
 	}, []);
 
 	return (
-		<AppShell>
-			<div class="relative min-h-0 flex-1">
-				<div
-					ref={listRef}
-					class="h-full flex flex-col gap-4 overflow-y-auto pr-[15px] py-5 md:gap-6 md:py-6"
-				>
-					<header class="space-y-1">
-						<h1 class="text-xl font-bold text-zinc-100">
-							{t("settings.title")}
-						</h1>
-						<p class="text-sm text-zinc-500">{t("settings.subtitle")}</p>
-					</header>
+		<div class="relative min-h-0 flex-1">
+			<div
+				ref={listRef}
+				class="h-full flex flex-col gap-4 overflow-y-auto pr-[15px] py-5 md:gap-6 md:py-6"
+			>
+				<header class="space-y-1">
+					<h1 class="text-xl font-bold text-zinc-100">{t("settings.title")}</h1>
+					<p class="text-sm text-zinc-500">{t("settings.subtitle")}</p>
+				</header>
 
-					<AccountSettings />
-					<LanguageSettings />
-					{!isAndroid && <DiscordSettings />}
-					<IdleSettings />
-					<RelaySettings />
-					<AboutSettings />
-					<LogsSettings />
+				<AccountSettings />
+				<LanguageSettings />
+				{!isAndroid && <DiscordSettings />}
+				<IdleSettings />
+				<RelaySettings />
+				<AboutSettings />
+				<LogsSettings />
 
-					<footer class="mt-auto pt-5 text-center text-xs text-zinc-600 md:pt-6">
-						{t("settings.developedBy")}{" "}
-						<button
-							type="button"
-							onClick={openDeveloper}
-							class="cursor-pointer text-zinc-400 underline underline-offset-2 transition-colors hover:text-zinc-200"
-						>
-							@salvadorsru
-						</button>
-					</footer>
-				</div>
-				<Scrollbar target={listRef} />
+				<footer class="mt-auto pt-5 text-center text-xs text-zinc-600 md:pt-6">
+					{t("settings.developedBy")}{" "}
+					<button
+						type="button"
+						onClick={openDeveloper}
+						class="cursor-pointer text-zinc-400 underline underline-offset-2 transition-colors hover:text-zinc-200"
+					>
+						@salvadorsru
+					</button>
+				</footer>
 			</div>
-		</AppShell>
+			<Scrollbar target={listRef} />
+		</div>
 	);
 }
 
