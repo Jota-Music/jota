@@ -1,5 +1,6 @@
 import { effect, signal } from "@preact/signals";
 import { shouldEnd } from "@/lib/music/app/end";
+import { retryDelay, stalled } from "@/lib/music/app/recovery";
 import { gain } from "@/lib/music/app/volume";
 import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
@@ -45,6 +46,15 @@ let recovering = 0;
 // gates every track the same way, so it must stop the queue instead of failing
 // each song in turn.
 let blockedByPolicy = false;
+// Set while a stream recovery reloads the shared element, so the transient
+// load/pause it causes does not overwrite the stable UI. Cleared by the next
+// `play` event or a timeout.
+let quietReload = false;
+let quietTimer: ReturnType<typeof setTimeout> | null = null;
+// Stream recovery: re-resolve the dead stream and resume at the same position.
+let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
+let recoveryInFlight = false;
+let recoveryAttempt = 0;
 
 let onTrackEndedCallback: (() => void) | null = null;
 let endedElement: HTMLAudioElement | null = null;
@@ -96,9 +106,107 @@ function watchEnd(a: HTMLAudioElement) {
 		} else {
 			still = 0;
 			last = time;
+			// The stream came back on its own: drop a reload a stall scheduled.
+			if (recoveryTimer !== null) cancelRecovery();
 		}
-		if (shouldEnd(time, elementDuration, knownDuration, still)) endPlayback(a);
+		if (shouldEnd(time, elementDuration, knownDuration, still)) {
+			endPlayback(a);
+			return;
+		}
+		if (stalled(still)) {
+			still = 0;
+			last = time;
+			requestRecovery();
+		}
 	}, 250);
+}
+
+function endQuietReload() {
+	quietReload = false;
+	if (quietTimer !== null) {
+		clearTimeout(quietTimer);
+		quietTimer = null;
+	}
+}
+
+function beginQuietReload() {
+	quietReload = true;
+	if (quietTimer !== null) clearTimeout(quietTimer);
+	// If the reload never reaches `play`, stop hiding the UI after a short window
+	// so a manual pause or an error still shows through.
+	quietTimer = setTimeout(endQuietReload, 5000);
+}
+
+function cancelRecovery() {
+	if (recoveryTimer !== null) {
+		clearTimeout(recoveryTimer);
+		recoveryTimer = null;
+	}
+	recoveryAttempt = 0;
+}
+
+// Position to restore after a rebuild: the live element when it still holds the
+// song, otherwise the last position the UI reported.
+function resumePosition(): number {
+	if (audio && loadedSongId === currentSong.value?.id && !audio.error) {
+		return audio.currentTime;
+	}
+	return progress.value;
+}
+
+function scheduleRecovery(song: Song) {
+	if (recoveryTimer !== null) return;
+	const delay = retryDelay(recoveryAttempt++);
+	recoveryTimer = setTimeout(() => {
+		recoveryTimer = null;
+		if (currentSong.value?.id !== song.id) {
+			recoveryAttempt = 0;
+			return;
+		}
+		void recover();
+	}, delay);
+}
+
+// Entry point for the watchdogs: a no-op while a retry is already pending, so a
+// stall that keeps firing every tick cannot bypass the backoff.
+function requestRecovery() {
+	if (recoveryTimer !== null || recoveryInFlight) return;
+	void recover();
+}
+
+// A dead stream is not a broken song: re-resolve the URL (YouTube links expire),
+// rebuild the element and resume at the same position. Retries forever with
+// backoff, silently, and never advances the queue.
+async function recover(): Promise<void> {
+	if (recoveryInFlight) return;
+	const song = currentSong.value;
+	if (!song) return;
+
+	// Offline: the resolve would only burn its timeout. Wait for the `online`
+	// event or the next backoff tick.
+	if (typeof navigator !== "undefined" && navigator.onLine === false) {
+		scheduleRecovery(song);
+		return;
+	}
+
+	recoveryInFlight = true;
+	const at = resumePosition();
+	try {
+		AudioCache.remove(song.id);
+		const loaded = await prepareSong(song, undefined, true);
+		if (!loaded || !audio) {
+			scheduleRecovery(song);
+			return;
+		}
+		seek(clampSeconds(at, knownDurationOr(audio.duration)));
+		await audio.play();
+		recoveryAttempt = 0;
+		markFailed(song.id, false);
+	} catch {
+		scheduleRecovery(song);
+	} finally {
+		recoveryInFlight = false;
+	}
 }
 
 export const isLoading = signal(false);
@@ -238,6 +346,14 @@ function isNotAllowedError(err: unknown): boolean {
 	);
 }
 
+// Reflect a stopped load in the UI unless a quiet recovery owns the element and
+// must keep the previous state visible while it rebuilds the stream.
+function markStopped(): void {
+	if (quietReload) return;
+	isLoading.value = false;
+	isPlaying.value = false;
+}
+
 // "aborted" means a newer load superseded this one, which is not a failure and
 // must not run the recovery ladder nor mark the song as failed.
 type LoadStatus = "ok" | "failed" | "aborted";
@@ -250,8 +366,14 @@ async function loadSongIntoPlayer(
 	song: Song,
 	autostart: boolean,
 	startSeconds?: number | (() => number),
+	quiet = false,
 ): Promise<LoadStatus> {
 	const token = ++loadToken;
+
+	// A recovery reload hides its transient state; any other load is the normal
+	// path and must clear a leftover quiet window from a failed recovery.
+	if (quiet) beginQuietReload();
+	else endQuietReload();
 
 	stopEndWatch();
 	const replaying = endedElement != null;
@@ -268,9 +390,11 @@ async function loadSongIntoPlayer(
 		knownDuration = 0;
 	}
 
-	progress.value = 0;
-	audioDuration.value = 0;
-	isLoading.value = true;
+	if (!quietReload) {
+		progress.value = 0;
+		audioDuration.value = 0;
+		isLoading.value = true;
+	}
 
 	currentSong.value = song;
 	media.update(song, isPlaying.value);
@@ -282,8 +406,7 @@ async function loadSongIntoPlayer(
 		if (data.youtube) setYoutube(song, data.youtube);
 	} catch (err) {
 		if (token !== loadToken) return "aborted";
-		isLoading.value = false;
-		isPlaying.value = false;
+		markStopped();
 		logError(err, `resolve ${songLabel(song)}`);
 		return "failed";
 	}
@@ -293,8 +416,7 @@ async function loadSongIntoPlayer(
 		instance = await AudioCache.getAudioElement(song);
 	} catch (err) {
 		if (token !== loadToken) return "aborted";
-		isLoading.value = false;
-		isPlaying.value = false;
+		markStopped();
 		logError(err, `element ${songLabel(song)}`);
 		return "failed";
 	}
@@ -305,7 +427,7 @@ async function loadSongIntoPlayer(
 
 	instance.volume = gain(volume.value);
 	instance.muted = muted.value;
-	instance.currentTime = 0;
+	if (!quietReload) instance.currentTime = 0;
 
 	bindEvents(instance);
 
@@ -326,8 +448,7 @@ async function loadSongIntoPlayer(
 			try {
 				await waitUntilBufferedEnough(instance);
 			} catch (err) {
-				isLoading.value = false;
-				isPlaying.value = false;
+				markStopped();
 				logError(err, `buffer ${songLabel(song)} | ${mediaState(instance)}`);
 				return "failed";
 			}
@@ -346,20 +467,22 @@ async function loadSongIntoPlayer(
 			if (token !== loadToken) return "aborted";
 			if (!isAbortError(err)) {
 				if (isNotAllowedError(err)) blockedByPolicy = true;
-				isPlaying.value = false;
-				isLoading.value = false;
+				markStopped();
 				logError(err, `play ${songLabel(song)} | ${mediaState(instance)}`);
 				return "failed";
 			}
 		}
 	} else {
-		isPlaying.value = false;
+		if (!quietReload) isPlaying.value = false;
 		try {
 			await waitUntilBufferedEnough(instance);
 		} catch (err) {
-			isLoading.value = false;
-			isPlaying.value = false;
-			addError(err, `buffer ${songLabel(song)}`);
+			markStopped();
+			if (quietReload) {
+				logError(err, `buffer ${songLabel(song)}`);
+			} else {
+				addError(err, `buffer ${songLabel(song)}`);
+			}
 			return "failed";
 		}
 		if (wantsStart) {
@@ -370,7 +493,7 @@ async function loadSongIntoPlayer(
 	}
 
 	if (token !== loadToken) return "aborted";
-	isLoading.value = false;
+	if (!quietReload) isLoading.value = false;
 	return "ok";
 }
 
@@ -409,6 +532,7 @@ export async function play(
 	const seq = ++playSeq;
 	const superseded = () => seq !== playSeq;
 
+	cancelRecovery();
 	blockedByPolicy = false;
 
 	const success = (): PlayResult => {
@@ -552,8 +676,9 @@ function primeAutoplayOnGesture(): void {
 export async function prepareSong(
 	song: Song,
 	startSeconds?: number | (() => number),
+	quiet = false,
 ): Promise<boolean> {
-	return (await loadSongIntoPlayer(song, false, startSeconds)) === "ok";
+	return (await loadSongIntoPlayer(song, false, startSeconds, quiet)) === "ok";
 }
 
 export function getPlaybackSeconds(): number {
@@ -652,6 +777,8 @@ function setMuted(value: boolean) {
 }
 
 export function pause(): boolean {
+	cancelRecovery();
+	endQuietReload();
 	if (audio && !audio.error && endedElement !== audio && !audio.paused) {
 		audio.pause();
 		return true;
@@ -668,6 +795,8 @@ export async function togglePlayPause(): Promise<boolean> {
 }
 
 export function stopPlayer() {
+	cancelRecovery();
+	endQuietReload();
 	loadToken++;
 	stopEndWatch();
 	endedElement = null;
@@ -698,6 +827,7 @@ function bindEvents(a: HTMLAudioElement) {
 
 	a.onplay = () => {
 		if (audio !== a) return;
+		endQuietReload();
 		endedElement = null;
 		isPlaying.value = true;
 		pendingStart.value = false;
@@ -707,6 +837,12 @@ function bindEvents(a: HTMLAudioElement) {
 
 	a.onpause = () => {
 		if (audio !== a) return;
+		// A reload pauses the element behind the scenes; keep the UI stable and let
+		// the following `play` decide the state.
+		if (quietReload) {
+			stopEndWatch();
+			return;
+		}
 		isPlaying.value = false;
 		media.update(currentSong.value, false);
 		stopEndWatch();
@@ -740,7 +876,10 @@ function bindEvents(a: HTMLAudioElement) {
 		if (recovering > 0) {
 			logError(new Error(`media error code ${code}`), detail);
 		} else {
-			addError(new Error(`media error code ${code}`), detail);
+			// A mid-track error is usually the stream dying with the connection, not
+			// a broken song: recover it instead of reporting and leaving it stopped.
+			logError(new Error(`media error code ${code}`), detail);
+			requestRecovery();
 		}
 	};
 }
@@ -756,6 +895,11 @@ effect(() => {
 
 if (typeof window !== "undefined") {
 	primeAutoplayOnGesture();
+	// The network came back: retry immediately instead of waiting out the backoff.
+	window.addEventListener("online", () => {
+		cancelRecovery();
+		requestRecovery();
+	});
 	window.addEventListener("storage", (e: StorageEvent) => {
 		if (e.storageArea !== localStorage) return;
 		if (e.key === VOLUME_STORAGE_KEY) {
