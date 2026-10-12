@@ -493,7 +493,9 @@ async function loadSongIntoPlayer(
 	}
 
 	if (token !== loadToken) return "aborted";
-	if (!quietReload) isLoading.value = false;
+	// A prepared (not playing) load ends here, so clear the loader. An autostart
+	// leaves it to the playing/timeupdate events, which fire when sound is out.
+	if (!quietReload && !autostart) isLoading.value = false;
 	return "ok";
 }
 
@@ -831,12 +833,25 @@ function bindEvents(a: HTMLAudioElement) {
 		endQuietReload();
 		endedElement = null;
 		isPlaying.value = true;
-		// Playback started: whatever load was waiting is done, even when a quiet
-		// recovery superseded the normal one and left the flag set.
-		isLoading.value = false;
 		pendingStart.value = false;
 		media.update(currentSong.value, true);
 		watchEnd(a);
+	};
+
+	// `play` fires once the browser accepts playback, which is still before the
+	// stream reaches the speakers. Only `playing` means audio is actually out, so
+	// the loader stays until then instead of vanishing into a silent gap.
+	a.onplaying = () => {
+		if (audio !== a) return;
+		isLoading.value = false;
+	};
+
+	// Re-buffering, at the start or mid-track: the element is not producing sound,
+	// so the loader belongs on. A quiet recovery reloads behind the scenes and
+	// must show it just the same.
+	a.onwaiting = () => {
+		if (audio !== a) return;
+		isLoading.value = true;
 	};
 
 	a.onpause = () => {
@@ -854,6 +869,9 @@ function bindEvents(a: HTMLAudioElement) {
 
 	a.ontimeupdate = () => {
 		if (audio !== a) return;
+		// Belt and braces: a frame advancing means the wait is over, even if a
+		// WebKit quirk swallowed the `playing` event.
+		isLoading.value = false;
 		if (!dragSeeking.value) progress.value = a.currentTime;
 		media.position(a, knownDuration);
 	};
