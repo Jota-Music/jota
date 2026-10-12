@@ -101,8 +101,17 @@ func (s *Service) SetYoutubeId(cacheKey, youtubeId string) error {
 	return youtubeSourceBucket.SetString(cacheKey, youtubeId)
 }
 
+// audioQuery asks YouTube for the song by title, artist and album. The album
+// disambiguates a title YouTube spells differently — "Lo que quieras" against
+// Spotify's "Lo que quieres" — because the distributor keeps the release name in
+// the upload's metadata. audioQueryArtistFirst stays album-free as the broader
+// fallback, so an album that over-constrains the search can still recover.
 func audioQuery(song music.Song) string {
-	return strings.TrimSpace(song.Name + " " + artistNames(song))
+	query := song.Name + " " + artistNames(song)
+	if album := strings.TrimSpace(song.Album.Title); album != "" {
+		query += " " + album
+	}
+	return strings.TrimSpace(query)
 }
 
 func audioQueryArtistFirst(song music.Song) string {
