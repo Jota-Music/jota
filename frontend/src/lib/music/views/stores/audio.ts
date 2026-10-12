@@ -812,6 +812,7 @@ export function stopPlayer() {
 	progress.value = 0;
 	audioDuration.value = 0;
 	isPlaying.value = false;
+	isLoading.value = false;
 	pendingStart.value = false;
 }
 
@@ -830,6 +831,9 @@ function bindEvents(a: HTMLAudioElement) {
 		endQuietReload();
 		endedElement = null;
 		isPlaying.value = true;
+		// Playback started: whatever load was waiting is done, even when a quiet
+		// recovery superseded the normal one and left the flag set.
+		isLoading.value = false;
 		pendingStart.value = false;
 		media.update(currentSong.value, true);
 		watchEnd(a);
