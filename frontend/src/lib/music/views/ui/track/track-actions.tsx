@@ -59,6 +59,9 @@ type Props = {
 	// header it sits in does not shift when the tracks land.
 	reserve?: boolean;
 	abovePlayer?: boolean;
+	// Clearance below the viewport bottom for a fixed element anchored there
+	// (the compact player bar) when this button lives inside it.
+	bottom?: number;
 };
 
 export function buildActions({
@@ -182,6 +185,22 @@ export function buildActions({
 	return { actions, count: batch && list.length > 1 ? list.length : 0 };
 }
 
+// Context menu for a single song without its own trigger button: right-click
+// on the player. buildActions stays the single source of menu contents.
+export function useTrackMenu(
+	song: Song | undefined,
+	onPlay?: () => void,
+	bottom = 0,
+) {
+	const [, navigate] = useLocation();
+	return (e: MouseEvent) => {
+		if (!song) return;
+		const { actions } = buildActions({ songs: [song], onPlay, navigate });
+		if (actions.length > 0)
+			openContextMenu(actions, e, undefined, true, bottom);
+	};
+}
+
 export default function TrackActions({
 	songs,
 	playlistActions,
@@ -194,6 +213,7 @@ export default function TrackActions({
 	onDone,
 	reserve = false,
 	abovePlayer = true,
+	bottom = 0,
 }: Props) {
 	const [, navigate] = useLocation();
 
@@ -221,6 +241,7 @@ export default function TrackActions({
 			e,
 			count > 0 ? t("music.custom.selected", { count }) : undefined,
 			abovePlayer,
+			bottom,
 		);
 	};
 

@@ -1,4 +1,4 @@
-import { computed, signal } from "@preact/signals";
+import { computed, signal, useSignal } from "@preact/signals";
 import {
 	ChevronUp,
 	Minimize2,
@@ -9,7 +9,7 @@ import {
 	SkipForward,
 } from "lucide-preact";
 import { memo } from "preact/compat";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { usePlayer } from "@/lib/music/views/hooks/use-player";
 import { audioDuration, progress } from "@/lib/music/views/stores/audio";
@@ -26,7 +26,9 @@ import {
 import QueueButton from "@/lib/music/views/ui/player/queue-button";
 import SaveYoutubeId from "@/lib/music/views/ui/player/save-youtube-id";
 import Toggle from "@/lib/music/views/ui/player/toggle";
-import TrackActions from "@/lib/music/views/ui/track/track-actions";
+import TrackActions, {
+	useTrackMenu,
+} from "@/lib/music/views/ui/track/track-actions";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { t } from "@/lib/shared/i18n";
 import { cover as coverImage } from "@/lib/shared/utils/cover";
@@ -368,9 +370,17 @@ function NothingPlayingContent() {
 
 export function Player() {
 	const player = usePlayer();
+	const onContextMenu = useTrackMenu(
+		player?.song,
+		() => void player?.toggleSong(),
+	);
 
 	return (
-		<div class={compactPlayer.value ? "hidden" : "hidden md:block"}>
+		<div
+			role="none"
+			class={compactPlayer.value ? "hidden" : "hidden md:block"}
+			onContextMenu={onContextMenu}
+		>
 			{player ? <FullPlayerContent {...player} /> : <NothingPlayingContent />}
 		</div>
 	);
@@ -384,6 +394,26 @@ export function PlayerBar() {
 
 	const dragTracking = useRef({ startY: 0, active: false });
 	const modalListRef = useRef<HTMLDivElement>(null);
+	const barRef = useRef<HTMLDivElement>(null);
+	const barHeight = useSignal(0);
+
+	useLayoutEffect(() => {
+		if (barRef.current) barHeight.value = barRef.current.offsetHeight;
+	}, []);
+
+	// Opened from the compact bar, so clear the bar itself: the menu would
+	// otherwise open on top of the controls it sits next to.
+	const onContextMenu = useTrackMenu(
+		player?.song,
+		() => void player?.toggleSong(),
+		barHeight.value,
+	);
+
+	// Expanded player (mobile modal): the compact bar is slid out of view.
+	const onExpandedMenu = useTrackMenu(
+		player?.song,
+		() => void player?.toggleSong(),
+	);
 
 	useEffect(() => {
 		if (showQueue.value) playerModalOpen.value = false;
@@ -429,6 +459,8 @@ export function PlayerBar() {
 	return (
 		<>
 			<div
+				ref={barRef}
+				role="none"
 				class={cn(
 					"block fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-60 md:z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out",
 					compactPlayer.value ? "md:block" : "md:hidden",
@@ -436,6 +468,7 @@ export function PlayerBar() {
 				style={`transform: translateY(${
 					playerModalOpen.value ? "calc(100% + 3.5rem)" : "0"
 				})`}
+				onContextMenu={onContextMenu}
 				onPointerDown={onBarPointerDown}
 				onPointerMove={onBarPointerMove}
 				onPointerUp={onBarPointerUp}
@@ -581,6 +614,7 @@ export function PlayerBar() {
 								<TrackActions
 									songs={[player.song]}
 									onPlay={() => void player.toggleSong()}
+									bottom={barHeight.value}
 								/>
 							)}
 
@@ -609,7 +643,11 @@ export function PlayerBar() {
 				closeLabel={t("music.player.close")}
 				abovePlayer={false}
 			>
-				<div class="relative flex min-h-0 flex-1 flex-col">
+				<div
+					role="none"
+					class="relative flex min-h-0 flex-1 flex-col"
+					onContextMenu={onExpandedMenu}
+				>
 					<div
 						ref={modalListRef}
 						class="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4"

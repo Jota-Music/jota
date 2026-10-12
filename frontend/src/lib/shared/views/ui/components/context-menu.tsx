@@ -19,6 +19,10 @@ type Request = {
 	y: number;
 	header?: string;
 	abovePlayer: boolean;
+	// Clearance below the viewport bottom for a fixed element anchored there
+	// (the compact player bar): the y clamp keeps the menu above it instead of
+	// covering its controls.
+	bottom: number;
 };
 
 const GAP = 6;
@@ -34,10 +38,18 @@ export function openContextMenu(
 	e: MouseEvent,
 	header?: string,
 	abovePlayer = true,
+	bottom = 0,
 ) {
 	if (actions.length === 0) return;
 	e.preventDefault();
-	request.value = { actions, x: e.clientX, y: e.clientY, header, abovePlayer };
+	request.value = {
+		actions,
+		x: e.clientX,
+		y: e.clientY,
+		header,
+		abovePlayer,
+		bottom,
+	};
 }
 
 export function closeContextMenu() {
@@ -97,7 +109,10 @@ function FloatingMenu() {
 		);
 		const y = Math.max(
 			GAP,
-			Math.min(menu.y, window.innerHeight - bar - el.offsetHeight - GAP),
+			Math.min(
+				menu.y,
+				window.innerHeight - bar - menu.bottom - el.offsetHeight - GAP,
+			),
 		);
 		el.style.left = `${x}px`;
 		el.style.top = `${y}px`;
