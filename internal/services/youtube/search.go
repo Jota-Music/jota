@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 var youtubeSourceBucket = kv.UseBucket("youtube-source")
@@ -240,42 +241,79 @@ func extractPlaylists(res searchResponse) []music.PlaylistSummary {
 	return out
 }
 
-// candidates returns the videos to try for a song, best match first. A cached
-// id stays pinned at the front: the user either picked it by hand or it was
-// stored by an earlier resolve, and ranking must not demote it behind a fresh
-// automatic pick.
-func (s *Service) candidates(cacheKey, search string, song music.Song) ([]Video, error) {
-	if search == "" {
+// candidates returns the videos to try for a song, best match first. Both the
+// album-first and artist-first queries are searched in parallel and merged: an
+// album whose name matches another track buries the song it belongs to, and the
+// artist-first query still surfaces its official upload, which ranking then
+// places first. A cached id stays pinned at the front — the user either picked
+// it by hand or an earlier resolve settled on it, and ranking must not demote it
+// behind a fresh pick.
+func (s *Service) candidates(cacheKey string, song music.Song) ([]Video, error) {
+	wanted := queries(song)
+	if len(wanted) == 0 {
 		if !isYoutubeId(cacheKey) {
 			return nil, errors.New("no search query and not a youtube id")
 		}
 		return []Video{{ID: cacheKey}}, nil
 	}
 
-	videos, err := s.Search(search)
+	found, err := s.searchAll(wanted)
 	if err != nil {
-		return nil, fmt.Errorf("search failed: %w", err)
+		return nil, err
 	}
 
 	var (
 		pinned []Video
-		found  []Video
 		seen   = map[string]bool{}
 	)
 	if cached, err := youtubeSourceBucket.GetString(cacheKey); err == nil && cached != "" {
 		pinned = append(pinned, Video{ID: cached})
 		seen[cached] = true
 	}
-	for _, v := range videos {
+	unique := make([]Video, 0, len(found))
+	for _, v := range found {
 		if v.ID != "" && !seen[v.ID] {
-			found = append(found, v)
+			unique = append(unique, v)
 			seen[v.ID] = true
 		}
 	}
 
-	if len(pinned)+len(found) == 0 {
-		return nil, fmt.Errorf("no results for: %s", search)
+	if len(pinned)+len(unique) == 0 {
+		return nil, fmt.Errorf("no results for: %s", strings.Join(wanted, " / "))
 	}
 
-	return append(pinned, rank(found, song)...), nil
+	return append(pinned, rank(unique, song)...), nil
+}
+
+// searchAll runs every query against YouTube concurrently and merges the
+// results. One query failing does not sink the resolve while another returns
+// videos; the error is only reported when nothing came back at all.
+func (s *Service) searchAll(queries []string) ([]Video, error) {
+	results := make([][]Video, len(queries))
+	errs := make([]error, len(queries))
+	var wg sync.WaitGroup
+	for i, query := range queries {
+		wg.Add(1)
+		go func(i int, query string) {
+			defer wg.Done()
+			results[i], errs[i] = s.Search(query)
+		}(i, query)
+	}
+	wg.Wait()
+
+	var (
+		videos []Video
+		failed []error
+	)
+	for i := range results {
+		if errs[i] != nil {
+			failed = append(failed, errs[i])
+			continue
+		}
+		videos = append(videos, results[i]...)
+	}
+	if len(videos) == 0 && len(failed) > 0 {
+		return nil, fmt.Errorf("search failed: %w", errors.Join(failed...))
+	}
+	return videos, nil
 }

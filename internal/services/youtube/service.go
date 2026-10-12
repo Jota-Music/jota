@@ -36,23 +36,10 @@ func (s *Service) ResolveAudio(song music.Song) (music.Audio, error) {
 			return audio, nil
 		}
 	}
-	audio, err := s.searchAudio(song, audioQuery(song))
-	if err == nil {
-		return audio, nil
-	}
-
-	// A title-first query can come back empty; YouTube search indexes "artist
-	// title" better, so retry the other way before giving up.
-	if alt := audioQueryArtistFirst(song); alt != audioQuery(song) {
-		if retry, retryErr := s.searchAudio(song, alt); retryErr == nil {
-			return retry, nil
-		}
-	}
-
-	return audio, err
+	return s.searchAudio(song)
 }
 
-func (s *Service) searchAudio(song music.Song, search string) (music.Audio, error) {
+func (s *Service) searchAudio(song music.Song) (music.Audio, error) {
 	cacheKey := song.Id
 	if cached := cachedAudioBySong(cacheKey); cached != nil {
 		return *cached, nil
@@ -73,7 +60,7 @@ func (s *Service) searchAudio(song music.Song, search string) (music.Audio, erro
 		lastErr = err
 	}
 
-	videos, err := s.candidates(cacheKey, search, song)
+	videos, err := s.candidates(cacheKey, song)
 	if err != nil {
 		return music.Audio{}, err
 	}
@@ -129,8 +116,9 @@ func (s *Service) SetYoutubeId(cacheKey, youtubeId string) error {
 // audioQuery asks YouTube for the song by title, artist and album. The album
 // disambiguates a title YouTube spells differently — "Lo que quieras" against
 // Spotify's "Lo que quieres" — because the distributor keeps the release name in
-// the upload's metadata. audioQueryArtistFirst stays album-free as the broader
-// fallback, so an album that over-constrains the search can still recover.
+// the upload's metadata. audioQueryArtistFirst drops the album: an album that
+// shares its name with another track on it buries the song under that track, so
+// both queries run together and ranking picks between their merged results.
 func audioQuery(song music.Song) string {
 	query := song.Name + " " + artistNames(song)
 	if album := strings.TrimSpace(song.Album.Title); album != "" {
@@ -145,6 +133,19 @@ func audioQueryArtistFirst(song music.Song) string {
 		return strings.TrimSpace(song.Name)
 	}
 	return strings.TrimSpace(names + " " + song.Name)
+}
+
+// queries returns the distinct searches to run for a song, album-first then
+// artist-first. They collapse to one when the song carries no album.
+func queries(song music.Song) []string {
+	album, artist := audioQuery(song), audioQueryArtistFirst(song)
+	if album == "" {
+		return nil
+	}
+	if artist == "" || artist == album {
+		return []string{album}
+	}
+	return []string{album, artist}
 }
 
 func artistNames(song music.Song) string {
