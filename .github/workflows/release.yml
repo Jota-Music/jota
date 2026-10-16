@@ -328,3 +328,16 @@ jobs:
           files: |
             ${{ steps.collect.outputs.files }}
             SHA256SUMS
+      - name: Refresh the landing page
+        # The site bakes the release tag into the download button at build
+        # time, so a new release only shows up after the next build. Without
+        # this step the landing keeps advertising the previous tag until
+        # somebody happens to push to the web repo.
+        env:
+          DEPLOY_HOOK: ${{ secrets.LANDING_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "LANDING_DEPLOY_HOOK is not set — skipping the rebuild"
+            exit 0
+          fi
+          curl -fsS -X POST "$DEPLOY_HOOK"
