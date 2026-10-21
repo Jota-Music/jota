@@ -25,12 +25,14 @@ const (
 	loginTimeout = 5 * time.Minute
 
 	// restoreAttempts is how often Connect retries a stored session. Restoring
-	// is best-effort: the watcher retries in the background, so blocking
-	// startup here only delays the UI.
+	// is best-effort: the watcher retries in the background, so one attempt is
+	// all a caller needs to spend on it.
 	restoreAttempts = 1
-	// reconnectTimeout bounds one background attempt so a blackholed network
-	// cannot park the watcher forever.
-	reconnectTimeout = 10 * time.Second
+	// SessionTimeout bounds one session restore attempt. The accesspoint only
+	// deadlines its connection when the caller's context carries one, so a
+	// blackholed network parks the call forever without this. Startup and the
+	// reconnect watcher share the bound.
+	SessionTimeout = 10 * time.Second
 )
 
 var sessionBucket = kv.UseBucket(bucketName)
@@ -180,11 +182,11 @@ func (s *SpotifyService) OnReconnect(fn func()) {
 	s.onReconnect = fn
 }
 
-// Reconnect retries the restore with the background timeout applied, so no
-// caller can block on a blackholed network. It reports whether the session is
-// live again.
+// Reconnect retries the restore with the shared timeout applied, so no caller
+// can block on a blackholed network. It reports whether the session is live
+// again.
 func (s *SpotifyService) Reconnect() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), reconnectTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), SessionTimeout)
 	defer cancel()
 	return s.Connect(ctx) == nil
 }

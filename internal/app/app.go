@@ -100,11 +100,19 @@ func New(version string) *App {
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
 	kv.Start()
-	if err := a.Spotify.Connect(ctx); err != nil {
-		log.Printf("spotify: not connected at startup: %v", err)
-	} else {
+	// Restoring the session is a network round trip, and startup runs before any
+	// window exists: blocking here means the app never opens at all, which is
+	// exactly how it used to hang on a stalled network. Restore in the
+	// background, bounded; Watch retries a degraded session anyway.
+	go func() {
+		ctx, cancel := context.WithTimeout(ctx, spotify.SessionTimeout)
+		defer cancel()
+		if err := a.Spotify.Connect(ctx); err != nil {
+			log.Printf("spotify: not connected at startup: %v", err)
+			return
+		}
 		log.Printf("spotify: connected as %s", a.Spotify.Username())
-	}
+	}()
 	a.Spotify.Watch()
 	refresh.Start(func() {
 		app := application.Get()
