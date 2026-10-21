@@ -6,7 +6,7 @@ import {
 	TriangleAlert,
 } from "lucide-preact";
 import { memo } from "preact/compat";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import type { Song } from "@/lib/music/model";
 import { rowSelect } from "@/lib/music/views/hooks/row-select";
@@ -44,11 +44,19 @@ type Props = {
 	// sourceId identifies the playlist/album these songs belong to, so playback
 	// can be tied back to its card.
 	sourceId?: string;
+	// resetKey changes when the listing itself changes (a filter or an order), so
+	// the list goes back to the top instead of keeping an offset that now points
+	// at a different song.
+	resetKey?: string;
 	onRemove?: (songs: Song[]) => void;
 	onReorder?: (from: number, to: number) => void;
 };
 
 const ROW_PX = 64;
+
+// Scroll offset per list, kept for the session: a list that is unmounted and
+// mounted again (a route change, a cleared query) continues where it was.
+const offsets = new Map<string, number>();
 
 const dragFrom = signal<number | null>(null);
 const dragOver = signal<number | null>(null);
@@ -207,6 +215,7 @@ const PlaylistRowMemo = memo(PlaylistRow);
 export function Virtualization({
 	songs,
 	sourceId,
+	resetKey,
 	onRemove,
 	onReorder,
 }: Props) {
@@ -262,16 +271,51 @@ export function Virtualization({
 		dragOrigin.current = index;
 	};
 
-	// Open the list centered on the song that is already playing, if it belongs
-	// here. Runs once per mount: re-running on `songs` would steal the scroll
-	// position from the user on every reorder or filter change.
+	// The list opens where it was left: a remount (a route change, a cleared
+	// query) or a different playlist in place restores the saved offset instead
+	// of stealing the scroll back to the playing song, and only a different
+	// listing starts at the top.
+	const shown = useRef<{ key?: string; source?: string }>({
+		key: resetKey,
+		source: sourceId,
+	});
 	useLayoutEffect(() => {
 		const el = ref.current;
 		if (!el) return;
+		const previous = shown.current;
+		shown.current = { key: resetKey, source: sourceId };
+		if (previous.key !== resetKey) {
+			if (sourceId) offsets.delete(sourceId);
+			el.scrollTop = 0;
+			return;
+		}
+		const saved = sourceId ? offsets.get(sourceId) : undefined;
+		if (saved !== undefined) {
+			el.scrollTop = saved;
+			return;
+		}
+		// A different list starts at the top unless the playing song belongs here:
+		// keeping the previous offset would leave the new list scrolled to a row that
+		// means nothing. A height of 0 would compute an offset far below the real
+		// position, so centering waits for a real measurement.
 		const index = songs.findIndex((song) => song.id === currentId.value);
-		if (index < 0) return;
+		if (index < 0) {
+			if (previous.source !== sourceId) el.scrollTop = 0;
+			return;
+		}
+		if (el.clientHeight === 0) return;
 		el.scrollTop = index * ROW_PX - el.clientHeight / 2 + ROW_PX / 2;
-	}, []);
+	}, [resetKey, sourceId]);
+
+	// Only a real list (a playlist, an album) is worth returning to: a search
+	// result or an artist page is looked at once and left behind.
+	useEffect(() => {
+		const el = ref.current;
+		if (!el || !sourceId) return;
+		const save = () => offsets.set(sourceId, el.scrollTop);
+		el.addEventListener("scroll", save, { passive: true });
+		return () => el.removeEventListener("scroll", save);
+	}, [sourceId]);
 
 	const song = currentSong.value;
 	const jumpTo = song ? songs.findIndex((s) => s.id === song.id) : -1;
