@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"embed"
+	"errors"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"runtime/pprof"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,6 +21,7 @@ import (
 	"github.com/Jota-Music/jota/internal/covers"
 	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/services/youtube"
+	"github.com/Jota-Music/jota/internal/single"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -39,7 +44,20 @@ const (
 	windowMinWidth  = 500
 	windowMinHeight = 480
 	logMaxBytes     = 2 << 20
+
+	// startupBudget is how long the process may go without a window before it
+	// dumps every goroutine. Nothing on the startup path should block, and a
+	// block is silent by definition: no window, no log line.
+	startupBudget = 20 * time.Second
+
+	// markerStarted and markerReady are the states recorded in the crash marker.
+	// A session that dies in "starting" never opened its window.
+	markerStarted = "starting"
+	markerReady   = "ready"
 )
+
+// runningMarker is the crash marker path, set by setupLogging.
+var runningMarker string
 
 // rotatingWriter appends to a file and, once it grows past max, moves it aside
 // to "<path>.1" (overwriting the previous backup) and starts fresh, so the log
@@ -97,17 +115,65 @@ func setupLogging() func() {
 
 	// A native crash (a WebKit abort, for one) kills the process before the
 	// deferred cleanup runs, so the marker is what survives to tell the next
-	// launch that the previous session died instead of exiting cleanly.
-	marker := filepath.Join(filepath.Dir(path), "jota.running")
-	if _, err := os.Stat(marker); err == nil {
-		log.Printf("previous session ended unexpectedly (crash or forced kill)")
-	}
-	_ = os.WriteFile(marker, []byte(strconv.Itoa(os.Getpid())), 0o644)
+	// launch how the previous session died. claimMarker owns it from here.
+	runningMarker = filepath.Join(filepath.Dir(path), "jota.running")
 
 	return func() {
-		_ = os.Remove(marker)
 		_ = f.Close()
 	}
+}
+
+// claimMarker reports how the previous session left the marker, then records this
+// one. The state is the whole point: a session that died while "starting" is a
+// launch that never opened a window, which is the failure this app used to hide.
+func claimMarker() {
+	if runningMarker == "" {
+		return
+	}
+	switch previousState() {
+	case markerReady:
+		log.Printf("previous session ended unexpectedly (crash or forced kill)")
+	case markerStarted:
+		log.Printf("previous session ended unexpectedly (crash or forced kill), window never appeared")
+	}
+	markRunning(markerStarted)
+}
+
+// markRunning moves the marker to state.
+func markRunning(state string) {
+	if runningMarker == "" {
+		return
+	}
+	_ = os.WriteFile(runningMarker, []byte(strconv.Itoa(os.Getpid())+" "+state), 0o644)
+}
+
+// previousState is the state left in the marker, or "" when there is none. An
+// empty string from a clean exit and from a missing marker are the same answer:
+// nothing worth reporting.
+func previousState() string {
+	data, err := os.ReadFile(runningMarker)
+	if err != nil {
+		return ""
+	}
+	_, state, _ := strings.Cut(strings.TrimSpace(string(data)), " ")
+	return state
+}
+
+func releaseMarker() {
+	if runningMarker != "" {
+		_ = os.Remove(runningMarker)
+	}
+}
+
+// watchStartup names the stuck call in the log if no window is up inside the
+// budget. Without it a startup block is invisible: the process lives, nothing is
+// printed, and the only symptom is a window that never appears.
+func watchStartup() *time.Timer {
+	return time.AfterFunc(startupBudget, func() {
+		var dump bytes.Buffer
+		_ = pprof.Lookup("goroutine").WriteTo(&dump, 1)
+		log.Printf("startup: no window after %s; goroutines:\n%s", startupBudget, dump.String())
+	})
 }
 
 func loadWindowState() windowState {
@@ -141,6 +207,12 @@ func clampWindowState(st *windowState, screens []*application.Screen) {
 	}
 	st.Width = min(st.Width, wa.Width)
 	st.Height = min(st.Height, wa.Height)
+
+	// Size alone is not enough: a position saved on a monitor that is gone, or on
+	// a layout that shrank, restores the window off-screen with no way to drag it
+	// back. Pull it inside the work area.
+	st.X = min(max(st.X, wa.X), wa.X+wa.Width-st.Width)
+	st.Y = min(max(st.Y, wa.Y), wa.Y+wa.Height-st.Height)
 }
 
 // Moving or resizing the window floods WindowDidMove/Resize events at every
@@ -244,6 +316,34 @@ func main() {
 
 	log.Printf("jota %s starting", currentVersion)
 
+	// The single instance is decided before anything else starts, so a second
+	// launch costs a socket round trip and nothing more.
+	var windowPtr atomic.Pointer[application.WebviewWindow]
+	focus := func() {
+		w := windowPtr.Load()
+		if w == nil {
+			return
+		}
+		w.Restore()
+		w.Show()
+		w.Focus()
+	}
+	if runtime.GOOS == "linux" {
+		guard, err := single.Acquire(focus)
+		if errors.Is(err, single.ErrHandedOff) {
+			log.Printf("jota: already running, asked it to show its window")
+			return
+		}
+		if err != nil {
+			log.Printf("single: no session lock, starting anyway: %v", err)
+		} else {
+			defer guard.Close()
+		}
+	}
+
+	claimMarker()
+	defer releaseMarker()
+
 	a := app.New(currentVersion)
 
 	// Fetch YouTube's visitor token in the background so the first play does not
@@ -259,19 +359,15 @@ func main() {
 
 	var window *application.WebviewWindow
 
-	// Wails single-instance on Linux is built on the session D-Bus and aborts
-	// the app when there is no bus, so only enable it where one exists.
+	// Wails' single instance is built on the session D-Bus and its handshake has
+	// no timeout, so it is only used where Linux's own guard (internal/single)
+	// does not run.
 	var singleInstance *application.SingleInstanceOptions
-	if runtime.GOOS != "linux" || os.Getenv("DBUS_SESSION_BUS_ADDRESS") != "" {
+	if runtime.GOOS != "linux" {
 		singleInstance = &application.SingleInstanceOptions{
 			UniqueID: "com.jotamusic.jota",
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
-				if window == nil {
-					return
-				}
-				window.Restore()
-				window.Show()
-				window.Focus()
+				focus()
 			},
 		}
 	}
@@ -336,10 +432,16 @@ func main() {
 	}
 
 	window = wailsApp.Window.NewWithOptions(opts)
+	windowPtr.Store(window)
+
+	watchdog := watchStartup()
 
 	var restored atomic.Bool
 	var quitting atomic.Bool
 	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
+		watchdog.Stop()
+		markRunning(markerReady)
+		log.Printf("window ready")
 		application.Get().Event.Emit("window:always-on-top", state.AlwaysOnTop)
 		clampWindowState(&state, application.Get().Screen.GetAll())
 		if restored.Swap(true) || state.Width <= 0 {
