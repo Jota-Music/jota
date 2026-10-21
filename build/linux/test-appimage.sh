@@ -55,6 +55,28 @@ missing_message() {
 }
 check "negative: missing WebKitGTK message" missing_message
 
+# The window has to come up with the network blackholed (every outbound TCP
+# packet dropped). Startup used to wait on Spotify's session restore before any
+# window existed, so a stalled connection left the process alive, mute and
+# blocking each later launch. TestStalledAccesspointHonoursDeadline pins the
+# credential path; this is the end-to-end promise: no network, window anyway.
+blackholed() {
+  local out
+  out=$("$runtime" run --rm --cap-add NET_ADMIN -v "$app:/app.AppImage:ro" ubuntu:24.04 bash -lc '
+    set -e
+    apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libgtk-3-0 libwebkit2gtk-4.1-0 xvfb iptables >/dev/null
+    mkdir -p /run/user/0 && chmod 700 /run/user/0
+    export XDG_RUNTIME_DIR=/run/user/0
+    iptables -A OUTPUT -p tcp -j DROP
+    timeout 30 xvfb-run -a /app.AppImage --appimage-extract-and-run >/dev/null 2>&1 || true
+    grep "window ready" /root/.config/jota/jota.log || echo "no window ready line within 30s"
+  ' 2>&1)
+  echo "$out" | tail -2
+  echo "$out" | grep -q "window ready"
+}
+check "blackholed network: window opens" blackholed
+
 if [ "$failed" -eq 0 ]; then
   echo "all checks passed"
 else

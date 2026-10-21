@@ -94,6 +94,21 @@ jobs:
             'timeout 20 /app.AppImage --appimage-extract-and-run 2>&1 || true')
           echo "$out"
           echo "$out" | grep -q "missing system libraries"
+
+          # The window must come up with the network blackholed: startup used to
+          # wait on the Spotify session restore before any window existed, so a
+          # stalled connection left the process alive, mute, and blocking every
+          # later launch. Mirrored by build/linux/test-appimage.sh.
+          docker run --rm --cap-add NET_ADMIN -v "$PWD/$app:/app.AppImage:ro" ubuntu:24.04 bash -lc '
+            set -e
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libgtk-3-0 libwebkit2gtk-4.1-0 xvfb iptables >/dev/null
+            mkdir -p /run/user/0 && chmod 700 /run/user/0
+            export XDG_RUNTIME_DIR=/run/user/0
+            iptables -A OUTPUT -p tcp -j DROP
+            timeout 30 xvfb-run -a /app.AppImage --appimage-extract-and-run >/dev/null 2>&1 || true
+            grep "window ready" /root/.config/jota/jota.log
+          '
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: linux-packages
