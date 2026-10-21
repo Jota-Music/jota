@@ -46,9 +46,11 @@ let consensusGen: string | null = null;
 let roundSeq = 0;
 let playWait: {
 	gen: string;
-	resolve: (play: { at: number }) => void;
+	resolve: (play: Release) => void;
 	timer: number;
 } | null = null;
+
+type Release = { at: number; positionMs: number };
 
 // Host session id (from the relay), so a member can drop frames from a previous
 // session. Local queue edits are diffed against `lastQueue`: an incremental one
@@ -119,9 +121,12 @@ function answerJoin(from: string): void {
 
 // An empty room has no host, so the relay seats us as host. Our local session
 // then becomes the room's: broadcast our queue and immediate now-playing
-// instead of adopting a stale relay cache from a previous session.
-function inherit(): boolean {
+// instead of adopting a stale relay cache from a previous session. A room that
+// already holds playback is not empty: adopting it is how a host lands on the
+// track the room is playing instead of freezing everyone on its own copy.
+function inherit(state?: Playback): boolean {
 	if (store.role.value !== "host" || !currentSong.value) return false;
+	if (state && (state.songId || state.song)) return false;
 	transport.send({ t: "state", ...currentPlayback() });
 	pendingStart.value = false;
 	return true;
@@ -132,16 +137,16 @@ function cancelWait(): void {
 	clearTimeout(playWait.timer);
 	const wait = playWait;
 	playWait = null;
-	wait.resolve({ at: clock.serverNow() });
+	wait.resolve({ at: clock.serverNow(), positionMs: 0 });
 }
 
-function waitForPlay(gen: string): Promise<{ at: number }> {
-	return new Promise<{ at: number }>((resolve) => {
+function waitForPlay(gen: string): Promise<Release> {
+	return new Promise<Release>((resolve) => {
 		const wait = {
 			gen,
 			resolve,
 			timer: window.setTimeout(() => {
-				if (playWait !== wait) return;
+				if (playWait !== wait || consensusGen !== gen) return;
 				playWait = null;
 				pendingStart.value = false;
 				// Abandon the round so settle returns without starting solo, and
@@ -149,19 +154,22 @@ function waitForPlay(gen: string): Promise<{ at: number }> {
 				consensusGen = null;
 				addError(new Error("consensus timeout"), "room");
 				requestJoin();
-				resolve({ at: clock.serverNow() });
-			}, 20000),
+				resolve({ at: clock.serverNow(), positionMs: 0 });
+			}, 8000),
 		};
 		playWait = wait;
 	});
 }
 
-function resolvePlay(gen: string, at: number): void {
+function resolvePlay(
+	gen: string,
+	play: Extract<ServerMessage, { t: "play" }>,
+): void {
 	if (!playWait || playWait.gen !== gen) return;
 	clearTimeout(playWait.timer);
 	const wait = playWait;
 	playWait = null;
-	wait.resolve({ at });
+	wait.resolve({ at: play.at, positionMs: play.positionMs ?? 0 });
 }
 
 async function settle(gen: string, song: Song): Promise<void> {
@@ -171,6 +179,10 @@ async function settle(gen: string, song: Song): Promise<void> {
 	cancelWait();
 	consensusGen = gen;
 	pendingStart.value = true;
+
+	// Registered before the load: the relay releases the round on its deadline,
+	// so the play frame can land while this member is still loading the track.
+	const play = waitForPlay(gen);
 
 	if (song.youtubeId) {
 		try {
@@ -184,13 +196,17 @@ async function settle(gen: string, song: Song): Promise<void> {
 	// A failed load must not stall the room: the relay releases on any answer.
 	transport.send({ t: "ready", gen, ok: loaded });
 
-	const play = await waitForPlay(gen);
+	const release = await play;
 	if (consensusGen !== gen) return;
 	if (!loaded) {
 		pendingStart.value = false;
 		return;
 	}
-	await clock.sleep(clock.delayUntil(play.at));
+	await clock.sleep(clock.delayUntil(release.at));
+	if (consensusGen !== gen) return;
+	// A release whose instant already passed (this member was still loading when
+	// the round expired) lands on the live position instead of from the top.
+	await seekTo(clock.projected(release.positionMs, release.at, true));
 	if (consensusGen !== gen) return;
 	await resume();
 	pendingStart.value = false;
@@ -252,7 +268,7 @@ async function applySnapshot(
 		applyQueue(m.queue);
 	}
 
-	if (inherit()) return;
+	if (inherit(m.state)) return;
 	const seq = roundSeq;
 
 	const p = m.state;
@@ -453,7 +469,7 @@ function handleMessage(msg: ServerMessage): void {
 			void applySnapshot(msg);
 			return;
 		case "play":
-			resolvePlay(msg.gen, msg.at);
+			resolvePlay(msg.gen, msg);
 			return;
 	}
 	if (!live()) return;
