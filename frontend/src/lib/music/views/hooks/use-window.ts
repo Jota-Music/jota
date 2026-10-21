@@ -30,8 +30,12 @@ export function useWindow<T extends HTMLElement>(
 
 		let frame = 0;
 		const read = () => {
+			const height = el.clientHeight;
+			// A hidden or not-yet-measured pane reports no height: windowing to the
+			// overscan alone would paint the top rows and leave the rest blank.
+			if (height === 0) return;
 			setScrollTop(el.scrollTop);
-			setViewport(el.clientHeight);
+			setViewport(height);
 		};
 		// Scrolling and resizing are throttled to a frame, but the first read is
 		// not: a viewport of 0 would window the list to the overscan alone and
