@@ -26,16 +26,14 @@ export function dismissYouTubeSignInSuggestion(): void {
 }
 
 export async function syncYouTubeStatus(): Promise<void> {
-	try {
-		youtubeSignedIn.value = await YouTubeSignedIn();
-	} catch {
-		youtubeSignedIn.value = false;
-	}
-	try {
-		youtubeBrowserLoginSupported.value = await YouTubeBrowserLoginSupported();
-	} catch {
-		youtubeBrowserLoginSupported.value = false;
-	}
+	// Independent reads, so both crosses the bridge at once instead of
+	// stacking two round trips on every mount.
+	const [signedIn, supported] = await Promise.all([
+		YouTubeSignedIn().catch(() => false),
+		YouTubeBrowserLoginSupported().catch(() => false),
+	]);
+	youtubeSignedIn.value = signedIn;
+	youtubeBrowserLoginSupported.value = supported;
 	if (youtubeSignedIn.value) youtubeSignInSuggested.value = false;
 }
 
