@@ -12,7 +12,7 @@ function label(link: ClipboardLink): string {
 	switch (link.kind) {
 		case "song":
 			return link.to.startsWith("youtube:")
-				? t("clipboard.video")
+				? t("clipboard.track")
 				: t("clipboard.track");
 		case "user":
 			return t("clipboard.channel");
