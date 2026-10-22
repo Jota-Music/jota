@@ -39,6 +39,31 @@ func (s *Service) ResolveAudio(song music.Song) (music.Audio, error) {
 	return s.searchAudio(song)
 }
 
+// Find returns the YouTube video linked to a song without resolving a stream.
+// It prefers the id the song carries, then the cached one, and only searches
+// when both are missing, recording whatever it settles on for later resolves.
+func (s *Service) Find(song music.Song) (string, error) {
+	if song.YoutubeId != "" {
+		return song.YoutubeId, nil
+	}
+	if id := s.YoutubeId(song.Id); id != "" {
+		return id, nil
+	}
+
+	videos, err := s.candidates(song.Id, song)
+	if err != nil {
+		return "", err
+	}
+	if len(videos) == 0 {
+		return "", errors.New("no youtube video found")
+	}
+	id := videos[0].ID
+	if err := s.SetYoutubeId(song.Id, id); err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
 func (s *Service) searchAudio(song music.Song) (music.Audio, error) {
 	cacheKey := song.Id
 	if cached := cachedAudioBySong(cacheKey); cached != nil {

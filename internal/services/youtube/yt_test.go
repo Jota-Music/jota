@@ -66,6 +66,52 @@ func TestYoutubeIdLookup(t *testing.T) {
 	}
 }
 
+// Find must answer from the cached id without searching: a plain text query
+// with no stub responses would fail the search path.
+func TestFindUsesCachedId(t *testing.T) {
+	const song = "test-find-cached"
+	_ = youtubeSourceBucket.SetString(song, "cached_video1")
+	stubSearch(t, map[string]searchResponse{})
+
+	id, err := NewService().Find(music.Song{Id: song, Name: "Rambo"})
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	if id != "cached_video1" {
+		t.Fatalf("Find = %q, want the cached id", id)
+	}
+}
+
+func TestFindSearchesAndRecordsId(t *testing.T) {
+	const song = "test-find-search"
+	_ = youtubeSourceBucket.Delete(song)
+
+	want := music.Song{
+		Id:       song,
+		Name:     "Rambo",
+		Artists:  []music.Artist{{Name: "Orquesta Mondragón"}},
+		Album:    music.Album{Title: "Ellos las prefieren gordas"},
+		Duration: 182,
+	}
+	stubSearch(t, map[string]searchResponse{
+		audioQuery(want): searchVideos(
+			Video{ID: "ohV8ZwFXQN4", Title: "Rambo", Author: "Orquesta Mondragón - Topic", Duration: 183},
+		),
+	})
+
+	svc := NewService()
+	id, err := svc.Find(want)
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	if id != "ohV8ZwFXQN4" {
+		t.Fatalf("Find = %q, want the searched video", id)
+	}
+	if got := svc.YoutubeId(song); got != id {
+		t.Fatalf("YoutubeId = %q, want the searched id recorded", got)
+	}
+}
+
 func TestGetAudioURL(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test: reaches YouTube")

@@ -24,6 +24,10 @@ func (a *App) ResolveAudio(song music.Song) (music.Audio, error) {
 	return audio, err
 }
 
+func (a *App) ResolveYouTubeId(song music.Song) (string, error) {
+	return a.YouTube.Find(song)
+}
+
 func (a *App) SetYouTubeId(cacheKey string, youtubeId string) error {
 	return a.YouTube.SetYoutubeId(cacheKey, youtubeId)
 }

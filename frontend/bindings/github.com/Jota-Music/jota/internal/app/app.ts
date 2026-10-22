@@ -226,6 +226,10 @@ export function ResolveAudio(song: music$0.Song): $CancellablePromise<music$0.Au
     return $Call.ByID(1456476822, song);
 }
 
+export function ResolveYouTubeId(song: music$0.Song): $CancellablePromise<string> {
+    return $Call.ByID(1771554616, song);
+}
+
 export function RevalidateFollowing(): $CancellablePromise<void> {
     return $Call.ByID(1169650278);
 }
