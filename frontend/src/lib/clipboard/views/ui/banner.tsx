@@ -1,4 +1,13 @@
-import { Link2, Loader2, X } from "lucide-preact";
+import {
+	Disc3,
+	Link2,
+	ListMusic,
+	Loader2,
+	Play,
+	Tv,
+	UserRound,
+	X,
+} from "lucide-preact";
 import { useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import type { ClipboardLink } from "@/lib/clipboard/app/link";
@@ -30,6 +39,16 @@ export function ClipboardBanner() {
 
 	const { link } = current;
 	const playable = link.kind === "song";
+	const Icon =
+		link.kind === "song"
+			? Play
+			: link.kind === "album"
+				? Disc3
+				: link.kind === "playlist"
+					? ListMusic
+					: link.kind === "channel"
+						? Tv
+						: UserRound;
 
 	const open = async () => {
 		if (!playable) {
@@ -55,17 +74,18 @@ export function ClipboardBanner() {
 			<p class="min-w-0 flex-1 truncate text-zinc-400">{link.text}</p>
 
 			{busy ? (
-				<span class="flex shrink-0 items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300">
-					<Loader2 size={12} class="animate-spin" />
-					{t("common.loading")}
+				<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-zinc-300">
+					<Loader2 size={14} class="animate-spin" />
 				</span>
 			) : (
 				<button
 					type="button"
 					onClick={() => void open()}
-					class="shrink-0 cursor-pointer rounded-full bg-(--dominant-color) px-3 py-1 text-xs font-semibold text-(--binary-color) transition-opacity hover:opacity-85"
+					title={label(link)}
+					aria-label={label(link)}
+					class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition-opacity hover:opacity-85"
 				>
-					{label(link)}
+					<Icon size={14} class={playable ? "fill-current" : undefined} />
 				</button>
 			)}
 
