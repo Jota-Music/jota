@@ -1,8 +1,16 @@
 package covers
 
 import (
+	"bytes"
+	"fmt"
 	"image"
+	"image/png"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestAllowed(t *testing.T) {
@@ -121,4 +129,99 @@ func TestResize(t *testing.T) {
 	if b := larger.Bounds(); b.Dx() != 200 || b.Dy() != 100 {
 		t.Fatalf("resize above source = %dx%d, want unchanged 200x100", b.Dx(), b.Dy())
 	}
+}
+
+// gateTripper answers every request with the same in-memory image, waits on
+// gate before answering, and counts how many requests reached upstream.
+type gateTripper struct {
+	mu    sync.Mutex
+	hits  int
+	gate  chan struct{}
+	image []byte
+}
+
+func (t *gateTripper) RoundTrip(*http.Request) (*http.Response, error) {
+	t.mu.Lock()
+	t.hits++
+	t.mu.Unlock()
+	if t.gate != nil {
+		<-t.gate
+	}
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body:       io.NopCloser(bytes.NewReader(t.image)),
+	}, nil
+}
+
+func (t *gateTripper) count() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.hits
+}
+
+func pngSource(tb testing.TB, size int) []byte {
+	tb.Helper()
+	var buf bytes.Buffer
+	src := image.NewRGBA(image.Rect(0, 0, size, size))
+	if err := png.Encode(&buf, src); err != nil {
+		tb.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func TestConcurrentRequestsShareRender(t *testing.T) {
+	tripper := &gateTripper{gate: make(chan struct{}), image: pngSource(t, 640)}
+	server := New()
+	server.client = &http.Client{Transport: tripper}
+
+	const callers = 8
+	var wg sync.WaitGroup
+	bodies := make([][]byte, callers)
+	for i := range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			req := httptest.NewRequest(http.MethodGet, path+"?u=https://i.scdn.co/image/a&w=320", nil)
+			rec := httptest.NewRecorder()
+			server.Middleware(http.NotFoundHandler()).ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Errorf("status = %d, want 200", rec.Code)
+			}
+			bodies[i] = rec.Body.Bytes()
+		}()
+	}
+
+	// Give every caller time to join the in-flight render, then let it finish.
+	time.Sleep(50 * time.Millisecond)
+	close(tripper.gate)
+	wg.Wait()
+
+	if got := tripper.count(); got != 1 {
+		t.Fatalf("upstream requests = %d, want 1", got)
+	}
+	for i, body := range bodies {
+		if !bytes.Equal(body, bodies[0]) {
+			t.Fatalf("caller %d got a different cover", i)
+		}
+	}
+}
+
+func BenchmarkServeScrollingCovers(b *testing.B) {
+	tripper := &gateTripper{image: pngSource(b, 640)}
+	s := New()
+	s.client = &http.Client{Transport: tripper}
+	handler := s.Middleware(http.NotFoundHandler())
+	widths := []int{80, 160, 320}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			i++
+			req := httptest.NewRequest(http.MethodGet,
+				fmt.Sprintf("%s?u=https://i.scdn.co/image/%d&w=%d", path, i%200, widths[i%3]), nil)
+			handler.ServeHTTP(httptest.NewRecorder(), req)
+		}
+	})
 }

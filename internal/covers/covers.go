@@ -44,13 +44,25 @@ type Server struct {
 	client *http.Client
 	sem    chan struct{}
 	cache  *lru
+
+	mu      sync.Mutex
+	flights map[string]*flight
+}
+
+// flight is one in-progress render. Concurrent requests for the same cover and
+// width wait on it instead of fetching and resizing the same image again.
+type flight struct {
+	wg   sync.WaitGroup
+	data []byte
+	err  error
 }
 
 func New() *Server {
 	return &Server{
-		client: &http.Client{Timeout: fetchTimeout},
-		sem:    make(chan struct{}, maxConcurrent),
-		cache:  newLRU(cacheBudget),
+		client:  &http.Client{Timeout: fetchTimeout},
+		sem:     make(chan struct{}, maxConcurrent),
+		cache:   newLRU(cacheBudget),
+		flights: make(map[string]*flight),
 	}
 }
 
@@ -76,7 +88,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 
 	data, ok := s.cache.get(key)
 	if !ok {
-		rendered, err := s.render(r.Context(), target, width)
+		rendered, err := s.render(r.Context(), key, target, width)
 		if err != nil {
 			// The proxy is best-effort: fall back to the original URL so art
 			// still shows even when the upstream fetch or decode fails.
@@ -84,7 +96,6 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		data = rendered
-		s.cache.put(key, data)
 	}
 
 	w.Header().Set("Content-Type", "image/jpeg")
@@ -94,7 +105,34 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
-func (s *Server) render(ctx context.Context, target string, width int) ([]byte, error) {
+// render returns the encoded cover for key, joining a render already in flight
+// for it instead of starting a second one.
+func (s *Server) render(ctx context.Context, key, target string, width int) ([]byte, error) {
+	s.mu.Lock()
+	if f, ok := s.flights[key]; ok {
+		s.mu.Unlock()
+		f.wg.Wait()
+		return f.data, f.err
+	}
+	f := &flight{}
+	f.wg.Add(1)
+	s.flights[key] = f
+	s.mu.Unlock()
+
+	f.data, f.err = s.produce(ctx, target, width)
+	if f.err == nil {
+		s.cache.put(key, f.data)
+	}
+	f.wg.Done()
+
+	s.mu.Lock()
+	delete(s.flights, key)
+	s.mu.Unlock()
+
+	return f.data, f.err
+}
+
+func (s *Server) produce(ctx context.Context, target string, width int) ([]byte, error) {
 	s.sem <- struct{}{}
 	img, err := s.fetch(ctx, target)
 	if err != nil {
@@ -102,6 +140,8 @@ func (s *Server) render(ctx context.Context, target string, width int) ([]byte, 
 		return nil, err
 	}
 	resized := resize(img, width)
+	// Free the slot before encoding: JPEG is CPU work, and holding a download
+	// slot through it starves the fetches of covers scrolling into view.
 	<-s.sem
 
 	var buf bytes.Buffer
