@@ -11,7 +11,7 @@ type CachedAudio = {
 
 // A 45-byte silent 8kHz WAV: played inside the first user gesture to grant the
 // shared player element autoplay for the whole session.
-const SILENT_WAV =
+export const SILENT_WAV =
 	"data:audio/wav;base64,UklGRiUAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQEAAAAA";
 
 // WebKit grants autoplay per media element, so a new element created mid-playlist

@@ -26,12 +26,19 @@ const getVolumeStatus = (value: number, muted: boolean) => {
 	return VOLUME_STATUS.HIGH;
 };
 
-function VolumeControl({ class: className }: { class?: string }) {
+function VolumeControl({
+	class: className,
+	compact = false,
+}: {
+	class?: string;
+	compact?: boolean;
+}) {
 	const Icon = getVolumeStatus(volume.value, muted.value);
 	return (
 		<div
 			class={cn(
-				"w-26 md:w-36 flex items-center gap-2 text-(--dominant-color)",
+				"flex items-center gap-2 text-(--dominant-color)",
+				compact ? "w-24" : "w-26 md:w-36",
 				className,
 			)}
 		>
@@ -43,11 +50,13 @@ function VolumeControl({ class: className }: { class?: string }) {
 				}
 				class="contents"
 			>
-				<Icon class="size-9 cursor-pointer" />
+				<Icon
+					class={compact ? "size-5 cursor-pointer" : "size-9 cursor-pointer"}
+				/>
 			</button>
 
 			<Progress
-				class="w-36 text-current"
+				class={compact ? "w-16 text-current" : "w-36 text-current"}
 				value={volume.value}
 				onChange={setVolume}
 			/>
