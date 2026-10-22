@@ -23,6 +23,10 @@ export function Image({
 	style,
 	alt,
 	src,
+	// Art below the fold must not decode on the main thread while the user is
+	// scrolling; an always-visible cover opts out with loading="eager".
+	loading = "lazy",
+	decoding = "async",
 	...props
 }: Props) {
 	// ready and failed are tracked together so a new src can restart both.
@@ -60,6 +64,8 @@ export function Image({
 			{...props}
 			src={src}
 			alt={alt ?? ""}
+			loading={loading}
+			decoding={decoding}
 			onLoad={bound}
 			onError={bound}
 			ref={settled}

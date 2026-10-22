@@ -105,6 +105,7 @@ const Disc = memo(function Disc({
 				<Image
 					src={coverImage(cover, 384)}
 					alt=""
+					loading="eager"
 					draggable={false}
 					class={cn(
 						"absolute inset-0 h-full w-full object-cover rounded-2xl shadow-lg opacity-40 animate-[spin_120s_linear_infinite] select-none",
@@ -503,6 +504,7 @@ export function PlayerBar() {
 									<Image
 										src={coverImage(player.cover, 128)}
 										alt={player.song.name}
+										loading="eager"
 										draggable={false}
 										class="w-full h-full object-cover rounded-lg shadow-lg select-none"
 										style="-webkit-user-drag: none"
