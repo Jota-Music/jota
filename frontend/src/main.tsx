@@ -8,6 +8,12 @@ import Router from "@/lib/shared/views/ui/router";
 import "@wailsio/runtime";
 import "@/style.tw.css";
 
+// Preact 10.29 has no options.devtools: preact/debug installs the warnings and
+// pulls in preact/devtools, which attaches to the extension when one is present.
+if (import.meta.env.DEV) {
+	await import("preact/debug");
+}
+
 const description = document.querySelector('meta[name="description"]');
 effect(() => {
 	document.title = t("app.title");
