@@ -84,6 +84,11 @@ tasks:
     cmds:
       - ./build/linux/flatpak/build-local.sh
 
+  downloads:
+    desc: Count release asset downloads
+    cmds:
+      - gh api --paginate repos/Jota-Music/jota/releases --jq '.[].assets[] | "\(.download_count) \(.name)"' | sort -rn | awk '{print; total+=$1} END {printf "\ntotal %d\n", total}'
+
 includes:
   common: ./build/Taskfile.yml
   windows: ./build/windows/Taskfile.yml

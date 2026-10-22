@@ -16,6 +16,7 @@ the audio through YouTube, and start a room over a relay you own.
 
 [![CI](https://github.com/Jota-Music/jota/actions/workflows/ci.yml/badge.svg)](https://github.com/Jota-Music/jota/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Jota-Music/jota)](https://github.com/Jota-Music/jota/releases)
+[![Downloads](https://img.shields.io/github/downloads/Jota-Music/jota/total)](https://github.com/Jota-Music/jota/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-4ea94b.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.26-00add8.svg)](go.mod)
 
