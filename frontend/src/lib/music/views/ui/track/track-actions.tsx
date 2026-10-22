@@ -39,6 +39,8 @@ type Props = {
 	// playlistActions are about the containing playlist, not its tracks, and
 	// lead the same menu.
 	playlistActions?: Action[];
+	// share is always last: it acts on the page, not on the selection.
+	share?: Action[];
 	selection?: boolean;
 	removable?: boolean;
 	onPlay?: () => void;
@@ -59,6 +61,7 @@ type Props = {
 export function buildActions({
 	songs,
 	playlistActions,
+	share,
 	selection,
 	removable,
 	onPlay,
@@ -151,7 +154,6 @@ export function buildActions({
 				},
 			});
 		}
-		actions.push(...shareActions(single));
 		actions.push({
 			icon: Link2,
 			label: single.youtubeId
@@ -174,6 +176,8 @@ export function buildActions({
 			},
 		});
 	}
+	if (single) actions.push(...shareActions(single));
+	if (share) actions.push(...share);
 
 	return { actions, count: batch && list.length > 1 ? list.length : 0 };
 }
@@ -197,6 +201,7 @@ export function useTrackMenu(
 export default function TrackActions({
 	songs,
 	playlistActions,
+	share,
 	selection,
 	removable,
 	onPlay,
@@ -213,6 +218,7 @@ export default function TrackActions({
 	const { actions, count } = buildActions({
 		songs,
 		playlistActions,
+		share,
 		selection,
 		removable,
 		onPlay,

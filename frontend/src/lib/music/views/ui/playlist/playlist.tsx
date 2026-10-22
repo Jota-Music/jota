@@ -13,6 +13,7 @@ import {
 	removeSongFromPlaylist,
 	reorderPlaylist,
 } from "@/lib/music/app/playlists";
+import { pageLink } from "@/lib/music/app/share";
 import type { Playlist, Song } from "@/lib/music/model";
 import {
 	isPlaying,
@@ -29,6 +30,7 @@ import {
 import { SaveButton } from "@/lib/music/views/ui/follow";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import { shareLink } from "@/lib/music/views/ui/share";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { move } from "@/lib/shared/app/reorder";
@@ -453,6 +455,7 @@ function PlaylistHeader({
 				<TrackActions
 					songs={songs}
 					playlistActions={follow ? [toggle(id)] : undefined}
+					share={shareLink(pageLink("playlist", id))}
 					onSelectAll={selectAll}
 					removable={custom}
 					onRemove={custom ? onRemove : undefined}

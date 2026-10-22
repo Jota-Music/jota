@@ -7,6 +7,7 @@ import { useEffect } from "preact/hooks";
 import { useParams } from "wouter-preact";
 import { spotifyUser } from "@/lib/auth/views/stores/session";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
+import { pageLink } from "@/lib/music/app/share";
 import type { AlbumSummary, Song } from "@/lib/music/model";
 import { playAlbum } from "@/lib/music/views/play";
 import {
@@ -18,6 +19,7 @@ import { queueSource } from "@/lib/music/views/stores/queue";
 import { clearSelection, selectAll } from "@/lib/music/views/stores/selection";
 import { FollowButton } from "@/lib/music/views/ui/follow";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import { shareLink } from "@/lib/music/views/ui/share";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { useFollows } from "@/lib/music/views/ui/user/follow";
@@ -149,6 +151,7 @@ export function ArtistPage() {
 							playlistActions={
 								account && id ? [toggle(`artist:${id}`)] : undefined
 							}
+							share={shareLink(pageLink("artist", id ?? ""))}
 							onSelectAll={selectAll}
 							reserve={isLoading}
 							onPlay={() => void playList(tracks, id)}

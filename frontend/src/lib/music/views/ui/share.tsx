@@ -1,5 +1,5 @@
 import { Clipboard } from "@wailsio/runtime";
-import type { LucideIcon } from "lucide-preact";
+import { Link2, type LucideIcon } from "lucide-preact";
 import { resolveYoutubeId } from "@/lib/music/app/get-audio";
 import { canShare, spotifyLink } from "@/lib/music/app/share";
 import type { Song } from "@/lib/music/model";
@@ -61,4 +61,17 @@ export function shareActions(song: Song): Action[] {
 	}
 
 	return actions;
+}
+
+export function shareLink(link: string | null): Action[] {
+	if (!link) return [];
+	return [
+		{
+			icon: Link2,
+			label: t("music.share.link"),
+			run: () => {
+				void copy(link).catch((error) => addError(error, "share"));
+			},
+		},
+	];
 }

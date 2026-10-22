@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/preact-query";
 import { Loader } from "lucide-preact";
 import { useParams } from "wouter-preact";
 import { getAlbumTracks } from "@/lib/music/app/get-album";
+import { pageLink } from "@/lib/music/app/share";
 import type { Song } from "@/lib/music/model";
 import {
 	isPlaying,
@@ -13,6 +14,7 @@ import { playList } from "@/lib/music/views/stores/player";
 import { queueSource } from "@/lib/music/views/stores/queue";
 import { selectAll } from "@/lib/music/views/stores/selection";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import { shareLink } from "@/lib/music/views/ui/share";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { t } from "@/lib/shared/i18n";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
@@ -60,6 +62,7 @@ export function AlbumPage() {
 				actions={
 					<TrackActions
 						songs={tracks}
+						share={shareLink(pageLink("album", id ?? ""))}
 						onSelectAll={selectAll}
 						reserve={isLoading}
 						onPlay={() => void playList(tracks, id ?? null)}

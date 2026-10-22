@@ -189,6 +189,7 @@
 		"share": {
 			"spotify": "Share Spotify",
 			"youtube": "Share YouTube",
+			"link": "Share",
 			"error": "Could not copy the link."
 		},
 		"trackCount": {

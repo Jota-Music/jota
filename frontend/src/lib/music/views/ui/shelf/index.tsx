@@ -5,8 +5,10 @@ import {
 	spotifyDegraded,
 } from "@/lib/auth/views/stores/session";
 import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
+import { pageLink } from "@/lib/music/app/share";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { queueSource } from "@/lib/music/views/stores/queue";
+import { shareLink } from "@/lib/music/views/ui/share";
 import { Compact } from "@/lib/music/views/ui/shelf/compact";
 import { Controls } from "@/lib/music/views/ui/shelf/controls";
 import { Grid } from "@/lib/music/views/ui/shelf/grid";
@@ -35,6 +37,17 @@ export {
 	YouTubeHint,
 } from "@/lib/music/views/ui/shelf/hint";
 export type { IconType, Item, Source } from "@/lib/music/views/ui/shelf/types";
+
+// The shelf route names the entity, so every shelf gets a share entry without
+// each caller spelling one out. Routes that are not a shareable page (rooms, a
+// bare user) get nothing.
+function shareTo(to: (id: string) => string, id: string): Action[] {
+	const page = to(id).split("/")[1];
+	if (page === "playlist" || page === "album" || page === "artist") {
+		return shareLink(pageLink(page, id));
+	}
+	return [];
+}
 
 export function Shelf({
 	items,
@@ -99,6 +112,7 @@ export function Shelf({
 				run: () => onRemove(item.id),
 			});
 		}
+		actions.push(...shareTo(to, item.id));
 		openContextMenu(actions, e);
 	};
 

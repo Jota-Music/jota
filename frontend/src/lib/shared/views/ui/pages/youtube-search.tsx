@@ -16,6 +16,7 @@ import {
 	searchYouTubePlaylists,
 	youtubeVideoToSong,
 } from "@/lib/music/app/search";
+import { pageLink } from "@/lib/music/app/share";
 import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import type { PlaylistSummary, Song } from "@/lib/music/model";
 import { playPlaylist } from "@/lib/music/views/play";
@@ -27,6 +28,7 @@ import { hover } from "@/lib/music/views/ui/cover-hover";
 import { SaveButton } from "@/lib/music/views/ui/follow";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
+import { shareLink } from "@/lib/music/views/ui/share";
 import { Shelf } from "@/lib/music/views/ui/shelf";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
@@ -277,6 +279,7 @@ function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
 							run: () => void playPlaylist(queryClient, playlist.id),
 						},
 						toggle(playlist.id),
+						...shareLink(pageLink("playlist", playlist.id)),
 					],
 					e,
 				);

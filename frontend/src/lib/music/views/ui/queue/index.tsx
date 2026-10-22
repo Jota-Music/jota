@@ -24,6 +24,7 @@ import {
 	unqueue,
 } from "@/lib/music/views/stores/player";
 import { currentIndex, queue, showQueue } from "@/lib/music/views/stores/queue";
+import { shareActions } from "@/lib/music/views/ui/share";
 import TrackArt from "@/lib/music/views/ui/track/track-art";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -99,6 +100,7 @@ const QueueRow = memo(function QueueRow({
 			danger: true,
 			run: () => void unqueue(globalIndex),
 		});
+		out.push(...shareActions(song));
 		return out;
 	};
 

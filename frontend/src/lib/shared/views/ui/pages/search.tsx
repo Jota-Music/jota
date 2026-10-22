@@ -8,6 +8,7 @@ import {
 	searchSpotify,
 	stripUriPrefix,
 } from "@/lib/music/app/search";
+import { pageLink } from "@/lib/music/app/share";
 import { spotifyRef } from "@/lib/music/app/spotify-link";
 import { playAlbum, playPlaylist } from "@/lib/music/views/play";
 import { isPlaying } from "@/lib/music/views/stores/audio";
@@ -17,6 +18,7 @@ import { SaveButton } from "@/lib/music/views/ui/follow";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
+import { shareLink } from "@/lib/music/views/ui/share";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
 import { cover } from "@/lib/shared/utils/cover";
@@ -66,6 +68,11 @@ function SearchResultItem({ item }: { item: SearchResult }) {
 				run: () =>
 					void playAlbum(queryClient, stripUriPrefix(item.uri, "album")),
 			});
+		}
+		if (isPlaylist || isAlbum) {
+			actions.push(
+				...shareLink(pageLink(isPlaylist ? "playlist" : "album", id)),
+			);
 		}
 		if (actions.length > 0) openContextMenu(actions, e);
 	}
