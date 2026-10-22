@@ -5,6 +5,7 @@ import { translateError } from "@/lib/shared/i18n/errors";
 type RoomError = {
 	id: string;
 	message: string;
+	tone: "error" | "info";
 };
 
 export const roomErrors = signal<RoomError[]>([]);
@@ -36,21 +37,29 @@ export function logError(error: unknown, context?: string): void {
 	}
 }
 
-// Log and surface in the error bar.
-export function addError(error: unknown, context?: string): void {
-	logError(error, context);
-
-	const entry: RoomError = {
-		id: `${Date.now()}-${Math.random()}`,
-		message: line(context, translateError(error)),
-	};
-
+function push(entry: RoomError): void {
 	roomErrors.value = [...roomErrors.value, entry];
 
 	// Auto-remove after 5 seconds
 	setTimeout(() => {
 		removeError(entry.id);
 	}, 5000);
+}
+
+// Log and surface in the error bar.
+export function addError(error: unknown, context?: string): void {
+	logError(error, context);
+
+	push({
+		id: `${Date.now()}-${Math.random()}`,
+		message: line(context, translateError(error)),
+		tone: "error",
+	});
+}
+
+// Surface a confirmation in the same bar, without logging.
+export function notify(message: string): void {
+	push({ id: `${Date.now()}-${Math.random()}`, message, tone: "info" });
 }
 
 export function removeError(id: string): void {

@@ -1,5 +1,6 @@
 import { X } from "lucide-preact";
 import { useRef } from "preact/hooks";
+import { cn } from "@/lib/shared/utils/tw";
 import { removeError, roomErrors } from "@/lib/shared/views/stores/errors";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
@@ -17,13 +18,23 @@ export function ErrorBar() {
 				{errors.value.map((error) => (
 					<div
 						key={error.id}
-						class="flex items-center gap-3 rounded-lg border border-red-900/50 bg-red-950 px-4 py-3 text-sm text-red-200"
+						class={cn(
+							"flex items-center gap-3 rounded-lg border px-4 py-3 text-sm",
+							error.tone === "info"
+								? "border-stone-700 bg-stone-900 text-stone-200"
+								: "border-red-900/50 bg-red-950 text-red-200",
+						)}
 					>
 						<div class="flex-1">{error.message}</div>
 						<button
 							type="button"
 							onClick={() => removeError(error.id)}
-							class="shrink-0 text-red-400 hover:text-red-200 transition-colors"
+							class={cn(
+								"shrink-0 transition-colors",
+								error.tone === "info"
+									? "text-stone-400 hover:text-stone-200"
+									: "text-red-400 hover:text-red-200",
+							)}
 						>
 							<X class="size-4" />
 						</button>

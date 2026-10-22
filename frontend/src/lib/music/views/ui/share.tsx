@@ -5,7 +5,7 @@ import { canShare, spotifyLink } from "@/lib/music/app/share";
 import type { Song } from "@/lib/music/model";
 import { setYoutube } from "@/lib/music/views/stores/audio";
 import { t } from "@/lib/shared/i18n";
-import { addError } from "@/lib/shared/views/stores/errors";
+import { addError, notify } from "@/lib/shared/views/stores/errors";
 import type { Action } from "@/lib/shared/views/ui/components/context-menu";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
@@ -24,6 +24,7 @@ async function copy(link: string) {
 	} catch {
 		await navigator.clipboard.writeText(link);
 	}
+	notify(t("music.share.copied"));
 }
 
 async function youtube(song: Song) {

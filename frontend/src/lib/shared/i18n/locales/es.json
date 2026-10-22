@@ -190,6 +190,7 @@
 			"spotify": "Compartir Spotify",
 			"youtube": "Compartir YouTube",
 			"link": "Compartir",
+			"copied": "Enlace copiado.",
 			"error": "No se pudo copiar el enlace."
 		},
 		"trackCount": {
