@@ -67,6 +67,7 @@ cd frontend && bun run typecheck && bun run lint
 | `RELAY_API_URL` | _(empty)_ | Dev-only: pin the relay URL, overriding the one saved in the UI. |
 | `RELAY_API_TOKEN` | _(empty)_ | Dev-only: relay auth token to pair with `RELAY_API_URL`. |
 | `WEBKIT_DISABLE_DMABUF_RENDERER` | `1` | Wayland/DMA-BUF workaround (set in `main.go`). |
+| `JOTA_PROFILE_DIR` | _(empty)_ | Dev-only: writes `cpu.pprof` on start and `heap.pprof` on exit to this directory. Profile with `go tool pprof <dir>/cpu.pprof`. |
 
 ## Layout
 

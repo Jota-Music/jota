@@ -300,8 +300,49 @@ func enforceMinSize(w *application.WebviewWindow) {
 	}
 }
 
+// startProfiling records a CPU profile for the whole run and a heap profile on
+// exit when JOTA_PROFILE_DIR is set. Opt-in, so the default build pays nothing,
+// and starting with the process is the only way to capture startup work such as
+// opening Badger or building the window.
+func startProfiling() func() {
+	dir := os.Getenv("JOTA_PROFILE_DIR")
+	if dir == "" {
+		return func() {}
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		log.Printf("profile: %v", err)
+		return func() {}
+	}
+	cpu, err := os.Create(filepath.Join(dir, "cpu.pprof"))
+	if err != nil {
+		log.Printf("profile: %v", err)
+		return func() {}
+	}
+	if err := pprof.StartCPUProfile(cpu); err != nil {
+		log.Printf("profile: %v", err)
+		_ = cpu.Close()
+		return func() {}
+	}
+	log.Printf("profile: cpu -> %s", cpu.Name())
+	return func() {
+		pprof.StopCPUProfile()
+		_ = cpu.Close()
+		heap, err := os.Create(filepath.Join(dir, "heap.pprof"))
+		if err != nil {
+			log.Printf("profile: %v", err)
+			return
+		}
+		defer heap.Close()
+		runtime.GC()
+		if err := pprof.WriteHeapProfile(heap); err != nil {
+			log.Printf("profile: %v", err)
+		}
+	}
+}
+
 func main() {
 	defer setupLogging()()
+	defer startProfiling()()
 
 	// The webview owns most of the memory; keep Go's heap small and bounded so
 	// it stops competing with WebKit instead of ballooning to 2x live data.
