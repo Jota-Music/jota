@@ -35,6 +35,7 @@ import {
 	editingSong,
 	editorMode,
 } from "@/lib/music/views/stores/youtube-editor";
+import { playerModalOpen } from "@/lib/music/views/ui/player";
 import TrackArt from "@/lib/music/views/ui/track/track-art";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { t } from "@/lib/shared/i18n";
@@ -199,6 +200,7 @@ export default function YoutubeEditor() {
 			open={open}
 			close={() => (editingSong.value = null)}
 			labelledBy="youtube-id-title"
+			abovePlayer={!playerModalOpen.value}
 		>
 			{song && (
 				<form class="flex min-h-0 flex-col" onSubmit={handleSubmit}>
@@ -215,7 +217,7 @@ export default function YoutubeEditor() {
 					</ModalHeader>
 
 					<div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 sm:p-5">
-						<p class="text-balance text-xs text-zinc-500">
+						<p class="shrink-0 text-balance text-xs text-zinc-500">
 							{t(
 								searching
 									? "music.youtubeId.hintSearch"
@@ -223,7 +225,7 @@ export default function YoutubeEditor() {
 							)}
 						</p>
 
-						<div class="flex h-10 items-stretch overflow-hidden rounded-md border border-zinc-800 bg-zinc-950 focus-within:border-zinc-600">
+						<div class="flex h-10 shrink-0 items-stretch overflow-hidden rounded-md border border-zinc-800 bg-zinc-950 focus-within:border-zinc-600">
 							<div class="flex shrink-0 items-stretch border-r border-zinc-800">
 								<button
 									type="button"

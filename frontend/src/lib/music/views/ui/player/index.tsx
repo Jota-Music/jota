@@ -44,7 +44,7 @@ import { Modal } from "@/lib/shared/views/ui/components/modal";
 import Progress from "@/lib/shared/views/ui/components/progress";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
-const playerModalOpen = signal(false);
+export const playerModalOpen = signal(false);
 
 const currentLabel = computed(() => secondsToTime(progress.value));
 const totalLabel = computed(() => secondsToTime(audioDuration.value));
