@@ -2,6 +2,10 @@ package app
 
 import "github.com/Jota-Music/jota/internal/music"
 
+func (a *App) GetSong(id string) (music.Song, error) {
+	return a.Catalog.GetSong(id)
+}
+
 func (a *App) GetFullPlaylist(id string) (music.Playlist, error) {
 	return a.Catalog.GetFullPlaylist(id)
 }

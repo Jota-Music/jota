@@ -107,6 +107,10 @@ export function GetSavedPlaylists(): $CancellablePromise<music$0.PlaylistSummary
     return $Call.ByID(2542461862);
 }
 
+export function GetSong(id: string): $CancellablePromise<music$0.Song> {
+    return $Call.ByID(2619436861, id);
+}
+
 export function GetUserPlaylists(user: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
     return $Call.ByID(1067966734, user);
 }
