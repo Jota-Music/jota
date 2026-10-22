@@ -16,7 +16,24 @@ const MOBILE_POLL_MS = 5000;
 let watching = false;
 let last = "";
 
+type NativeBridge = { getClipboardText?: () => string };
+
+function native(): NativeBridge | null {
+	if (typeof window === "undefined") return null;
+	const wails = (window as unknown as { wails?: NativeBridge }).wails;
+	return wails && typeof wails.getClipboardText === "function" ? wails : null;
+}
+
 async function read(): Promise<string | null> {
+	const bridge = native();
+	if (bridge?.getClipboardText) {
+		try {
+			const text = bridge.getClipboardText();
+			if (text) return text;
+		} catch {
+			// fall through to other providers
+		}
+	}
 	try {
 		return await Clipboard.Text();
 	} catch {

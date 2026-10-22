@@ -19,11 +19,31 @@ const Youtube: LucideIcon = ({ size, class: className }) => (
 	<YoutubeIcon width={size} height={size} class={className as string} />
 );
 
+type NativeBridge = { setClipboardText?: (text: string) => void };
+
+function native(): NativeBridge | null {
+	if (typeof window === "undefined") return null;
+	const wails = (window as unknown as { wails?: NativeBridge }).wails;
+	return wails && typeof wails.setClipboardText === "function" ? wails : null;
+}
+
 async function copy(link: string) {
-	try {
-		await Clipboard.SetText(link);
-	} catch {
-		await navigator.clipboard.writeText(link);
+	const bridge = native();
+	let done = false;
+	if (bridge?.setClipboardText) {
+		try {
+			bridge.setClipboardText(link);
+			done = true;
+		} catch {
+			// fall through to other providers
+		}
+	}
+	if (!done) {
+		try {
+			await Clipboard.SetText(link);
+		} catch {
+			await navigator.clipboard.writeText(link);
+		}
 	}
 	remember(link);
 	notify(t("music.share.copied"));

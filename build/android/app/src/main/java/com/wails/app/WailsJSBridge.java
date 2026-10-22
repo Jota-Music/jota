@@ -103,6 +103,16 @@ public class WailsJSBridge {
      * @param message The message to log
      */
     @JavascriptInterface
+    public void setClipboardText(String text) {
+        bridge.setClipboardText(text);
+    }
+
+    @JavascriptInterface
+    public String getClipboardText() {
+        return bridge.getClipboardText();
+    }
+
+    @JavascriptInterface
     public void log(String level, String message) {
         switch (level.toLowerCase()) {
             case "debug":
