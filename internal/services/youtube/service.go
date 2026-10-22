@@ -105,6 +105,15 @@ func (s *Service) YoutubeId(cacheKey string) string {
 }
 
 func (s *Service) SetYoutubeId(cacheKey, youtubeId string) error {
+	youtubeId = strings.TrimPrefix(strings.TrimSpace(youtubeId), music.YouTubePrefix)
+	if youtubeId != "" {
+		id, ok := videoIdFromQuery(youtubeId)
+		if !ok {
+			return errors.New("invalid youtube id")
+		}
+		youtubeId = id
+	}
+
 	// Invalidate cached audio so the new video is resolved on the next request.
 	if old, err := youtubeSourceBucket.GetString(cacheKey); err == nil && old != "" && old != youtubeId {
 		_ = audioBucket.Delete(old)
