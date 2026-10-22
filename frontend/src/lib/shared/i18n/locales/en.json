@@ -44,6 +44,14 @@
 			"artist": "Artist"
 		}
 	},
+	"clipboard": {
+		"playlist": "Go to this playlist",
+		"album": "Go to this album",
+		"artist": "Go to this artist",
+		"channel": "Go to this channel",
+		"track": "Listen to this song",
+		"video": "Play this video"
+	},
 	"window": {
 		"pin": "Always on top",
 		"unpin": "Disable always on top",

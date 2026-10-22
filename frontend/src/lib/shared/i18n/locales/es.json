@@ -44,6 +44,14 @@
 			"artist": "Artista"
 		}
 	},
+	"clipboard": {
+		"playlist": "Ir a esta lista",
+		"album": "Ir a este álbum",
+		"artist": "Ir a este artista",
+		"channel": "Ir a este canal",
+		"track": "Escuchar canción",
+		"video": "Reproducir vídeo"
+	},
 	"window": {
 		"pin": "Siempre encima",
 		"unpin": "Desactivar siempre encima",

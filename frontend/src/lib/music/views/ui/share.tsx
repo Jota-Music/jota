@@ -1,5 +1,6 @@
 import { Clipboard } from "@wailsio/runtime";
 import { Link2, type LucideIcon } from "lucide-preact";
+import { remember } from "@/lib/clipboard/views/stores/pending";
 import { resolveYoutubeId } from "@/lib/music/app/get-audio";
 import { canShare, spotifyLink } from "@/lib/music/app/share";
 import type { Song } from "@/lib/music/model";
@@ -24,6 +25,7 @@ async function copy(link: string) {
 	} catch {
 		await navigator.clipboard.writeText(link);
 	}
+	remember(link);
 	notify(t("music.share.copied"));
 }
 

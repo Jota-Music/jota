@@ -4,6 +4,8 @@ import { useLocation } from "wouter-preact";
 import { DegradedBanner } from "@/lib/auth/views/ui/degraded-banner";
 import { SignInPrompt } from "@/lib/auth/views/ui/sign-in-prompt";
 import { Welcome } from "@/lib/auth/views/ui/welcome";
+import { watch } from "@/lib/clipboard/views/stores/pending";
+import { ClipboardBanner } from "@/lib/clipboard/views/ui/banner";
 import {
 	clearSelection,
 	selectionActive,
@@ -46,12 +48,17 @@ export function AppShell({
 		return () => document.removeEventListener("keydown", onKey);
 	}, []);
 
+	useEffect(() => {
+		watch();
+	}, []);
+
 	return (
 		<OverlayHost.Provider value={region}>
 			<div class="h-dvh min-h-0 flex flex-col">
 				<div class="flex flex-col bg-stone-950">
 					<Header />
 					<UpdateBanner />
+					<ClipboardBanner />
 					<DegradedBanner />
 					<SignInPrompt />
 				</div>
