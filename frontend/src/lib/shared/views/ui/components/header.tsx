@@ -5,6 +5,7 @@ import {
 	ArrowLeft,
 	ArrowRight,
 	ChevronDown,
+	ClipboardPaste,
 	ListMusic,
 	Search,
 	Settings,
@@ -19,6 +20,7 @@ import {
 	spotifyConnected,
 	spotifyDegraded,
 } from "@/lib/auth/views/stores/session";
+import { pasteFromClipboard } from "@/lib/clipboard/views/stores/pending";
 import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
 import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import { removal, undoRemoval } from "@/lib/music/views/stores/removal";
@@ -241,6 +243,18 @@ export function Header() {
 						</button>
 					)}
 				</div>
+
+				<button
+					type="button"
+					onClick={() => {
+						void pasteFromClipboard();
+					}}
+					title={t("nav.paste")}
+					aria-label={t("nav.paste")}
+					class="flex size-8 items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
+				>
+					<ClipboardPaste class="size-5 md:size-4" />
+				</button>
 
 				<div class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2">
 					<button

@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { Clipboard, System } from "@wailsio/runtime";
+import { Clipboard } from "@wailsio/runtime";
 import { type ClipboardLink, clipboardLink } from "@/lib/clipboard/app/link";
 
 export type Pending = {
@@ -11,6 +11,7 @@ export const pending = signal<Pending | null>(null);
 
 const ignored = new Set<string>();
 const POLL_MS = 1500;
+const MOBILE_POLL_MS = 5000;
 
 let watching = false;
 let last = "";
@@ -39,6 +40,17 @@ async function check(): Promise<void> {
 	pending.value = { link, dismissed: false };
 }
 
+export async function pasteFromClipboard(): Promise<boolean> {
+	const text = await read();
+	if (!text) return false;
+	last = text;
+	const link = clipboardLink(text);
+	if (!link || ignored.has(link.text)) return false;
+	ignored.add(link.text);
+	pending.value = { link, dismissed: false };
+	return true;
+}
+
 export function remember(link: string): void {
 	ignored.add(link.trim());
 }
@@ -61,9 +73,12 @@ export function watch(): void {
 	void check();
 	window.addEventListener("focus", poll);
 	document.addEventListener("visibilitychange", poll);
+	const mobile =
+		typeof window !== "undefined" &&
+		window.matchMedia("(pointer: coarse)").matches;
+	const interval = mobile ? MOBILE_POLL_MS : POLL_MS;
+
 	window.setInterval(() => {
-		if (document.visibilityState === "visible" && System.IsDesktop()) {
-			void check();
-		}
-	}, POLL_MS);
+		if (document.visibilityState === "visible") void check();
+	}, interval);
 }
