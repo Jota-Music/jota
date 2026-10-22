@@ -6,7 +6,7 @@ test("dismiss reports nothing to close when no overlay is held", () => {
 });
 
 test("dismiss closes the most recently held overlay", () => {
-	let order: string[] = [];
+	const order: string[] = [];
 	const releaseFirst = hold(() => order.push("first"));
 	const releaseSecond = hold(() => order.push("second"));
 
