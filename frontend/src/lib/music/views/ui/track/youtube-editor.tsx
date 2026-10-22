@@ -1,12 +1,14 @@
 import { useSignal } from "@preact/signals";
-import { Check } from "lucide-preact";
+import { Check, Loader2 } from "lucide-preact";
 import { useEffect, useRef } from "preact/hooks";
 import { getYouTubeId, updateYoutubeId } from "@/lib/music/app/get-audio";
+import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import { currentSong, setYoutube } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import { reloadCurrent } from "@/lib/music/views/stores/player";
 import { editingSong } from "@/lib/music/views/stores/youtube-editor";
 import { t } from "@/lib/shared/i18n";
+import { addError } from "@/lib/shared/views/stores/errors";
 import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
@@ -14,7 +16,9 @@ export default function YoutubeEditor() {
 	const song = editingSong.value;
 	const open = song != null;
 	const youtubeId = useSignal("");
+	const resolving = useSignal(false);
 	const $input = useRef<HTMLInputElement>(null);
+	const timer = useRef<number | undefined>(undefined);
 
 	useEffect(() => {
 		if (!open || !song) return;
@@ -35,18 +39,54 @@ export default function YoutubeEditor() {
 		};
 	}, [open, song]);
 
+	useEffect(() => {
+		const value = youtubeId.value.trim();
+		const parsed = parseYoutubeLink(value.replace(/^youtube:/i, ""));
+
+		if (parsed?.type !== "video" || value === parsed.id) {
+			resolving.value = false;
+			return;
+		}
+
+		resolving.value = true;
+		window.clearTimeout(timer.current);
+
+		timer.current = window.setTimeout(() => {
+			youtubeId.value = parsed.id;
+			resolving.value = false;
+		}, 300);
+
+		return () => window.clearTimeout(timer.current);
+	}, [youtubeId.value]);
+
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		if (!song) return;
 		const formData = new FormData(e.target as HTMLFormElement);
-		const youtube = formData.get("youtube") as string;
+		const raw = (formData.get("youtube") as string)
+			.trim()
+			.replace(/^youtube:/i, "");
+		const parsed = parseYoutubeLink(raw);
+
+		if (raw && parsed?.type !== "video") {
+			addError(t("music.youtubeId.invalid"));
+			return;
+		}
+
+		const youtube = parsed?.type === "video" ? parsed.id : "";
 
 		if (song.youtubeId === youtube) {
 			editingSong.value = null;
 			return;
 		}
 
-		await updateYoutubeId(song.id, youtube);
+		try {
+			await updateYoutubeId(song.id, youtube);
+		} catch (error) {
+			addError(error, t("music.youtubeId.title"));
+			return;
+		}
+
 		setYoutube(song, youtube);
 		youtubeId.value = youtube;
 		AudioCache.remove(song.id);
@@ -78,13 +118,18 @@ export default function YoutubeEditor() {
 						</p>
 
 						<div class="flex items-center gap-2">
-							<YoutubeIcon class="size-4 shrink-0 text-white/30" />
+							{resolving.value ? (
+								<Loader2 class="size-4 shrink-0 animate-spin text-white/30" />
+							) : (
+								<YoutubeIcon class="size-4 shrink-0 text-white/30" />
+							)}
 							<input
 								ref={$input}
 								type="text"
 								value={youtubeId.value}
 								name="youtube"
 								placeholder={t("music.youtubeId.placeholder")}
+								aria-busy={resolving.value}
 								class="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-zinc-600"
 								onInput={(e) => {
 									youtubeId.value = (e.target as HTMLInputElement).value;

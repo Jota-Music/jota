@@ -261,13 +261,14 @@
 			"expand": "Expand player"
 		},
 		"youtubeId": {
-			"title": "YouTube ID",
-			"hint": "Jota automatically finds this song's audio on YouTube. If it picked the wrong video, paste the correct video ID here: 11 characters, the part after \"v=\" in its URL.",
-			"placeholder": "e.g. dQw4w9WgXcQ",
-			"add": "Add YouTube ID",
-			"edit": "Edit YouTube ID",
+			"title": "YouTube audio",
+			"hint": "Jota automatically finds this song's audio on YouTube. If it picked the wrong video, paste the video ID or its URL. Jota saves only the ID.",
+			"placeholder": "Video ID or YouTube URL",
+			"invalid": "Paste a valid YouTube video ID or URL.",
+			"add": "Assign audio",
+			"edit": "Change audio",
 			"save": "Save",
-			"close": "Close YouTube ID editor"
+			"close": "Close YouTube audio editor"
 		},
 		"volume": {
 			"mute": "Mute",
