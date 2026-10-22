@@ -137,10 +137,10 @@ export function Sheet({
 				}}
 				class={cn(
 					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-b-0 border-zinc-800 bg-zinc-950 pb-3 shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out",
-					centered && "sm:pb-0 sm:rounded-2xl sm:border-b sm:mb-0",
+					centered && "sm:pb-0 sm:rounded-2xl sm:border-b",
 					abovePlayer
-						? "mb-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))]"
-						: "mb-[calc(3.5rem+env(safe-area-inset-bottom))]",
+						? "max-sm:mb-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))] max-sm:max-h-[min(70dvh,calc(100dvh-9.25rem-env(safe-area-inset-bottom)))]"
+						: "max-sm:mb-[calc(3.5rem+env(safe-area-inset-bottom))]",
 					"max-h-[70dvh]",
 					host ? "sm:max-h-full" : "sm:max-h-[85dvh]",
 					shown.value
