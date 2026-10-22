@@ -1,8 +1,8 @@
 import {
 	EllipsisVertical,
+	Link2,
 	ListChecks,
 	ListPlus,
-	type LucideIcon,
 	Pause,
 	Play,
 	Radio,
@@ -27,20 +27,12 @@ import {
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
 import { editingSong } from "@/lib/music/views/stores/youtube-editor";
+import { shareActions } from "@/lib/music/views/ui/share";
 import { t } from "@/lib/shared/i18n";
 import {
 	type Action,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
-import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
-
-const YoutubeMenuIcon: LucideIcon = ({ class: cls, size }) => (
-	<YoutubeIcon
-		class={cls as string | undefined}
-		width={typeof size === "number" ? size : undefined}
-		height={typeof size === "number" ? size : undefined}
-	/>
-);
 
 type Props = {
 	songs: Song[];
@@ -159,8 +151,9 @@ export function buildActions({
 				},
 			});
 		}
+		actions.push(...shareActions(single));
 		actions.push({
-			icon: YoutubeMenuIcon,
+			icon: Link2,
 			label: single.youtubeId
 				? t("music.youtubeId.edit")
 				: t("music.youtubeId.add"),

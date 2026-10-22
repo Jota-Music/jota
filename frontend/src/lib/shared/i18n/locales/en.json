@@ -186,6 +186,11 @@
 		"radio": {
 			"go": "Go to radio"
 		},
+		"share": {
+			"spotify": "Share Spotify",
+			"youtube": "Share YouTube",
+			"error": "Could not copy the link."
+		},
 		"trackCount": {
 			"one": "{count} track",
 			"other": "{count} tracks"
