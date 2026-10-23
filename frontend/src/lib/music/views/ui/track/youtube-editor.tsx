@@ -62,14 +62,17 @@ export default function YoutubeEditor() {
 
 	useLayoutEffect(() => {
 		if (!open || !song) return;
+		playerModalOpen.value = false;
 		stopPreview();
 		lastTap.current = null;
 		editorMode.value = "assign";
 		youtubeId.value = song.youtubeId ?? "";
 		search.value = "";
 		query.value = "";
-		$input.current?.focus({ preventScroll: true });
-		$input.current?.select();
+		if (!coarse) {
+			$input.current?.focus({ preventScroll: true });
+			$input.current?.select();
+		}
 
 		let active = true;
 		if (!song.youtubeId) {
@@ -200,10 +203,9 @@ export default function YoutubeEditor() {
 			open={open}
 			close={() => (editingSong.value = null)}
 			labelledBy="youtube-id-title"
-			abovePlayer={!playerModalOpen.value}
 		>
 			{song && (
-				<form class="flex min-h-0 flex-col" onSubmit={handleSubmit}>
+				<form class="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
 					<ModalHeader>
 						<div class="flex min-w-0 flex-col">
 							<h2
@@ -317,8 +319,8 @@ export default function YoutubeEditor() {
 
 						<div
 							class={cn(
-								"grid transition-[grid-template-rows] duration-200",
-								searching ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+								"grid min-h-0 transition-[grid-template-rows] duration-200",
+								searching ? "flex-1 grid-rows-[1fr]" : "grid-rows-[0fr]",
 							)}
 							aria-hidden={!searching}
 							inert={!searching}
@@ -326,7 +328,7 @@ export default function YoutubeEditor() {
 							<div class="relative min-h-0 overflow-hidden">
 								<div
 									ref={$results}
-									class="h-64 max-h-[40dvh] overflow-y-auto overscroll-contain rounded-lg border border-zinc-800 bg-zinc-950 pr-[15px]"
+									class="h-full overflow-y-auto overscroll-contain rounded-lg border border-zinc-800 bg-zinc-950 pr-[15px]"
 								>
 									{query.value.length === 0 ? (
 										<p class="py-6 text-sm text-zinc-500">
