@@ -111,7 +111,7 @@ export function Sheet({
 			class={cn(
 				"pointer-events-auto z-50 md:z-120 flex items-end justify-center p-0",
 				centered && "sm:items-center sm:p-4",
-				"fixed inset-0",
+				"absolute inset-0",
 				mobileOnly && "md:hidden",
 			)}
 			role="presentation"

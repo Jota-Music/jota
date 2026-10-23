@@ -54,7 +54,7 @@ export function AppShell({
 
 	return (
 		<OverlayHost.Provider value={overlayLayer}>
-			<div class="h-dvh min-h-0 flex flex-col">
+			<div class="relative h-dvh min-h-0 flex flex-col">
 				<div class="flex flex-col bg-stone-950">
 					<Header />
 					<UpdateBanner />
@@ -62,12 +62,12 @@ export function AppShell({
 					<DegradedBanner />
 					<SignInPrompt />
 				</div>
-				<div
-					ref={overlayLayer}
-					class="pointer-events-none fixed inset-0 z-50"
-				/>
-
 				<div class="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+					<div
+						ref={overlayLayer}
+						class="pointer-events-none absolute inset-0 z-50 md:z-120"
+					/>
+
 					{player}
 
 					<main

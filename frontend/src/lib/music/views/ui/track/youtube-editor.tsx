@@ -75,12 +75,18 @@ export default function YoutubeEditor() {
 		youtubeId.value = song.youtubeId ?? "";
 		search.value = "";
 		query.value = "";
+		let active = true;
+		let focusFrame = 0;
 		if (!coarse) {
-			$input.current?.focus({ preventScroll: true });
-			$input.current?.select();
+			focusFrame = requestAnimationFrame(() => {
+				focusFrame = requestAnimationFrame(() => {
+					if (!active) return;
+					$input.current?.focus({ preventScroll: true });
+					$input.current?.select();
+				});
+			});
 		}
 
-		let active = true;
 		if (!song.youtubeId) {
 			getYouTubeId(song.id)
 				.then((id) => {
@@ -90,6 +96,7 @@ export default function YoutubeEditor() {
 		}
 		return () => {
 			active = false;
+			cancelAnimationFrame(focusFrame);
 			window.clearTimeout(timer.current);
 			resolving.value = false;
 			stopPreview();
