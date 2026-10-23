@@ -8,11 +8,17 @@ import {
 	UserRound,
 	X,
 } from "lucide-preact";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import type { ClipboardLink } from "@/lib/clipboard/app/link";
 import { dismiss, pending } from "@/lib/clipboard/views/stores/pending";
 import { getSong } from "@/lib/music/app/get-song";
+import {
+	currentSong,
+	isLoading,
+	isPlaying,
+	pendingStart,
+} from "@/lib/music/views/stores/audio";
 import { playList } from "@/lib/music/views/stores/player";
 import { t } from "@/lib/shared/i18n";
 import { addError } from "@/lib/shared/views/stores/errors";
@@ -30,14 +36,49 @@ function label(link: ClipboardLink): string {
 	}
 }
 
+function routeKey(path: string): string {
+	return path.replace(/\/+$/, "") || "/";
+}
+
+function isCurrentSong(link: ClipboardLink | undefined): boolean {
+	if (!link || link.kind !== "song") return false;
+	const song = currentSong.value;
+	if (!song) return false;
+
+	if (link.to === song.id || link.to === song.youtubeId) return true;
+	return (
+		link.to.startsWith("youtube:") &&
+		link.to.slice("youtube:".length) === song.youtubeId
+	);
+}
+
 export function ClipboardBanner() {
-	const [, setLocation] = useLocation();
+	const [location, setLocation] = useLocation();
 	const [busy, setBusy] = useState(false);
 
 	const current = pending.value;
-	if (!current || current.dismissed) return null;
+	const link = current?.link;
+	const alreadyAtDestination =
+		link !== undefined &&
+		link.kind !== "song" &&
+		routeKey(location) === routeKey(link.to);
+	const alreadyPlayingSong =
+		isCurrentSong(link) &&
+		(isPlaying.value || isLoading.value || pendingStart.value);
+	const redundant = alreadyAtDestination || alreadyPlayingSong;
 
-	const { link } = current;
+	useEffect(() => {
+		if (
+			redundant &&
+			link &&
+			pending.value?.link.to === link.to
+		) {
+			pending.value = null;
+		}
+	}, [redundant, link?.to]);
+
+	if (!current || current.dismissed || redundant || !link) return null;
+
 	const playable = link.kind === "song";
 	const Icon =
 		link.kind === "song"
