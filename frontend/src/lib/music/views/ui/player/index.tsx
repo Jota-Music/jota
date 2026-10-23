@@ -13,7 +13,11 @@ import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import type { Song } from "@/lib/music/model";
 import { usePlayer } from "@/lib/music/views/hooks/use-player";
 import { audioDuration, progress } from "@/lib/music/views/stores/audio";
-import { commitSeek, previewSeek } from "@/lib/music/views/stores/player";
+import {
+	commitSeek,
+	playerModalOpen,
+	previewSeek,
+} from "@/lib/music/views/stores/player";
 import {
 	canNext,
 	canPrev,
@@ -43,8 +47,6 @@ import { Image } from "@/lib/shared/views/ui/components/image";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import Progress from "@/lib/shared/views/ui/components/progress";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
-
-export const playerModalOpen = signal(false);
 
 const currentLabel = computed(() => secondsToTime(progress.value));
 const totalLabel = computed(() => secondsToTime(audioDuration.value));

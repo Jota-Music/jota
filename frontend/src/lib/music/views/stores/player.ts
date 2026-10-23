@@ -1,3 +1,4 @@
+import { signal } from "@preact/signals";
 import { pick } from "@/lib/music/app/playback";
 import { insertAt, isOwnList, pinAfter } from "@/lib/music/app/queue";
 import { permute, random, seed } from "@/lib/music/app/shuffle";
@@ -31,6 +32,9 @@ import {
 	shuffle,
 } from "@/lib/music/views/stores/queue";
 import { playGate, publish } from "@/lib/music/views/stores/remote";
+
+// Whether the expanded player (mobile modal) is on screen.
+export const playerModalOpen = signal(false);
 
 // Resolve this many tracks ahead: an already-resolved stream keeps playing while
 // the YouTube API is blocked, so a wider window rides out longer outages.

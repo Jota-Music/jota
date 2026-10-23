@@ -18,7 +18,10 @@ import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import { coarse } from "@/lib/music/views/hooks/row-select";
 import { currentSong, setYoutube } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
-import { reloadCurrent } from "@/lib/music/views/stores/player";
+import {
+	playerModalOpen,
+	reloadCurrent,
+} from "@/lib/music/views/stores/player";
 import {
 	preview,
 	previewDuration,
@@ -35,7 +38,6 @@ import {
 	editingSong,
 	editorMode,
 } from "@/lib/music/views/stores/youtube-editor";
-import { playerModalOpen } from "@/lib/music/views/ui/player";
 import TrackArt from "@/lib/music/views/ui/track/track-art";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { t } from "@/lib/shared/i18n";
