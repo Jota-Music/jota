@@ -62,14 +62,12 @@ export function AppShell({
 					<DegradedBanner />
 					<SignInPrompt />
 				</div>
-
 				<div
-					class="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
-				>
-					<div
-						ref={overlayLayer}
-						class="pointer-events-none absolute inset-0 z-50 overflow-hidden transform-gpu"
-					/>
+					ref={overlayLayer}
+					class="pointer-events-none fixed inset-0 z-50"
+				/>
+
+				<div class="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
 					{player}
 
 					<main
