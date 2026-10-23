@@ -76,7 +76,8 @@ export function buildActions({
 	const list = (batch ? selectedSongs.value : songs).filter(
 		(song) => !song.broken,
 	);
-	if (list.length === 0) return { actions: [], count: 0 };
+	if (list.length === 0)
+		return { actions: [...(playlistActions ?? [])], count: 0 };
 
 	const single = list.length === 1 ? list[0] : null;
 	const done = () => void onDone?.();

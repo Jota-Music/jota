@@ -27,8 +27,7 @@ export function CreatePlaylistModal({
 		try {
 			const playlist = await createPlaylist(name.value);
 			onCreated(playlist);
-			name.value = "";
-			close();
+			closeAndReset();
 		} catch (error) {
 			addError(error, "playlist");
 		} finally {

@@ -1,7 +1,20 @@
 import { effect, signal, useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { ArrowUpDown, Loader, RefreshCw, Search, X } from "lucide-preact";
+import {
+	ArrowUpDown,
+	EllipsisVertical,
+	ListChecks,
+	ListPlus,
+	Loader,
+	RefreshCw,
+	Search,
+	Square,
+	SquarePlus,
+	Trash2,
+	X,
+} from "lucide-preact";
 import { useEffect, useMemo } from "preact/hooks";
+import { useLocation } from "wouter-preact";
 import {
 	getFullPlaylist,
 	revalidateFullPlaylist,
@@ -9,6 +22,7 @@ import {
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import { playlistSource } from "@/lib/music/app/playlist-source";
 import {
+	deletePlaylist,
 	isCustom,
 	removeSongFromPlaylist,
 	reorderPlaylist,
@@ -19,25 +33,31 @@ import {
 	isPlaying,
 	isLoading as playbackLoading,
 } from "@/lib/music/views/stores/audio";
-import { playList } from "@/lib/music/views/stores/player";
+import { enqueueMany, playList } from "@/lib/music/views/stores/player";
 import { queueSource } from "@/lib/music/views/stores/queue";
 import { expireRemoval, stageRemoval } from "@/lib/music/views/stores/removal";
 import {
 	clearSelection,
+	openPicker,
 	selectAll,
+	selectedIds,
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
 import { SaveButton } from "@/lib/music/views/ui/follow";
+import { LocalShareToggle } from "@/lib/music/views/ui/playlist/local-share-toggle";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
-import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
 import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
+import {
+	type Action,
+	openContextMenu,
+} from "@/lib/shared/views/ui/components/context-menu";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
 const storageKey = "playlist_filters";
@@ -129,7 +149,9 @@ effect(() => {
 
 export default function PlaylistPlain({ id }: { id: string }) {
 	const refreshing = useSignal(false);
+	const deletePlaylistConfirm = useSignal(false);
 	const queryClient = useQueryClient();
+	const [, navigate] = useLocation();
 	const custom = isCustom(id);
 
 	useEffect(() => {
@@ -163,6 +185,18 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			order,
 		});
 		removing.value = null;
+	};
+
+	const confirmDeletePlaylist = async () => {
+		try {
+			await deletePlaylist(id);
+			void queryClient.invalidateQueries({ queryKey: ["playlists"] });
+			clearSelection();
+			deletePlaylistConfirm.value = false;
+			navigate("/");
+		} catch (error) {
+			addError(error, "playlist");
+		}
 	};
 
 	const reorder = useMutation({
@@ -273,10 +307,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				custom={custom}
 				songs={songs}
 				reserve={isLoading}
-				onRemove={() => {
-					removing.value =
-						selectedSongs.value.length > 0 ? selectedSongs.value : songs;
-				}}
+				onDeletePlaylist={() => (deletePlaylistConfirm.value = true)}
 			/>
 
 			{selectedSongs.value.length > 1 ? (
@@ -393,6 +424,12 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			)}
 
 			<ConfirmModal
+				open={deletePlaylistConfirm.value}
+				danger
+				close={() => (deletePlaylistConfirm.value = false)}
+				onConfirm={() => void confirmDeletePlaylist()}
+			/>
+			<ConfirmModal
 				open={!!removing.value}
 				danger
 				pending={removeSong.isPending}
@@ -418,7 +455,7 @@ function PlaylistHeader({
 	custom,
 	songs,
 	reserve,
-	onRemove,
+	onDeletePlaylist,
 }: {
 	id: string;
 	cover?: string;
@@ -430,13 +467,50 @@ function PlaylistHeader({
 	custom: boolean;
 	songs: Song[];
 	reserve?: boolean;
-	onRemove: () => void;
+	onDeletePlaylist: () => void;
 }) {
 	// queueSource instead of isQueue: membership walks the whole queue, so the
 	// header re-rendered and re-filtered the track list on every queue edit.
 	const active = queueSource.value === id;
 	const { toggle } = useSaved();
 	const follow = followable(id);
+	const menuActions: Action[] = [];
+	if (follow) menuActions.push(toggle(id));
+	menuActions.push(...shareLink(pageLink("playlist", id)));
+	const tracks = songs.filter((song) => !song.broken);
+	if (tracks.length > 0) {
+		menuActions.push(
+			{
+				icon: ListPlus,
+				label: t("music.track.addQueue"),
+				run: () => enqueueMany(tracks),
+			},
+			{
+				icon: SquarePlus,
+				label: t("music.custom.addTo"),
+				run: () => openPicker(tracks),
+			},
+		);
+		const allSelected = tracks.every((song) => selectedIds.value.has(song.id));
+		menuActions.push({
+			icon: allSelected ? Square : ListChecks,
+			label: allSelected
+				? t("music.custom.deselectAll")
+				: t("music.custom.selectAll"),
+			run: () => {
+				if (allSelected) clearSelection();
+				else selectAll(tracks);
+			},
+		});
+	}
+	if (custom) {
+		menuActions.push({
+			icon: Trash2,
+			label: t("music.custom.deletePlaylist"),
+			danger: true,
+			run: onDeletePlaylist,
+		});
+	}
 	return (
 		<PageHeader
 			cover={cover}
@@ -445,24 +519,50 @@ function PlaylistHeader({
 			subtitle={t("music.trackCount", { count: trackCount })}
 			link={link}
 			linkReserve
-			beforePlay={follow ? <SaveButton id={id} variant="toolbar" /> : undefined}
+			beforePlay={
+				follow || custom ? (
+					<>
+						{follow && <SaveButton id={id} variant="toolbar" />}
+						{custom && <LocalShareToggle id={id} name={name} />}
+					</>
+				) : undefined
+			}
 			onPlay={
 				playable.length > 0 ? () => void playList(playable, id) : undefined
 			}
 			playing={active && isPlaying.value}
 			loading={active && playbackLoading.value}
-			actions={
-				<TrackActions
-					songs={songs}
-					playlistActions={follow ? [toggle(id)] : undefined}
-					share={shareLink(pageLink("playlist", id))}
-					onSelectAll={selectAll}
-					removable={custom}
-					onRemove={custom ? onRemove : undefined}
-					reserve={reserve}
-					onPlay={() => void playList(playable, id)}
-				/>
-			}
+			actions={<PlaylistActions actions={menuActions} reserve={reserve} />}
 		/>
+	);
+}
+
+function PlaylistActions({
+	actions,
+	reserve,
+}: {
+	actions: Action[];
+	reserve?: boolean;
+}) {
+	if (actions.length === 0 && !reserve) return null;
+	return (
+		<button
+			type="button"
+			title={t("music.track.actions")}
+			aria-label={t("music.track.actions")}
+			aria-haspopup="menu"
+			disabled={actions.length === 0}
+			onPointerDown={(event) => {
+				event.preventDefault();
+				event.stopPropagation();
+			}}
+			onClick={(event) => {
+				event.stopPropagation();
+				openContextMenu(actions, event);
+			}}
+			class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-white disabled:cursor-default disabled:opacity-40"
+		>
+			<EllipsisVertical size={18} />
+		</button>
 	);
 }
