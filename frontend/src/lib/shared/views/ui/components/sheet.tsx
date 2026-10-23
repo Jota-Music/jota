@@ -2,7 +2,7 @@ import { useSignal } from "@preact/signals";
 import { X } from "lucide-preact";
 import { type ComponentChildren, createContext, type RefObject } from "preact";
 import { createPortal } from "preact/compat";
-import { useContext, useEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { useSheetDrag } from "@/lib/shared/views/hooks/use-sheet-drag";
@@ -76,7 +76,7 @@ export function Sheet({
 	const closeRef = useRef(close);
 	closeRef.current = close;
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		if (!open) return;
 		return hold(() => closeRef.current());
 	}, [open]);
@@ -88,7 +88,7 @@ export function Sheet({
 		el.style.translate = "";
 	};
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		if (open) {
 			mounted.value = true;
 			clearInline();
@@ -109,9 +109,9 @@ export function Sheet({
 	return createPortal(
 		<div
 			class={cn(
-				"z-50 md:z-120 flex items-end justify-center p-0",
+				"pointer-events-auto z-50 md:z-120 flex items-end justify-center p-0",
 				centered && "sm:items-center sm:p-4",
-				host ? "absolute inset-0" : "fixed inset-0",
+				"fixed inset-0",
 				mobileOnly && "md:hidden",
 			)}
 			role="presentation"

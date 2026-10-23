@@ -33,7 +33,7 @@ export function AppShell({
 	player?: ComponentChildren;
 	mainClass?: string;
 }) {
-	const region = useRef<HTMLDivElement>(null);
+	const overlayLayer = useRef<HTMLDivElement>(null);
 	const [location] = useLocation();
 
 	useEffect(() => {
@@ -53,7 +53,7 @@ export function AppShell({
 	}, []);
 
 	return (
-		<OverlayHost.Provider value={region}>
+		<OverlayHost.Provider value={overlayLayer}>
 			<div class="h-dvh min-h-0 flex flex-col">
 				<div class="flex flex-col bg-stone-950">
 					<Header />
@@ -64,9 +64,12 @@ export function AppShell({
 				</div>
 
 				<div
-					ref={region}
 					class="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
 				>
+					<div
+						ref={overlayLayer}
+						class="pointer-events-none absolute inset-0 z-50 overflow-hidden transform-gpu"
+					/>
 					{player}
 
 					<main
