@@ -15,6 +15,7 @@ import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { getYouTubeId, updateYoutubeId } from "@/lib/music/app/get-audio";
 import { searchYouTube, youtubeVideoToSong } from "@/lib/music/app/search";
 import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
+import type { Song } from "@/lib/music/model";
 import { coarse } from "@/lib/music/views/hooks/row-select";
 import { currentSong, setYoutube } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
@@ -51,8 +52,10 @@ import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 type Mode = "assign" | "search";
 
 export default function YoutubeEditor() {
-	const song = editingSong.value;
-	const open = song != null;
+	const activeSong = editingSong.value;
+	const closingSong = useSignal<Song | null>(null);
+	const open = activeSong != null;
+	const song = activeSong ?? closingSong.value;
 	const youtubeId = useSignal("");
 	const search = useSignal("");
 	const query = useSignal("");
@@ -64,6 +67,7 @@ export default function YoutubeEditor() {
 
 	useLayoutEffect(() => {
 		if (!open || !song) return;
+		closingSong.value = song;
 		playerModalOpen.value = false;
 		stopPreview();
 		lastTap.current = null;
@@ -327,7 +331,14 @@ export default function YoutubeEditor() {
 							aria-hidden={!searching}
 							inert={!searching}
 						>
-							<div class="relative min-h-0 overflow-hidden">
+							<div
+								class={cn(
+									"relative min-h-0 overflow-hidden transition-[height,opacity] duration-200 ease-out motion-reduce:transition-none",
+									searching
+										? "h-64 max-h-[40dvh] opacity-100"
+										: "h-0 opacity-0",
+								)}
+							>
 								<div
 									ref={$results}
 									class="absolute inset-0 overflow-y-auto overscroll-contain rounded-lg border border-zinc-800 bg-zinc-950 pr-[15px]"
