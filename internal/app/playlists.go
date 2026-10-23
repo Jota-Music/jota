@@ -10,6 +10,10 @@ func (a *App) CreatePlaylist(name string) (music.PlaylistSummary, error) {
 	return a.Playlists.Create(name)
 }
 
+func (a *App) RenamePlaylist(id, name string) error {
+	return a.Playlists.Rename(id, name)
+}
+
 func (a *App) DeletePlaylist(id string) error {
 	return a.Playlists.Delete(id)
 }

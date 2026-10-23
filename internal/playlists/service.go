@@ -170,6 +170,23 @@ func (s *Service) Create(name string) (music.PlaylistSummary, error) {
 	return music.PlaylistSummary{Id: id, Name: name}, nil
 }
 
+func (s *Service) Rename(id, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = defaultName
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	pl, err := s.load(id)
+	if err != nil {
+		return err
+	}
+	pl.Name = name
+	return s.save(pl)
+}
+
 func (s *Service) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

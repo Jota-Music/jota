@@ -326,7 +326,9 @@
 			"deselect": "Deselect",
 			"deselectAll": "Deselect all",
 			"noPlaylists": "No playlists yet. Create one below.",
-			"undo": "Undo"
+			"undo": "Undo",
+			"deletePlaylist": "Delete playlist",
+			"rename": "Rename playlist"
 		},
 		"local": {
 			"hint": {

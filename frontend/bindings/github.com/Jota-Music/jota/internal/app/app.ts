@@ -222,6 +222,10 @@ export function RemoveSongFromPlaylist(id: string, ref: string): $CancellablePro
     return $Call.ByID(4016821159, id, ref);
 }
 
+export function RenamePlaylist(id: string, name: string): $CancellablePromise<void> {
+    return $Call.ByID(2057524468, id, name);
+}
+
 export function ReorderPlaylist(id: string, refs: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(793586653, id, refs);
 }

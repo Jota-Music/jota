@@ -4,6 +4,7 @@ import {
 	DeletePlaylist,
 	GetPlaylists,
 	RemoveSongFromPlaylist,
+	RenamePlaylist,
 	ReorderPlaylist,
 } from "@bindings/app";
 import type { PlaylistSummary } from "@/lib/music/model";
@@ -24,6 +25,10 @@ export async function createPlaylist(name: string): Promise<PlaylistSummary> {
 
 export async function deletePlaylist(id: string): Promise<void> {
 	await DeletePlaylist(id);
+}
+
+export async function renamePlaylist(id: string, name: string): Promise<void> {
+	await RenamePlaylist(id, name);
 }
 
 export async function addSongsToPlaylist(

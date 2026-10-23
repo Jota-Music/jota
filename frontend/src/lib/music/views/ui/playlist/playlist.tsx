@@ -2,10 +2,12 @@ import { effect, signal, useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import {
 	ArrowUpDown,
+	Check,
 	EllipsisVertical,
 	ListChecks,
 	ListPlus,
 	Loader,
+	Pencil,
 	RefreshCw,
 	Search,
 	Square,
@@ -25,6 +27,7 @@ import {
 	deletePlaylist,
 	isCustom,
 	removeSongFromPlaylist,
+	renamePlaylist,
 	reorderPlaylist,
 } from "@/lib/music/app/playlists";
 import { pageLink } from "@/lib/music/app/share";
@@ -58,6 +61,7 @@ import {
 	type Action,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
+import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
 const storageKey = "playlist_filters";
@@ -150,6 +154,8 @@ effect(() => {
 export default function PlaylistPlain({ id }: { id: string }) {
 	const refreshing = useSignal(false);
 	const deletePlaylistConfirm = useSignal(false);
+	const renamePlaylistOpen = useSignal(false);
+	const renameDraft = useSignal("");
 	const queryClient = useQueryClient();
 	const [, navigate] = useLocation();
 	const custom = isCustom(id);
@@ -194,6 +200,24 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			clearSelection();
 			deletePlaylistConfirm.value = false;
 			navigate("/");
+		} catch (error) {
+			addError(error, "playlist");
+		}
+	};
+
+	const openRenamePlaylist = () => {
+		renameDraft.value = name;
+		renamePlaylistOpen.value = true;
+	};
+
+	const confirmRenamePlaylist = async () => {
+		const trimmed = renameDraft.value.trim();
+		if (!trimmed) return;
+		try {
+			await renamePlaylist(id, trimmed);
+			await queryClient.invalidateQueries({ queryKey: ["playlist", id] });
+			void queryClient.invalidateQueries({ queryKey: ["playlists"] });
+			renamePlaylistOpen.value = false;
 		} catch (error) {
 			addError(error, "playlist");
 		}
@@ -308,6 +332,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				songs={songs}
 				reserve={isLoading}
 				onDeletePlaylist={() => (deletePlaylistConfirm.value = true)}
+				onRenamePlaylist={custom ? openRenamePlaylist : undefined}
 			/>
 
 			{selectedSongs.value.length > 1 ? (
@@ -438,6 +463,61 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				}}
 				onConfirm={confirmRemove}
 			/>
+
+			<Modal
+				open={renamePlaylistOpen.value}
+				close={() => {
+					renamePlaylistOpen.value = false;
+				}}
+				labelledBy="rename-playlist-title"
+			>
+				<div class="flex flex-col gap-4 px-6 pt-6 pb-6">
+					<h2
+						id="rename-playlist-title"
+						class="text-lg font-bold text-zinc-100"
+					>
+						{t("music.custom.rename")}
+					</h2>
+					<input
+						type="text"
+						value={renameDraft.value}
+						onInput={(e) => {
+							renameDraft.value = (e.target as HTMLInputElement).value;
+						}}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") {
+								e.preventDefault();
+								void confirmRenamePlaylist();
+							} else if (e.key === "Escape") {
+								renamePlaylistOpen.value = false;
+							}
+						}}
+						class="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-zinc-600"
+					/>
+					<div class="flex justify-end gap-2">
+						<button
+							type="button"
+							onClick={() => {
+								renamePlaylistOpen.value = false;
+							}}
+							title={t("common.cancel")}
+							aria-label={t("common.cancel")}
+							class="flex size-10 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:text-white"
+						>
+							<X size={18} />
+						</button>
+						<button
+							type="button"
+							onClick={() => void confirmRenamePlaylist()}
+							title={t("common.save")}
+							aria-label={t("common.save")}
+							class="flex size-10 items-center justify-center rounded-lg bg-(--dominant-color) text-(--binary-color) transition-opacity hover:opacity-75"
+						>
+							<Check size={18} />
+						</button>
+					</div>
+				</div>
+			</Modal>
 		</div>
 	);
 }
@@ -456,6 +536,7 @@ function PlaylistHeader({
 	songs,
 	reserve,
 	onDeletePlaylist,
+	onRenamePlaylist,
 }: {
 	id: string;
 	cover?: string;
@@ -468,6 +549,7 @@ function PlaylistHeader({
 	songs: Song[];
 	reserve?: boolean;
 	onDeletePlaylist: () => void;
+	onRenamePlaylist?: () => void;
 }) {
 	// queueSource instead of isQueue: membership walks the whole queue, so the
 	// header re-rendered and re-filtered the track list on every queue edit.
@@ -501,6 +583,13 @@ function PlaylistHeader({
 				if (allSelected) clearSelection();
 				else selectAll(tracks);
 			},
+		});
+	}
+	if (custom && onRenamePlaylist) {
+		menuActions.push({
+			icon: Pencil,
+			label: t("music.custom.rename"),
+			run: onRenamePlaylist,
 		});
 	}
 	if (custom) {
