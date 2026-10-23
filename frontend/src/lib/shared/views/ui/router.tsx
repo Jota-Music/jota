@@ -108,11 +108,12 @@ Events.On("spotify:reconnected", async () => {
 
 const IDLE_SHED_MS = 5 * 60 * 1000;
 
-// Opt-in: reload the webview when it has been hidden this long and playback is
-// paused, which is the only way to flush WebKit's internal image caches. Once
-// the hidden session crosses this RSS, the reload fires early instead of
-// waiting out the full deadline; below it (or on platforms without /proc,
-// where RamMB is 0) the deadline still applies.
+// Reload the webview when it has been hidden this long and playback is paused,
+// which is the only way to flush WebKit's internal image caches. This is on by
+// default and can be disabled in settings. Once the hidden session crosses this
+// RSS, the reload fires early instead of waiting out the full deadline; below
+// it (or on platforms without /proc, where RamMB is 0) the deadline still
+// applies.
 const IDLE_RELOAD_MS = 10 * 60 * 1000;
 const IDLE_RAM_MB = 600;
 const RELOAD_POLL_MS = 30 * 1000;

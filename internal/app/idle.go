@@ -14,8 +14,13 @@ const idleReloadKey = "idle-reload"
 // IdleReload reports whether the app may reload the webview after sitting idle
 // and hidden, which is the only way to flush WebKit's internal image caches.
 func (a *App) IdleReload() bool {
-	var enabled bool
-	_ = settings.GetObject(idleReloadKey, &enabled)
+	// Reloading the hidden WebView is the only reliable way to release its
+	// internal image caches. Enable this for new installs; a saved user choice
+	// still takes precedence.
+	enabled := true
+	if err := settings.GetObject(idleReloadKey, &enabled); err != nil {
+		return true
+	}
 	return enabled
 }
 
