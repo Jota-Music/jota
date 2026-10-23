@@ -22,6 +22,7 @@ import {
 } from "@/lib/music/views/stores/audio";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
+import { interruptPreview } from "@/lib/music/views/stores/preview";
 import {
 	currentIndex,
 	persistQueue,
@@ -76,6 +77,7 @@ function setQueueState(
 	persistQueue();
 
 	if (!song) {
+		interruptPreview();
 		stopPlayer();
 		return;
 	}
@@ -105,6 +107,7 @@ async function playAtIndex(
 ): Promise<void> {
 	const q = queue.value;
 	if (i < 0 || i >= q.length) return;
+	interruptPreview();
 
 	const song = q[i];
 
@@ -301,6 +304,7 @@ export async function playAt(i: number): Promise<void> {
 }
 
 export async function toggleSong() {
+	interruptPreview();
 	publish({ action: isPlaying.value ? "pause" : "play" });
 	await togglePlayPause();
 }
@@ -318,6 +322,7 @@ export async function restart(): Promise<void> {
 export async function reloadCurrent(): Promise<void> {
 	const song = currentSong.value;
 	if (!song) return;
+	interruptPreview();
 
 	const gate = playGate.value;
 	if (gate) {

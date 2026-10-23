@@ -89,6 +89,13 @@ export function stopPreview() {
 	void resumeMain();
 }
 
+// A deliberate player action takes ownership from the preview. Stop the
+// separate element without restoring the track that the preview paused.
+export function interruptPreview() {
+	clearAudio();
+	resumeMainAfterPreview = false;
+}
+
 async function playAudio() {
 	const audio = player;
 	if (!audio) return;
