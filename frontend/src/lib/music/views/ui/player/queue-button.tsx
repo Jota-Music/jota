@@ -1,6 +1,7 @@
 import { useSignal, useSignalEffect } from "@preact/signals";
 import { Check, ListMusic } from "lucide-preact";
 import { useRef } from "preact/hooks";
+import { playerModalOpen } from "@/lib/music/views/stores/player";
 import { queuePulse, showQueue } from "@/lib/music/views/stores/queue";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -30,6 +31,12 @@ export default function QueueButton({ class: className }: { class?: string }) {
 			title={t("music.player.queue")}
 			aria-expanded={showQueue.value}
 			onClick={() => {
+				// Re-pressing while the expanded player covers the queue must
+				// present it again, not toggle a sheet nobody can see.
+				if (showQueue.value && playerModalOpen.value) {
+					playerModalOpen.value = false;
+					return;
+				}
 				showQueue.value = !showQueue.value;
 			}}
 			class={cn(
