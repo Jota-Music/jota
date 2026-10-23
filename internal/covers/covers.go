@@ -26,8 +26,8 @@ const (
 	maxSource     = 8 << 20
 	quality       = 82
 	fetchTimeout  = 10 * time.Second
-	maxConcurrent = 16
-	cacheBudget   = 16 << 20
+	maxConcurrent = 4
+	cacheBudget   = 4 << 20
 	userAgent     = "Mozilla/5.0 (compatible; Jota/1.0)"
 )
 
