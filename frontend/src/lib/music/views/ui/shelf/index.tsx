@@ -12,7 +12,7 @@ import { shareLink } from "@/lib/music/views/ui/share";
 import { Compact } from "@/lib/music/views/ui/shelf/compact";
 import { Controls } from "@/lib/music/views/ui/shelf/controls";
 import { Grid } from "@/lib/music/views/ui/shelf/grid";
-import { LocalHint } from "@/lib/music/views/ui/shelf/hint";
+import { LocalHint, YouTubeHint } from "@/lib/music/views/ui/shelf/hint";
 import {
 	sortMode,
 	toggleSortMode,
@@ -31,6 +31,7 @@ import {
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 export {
+	AllHint,
 	FollowingHint,
 	LocalHint,
 	RelayHint,
@@ -154,7 +155,7 @@ export function Shelf({
 	const hoverable = (item: Item) =>
 		(onRemove && item.removable) || !!actions || !!leading;
 
-	const filterable = items.some((item) => item.source);
+	const filterable = items.some((item) => item.source) || !!onCreate;
 
 	const filteredItems =
 		sourceFilter === "all" || !filterable
@@ -167,82 +168,98 @@ export function Shelf({
 				<div class="flex flex-1 items-center justify-center p-8 text-sm text-zinc-400">
 					{t("common.loading")}
 				</div>
-			) : items.length === 0 ? (
-				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
-					{emptyMessage}
-					{onCreate && (
-						<button
-							type="button"
-							onClick={onCreate}
-							title={t("music.custom.create")}
-							aria-label={t("music.custom.create")}
-							class="flex h-10 md:h-8 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 px-4 text-zinc-400 transition-colors hover:text-white"
-						>
-							<Plus size={18} class="md:hidden" />
-							<Plus size={14} class="hidden md:block" />
-							{t("music.custom.create")}
-						</button>
-					)}
-				</div>
 			) : (
 				<>
-					<Controls
-						filterable={filterable}
-						sourceFilter={sourceFilter}
-						setFilter={setFilter}
-						variant={variant}
-						setVariant={setVariant}
-						sortMode={canSort ? sortMode.value : undefined}
-						onSortMode={canSort ? toggleSortMode : undefined}
-						onCreate={onCreate}
-						showLocal={showLocal}
-					/>
+					{filterable && (
+						<Controls
+							filterable={filterable}
+							sourceFilter={sourceFilter}
+							setFilter={setFilter}
+							variant={variant}
+							setVariant={setVariant}
+							sortMode={canSort ? sortMode.value : undefined}
+							onSortMode={canSort ? toggleSortMode : undefined}
+							onCreate={items.length > 0 ? onCreate : undefined}
+							showLocal={showLocal}
+						/>
+					)}
 
-					<div class="relative min-h-0 flex-1">
-						<div
-							ref={listRef}
-							class="h-full overflow-y-auto pl-1 pr-[15px] pb-3"
-							onClickCapture={captureClick}
-						>
-							{filteredItems.length === 0 ? (
-								<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
-									{sourceFilter === "spotify" &&
-									!spotifyConnected.value &&
-									!spotifyDegraded.value ? (
-										<SpotifyConnect />
-									) : sourceFilter === "spotify" ? (
-										t("music.shelf.noSpotify")
-									) : sourceFilter === "local" ? (
-										<LocalHint />
-									) : (
-										emptyMessage
-									)}
-								</div>
-							) : variant === "grid" ? (
-								<Grid
-									items={filteredItems}
-									to={to}
-									dragProps={dragProps}
-									select={select}
-									menu={openItemMenu}
-									actions={renderActions}
-									leading={renderLeading}
-								/>
+					{items.length === 0 ? (
+						<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
+							{sourceFilter === "spotify" &&
+							!spotifyConnected.value &&
+							!spotifyDegraded.value ? (
+								<SpotifyConnect />
+							) : sourceFilter === "spotify" ? (
+								t("music.shelf.noSpotify")
+							) : sourceFilter === "local" ? (
+								<LocalHint />
+							) : sourceFilter === "youtube" ? (
+								<YouTubeHint />
 							) : (
-								<Compact
-									items={filteredItems}
-									to={to}
-									dragProps={dragProps}
-									select={select}
-									menu={openItemMenu}
-									actions={renderActions}
-									leading={renderLeading}
-									hoverable={hoverable}
-								/>
+								emptyMessage
+							)}
+							{onCreate && sourceFilter === "local" && (
+								<button
+									type="button"
+									onClick={onCreate}
+									title={t("music.custom.create")}
+									aria-label={t("music.custom.create")}
+									class="flex h-10 md:h-8 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 px-4 text-zinc-400 transition-colors hover:text-white"
+								>
+									<Plus size={18} class="md:hidden" />
+									<Plus size={14} class="hidden md:block" />
+									{t("music.custom.create")}
+								</button>
 							)}
 						</div>
-						<Scrollbar target={listRef} />
-					</div>
+					) : (
+						<div class="relative min-h-0 flex-1">
+							<div
+								ref={listRef}
+								class="h-full overflow-y-auto pl-1 pr-[15px] pb-3"
+								onClickCapture={captureClick}
+							>
+								{filteredItems.length === 0 ? (
+									<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
+										{sourceFilter === "spotify" &&
+										!spotifyConnected.value &&
+										!spotifyDegraded.value ? (
+											<SpotifyConnect />
+										) : sourceFilter === "spotify" ? (
+											t("music.shelf.noSpotify")
+										) : sourceFilter === "local" ? (
+											<LocalHint />
+										) : (
+											emptyMessage
+										)}
+									</div>
+								) : variant === "grid" ? (
+									<Grid
+										items={filteredItems}
+										to={to}
+										dragProps={dragProps}
+										select={select}
+										menu={openItemMenu}
+										actions={renderActions}
+										leading={renderLeading}
+									/>
+								) : (
+									<Compact
+										items={filteredItems}
+										to={to}
+										dragProps={dragProps}
+										select={select}
+										menu={openItemMenu}
+										actions={renderActions}
+										leading={renderLeading}
+										hoverable={hoverable}
+									/>
+								)}
+							</div>
+							<Scrollbar target={listRef} />
+						</div>
+					)}
 				</>
 			)}
 		</div>

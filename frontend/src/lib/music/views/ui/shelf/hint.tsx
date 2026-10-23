@@ -80,6 +80,22 @@ export function YouTubeHint() {
 	);
 }
 
+export function AllHint() {
+	return (
+		<Hint
+			icon={<Library size={24} />}
+			class="text-zinc-400"
+			title={t("music.allHint.title")}
+			body={t("music.allHint.body")}
+			steps={[
+				t("music.allHint.step1"),
+				t("music.allHint.step2"),
+				t("music.allHint.step3"),
+			]}
+		/>
+	);
+}
+
 export function FollowingHint() {
 	return (
 		<Hint

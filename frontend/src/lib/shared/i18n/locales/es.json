@@ -336,6 +336,13 @@
 				"step2": "Ponle nombre y aparecerá en esta lista.",
 				"step3": "Ábrela y añade canciones de cualquier fuente."
 			}
+		},
+		"allHint": {
+			"title": "Aún no hay listas",
+			"body": "Conecta Spotify, sigue una lista de YouTube o crea una local: todo aparecerá aquí.",
+			"step1": "En la barra de búsqueda de arriba, busca una lista por nombre o pega su enlace.",
+			"step2": "Abre la pestaña Listas en los resultados y toca el corazón para seguirla.",
+			"step3": "O usa el botón + para crear una lista local."
 		}
 	},
 	"sync": {

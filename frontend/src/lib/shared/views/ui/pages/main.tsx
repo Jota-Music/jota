@@ -17,7 +17,7 @@ import { SaveButton } from "@/lib/music/views/ui/follow";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { CreatePlaylistModal } from "@/lib/music/views/ui/playlists/create";
-import { type Item, Shelf, YouTubeHint } from "@/lib/music/views/ui/shelf";
+import { AllHint, type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { FollowingShelf } from "@/lib/music/views/ui/user/following";
 import { getOrder, saveOrder } from "@/lib/shared/app/order";
 import { applyOrder, move } from "@/lib/shared/app/reorder";
@@ -151,7 +151,7 @@ export function MainPage() {
 						isLoading={
 							spotifyQuery.isLoading || loadingSaved || customQuery.isLoading
 						}
-						emptyMessage={<YouTubeHint />}
+						emptyMessage={<AllHint />}
 						onPlay={(id) => void playPlaylist(queryClient, id)}
 						onRemove={(id) => remove(id)}
 						onReorder={reorder}
