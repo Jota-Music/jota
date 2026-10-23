@@ -68,11 +68,7 @@ export function ClipboardBanner() {
 	const redundant = alreadyAtDestination || alreadyPlayingSong;
 
 	useEffect(() => {
-		if (
-			redundant &&
-			link &&
-			pending.value?.link.to === link.to
-		) {
+		if (redundant && link && pending.value?.link.to === link.to) {
 			pending.value = null;
 		}
 	}, [redundant, link?.to]);
