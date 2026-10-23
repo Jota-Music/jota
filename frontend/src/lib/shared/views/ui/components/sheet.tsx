@@ -110,7 +110,6 @@ export function Sheet({
 		<div
 			class={cn(
 				"z-50 md:z-120 flex items-end justify-center p-0",
-				"max-sm:has-[input:focus]:z-120",
 				centered && "sm:items-center sm:p-4",
 				host ? "absolute inset-0" : "fixed inset-0",
 				mobileOnly && "md:hidden",
@@ -142,10 +141,6 @@ export function Sheet({
 					abovePlayer
 						? "max-sm:mb-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))] max-sm:max-h-[min(70dvh,calc(100dvh-9.25rem-env(safe-area-inset-bottom)))]"
 						: "max-sm:mb-[calc(3.5rem+env(safe-area-inset-bottom))]",
-					// With the soft keyboard up, the viewport is short: take the
-					// whole area and cover the player bar and nav, or the sheet
-					// shrinks to a sliver.
-					"max-sm:has-[input:focus]:mb-0 max-sm:has-[input:focus]:max-h-full",
 					"max-h-[70dvh]",
 					host ? "sm:max-h-full" : "sm:max-h-[85dvh]",
 					shown.value
