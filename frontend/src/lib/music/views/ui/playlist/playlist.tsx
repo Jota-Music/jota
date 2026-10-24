@@ -15,7 +15,7 @@ import {
 	Trash2,
 	X,
 } from "lucide-preact";
-import { useEffect, useMemo } from "preact/hooks";
+import { useEffect, useMemo, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import {
 	getFullPlaylist,
@@ -156,6 +156,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	const deletePlaylistConfirm = useSignal(false);
 	const renamePlaylistOpen = useSignal(false);
 	const renameDraft = useSignal("");
+	const renameInputRef = useRef<HTMLInputElement>(null);
 	const queryClient = useQueryClient();
 	const [, navigate] = useLocation();
 	const custom = isCustom(id);
@@ -209,6 +210,16 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		renameDraft.value = name;
 		renamePlaylistOpen.value = true;
 	};
+
+	useEffect(() => {
+		if (!renamePlaylistOpen.value) return;
+		const id = requestAnimationFrame(() => {
+			const input = renameInputRef.current;
+			if (!input) return;
+			input.focus();
+		});
+		return () => cancelAnimationFrame(id);
+	}, [renamePlaylistOpen.value]);
 
 	const confirmRenamePlaylist = async () => {
 		const trimmed = renameDraft.value.trim();
@@ -471,24 +482,33 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				}}
 				labelledBy="rename-playlist-title"
 			>
-				<div class="flex flex-col gap-4 px-6 pt-6 pb-6">
+				<form
+					class="flex flex-col gap-4 px-6 pt-6 pb-6"
+					onSubmit={(e) => {
+						e.preventDefault();
+						void confirmRenamePlaylist();
+					}}
+				>
 					<h2
 						id="rename-playlist-title"
 						class="text-lg font-bold text-zinc-100"
 					>
 						{t("music.custom.rename")}
 					</h2>
+					<label for="rename-playlist-input" class="sr-only">
+						{t("music.custom.rename")}
+					</label>
 					<input
+						ref={renameInputRef}
+						id="rename-playlist-input"
 						type="text"
 						value={renameDraft.value}
+						autoFocus
 						onInput={(e) => {
 							renameDraft.value = (e.target as HTMLInputElement).value;
 						}}
 						onKeyDown={(e) => {
-							if (e.key === "Enter") {
-								e.preventDefault();
-								void confirmRenamePlaylist();
-							} else if (e.key === "Escape") {
+							if (e.key === "Escape") {
 								renamePlaylistOpen.value = false;
 							}
 						}}
@@ -507,8 +527,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 							<X size={18} />
 						</button>
 						<button
-							type="button"
-							onClick={() => void confirmRenamePlaylist()}
+							type="submit"
 							title={t("common.save")}
 							aria-label={t("common.save")}
 							class="flex size-10 items-center justify-center rounded-lg bg-(--dominant-color) text-(--binary-color) transition-opacity hover:opacity-75"
@@ -516,7 +535,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 							<Check size={18} />
 						</button>
 					</div>
-				</div>
+				</form>
 			</Modal>
 		</div>
 	);
