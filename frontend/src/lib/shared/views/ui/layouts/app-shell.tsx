@@ -54,7 +54,7 @@ export function AppShell({
 
 	return (
 		<OverlayHost.Provider value={overlayLayer}>
-			<div class="relative h-dvh min-h-0 flex flex-col">
+			<div class="relative h-screen min-h-0 flex flex-col">
 				<div class="flex flex-col bg-stone-950">
 					<Header />
 					<UpdateBanner />
