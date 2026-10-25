@@ -39,3 +39,4 @@ build/android/app/src/main/jniLibs/
 build/android/gen/
 build/android/local.properties
 build/android/keystore.properties
+TODO.md
