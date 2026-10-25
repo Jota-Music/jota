@@ -58,7 +58,10 @@ export function RelaySettings() {
 			<p class="text-xs text-zinc-500">{t("sync.relay.body")}</p>
 
 			<div class="space-y-1.5">
-				<label for="sync-relay" class="text-xs font-medium text-zinc-400">
+				<label
+					for="sync-relay"
+					class="mb-2 block text-xs font-medium text-zinc-400"
+				>
 					{t("sync.relay.label")}
 				</label>
 				<input
@@ -94,7 +97,10 @@ export function RelaySettings() {
 			>
 				<div class="min-h-0 overflow-hidden">
 					<div class="space-y-1.5 pt-1.5">
-						<label for="sync-token" class="text-xs font-medium text-zinc-400">
+						<label
+							for="sync-token"
+							class="mb-2 block text-xs font-medium text-zinc-400"
+						>
 							{t("sync.relay.token")}
 						</label>
 						<PasswordInput

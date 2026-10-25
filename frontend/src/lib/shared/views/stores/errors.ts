@@ -6,6 +6,7 @@ type RoomError = {
 	id: string;
 	message: string;
 	tone: "error" | "info";
+	leaving?: boolean;
 };
 
 export const roomErrors = signal<RoomError[]>([]);
@@ -40,6 +41,11 @@ export function logError(error: unknown, context?: string): void {
 function push(entry: RoomError): void {
 	roomErrors.value = [...roomErrors.value, entry];
 
+	// Keep at most three visible notifications; fade the rest out.
+	if (roomErrors.value.length > 3) {
+		removeError(roomErrors.value[0].id);
+	}
+
 	// Auto-remove after 5 seconds
 	setTimeout(() => {
 		removeError(entry.id);
@@ -63,5 +69,12 @@ export function notify(message: string): void {
 }
 
 export function removeError(id: string): void {
-	roomErrors.value = roomErrors.value.filter((e) => e.id !== id);
+	const target = roomErrors.value.find((e) => e.id === id);
+	if (!target || target.leaving) return;
+	roomErrors.value = roomErrors.value.map((e) =>
+		e.id === id ? { ...e, leaving: true } : e,
+	);
+	setTimeout(() => {
+		roomErrors.value = roomErrors.value.filter((e) => e.id !== id);
+	}, 200);
 }

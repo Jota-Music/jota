@@ -47,7 +47,6 @@ import {
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
 import { SaveButton } from "@/lib/music/views/ui/follow";
-import { LocalShareToggle } from "@/lib/music/views/ui/playlist/local-share-toggle";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
@@ -629,10 +628,7 @@ function PlaylistHeader({
 			linkReserve
 			beforePlay={
 				follow || custom ? (
-					<>
-						{follow && <SaveButton id={id} variant="toolbar" />}
-						{custom && <LocalShareToggle id={id} name={name} />}
-					</>
+					follow && <SaveButton id={id} variant="toolbar" />
 				) : undefined
 			}
 			onPlay={

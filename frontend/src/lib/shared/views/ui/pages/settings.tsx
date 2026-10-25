@@ -12,9 +12,6 @@ import { AboutSettings } from "@/lib/update/views/about-settings";
 
 const GITHUB_URL = "https://github.com/salvadorsru";
 
-const isAndroid =
-	typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
-
 function openDeveloper(): void {
 	browse(GITHUB_URL);
 }
@@ -45,7 +42,7 @@ function SettingsPage() {
 
 				<AccountSettings />
 				<LanguageSettings />
-				{!isAndroid && <DiscordSettings />}
+				<DiscordSettings />
 				<IdleSettings />
 				<RelaySettings />
 				<AboutSettings />

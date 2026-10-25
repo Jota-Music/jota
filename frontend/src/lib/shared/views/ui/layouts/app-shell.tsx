@@ -20,7 +20,7 @@ import {
 	MobileBottomNav,
 } from "@/lib/shared/views/ui/components/header";
 import { OverlayHost } from "@/lib/shared/views/ui/components/modal";
-import { ErrorBar } from "@/lib/shared/views/ui/error-bar";
+import { NotificationBar } from "@/lib/shared/views/ui/notification-bar";
 import { SyncPanel } from "@/lib/sync/views/ui/session";
 import { UpdateBanner } from "@/lib/update/views/banner";
 
@@ -91,7 +91,7 @@ export function AppShell({
 				</div>
 
 				<MobileBottomNav />
-				<ErrorBar />
+				<NotificationBar />
 			</div>
 		</OverlayHost.Provider>
 	);

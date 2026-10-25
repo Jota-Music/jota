@@ -115,7 +115,7 @@ function SessionForm() {
 					<p class="text-sm font-medium text-zinc-100">
 						{t("sync.session.relayRequired")}
 					</p>
-					<p class="text-xs text-zinc-500">
+					<p class="mb-2 block text-xs text-zinc-500">
 						{t("sync.session.relayRequiredBody")}
 					</p>
 				</div>
@@ -133,7 +133,7 @@ function SessionForm() {
 
 	return (
 		<div class="flex flex-col gap-3">
-			<label for="sync-room" class="text-xs text-zinc-500">
+			<label for="sync-room" class="mb-2 block text-xs text-zinc-500">
 				{t("sync.session.roomCode")}
 			</label>
 			<div class="flex gap-2">
@@ -153,12 +153,12 @@ function SessionForm() {
 					{t("sync.session.generate")}
 				</button>
 			</div>
-			<p class="text-xs text-zinc-500">
+			<p class="mb-2 block text-xs text-zinc-500">
 				{active
 					? t("sync.session.inRoom", { room: currentRoom })
 					: t("sync.session.hostHint")}
 			</p>
-			<label for="sync-pass" class="text-xs text-zinc-500">
+			<label for="sync-pass" class="mb-2 block text-xs text-zinc-500">
 				{t("sync.session.password")}
 			</label>
 			<PasswordInput
@@ -225,7 +225,9 @@ function SessionForm() {
 				</button>
 			)}
 			{pendingStart.value && (
-				<p class="text-xs text-zinc-500">{t("sync.session.waiting")}</p>
+				<p class="mb-2 block text-xs text-zinc-500">
+					{t("sync.session.waiting")}
+				</p>
 			)}
 			{store.error.value && (
 				<p class="text-xs text-red-400">{store.error.value}</p>
