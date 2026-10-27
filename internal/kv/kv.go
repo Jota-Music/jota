@@ -65,9 +65,9 @@ func EnsureStarted() error {
 
 // startValueLogGC keeps the value log compacted: every write (window state,
 // cache entries, settings) appends to it, and an unconverged log makes both
-// disk usage and the read path grow over time. Each RunValueLogGC pass handles
-// one rewrite, so keep retrying while Badger reports progress and only stop on
-// ErrNoRewrite.
+// disk usage and the read path grow over time. One pass per tick, because Badger
+// blocks writes while it rewrites a value log and a burst of passes is a burst
+// of stalls; the next tick picks up whatever is left.
 func startValueLogGC() {
 	valueLogGCOn.Do(func() {
 		go func() {
@@ -78,14 +78,8 @@ func startValueLogGC() {
 				if d == nil {
 					return
 				}
-				for {
-					err := d.RunValueLogGC(valueLogGCRate)
-					if err != nil {
-						if !errors.Is(err, badger.ErrNoRewrite) {
-							log.Printf("kv: value log GC: %v", err)
-						}
-						break
-					}
+				if err := d.RunValueLogGC(valueLogGCRate); err != nil && !errors.Is(err, badger.ErrNoRewrite) {
+					log.Printf("kv: value log GC: %v", err)
 				}
 			}
 		}()
