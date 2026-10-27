@@ -7,6 +7,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as backup$0 from "../backup/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as music$0 from "../music/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -39,12 +42,25 @@ export function CheckUpdate(): $CancellablePromise<update$0.Info> {
     return $Call.ByID(1914456057);
 }
 
+export function ChooseSyncFolder(): $CancellablePromise<string> {
+    return $Call.ByID(2821744806);
+}
+
 export function ClearDiscordPresence(): $CancellablePromise<void> {
     return $Call.ByID(345571046);
 }
 
 export function ClearYouTubeCookies(): $CancellablePromise<void> {
     return $Call.ByID(438744125);
+}
+
+/**
+ * CookiesBrowsers lists the browsers on this machine whose cookie jar holds a
+ * YouTube session, so the desktop UI only offers a browser import it can
+ * actually perform. Empty on platforms without a jar reader.
+ */
+export function CookiesBrowsers(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(782722962);
 }
 
 export function CreatePlaylist(name: string): $CancellablePromise<music$0.PlaylistSummary> {
@@ -59,8 +75,20 @@ export function DiscordEnabled(): $CancellablePromise<boolean> {
     return $Call.ByID(1914947745);
 }
 
-export function FollowUser(account: string, user: string): $CancellablePromise<void> {
-    return $Call.ByID(2248055530, account, user);
+/**
+ * ExportBackup serializes the user's playlists, plus the ones the sources
+ * own, and asks where to save the file. It returns the chosen path, or an empty
+ * string when the dialog is dismissed. The dialog comes first so the network
+ * work only starts once the user picked a destination, and the file carries the
+ * same name as the sync document: saving it inside the sync folder updates that
+ * document instead of creating a second file.
+ */
+export function ExportBackup(): $CancellablePromise<string> {
+    return $Call.ByID(119988368);
+}
+
+export function FollowUser(user: string): $CancellablePromise<void> {
+    return $Call.ByID(2248055530, user);
 }
 
 export function GetAlbumTracks(uri: string): $CancellablePromise<music$0.Song[] | null> {
@@ -75,8 +103,8 @@ export function GetArtistDiscography(uri: string): $CancellablePromise<music$0.A
     return $Call.ByID(764690128, uri);
 }
 
-export function GetFollowedUsers(account: string): $CancellablePromise<string[] | null> {
-    return $Call.ByID(2564120032, account);
+export function GetFollowedUsers(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2564120032);
 }
 
 export function GetFollowing(): $CancellablePromise<music$0.Follow[] | null> {
@@ -89,6 +117,17 @@ export function GetFriends(): $CancellablePromise<string[] | null> {
 
 export function GetFullPlaylist(id: string): $CancellablePromise<music$0.Playlist> {
     return $Call.ByID(3017102079, id);
+}
+
+/**
+ * GetMyYouTubePlaylists returns the playlists of the signed-in YouTube account.
+ * A session YouTube no longer accepts is answered as an empty list, not as an
+ * error: this feeds a shelf next to Spotify's and the saved library, so a stale
+ * session must only cost its own source, not the view. The reason is logged, and
+ * the account panel's refresh retries it.
+ */
+export function GetMyYouTubePlaylists(): $CancellablePromise<music$0.PlaylistSummary[] | null> {
+    return $Call.ByID(3598556050);
 }
 
 /**
@@ -141,6 +180,14 @@ export function GetYouTubeId(cacheKey: string): $CancellablePromise<string> {
  */
 export function IdleReload(): $CancellablePromise<boolean> {
     return $Call.ByID(2217801143);
+}
+
+/**
+ * ImportBackup restores every section a backup file carries, letting the file
+ * win over local deletions because the user asked for it.
+ */
+export function ImportBackup(data: string): $CancellablePromise<backup$0.Stats> {
+    return $Call.ByID(1837819239, data);
 }
 
 /**
@@ -307,10 +354,29 @@ export function SetIdleReload(enabled: boolean): $CancellablePromise<void> {
     return $Call.ByID(4291922887, enabled);
 }
 
+export function SetSyncAuto(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(1064953360, enabled);
+}
+
+export function SetSyncFolder(folder: string): $CancellablePromise<void> {
+    return $Call.ByID(1582475535, folder);
+}
+
+export function SetSyncImport(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3795331634, enabled);
+}
+
+export function SetSyncInterval(minutes: number): $CancellablePromise<void> {
+    return $Call.ByID(200971970, minutes);
+}
+
 /**
  * SetYouTubeCookies stores the Google account cookies used to sign innertube
  * requests. Playing age-restricted videos and avoiding the bot check requires
- * it; using an account this way can get it banned by Google.
+ * it; using an account this way can get it banned by Google. The session is
+ * checked against YouTube before it is kept, because a partial export signs
+ * requests yet is still anonymous, which only shows up later on a private
+ * playlist.
  */
 export function SetYouTubeCookies(cookies: string): $CancellablePromise<void> {
     return $Call.ByID(2898265424, cookies);
@@ -318,6 +384,16 @@ export function SetYouTubeCookies(cookies: string): $CancellablePromise<void> {
 
 export function SetYouTubeId(cacheKey: string, youtubeId: string): $CancellablePromise<void> {
     return $Call.ByID(965987300, cacheKey, youtubeId);
+}
+
+/**
+ * SetYouTubeSession stores what an Android sign-in hands over: the whole cookie
+ * jar the WebView holds plus the visitor id and client version of that session.
+ * The visitor is adopted after the cookies are verified, because a signed
+ * request that speaks as a guest is answered as if it were anonymous.
+ */
+export function SetYouTubeSession(cookies: string, visitor: string, version: string): $CancellablePromise<void> {
+    return $Call.ByID(1434092371, cookies, visitor, version);
 }
 
 export function SpotifyDisconnect(): $CancellablePromise<void> {
@@ -356,12 +432,66 @@ export function SpotifyReconnect(): $CancellablePromise<boolean> {
     return $Call.ByID(4133825283);
 }
 
+export function SyncAuto(): $CancellablePromise<boolean> {
+    return $Call.ByID(3037513824);
+}
+
 export function SyncCheck(relayURL: string, token: string): $CancellablePromise<boolean> {
     return $Call.ByID(3718808301, relayURL, token);
 }
 
 export function SyncConnect(relayURL: string, room: string, role: string, token: string, password: string): $CancellablePromise<void> {
     return $Call.ByID(799230255, relayURL, room, role, token, password);
+}
+
+/**
+ * SyncDocument merges a backup document read from the platform picker (an
+ * Android content:// document) and returns the document both sides agree on.
+ * fresh reports whether the copy is newer than our own last write: only the
+ * side that read the file can tell a cache miss from a cached copy.
+ */
+export function SyncDocument(data: string, fresh: boolean): $CancellablePromise<string> {
+    return $Call.ByID(392385374, data, fresh);
+}
+
+export function SyncFolder(): $CancellablePromise<string> {
+    return $Call.ByID(2813775935);
+}
+
+/**
+ * SyncImport decides whether a pass also applies the document to this library.
+ * Missing means on: that was the only behaviour before the switch existed.
+ */
+export function SyncImport(): $CancellablePromise<boolean> {
+    return $Call.ByID(2863524194);
+}
+
+export function SyncInterval(): $CancellablePromise<number> {
+    return $Call.ByID(487905522);
+}
+
+/**
+ * SyncOverwrite is the emergency exit: it writes our document over a file a
+ * normal save cannot read.
+ */
+export function SyncOverwrite(): $CancellablePromise<void> {
+    return $Call.ByID(1791553712);
+}
+
+/**
+ * SyncPending reports whether a manual sync could still change the document: our
+ * playlists moved since the last one, or it never ran and could not write.
+ */
+export function SyncPending(): $CancellablePromise<boolean> {
+    return $Call.ByID(2813578778);
+}
+
+/**
+ * SyncPlaylists is the automatic pass: it reconciles the document and only
+ * downloads the playlists the sources own once their snapshot is old.
+ */
+export function SyncPlaylists(): $CancellablePromise<void> {
+    return $Call.ByID(3661890186);
 }
 
 /**
@@ -372,16 +502,30 @@ export function SyncRoomStatus(relayURL: string, room: string, token: string): $
     return $Call.ByID(1137831878, relayURL, room, token);
 }
 
+/**
+ * SyncSave is the manual save: it writes this library now, and only resolves the
+ * playlists the sources own once their snapshot is old, exactly like the
+ * automatic pass. Downloading the whole account on every click is what made the
+ * button look frozen.
+ */
+export function SyncSave(): $CancellablePromise<void> {
+    return $Call.ByID(1673416822);
+}
+
 export function SyncSend(payload: string): $CancellablePromise<void> {
     return $Call.ByID(111451869, payload);
+}
+
+export function SyncStatus(): $CancellablePromise<$models.SyncStatus> {
+    return $Call.ByID(3855208621);
 }
 
 export function SyncStop(): $CancellablePromise<void> {
     return $Call.ByID(3298596019);
 }
 
-export function UnfollowUser(account: string, user: string): $CancellablePromise<void> {
-    return $Call.ByID(2753135609, account, user);
+export function UnfollowUser(user: string): $CancellablePromise<void> {
+    return $Call.ByID(2753135609, user);
 }
 
 export function UpdateDiscordPresence(payload: string): $CancellablePromise<void> {
@@ -390,6 +534,24 @@ export function UpdateDiscordPresence(payload: string): $CancellablePromise<void
 
 export function Version(): $CancellablePromise<string> {
     return $Call.ByID(3689526796);
+}
+
+/**
+ * YouTubeAccount names the account the stored session belongs to, so the panel
+ * can say who is connected instead of only that someone is. Empty when the
+ * session is one YouTube does not recognise (the partial set the sign-in window
+ * can read).
+ */
+export function YouTubeAccount(): $CancellablePromise<string> {
+    return $Call.ByID(328438784);
+}
+
+/**
+ * YouTubeBrowserAccounts labels each browser whose jar can be read with the
+ * account it holds, so the panel offers the right one instead of an opaque name.
+ */
+export function YouTubeBrowserAccounts(): $CancellablePromise<{ [_ in string]?: string } | null> {
+    return $Call.ByID(3498014055);
 }
 
 /**
@@ -403,12 +565,32 @@ export function YouTubeBrowserLogin(): $CancellablePromise<void> {
 }
 
 /**
- * YouTubeBrowserLoginSupported reports whether the in-app browser login can run.
- * On Android the WebView is a single fullscreen view owned by the Activity and
- * cannot load an external URL, so only paste and cookies.txt import work there.
+ * YouTubeBrowserLoginSupported reports whether the desktop in-app window can
+ * run. Android has no room for an external page inside its single fullscreen
+ * WebView; it signs in through its own YouTubeLoginActivity and the bridge
+ * instead, so this answers false there.
  */
 export function YouTubeBrowserLoginSupported(): $CancellablePromise<boolean> {
     return $Call.ByID(716896478);
+}
+
+/**
+ * YouTubeCookiesFromBrowser signs in with the session a browser on this machine
+ * already holds, so the user never pastes a cookie header. The jar is read and
+ * verified here, not in the UI, and the account's playlists are refetched only
+ * once YouTube accepted the session.
+ */
+export function YouTubeCookiesFromBrowser(browser: string): $CancellablePromise<void> {
+    return $Call.ByID(1724923768, browser);
+}
+
+/**
+ * YouTubeSessionFull reports whether the stored cookies can open private
+ * resources: the browser cannot read the ones that do, so a session started from
+ * the app window is always partial.
+ */
+export function YouTubeSessionFull(): $CancellablePromise<boolean> {
+    return $Call.ByID(2048160622);
 }
 
 export function YouTubeSignedIn(): $CancellablePromise<boolean> {

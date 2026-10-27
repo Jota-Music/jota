@@ -14,3 +14,33 @@ export interface SpotifyStatus {
     "degraded": boolean;
     "user": string;
 }
+
+/**
+ * SyncStatus is what the last sync read and changed. It lives in settings
+ * because the WebView loses its in-memory state on every reload, and the panel
+ * still has to say what happened.
+ */
+export interface SyncStatus {
+    "at": number;
+    "uri": string;
+
+    /**
+     * WriteAt is when we last actually wrote the document, and Hash fingerprints
+     * what we wrote. A read that only pulled must not move them: they are the
+     * baseline the freshness check compares against.
+     */
+    "writeAt": number;
+    "hash": number;
+
+    /**
+     * SnapshotsAt is when the playlists the sources own were last written into
+     * the document. Their download is the expensive part of a pass, so they are
+     * only resolved again once they are older than the refresh interval.
+     */
+    "snapshotsAt": number;
+    "bytes": number;
+    "remote": number;
+    "imported": number;
+    "modified": boolean;
+    "stale": boolean;
+}
