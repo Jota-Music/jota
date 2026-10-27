@@ -17,9 +17,17 @@ func (a *App) AddSavedPlaylist(id string) error {
 	if err != nil {
 		return err
 	}
-	return a.Saved.Add(summary)
+	if err := a.Saved.Add(summary); err != nil {
+		return err
+	}
+	a.syncInBackground()
+	return nil
 }
 
 func (a *App) RemoveSavedPlaylist(id string) error {
-	return a.Saved.Remove(id)
+	err := a.Saved.Remove(id)
+	if err == nil {
+		a.syncInBackground()
+	}
+	return err
 }

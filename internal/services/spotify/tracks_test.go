@@ -66,14 +66,14 @@ func TestGroupByURISharesDuplicates(t *testing.T) {
 	}
 }
 
-// Song ids are bare, and every id-based call depends on that staying true, so
-// pin the contract here.
-func TestSongIdIsBare(t *testing.T) {
+// Song ids carry the spotify: prefix so every source can be routed by id, and
+// every id-based call depends on that staying true, so pin the contract here.
+func TestSongIdIsPrefixed(t *testing.T) {
 	const uri = "spotify:track:4uLU6hMCjMI75M1A2tKUQC"
 	song := trackToSong(Track{URI: uri, Name: "Test"})
 
-	if song.Id != "4uLU6hMCjMI75M1A2tKUQC" {
-		t.Fatalf("Song.Id = %q, want the bare id", song.Id)
+	if song.Id != "spotify:4uLU6hMCjMI75M1A2tKUQC" {
+		t.Fatalf("Song.Id = %q, want the prefixed id", song.Id)
 	}
 }
 
@@ -87,8 +87,8 @@ func TestSearchResultDurationIsSeconds(t *testing.T) {
 	}
 }
 
-// Artist ids must arrive bare and paired by position, or the frontend cannot
-// link to the artist page.
+// Artist ids must keep the spotify: prefix and stay paired by position, or the
+// frontend cannot route to the artist page.
 func TestSearchResultArtistsAreBare(t *testing.T) {
 	got := trackToSearchResult(Track{
 		URI:        "spotify:track:x",
@@ -97,7 +97,7 @@ func TestSearchResultArtistsAreBare(t *testing.T) {
 	})
 
 	want := []music.Artist{
-		{Id: "4Z8W4fKeB5YxbusRsdQVPb", Name: "Radiohead"},
+		{Id: "spotify:4Z8W4fKeB5YxbusRsdQVPb", Name: "Radiohead"},
 		{Name: "Radiohead"},
 	}
 	if !slices.Equal(got.Artists, want) {

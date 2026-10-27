@@ -1,42 +1,9 @@
 package playlists
 
 import (
-	"errors"
 	"slices"
 	"testing"
-
-	"github.com/Jota-Music/jota/internal/kv"
-	"github.com/Jota-Music/jota/internal/music"
 )
-
-func fakeResolver(covers map[string]string, fail map[string]bool) func(string) (music.Song, error) {
-	return func(id string) (music.Song, error) {
-		if fail[id] {
-			return music.Song{}, errors.New("unavailable")
-		}
-		cover := covers[id]
-		if cover == "" {
-			cover = "cover-" + id
-		}
-		return music.Song{
-			Id:    id,
-			Name:  "Song " + id,
-			Album: music.Album{Covers: []string{cover}},
-		}, nil
-	}
-}
-
-func setup(t *testing.T) {
-	t.Helper()
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
-}
 
 func TestPlaylistLifecycle(t *testing.T) {
 	setup(t)

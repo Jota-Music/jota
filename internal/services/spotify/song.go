@@ -38,3 +38,29 @@ func (s *SpotifyService) song(uri string) (music.Song, error) {
 
 	return trackToSong(trackFromProto(&track)), nil
 }
+
+// CachedSong returns metadata previously stored for a track without hitting the
+// network. It is used to keep a backup self-contained and to show titles even
+// when Spotify is not connected. ok is false when nothing is cached.
+func (s *SpotifyService) CachedSong(id string) (music.Song, bool) {
+	uri := normalizeID(id, "track")
+	type cachedTrack struct {
+		Value       music.Song `json:"value"`
+		Fingerprint string     `json:"fingerprint"`
+	}
+	var stored cachedTrack
+	if err := musicBucket.GetObject("track:"+uri, &stored); err != nil || stored.Fingerprint == "" {
+		return music.Song{}, false
+	}
+	return stored.Value, true
+}
+
+// SetCachedSong stores metadata for a track, e.g. when importing a backup, so
+// later GetSong calls can resolve it without a network round trip.
+func (s *SpotifyService) SetCachedSong(id string, song music.Song) {
+	uri := normalizeID(id, "track")
+	_ = musicBucket.SetObject("track:"+uri, struct {
+		Value       music.Song `json:"value"`
+		Fingerprint string     `json:"fingerprint"`
+	}{Value: song, Fingerprint: "imported"})
+}

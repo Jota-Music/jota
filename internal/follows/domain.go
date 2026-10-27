@@ -1,5 +1,5 @@
 package follows
 
-// Users is the set of usernames an account follows. Follows are local to Jota
-// and scoped by the owning account, so different accounts keep separate lists.
+// Users is the set of ids this install follows: Spotify artists, YouTube
+// channels and users, all in one list.
 type Users []string

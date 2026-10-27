@@ -16,6 +16,17 @@ import (
 func normalizeID(id, typ string) string {
 	id = strings.TrimSpace(id)
 	if strings.HasPrefix(id, "spotify:") {
+		parts := strings.SplitN(id, ":", 3)
+		// Full URI: spotify:<type>:<id>
+		if len(parts) >= 3 {
+			return id
+		}
+		// Shorthand: spotify:<id>
+		if len(parts) == 2 && parts[1] != "" {
+			id = parts[1]
+		}
+	}
+	if id == "" {
 		return id
 	}
 	return "spotify:" + typ + ":" + id

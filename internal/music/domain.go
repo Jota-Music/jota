@@ -2,6 +2,7 @@ package music
 
 const (
 	YouTubePrefix = "youtube:"
+	SpotifyPrefix = "spotify:"
 	LocalPrefix   = "local:"
 )
 

@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -21,7 +22,9 @@ import (
 
 const (
 	credsKey     = "global"
+	deviceKey    = "device-id"
 	bucketName   = "spotify-global"
+	deviceBucket = "spotify-device"
 	loginTimeout = 5 * time.Minute
 
 	// restoreAttempts is how often Connect retries a stored session. Restoring
@@ -36,6 +39,7 @@ const (
 )
 
 var sessionBucket = kv.UseBucket(bucketName)
+var devices = kv.UseBucket(deviceBucket)
 
 type storedCreds struct {
 	Username string `json:"username"`
@@ -162,7 +166,7 @@ func (s *SpotifyService) newSession(ctx context.Context, creds any, attempts int
 		sess, err := session.NewSessionFromOptions(ctx, &session.Options{
 			Log:         &browserLogger{},
 			DeviceType:  devicespb.DeviceType_COMPUTER,
-			DeviceId:    "0123456789abcdef0123456789abcdef01234567",
+			DeviceId:    deviceId(),
 			Credentials: creds,
 		})
 		if err == nil {
@@ -380,6 +384,25 @@ func (s *SpotifyService) CompleteLogin() error {
 	log.Printf("spotify: connected as %s", sess.Username())
 
 	return nil
+}
+
+// deviceId identifies this install to Spotify Connect. It is generated once
+// and stored, because a new id on every launch registers a new device on the
+// account and silently drops the saved playback state.
+func deviceId() string {
+	if id, err := devices.GetString(deviceKey); err == nil && len(id) == 40 {
+		return id
+	}
+	buf := make([]byte, 20)
+	if _, err := rand.Read(buf); err != nil {
+		log.Printf("spotify: cannot generate device id: %v", err)
+		return "0123456789abcdef0123456789abcdef01234567"
+	}
+	id := hex.EncodeToString(buf)
+	if err := devices.SetString(deviceKey, id); err != nil {
+		log.Printf("spotify: cannot store device id: %v", err)
+	}
+	return id
 }
 
 func loadCreds() (*storedCreds, error) {

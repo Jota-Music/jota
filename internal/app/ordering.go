@@ -8,5 +8,9 @@ func (a *App) GetOrder(scope string, account string) ([]string, error) {
 
 // SaveOrder stores the user's custom order of ids for a shelf.
 func (a *App) SaveOrder(scope string, account string, ids []string) error {
-	return a.Order.Save(scope, account, ids)
+	err := a.Order.Save(scope, account, ids)
+	if err == nil {
+		a.syncInBackground()
+	}
+	return err
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Jota-Music/jota/internal/kv"
 )
@@ -20,10 +21,21 @@ const Library = "library"
 // only holds ids; it never edits the source collection.
 type Service struct {
 	mu sync.Mutex
+	// dirty marks changes the user made since the last sync, so the manual sync
+	// is offered only when it has something to write.
+	dirty bool
 }
 
 func New() *Service {
 	return &Service{}
+}
+
+// Pending reports whether the store changed since the last sync.
+func (s *Service) Pending() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.dirty
 }
 
 func normalize(value string) string {
@@ -39,15 +51,16 @@ func key(scope, account string) string {
 	return account + ":" + scope
 }
 
-func read(key string) (Order, error) {
-	var ids Order
-	if err := bucket.GetObject(key, &ids); err != nil {
+// load reads one shelf's order. A key missing means an empty order.
+func load(key string) (Record, error) {
+	var rec Record
+	if err := bucket.GetObject(key, &rec); err != nil {
 		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
-			return nil, nil
+			return Record{}, nil
 		}
-		return nil, err
+		return Record{}, err
 	}
-	return ids, nil
+	return clean(rec), nil
 }
 
 func (s *Service) List(scope string, account string) (Order, error) {
@@ -57,18 +70,16 @@ func (s *Service) List(scope string, account string) (Order, error) {
 		return nil, nil
 	}
 
-	ids, err := read(key(scope, account))
+	rec, err := load(key(scope, account))
 	if err != nil {
 		return nil, err
 	}
-	if len(ids) == 0 && account != "" && scope == Library {
-		return read(account)
-	}
-	return ids, nil
+	return rec.Ids, nil
 }
 
 func (s *Service) Save(scope string, account string, ids Order) error {
 	scope = normalize(scope)
+	account = normalize(account)
 	if scope == "" {
 		return nil
 	}
@@ -76,9 +87,21 @@ func (s *Service) Save(scope string, account string, ids Order) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	seen := make(map[string]struct{}, len(ids))
-	out := make(Order, 0, len(ids))
-	for _, id := range ids {
+	rec := clean(Record{Scope: scope, Account: account, Ids: ids})
+	rec.At = time.Now().UnixMilli()
+	if err := bucket.SetObject(key(scope, account), rec); err != nil {
+		return err
+	}
+	s.dirty = true
+	return nil
+}
+
+// clean trims the ids, drops the empty ones and the duplicates, so a stored
+// order never carries noise.
+func clean(rec Record) Record {
+	seen := make(map[string]struct{}, len(rec.Ids))
+	out := make(Order, 0, len(rec.Ids))
+	for _, id := range rec.Ids {
 		id = strings.TrimSpace(id)
 		if id == "" {
 			continue
@@ -89,5 +112,6 @@ func (s *Service) Save(scope string, account string, ids Order) error {
 		seen[id] = struct{}{}
 		out = append(out, id)
 	}
-	return bucket.SetObject(key(scope, normalize(account)), out)
+	rec.Ids = out
+	return rec
 }

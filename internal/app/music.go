@@ -14,14 +14,22 @@ func (a *App) RevalidateFullPlaylist(id string) error {
 	return a.Catalog.RevalidateFullPlaylist(id)
 }
 
-func (a *App) GetFollowedUsers(account string) ([]string, error) {
-	return a.Follows.List(account)
+func (a *App) GetFollowedUsers() ([]string, error) {
+	return a.Follows.List()
 }
 
-func (a *App) FollowUser(account string, user string) error {
-	return a.Follows.Follow(account, user)
+func (a *App) FollowUser(user string) error {
+	if err := a.Follows.Follow(user); err != nil {
+		return err
+	}
+	a.syncInBackground()
+	return nil
 }
 
-func (a *App) UnfollowUser(account string, user string) error {
-	return a.Follows.Unfollow(account, user)
+func (a *App) UnfollowUser(user string) error {
+	if err := a.Follows.Unfollow(user); err != nil {
+		return err
+	}
+	a.syncInBackground()
+	return nil
 }

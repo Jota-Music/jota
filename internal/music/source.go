@@ -26,6 +26,8 @@ func (c *Catalog) source(id string) Source {
 	if strings.HasPrefix(id, LocalPrefix) {
 		return c.local
 	}
+	// Spotify is the default source: both prefixed ("spotify:...") and legacy
+	// bare ids resolve to it.
 	return c.spotify
 }
 

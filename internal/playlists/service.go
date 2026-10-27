@@ -4,9 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"fmt"
-	"slices"
-	"strings"
 	"sync"
 
 	"github.com/Jota-Music/jota/internal/kv"
@@ -17,11 +14,17 @@ var (
 	bucket    = kv.UseBucket("playlists")
 	indexKey  = "index"
 	recordKey = "p:"
+	graveKey  = "graves"
 )
 
 type Service struct {
-	mu      sync.Mutex
-	resolve func(id string) (music.Song, error)
+	mu            sync.Mutex
+	resolve       func(id string) (music.Song, error)
+	trackCache    func(id string) (music.Song, bool)
+	setTrackCache func(id string, song music.Song)
+	// dirty marks playlists the user changed since the last sync, so the manual
+	// sync is offered only when it has something to write.
+	dirty bool
 }
 
 func New(resolve func(id string) (music.Song, error)) *Service {
@@ -37,6 +40,22 @@ func (s *Service) SetResolver(resolve func(id string) (music.Song, error)) {
 	s.resolve = resolve
 }
 
+// SetTrackCache wires best-effort metadata access for Spotify tracks, used to
+// keep backups self-contained and to show titles without a live session.
+func (s *Service) SetTrackCache(get func(id string) (music.Song, bool), set func(id string, song music.Song)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.trackCache = get
+	s.setTrackCache = set
+}
+
+// Pending reports whether the user changed a playlist since the last sync.
+func (s *Service) Pending() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.dirty
+}
+
 func newId() (string, error) {
 	buf := make([]byte, 8)
 	if _, err := rand.Read(buf); err != nil {
@@ -45,15 +64,33 @@ func newId() (string, error) {
 	return music.LocalPrefix + hex.EncodeToString(buf), nil
 }
 
-func normalizeRefs(refs []string) []string {
-	out := make([]string, 0, len(refs))
-	for _, ref := range refs {
-		ref = strings.TrimSpace(ref)
-		if ref != "" {
-			out = append(out, ref)
+// portable converts a stored playlist into its export shape. Metadata comes
+// from the playlist itself, then from the Spotify cache, so a backup stays
+// self-contained without a network round trip.
+func (s *Service) portable(pl Playlist) exportPlaylist {
+	songs := normalizeRefs(pl.Songs)
+	tracks := normalizeTracks(pl.Tracks)
+	if s.trackCache != nil {
+		for _, ref := range songs {
+			if _, ok := tracks[ref]; ok {
+				continue
+			}
+			if cached, ok := s.trackCache(ref); ok {
+				if tracks == nil {
+					tracks = make(map[string]music.Song, len(songs))
+				}
+				tracks[ref] = cached
+			}
 		}
 	}
-	return out
+	return exportPlaylist{
+		Id:         pl.Id,
+		Source:     "local",
+		Name:       pl.Name,
+		Songs:      songs,
+		Tracks:     tracks,
+		ModifiedAt: pl.ModifiedAt,
+	}
 }
 
 func (s *Service) load(id string) (Playlist, error) {
@@ -83,252 +120,24 @@ func (s *Service) setIndex(ids []string) error {
 	return bucket.SetObject(indexKey, ids)
 }
 
-func (s *Service) List() ([]music.PlaylistSummary, error) {
-	ids, err := s.index()
-	if err != nil {
+// tombstones maps a deleted playlist id to the moment it was deleted, so the
+// backup file cannot bring it back.
+func (s *Service) tombstones() (map[string]int64, error) {
+	graves := map[string]int64{}
+	if err := bucket.GetObject(graveKey, &graves); err != nil {
+		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
+			return map[string]int64{}, nil
+		}
 		return nil, err
 	}
-
-	out := make([]music.PlaylistSummary, 0, len(ids))
-	for _, id := range ids {
-		pl, err := s.load(id)
-		if err != nil {
-			if errors.Is(err, kv.ErrKeyNotFound) {
-				continue
-			}
-			return nil, err
-		}
-		out = append(out, s.summary(pl))
-	}
-	return out, nil
+	return graves, nil
 }
 
-// summary is the listing shape of a stored playlist: its name and the mosaic of
-// the covers of its first tracks.
-func (s *Service) summary(pl Playlist) music.PlaylistSummary {
-	return music.PlaylistSummary{
-		Id:     pl.Id,
-		Name:   pl.Name,
-		Covers: s.covers(pl.Songs),
-	}
-}
-
-// covers collects the album covers of the first tracks, skipping unresolved
-// tracks and duplicate covers so the mosaic never repeats the same art.
-func (s *Service) covers(refs []string) []string {
-	if s.resolve == nil {
-		return nil
-	}
-
-	covers := make([]string, 0, coverCount)
-	seen := make(map[string]struct{}, coverCount)
-	for _, ref := range refs {
-		if len(covers) == coverCount {
-			break
-		}
-		song, err := s.resolve(ref)
-		if err != nil || len(song.Album.Covers) == 0 {
-			continue
-		}
-		cover := song.Album.Covers[0]
-		if _, dup := seen[cover]; dup {
-			continue
-		}
-		seen[cover] = struct{}{}
-		covers = append(covers, cover)
-	}
-	return covers
-}
-
-func (s *Service) Create(name string) (music.PlaylistSummary, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		name = defaultName
-	}
-
-	id, err := newId()
-	if err != nil {
-		return music.PlaylistSummary{}, err
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	pl := Playlist{Id: id, Name: name, Songs: []string{}}
-	if err := s.save(pl); err != nil {
-		return music.PlaylistSummary{}, err
-	}
-
-	ids, err := s.index()
-	if err != nil {
-		return music.PlaylistSummary{}, err
-	}
-	if err := s.setIndex(append(ids, id)); err != nil {
-		return music.PlaylistSummary{}, err
-	}
-
-	return music.PlaylistSummary{Id: id, Name: name}, nil
-}
-
-func (s *Service) Rename(id, name string) error {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		name = defaultName
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	pl, err := s.load(id)
+func (s *Service) bury(id string, at int64) error {
+	graves, err := s.tombstones()
 	if err != nil {
 		return err
 	}
-	pl.Name = name
-	return s.save(pl)
-}
-
-func (s *Service) Delete(id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	ids, err := s.index()
-	if err != nil {
-		return err
-	}
-
-	out := ids[:0]
-	for _, existing := range ids {
-		if existing != id {
-			out = append(out, existing)
-		}
-	}
-	if err := s.setIndex(out); err != nil {
-		return err
-	}
-	return bucket.Delete(recordKey + id)
-}
-
-// AddSongs resolves every reference before persisting anything, so a playlist
-// never stores a reference that cannot be resolved at add time.
-func (s *Service) AddSongs(id string, refs []string) error {
-	refs = normalizeRefs(refs)
-	if len(refs) == 0 {
-		return nil
-	}
-
-	for _, ref := range refs {
-		if _, err := s.resolve(ref); err != nil {
-			return fmt.Errorf("cannot add %q: %w", ref, err)
-		}
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	pl, err := s.load(id)
-	if err != nil {
-		return err
-	}
-
-	for _, ref := range refs {
-		if !slices.Contains(pl.Songs, ref) {
-			pl.Songs = append(pl.Songs, ref)
-		}
-	}
-	return s.save(pl)
-}
-
-func (s *Service) RemoveSong(id string, ref string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	pl, err := s.load(id)
-	if err != nil {
-		return err
-	}
-
-	out := pl.Songs[:0]
-	for _, existing := range pl.Songs {
-		if existing != ref {
-			out = append(out, existing)
-		}
-	}
-	pl.Songs = out
-	return s.save(pl)
-}
-
-// Reorder replaces the playlist order with refs. Unknown references are dropped,
-// so a stale frontend cannot corrupt the stored list.
-func (s *Service) Reorder(id string, refs []string) error {
-	refs = normalizeRefs(refs)
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	pl, err := s.load(id)
-	if err != nil {
-		return err
-	}
-
-	seen := make(map[string]struct{}, len(pl.Songs))
-	for _, ref := range pl.Songs {
-		seen[ref] = struct{}{}
-	}
-
-	out := make([]string, 0, len(refs))
-	added := make(map[string]struct{}, len(refs))
-	for _, ref := range refs {
-		if _, ok := seen[ref]; !ok {
-			continue
-		}
-		if _, dup := added[ref]; dup {
-			continue
-		}
-		added[ref] = struct{}{}
-		out = append(out, ref)
-	}
-	pl.Songs = out
-	return s.save(pl)
-}
-
-// GetPlaylistSummary implements music.Source.
-func (s *Service) GetPlaylistSummary(id string) (music.PlaylistSummary, error) {
-	pl, err := s.load(id)
-	if err != nil {
-		return music.PlaylistSummary{}, err
-	}
-	return s.summary(pl), nil
-}
-
-// GetFullPlaylist implements music.Source: it resolves each stored reference to
-// its metadata. A reference that no longer resolves is marked Broken instead of
-// failing the whole playlist.
-func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
-	pl, err := s.load(id)
-	if err != nil {
-		if errors.Is(err, kv.ErrKeyNotFound) {
-			return music.Playlist{}, fmt.Errorf("playlist %q not found", id)
-		}
-		return music.Playlist{}, err
-	}
-
-	songs := make([]music.Song, 0, len(pl.Songs))
-	for _, ref := range pl.Songs {
-		song, err := s.resolve(ref)
-		if err != nil {
-			songs = append(songs, music.Song{Id: ref, Broken: true})
-			continue
-		}
-		songs = append(songs, song)
-	}
-
-	return music.Playlist{Name: pl.Name, Songs: songs}, nil
-}
-
-func (s *Service) RevalidateFullPlaylist(id string) error {
-	return nil
-}
-
-func (s *Service) GetSong(id string) (music.Song, error) {
-	return music.Song{}, errors.New("local playlists are not a song source")
+	graves[id] = at
+	return bucket.SetObject(graveKey, graves)
 }

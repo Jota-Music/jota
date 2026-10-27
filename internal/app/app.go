@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"log"
+	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/Jota-Music/jota/internal/backup"
 	"github.com/Jota-Music/jota/internal/env"
 	"github.com/Jota-Music/jota/internal/follows"
 	"github.com/Jota-Music/jota/internal/kv"
@@ -39,10 +42,21 @@ type App struct {
 	Playlists *playlists.Service
 	Saved     *saved.Service
 	Discord   *discord.Service
+	// Backup is the document the library travels in, built from the stores
+	// above and the settings bucket.
+	Backup *backup.Service
 
 	discordMu  sync.Mutex
 	discord    *discordState
 	discordErr string
+	// syncMu serializes the passes that write the sync document: they all land on
+	// the same temp file.
+	syncMu sync.Mutex
+	// syncQueued is the one background pass that has not started yet, and
+	// syncRunning is the goroutine that takes it. Twenty follows in a row ask for
+	// a pass each, but one is enough: they all read the same stores.
+	syncQueued  atomic.Bool
+	syncRunning atomic.Bool
 }
 
 // Relay is the endpoint the app dials: a URL and the token that relay wants.
@@ -67,6 +81,10 @@ func New(version string) *App {
 	playlistsSvc := playlists.New(nil)
 	catalog := music.NewCatalog(spotifySvc, youTubeSvc, playlistsSvc)
 	playlistsSvc.SetResolver(catalog.GetSong)
+	playlistsSvc.SetTrackCache(spotifySvc.CachedSong, spotifySvc.SetCachedSong)
+	followsSvc := follows.New()
+	orderingSvc := ordering.New()
+	savedSvc := saved.New()
 	app := &App{
 		version: version,
 		relay: Relay{
@@ -83,12 +101,19 @@ func New(version string) *App {
 			}
 			app.Event.Emit(name, data...)
 		}),
-		Follows:   follows.New(),
+		Follows:   followsSvc,
 		Rooms:     rooms.NewStore(),
-		Order:     ordering.New(),
+		Order:     orderingSvc,
 		Playlists: playlistsSvc,
-		Saved:     saved.New(),
+		Saved:     savedSvc,
 		Discord:   discord.New(cfg.DiscordClientID),
+		Backup: &backup.Service{
+			Playlists: playlistsSvc,
+			Follows:   followsSvc,
+			Saved:     savedSvc,
+			Order:     orderingSvc,
+			Settings:  settingsSync,
+		},
 	}
 
 	refresh.Register("spotify-catalog", spotifySvc.RefreshCatalog)
@@ -100,6 +125,18 @@ func New(version string) *App {
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
 	kv.Start()
+
+	go func() {
+		for {
+			if runtime.GOOS != "android" && a.SyncAuto() && a.SyncFolder() != "" {
+				if err := a.SyncPlaylists(); err != nil {
+					log.Printf("sync: %v", err)
+				}
+			}
+			time.Sleep(time.Duration(a.SyncInterval()) * time.Minute)
+		}
+	}()
+
 	// Restoring the session is a network round trip, and startup runs before any
 	// window exists: blocking here means the app never opens at all, which is
 	// exactly how it used to hang on a stalled network. Restore in the
@@ -203,8 +240,13 @@ func (a *App) SaveRelay(url string, token string) error {
 	if url == "" {
 		return nil
 	}
-	return settings.SetObject("relay", Relay{
+	if err := settings.SetObject("relay", Relay{
 		URL:   url,
 		Token: strings.TrimSpace(token),
-	})
+	}); err != nil {
+		return err
+	}
+	touch("relay")
+	a.syncInBackground()
+	return nil
 }

@@ -2,12 +2,15 @@ package spotify
 
 import (
 	"context"
+	"encoding/hex"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/devgianlu/go-librespot/ap"
+
+	"github.com/Jota-Music/jota/internal/kv"
 )
 
 // A stalled accesspoint is what used to make the app open without a window: the
@@ -103,5 +106,40 @@ func TestDegradedRequiresStoredAccount(t *testing.T) {
 	}
 	if s.isFinished() {
 		t.Error("fresh service reports finished")
+	}
+}
+
+// readDeviceId points the kv store at dir and returns the id this install
+// would use. A fresh store stands in for a fresh install.
+func readDeviceId(t *testing.T, dir string) string {
+	t.Helper()
+	t.Setenv("HOME", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("APPDATA", dir)
+	kv.Close()
+	if err := kv.EnsureStarted(); err != nil {
+		t.Fatalf("open kv: %v", err)
+	}
+	t.Cleanup(kv.Close)
+	return deviceId()
+}
+
+func TestDeviceIdStablePerInstall(t *testing.T) {
+	dir := t.TempDir()
+	id := readDeviceId(t, dir)
+
+	if len(id) != 40 {
+		t.Fatalf("device id %q is %d chars, want 40", id, len(id))
+	}
+	if _, err := hex.DecodeString(id); err != nil {
+		t.Fatalf("device id %q is not hex: %v", id, err)
+	}
+
+	if again := readDeviceId(t, dir); again != id {
+		t.Fatalf("device id changed across calls: %q -> %q", id, again)
+	}
+
+	if other := readDeviceId(t, t.TempDir()); other == id {
+		t.Fatalf("two installs share the device id %q", id)
 	}
 }

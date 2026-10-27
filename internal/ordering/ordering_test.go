@@ -20,6 +20,17 @@ func setup(t *testing.T) *Service {
 	return New()
 }
 
+func entry(t *testing.T, part Section, scope, account string) Entry {
+	t.Helper()
+	for _, e := range part {
+		if e.Scope == scope && e.Account == account {
+			return e
+		}
+	}
+	t.Fatalf("section has no %s/%s entry: %+v", scope, account, part)
+	return Entry{}
+}
+
 func TestOrderLifecycle(t *testing.T) {
 	s := setup(t)
 
@@ -71,44 +82,85 @@ func TestScopesAreSeparate(t *testing.T) {
 func TestOrderWithoutAccount(t *testing.T) {
 	s := setup(t)
 
-	if err := s.Save("rooms", "", Order{"r1", "r2"}); err != nil {
+	if err := s.Save("following", "", Order{"a", "b"}); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	got, _ := s.List("rooms", "")
-	if want := (Order{"r1", "r2"}); !reflect.DeepEqual(got, want) {
-		t.Fatalf("rooms = %v, want %v", got, want)
-	}
-	if other, _ := s.List(Library, ""); len(other) != 0 {
-		t.Fatalf("global order leaked into another scope: %v", other)
-	}
-}
 
-// Orders were stored under the bare account key before shelves had scopes, so
-// the library order has to keep reading it.
-func TestLibraryReadsLegacyKey(t *testing.T) {
-	s := setup(t)
-
-	if err := bucket.SetObject("alice", Order{"x", "y"}); err != nil {
-		t.Fatalf("legacy save: %v", err)
-	}
-
-	got, err := s.List(Library, "alice")
+	got, err := s.List("following", "")
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if want := (Order{"x", "y"}); !reflect.DeepEqual(got, want) {
-		t.Fatalf("legacy library = %v, want %v", got, want)
+	if want := (Order{"a", "b"}); !reflect.DeepEqual(got, want) {
+		t.Fatalf("following = %v, want %v", got, want)
 	}
+	part, err := s.Section()
+	if err != nil {
+		t.Fatalf("section: %v", err)
+	}
+	rec := entry(t, part, "following", "")
+	if rec.Account != "" || !reflect.DeepEqual(Order(rec.Ids), Order{"a", "b"}) {
+		t.Fatalf("section = %+v, want the shelf without an account", rec)
+	}
+}
 
-	if err := s.Save(Library, "alice", Order{"y", "x"}); err != nil {
+func TestMergeSectionKeepsTheNewestList(t *testing.T) {
+	s := setup(t)
+	if err := s.Save(Library, "alice", Order{"a", "b"}); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	after, _ := s.List(Library, "alice")
-	if want := (Order{"y", "x"}); !reflect.DeepEqual(after, want) {
-		t.Fatalf("scoped order = %v, want %v", after, want)
+	local, _ := s.Section()
+	at := entry(t, local, Library, "alice").At
+
+	remote := Section{
+		{Scope: Library, Account: "alice", Ids: []string{"b", "a"}, At: at + 1},
+		{Scope: "following", Account: "alice", Ids: []string{"c"}, At: 1},
 	}
-	legacy, _ := read("alice")
-	if want := (Order{"x", "y"}); !reflect.DeepEqual(legacy, want) {
-		t.Fatalf("legacy key rewritten: %v, want %v", legacy, want)
+	out, applied, err := s.MergeSection(remote, Newer, true)
+	if err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	if applied != 2 {
+		t.Fatalf("applied = %d, want 2", applied)
+	}
+	if got := Order(entry(t, out, Library, "alice").Ids); !reflect.DeepEqual(got, Order{"b", "a"}) {
+		t.Fatalf("library = %v, want the newer list from the file", got)
+	}
+	if _, _, err := s.MergeSection(Section{
+		{Scope: Library, Account: "alice", Ids: []string{"a", "b"}, At: at - 1},
+	}, Newer, true); err != nil {
+		t.Fatalf("merge older: %v", err)
+	}
+	if got, _ := s.List(Library, "alice"); !reflect.DeepEqual(got, Order{"b", "a"}) {
+		t.Fatalf("library = %v, want the newer local list kept", got)
+	}
+
+	// An explicit restore takes the document's list whatever its age, because the
+	// user asked for that document and not for its age.
+	if _, _, err := s.MergeSection(Section{
+		{Scope: Library, Account: "alice", Ids: []string{"a", "b"}, At: at - 1},
+	}, Restore, true); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	if got, _ := s.List(Library, "alice"); !reflect.DeepEqual(got, Order{"a", "b"}) {
+		t.Fatalf("library = %v, want the document's list after a restore", got)
+	}
+}
+
+func TestMergeSectionWithoutApplyLeavesStore(t *testing.T) {
+	s := setup(t)
+	if err := s.Save(Library, "alice", Order{"a"}); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+
+	remote := Section{{Scope: Library, Account: "bob", Ids: []string{"x"}, At: 5}}
+	out, applied, err := s.MergeSection(remote, Newer, false)
+	if err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	if applied != 0 || len(out) != 2 {
+		t.Fatalf("applied = %d, union = %v, want 0 and both shelves", applied, out)
+	}
+	if got, _ := s.List(Library, "bob"); len(got) != 0 {
+		t.Fatalf("store = %v, want the union only in the answer", got)
 	}
 }

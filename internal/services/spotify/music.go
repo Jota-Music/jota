@@ -30,7 +30,7 @@ func (s *SpotifyService) GetPlaylistSummary(playlistID string) (music.PlaylistSu
 		return music.PlaylistSummary{}, err
 	}
 	return music.PlaylistSummary{
-		Id:       strings.TrimPrefix(uri, URIPlaylistPrefix),
+		Id:       music.SpotifyPrefix + strings.TrimPrefix(uri, URIPlaylistPrefix),
 		Name:     meta.name,
 		Cover:    meta.cover,
 		Owner:    meta.owner,
@@ -149,7 +149,7 @@ func (s *SpotifyService) userPlaylists(user string) ([]music.PlaylistSummary, er
 			continue
 		}
 		out = append(out, music.PlaylistSummary{
-			Id:    id,
+			Id:    music.SpotifyPrefix + id,
 			Name:  p.Name,
 			Cover: p.CoverURL,
 			Owner: p.Owner,
@@ -182,7 +182,7 @@ func artistsFromTrack(t Track) []music.Artist {
 		}
 		artist := music.Artist{Name: a}
 		if i < len(t.ArtistURIs) {
-			artist.Id = strings.TrimPrefix(t.ArtistURIs[i], URIArtistPrefix)
+			artist.Id = music.SpotifyPrefix + strings.TrimPrefix(t.ArtistURIs[i], URIArtistPrefix)
 		}
 		artists = append(artists, artist)
 	}
@@ -191,6 +191,7 @@ func artistsFromTrack(t Track) []music.Artist {
 
 func trackToSong(t Track) music.Song {
 	id := strings.TrimPrefix(t.URI, URITrackPrefix)
+	songID := music.SpotifyPrefix + id
 
 	artists := artistsFromTrack(t)
 
@@ -201,16 +202,16 @@ func trackToSong(t Track) music.Song {
 
 	albumID := ""
 	if strings.HasPrefix(t.AlbumURI, URIAlbumPrefix) {
-		albumID = strings.TrimPrefix(t.AlbumURI, URIAlbumPrefix)
+		albumID = music.SpotifyPrefix + strings.TrimPrefix(t.AlbumURI, URIAlbumPrefix)
 	}
 
 	return music.Song{
-		Id:       id,
+		Id:       songID,
 		Url:      t.URI,
 		Name:     t.Name,
 		Duration: t.Duration / 1000,
 		Share: music.Share{
-			Id:  id,
+			Id:  songID,
 			Url: "https://open.spotify.com/track/" + id,
 		},
 		Album: music.Album{
@@ -282,7 +283,7 @@ func (s *SpotifyService) artistDiscography(normalizedURI string) (music.ArtistDi
 			continue
 		}
 		albums = append(albums, music.AlbumSummary{
-			Id:    id,
+			Id:    music.SpotifyPrefix + id,
 			Name:  a.Name,
 			Year:  a.Year,
 			Cover: a.CoverURL,
