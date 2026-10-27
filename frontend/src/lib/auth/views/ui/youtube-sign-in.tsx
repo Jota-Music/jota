@@ -232,7 +232,10 @@ export function YouTubeSignIn() {
 							{t("auth.youtube.importFile")}
 							<input
 								type="file"
-								accept=".txt,text/plain"
+								// The .enc export is what a pass-protected session looks like, so the
+								// picker has to offer it too; octet-stream is how a file manager
+								// reports an extension it does not know.
+								accept=".txt,.enc,text/plain,application/octet-stream"
 								onChange={importFile}
 								disabled={busy.value}
 								class="hidden"

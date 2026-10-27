@@ -54,6 +54,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="jota" android:host="callback" />
             </intent-filter>
+            <!-- A session export this device sends itself. Android binds "open
+                 with" to a MIME type, and the .enc extension is unknown, so it
+                 arrives as application/octet-stream. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
         </activity>
 
         <provider

@@ -105,6 +105,19 @@ UI warns before storing it: Google can ban an account used this way.
   instead), encrypting it when a pass is set; `ImportYouTubeCookies` accepts that
   file back, decrypting it with the pass this device has. The export is the way a
   desktop session reaches a phone.
+- **The export can be opened with the app on Android.** The manifest registers
+  `ACTION_VIEW` for `application/octet-stream`, which is the MIME the system
+  reports for the unknown `.enc` extension; "open with" is bound to a type, so
+  there is nothing narrower to use. `MainActivity.handleImportIntent` reads the
+  URI off the UI thread and keeps the text in the bridge until the page takes it
+  (`WailsBridge.takeIncomingFile`), which covers both a cold start and an app
+  already running (the wake is `window.__jotaIncoming`). `watchIncoming`
+  (`frontend/src/lib/auth/views/stores/youtube.ts`) imports it with the local
+  pass on mount and on resume. A destroyed activity also ends the process
+  (`MainActivity.onDestroy`): the bridge shutdown stops the Go runtime and the
+  native side cannot attach a second activity to it, so a cached process would
+  answer the next launch with a fatal exit. `build/android/**` comes from the
+  Wails template, so re-apply these additions after a regeneration.
 - A session started from the desktop in-app window is read from the window's own
   cookie store, not from `document.cookie`, which never carries the HttpOnly ones.
   `WebviewCookies` reads WebKitGTK's `cookies.sqlite` (libsoup's plaintext

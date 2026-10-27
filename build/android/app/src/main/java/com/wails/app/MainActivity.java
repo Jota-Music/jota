@@ -17,6 +17,7 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.os.Process;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -82,6 +83,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int WEBVIEW_CAMERA_PERMISSION_REQUEST = 7011;
     private static final int WEBVIEW_FILE_CHOOSER_REQUEST = 7012;
     private static final int SYNC_FILE_PICKER_REQUEST = SyncDocuments.PICK_REQUEST;
+    // A session export is a few KB of text; anything past this is not one.
+    private static final int MAX_IMPORT_BYTES = 256 * 1024;
     // In-flight <input type="file"> callback; must be resolved exactly once or
     // the input stops working after the first pick.
     private ValueCallback<Uri[]> pendingFileChooser;
@@ -296,7 +299,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 pendingFileChooser = callback;
                 try {
-                    startActivityForResult(params.createIntent(), WEBVIEW_FILE_CHOOSER_REQUEST);
+                    startActivityForResult(fileChooser(params), WEBVIEW_FILE_CHOOSER_REQUEST);
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to launch file chooser", e);
                     pendingFileChooser = null;
@@ -328,6 +331,11 @@ public class MainActivity extends AppCompatActivity {
 
         // Add JavaScript interface for Go communication
         webView.addJavascriptInterface(new WailsJSBridge(bridge, webView), "wails");
+
+        // The app can have been started by "open with" on a session export, which
+        // arrives before the page exists: the bridge keeps the text until the
+        // page takes it.
+        handleImportIntent(getIntent());
     }
 
     private void loadApplication() {
@@ -386,6 +394,66 @@ public class MainActivity extends AppCompatActivity {
             // login promise in the frontend and the app would never notice the
             // login has completed.
             if (DEBUG) Log.d(TAG, "OAuth return; resuming without WebView reload");
+        }
+        handleImportIntent(intent);
+    }
+
+    /**
+     * A file another app opened Jota with — on Android that menu is bound to a
+     * MIME type, and an unknown extension (`youtube-cookies.enc`) arrives as
+     * application/octet-stream. The text is handed to the page, which imports it
+     * as the session; reading happens off the UI thread because a provider can
+     * block for as long as it likes.
+     */
+    private void handleImportIntent(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return;
+        final Uri data = intent.getData();
+        if (data == null || bridge == null) return;
+        new Thread(() -> {
+            String text = readSharedText(data);
+            if (text == null || text.isEmpty()) {
+                bridge.setIncomingError("unreadable");
+                return;
+            }
+            if (DEBUG) Log.d(TAG, "Taking " + text.length() + " bytes from " + data);
+            bridge.setIncomingFile(text);
+        }, "jota-import").start();
+    }
+
+    /**
+     * The system picker behind an `<input type="file">`. The content decides,
+     * not the name: a session export is `.enc`, an extension Android reports as
+     * an unknown type, so an intent built from the accept list (extensions and
+     * all) hides the very file an import is for. Both imports in this app
+     * validate what they are handed, so the list is left unfiltered.
+     */
+    private Intent fileChooser(WebChromeClient.FileChooserParams params) {
+        Intent chooser = new Intent(Intent.ACTION_GET_CONTENT);
+        chooser.addCategory(Intent.CATEGORY_OPENABLE);
+        chooser.setType("*/*");
+        if (params.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) {
+            chooser.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        }
+        return chooser;
+    }
+
+    private String readSharedText(Uri uri) {
+        try (InputStream in = getContentResolver().openInputStream(uri)) {
+            if (in == null) return null;
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) > 0) {
+                out.write(buffer, 0, read);
+                if (out.size() > MAX_IMPORT_BYTES) {
+                    Log.w(TAG, "shared file is too large to be a session export");
+                    return null;
+                }
+            }
+            return out.toString("UTF-8");
+        } catch (Exception e) {
+            Log.e(TAG, "cannot read the shared file", e);
+            return null;
         }
     }
 
@@ -1040,6 +1108,14 @@ public class MainActivity extends AppCompatActivity {
             }
             webView.destroy();
         }
+        // The shutdown above ends the Go runtime, and the native side cannot
+        // attach a second activity to the same runtime: the next launch would
+        // re-initialise one that already quit, which Wails answers by ending the
+        // process with a fatal error instead of opening — that is what happened
+        // when a file was opened with the app after its task was swiped away.
+        // One process, one activity generation: end it here and let the next
+        // launch start clean.
+        Process.killProcess(Process.myPid());
     }
 
     @Override

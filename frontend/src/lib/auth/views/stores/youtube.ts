@@ -3,6 +3,7 @@ import {
 	CookiesBrowsers,
 	ExportYouTubeCookiesFile,
 	ImportYouTubeCookies,
+	SessionPass,
 	SetYouTubeCookies,
 	YouTubeAccount,
 	YouTubeBrowserAccounts,
@@ -15,6 +16,8 @@ import {
 import { signal } from "@preact/signals";
 import { Events } from "@wailsio/runtime";
 
+import { t } from "@/lib/shared/i18n";
+import { addError, notify } from "@/lib/shared/views/stores/errors";
 import { queryClient } from "@/lib/shared/views/ui/query-client";
 
 export const youtubeSignedIn = signal(false);
@@ -77,6 +80,47 @@ export async function importYouTubeCookies(
 ): Promise<void> {
 	await ImportYouTubeCookies(data, pass);
 	await syncYouTubeStatus();
+}
+
+// A file another app opened Jota with (Android "open with" on the export this
+// device sent itself). The native side keeps the text until this takes it, so a
+// cold start finds it on mount and a running app is woken by __jotaIncoming.
+type IncomingBridge = {
+	takeIncomingFile?: () => string;
+	takeIncomingError?: () => string;
+};
+
+declare global {
+	interface Window {
+		__jotaIncoming?: () => void;
+	}
+}
+
+async function importIncoming(): Promise<void> {
+	const bridge = (window as unknown as { wails?: IncomingBridge }).wails;
+	if (bridge?.takeIncomingError?.()) {
+		addError(new Error(t("auth.youtube.unreadable")));
+		return;
+	}
+	const text = bridge?.takeIncomingFile?.();
+	if (!text) return;
+	try {
+		await importYouTubeCookies(text, (await SessionPass()) ?? "");
+		notify(t("auth.youtube.imported"));
+	} catch (error) {
+		addError(error);
+	}
+}
+
+export function watchIncoming(): void {
+	if (typeof window === "undefined") return;
+	window.__jotaIncoming = () => void importIncoming();
+	void importIncoming();
+	// The native wake can land before the page finished loading on a cold start;
+	// coming back to the app is the second chance to pick the file up.
+	document.addEventListener("visibilitychange", () => {
+		if (!document.hidden) void importIncoming();
+	});
 }
 
 // The browsers on this machine whose cookie jar can be read, so the panel only

@@ -207,6 +207,45 @@ public class WailsBridge {
                 "window.__jotaSync&&window.__jotaSync()", null));
     }
 
+    // A file another app handed over through "open with" (a session export this
+    // device sent itself). The text waits here until the page takes it, so a
+    // cold start finds it too; the wake is what makes the already-running case
+    // land without the page having to come back for it. A file the provider
+    // would not hand over leaves an error instead, so the tap is never silent.
+    private String incomingFile;
+    private String incomingError;
+
+    public synchronized void setIncomingFile(String text) {
+        incomingFile = text;
+        incomingError = null;
+        wakeIncoming();
+    }
+
+    public synchronized String takeIncomingFile() {
+        String text = incomingFile;
+        incomingFile = null;
+        return text;
+    }
+
+    public synchronized void setIncomingError(String message) {
+        incomingFile = null;
+        incomingError = message;
+        wakeIncoming();
+    }
+
+    public synchronized String takeIncomingError() {
+        String message = incomingError;
+        incomingError = null;
+        return message;
+    }
+
+    private void wakeIncoming() {
+        WebView view = webView;
+        if (view == null) return;
+        mainHandler.post(() -> view.evaluateJavascript(
+                "window.__jotaIncoming&&window.__jotaIncoming()", null));
+    }
+
     public void onStop() {
         if (initialized) nativeOnStop();
         pauseFeaturesForBackground();

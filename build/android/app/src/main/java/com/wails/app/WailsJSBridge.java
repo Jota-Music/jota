@@ -112,6 +112,25 @@ public class WailsJSBridge {
         return bridge.getClipboardText();
     }
 
+    /**
+     * Take the text of a file another app opened Jota with. The export the app
+     * writes is what a device sends itself to carry the YouTube session over.
+     * Called from JavaScript: wails.takeIncomingFile()
+     */
+    @JavascriptInterface
+    public String takeIncomingFile() {
+        return bridge.takeIncomingFile();
+    }
+
+    /**
+     * The reason the file another app opened Jota with could not be read.
+     * Called from JavaScript: wails.takeIncomingError()
+     */
+    @JavascriptInterface
+    public String takeIncomingError() {
+        return bridge.takeIncomingError();
+    }
+
     @JavascriptInterface
     public void log(String level, String message) {
         switch (level.toLowerCase()) {
