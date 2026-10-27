@@ -14,7 +14,7 @@ import (
 // tracks as a synthetic playlist. Radio is dynamic by nature, so it is never
 // cached: every call asks the context servers for a fresh set of pages.
 func (s *SpotifyService) GetSongRadio(id string) (music.Playlist, error) {
-	trackID := id
+	var trackID string
 	switch {
 	case strings.HasPrefix(id, URIRadioPrefix):
 		trackID = strings.TrimPrefix(id, URIRadioPrefix)

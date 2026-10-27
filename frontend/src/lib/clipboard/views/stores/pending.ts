@@ -57,17 +57,6 @@ async function check(): Promise<void> {
 	pending.value = { link, dismissed: false };
 }
 
-export async function pasteFromClipboard(): Promise<boolean> {
-	const text = await read();
-	if (!text) return false;
-	last = text;
-	const link = clipboardLink(text);
-	if (!link || ignored.has(link.text)) return false;
-	ignored.add(link.text);
-	pending.value = { link, dismissed: false };
-	return true;
-}
-
 export function remember(link: string): void {
 	ignored.add(link.trim());
 }

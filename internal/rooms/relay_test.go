@@ -100,7 +100,7 @@ func TestCheckToken(t *testing.T) {
 					_, _ = w.Write([]byte(`{"active":false}`))
 					return
 				}
-				_, _ = w.Write([]byte(fmt.Sprintf(`{"auth":%t}`, c.auth)))
+				_, _ = fmt.Fprintf(w, `{"auth":%t}`, c.auth)
 			}))
 			defer srv.Close()
 
