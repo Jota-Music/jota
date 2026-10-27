@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"log"
+	"strings"
 
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/services/youtube"
@@ -93,6 +94,28 @@ func (a *App) SetYouTubeCookies(cookies string) error {
 		return err
 	}
 	return nil
+}
+
+// exportYouTubeCookies returns the stored cookies as a portable string. When a
+// passphrase is given they are encrypted so the file can be carried across
+// devices without exposing the session.
+func (a *App) exportYouTubeCookies(pass string) (string, error) {
+	raw := youtube.Cookies()
+	if raw == "" {
+		return "", errors.New("no YouTube session stored")
+	}
+	return encryptWithPass(pass, raw)
+}
+
+// ImportYouTubeCookies accepts a portable string produced by exportYouTubeCookies
+// (possibly encrypted) and stores it as the account session.
+func (a *App) ImportYouTubeCookies(data, pass string) error {
+	data = strings.TrimSpace(data)
+	pt, err := decryptWithPass(pass, data)
+	if err != nil {
+		return err
+	}
+	return a.SetYouTubeCookies(pt)
 }
 
 func (a *App) ClearYouTubeCookies() error {

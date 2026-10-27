@@ -1,3 +1,4 @@
+import { SessionPass } from "@bindings/app";
 import { useSignal } from "@preact/signals";
 import { useQueryClient } from "@tanstack/preact-query";
 import { ChevronDown, ChevronRight, Loader, ShieldAlert } from "lucide-preact";
@@ -5,6 +6,7 @@ import { useEffect } from "preact/hooks";
 import {
 	browserAccounts,
 	browsers,
+	importYouTubeCookies,
 	loginYouTubeWithBrowser,
 	saveYouTubeCookies,
 	signInFromBrowser,
@@ -12,6 +14,8 @@ import {
 } from "@/lib/auth/views/stores/youtube";
 import { t } from "@/lib/shared/i18n";
 import { translateError } from "@/lib/shared/i18n/errors";
+
+import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 function message(err: unknown): string {
 	return translateError(err);
@@ -96,7 +100,7 @@ export function BrowserImport() {
 				type="button"
 				onClick={() => void run()}
 				disabled={importBusy.value || browser.value === ""}
-				class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-5 py-2.5 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+				class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				{importBusy.value && <Loader size={14} class="animate-spin" />}
 				{importBusy.value
@@ -147,7 +151,19 @@ export function YouTubeSignIn() {
 	async function importFile(event: Event) {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
-		if (file) await save(await file.text());
+		if (file) {
+			busy.value = true;
+			error.value = null;
+			try {
+				const pass = await SessionPass();
+				await importYouTubeCookies(await file.text(), pass ?? "");
+				cookies.value = "";
+			} catch (err) {
+				error.value = message(err);
+			} finally {
+				busy.value = false;
+			}
+		}
 		input.value = "";
 	}
 
@@ -160,9 +176,13 @@ export function YouTubeSignIn() {
 					type="button"
 					onClick={() => void signInWithBrowser()}
 					disabled={browserBusy.value}
-					class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-zinc-800 px-3 py-2.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
 				>
-					{browserBusy.value && <Loader size={14} class="animate-spin" />}
+					{browserBusy.value ? (
+						<Loader size={14} class="animate-spin" />
+					) : (
+						<YoutubeIcon width={16} height={16} />
+					)}
 					{browserBusy.value
 						? t("auth.youtube.waiting")
 						: t("auth.youtube.signInWindow")}

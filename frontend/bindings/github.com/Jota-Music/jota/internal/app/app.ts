@@ -87,6 +87,16 @@ export function ExportBackup(): $CancellablePromise<string> {
     return $Call.ByID(119988368);
 }
 
+/**
+ * ExportYouTubeCookiesFile exports the stored YouTube session to a file chosen
+ * by the user. The passphrase stored in settings decides whether the file is
+ * encrypted. It returns the chosen path, or an empty string when the dialog
+ * is dismissed.
+ */
+export function ExportYouTubeCookiesFile(): $CancellablePromise<string> {
+    return $Call.ByID(3031681012);
+}
+
 export function FollowUser(user: string): $CancellablePromise<void> {
     return $Call.ByID(2248055530, user);
 }
@@ -188,6 +198,14 @@ export function IdleReload(): $CancellablePromise<boolean> {
  */
 export function ImportBackup(data: string): $CancellablePromise<backup$0.Stats> {
     return $Call.ByID(1837819239, data);
+}
+
+/**
+ * ImportYouTubeCookies accepts a portable string produced by exportYouTubeCookies
+ * (possibly encrypted) and stores it as the account session.
+ */
+export function ImportYouTubeCookies(data: string, pass: string): $CancellablePromise<void> {
+    return $Call.ByID(117944717, data, pass);
 }
 
 /**
@@ -344,6 +362,13 @@ export function SearchYouTubeChannels(query: string): $CancellablePromise<music$
 
 export function SearchYouTubePlaylists(query: string): $CancellablePromise<music$0.PlaylistSummary[] | null> {
     return $Call.ByID(4089111504, query);
+}
+
+/**
+ * SessionPass returns the shared passphrase.
+ */
+export function SessionPass(): $CancellablePromise<string> {
+    return $Call.ByID(3264687877);
 }
 
 export function SetDiscordEnabled(enabled: boolean): $CancellablePromise<void> {

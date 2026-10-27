@@ -1,3 +1,4 @@
+import { useSignal } from "@preact/signals";
 import { UserRound } from "lucide-preact";
 import {
 	disconnectSpotify,
@@ -6,6 +7,7 @@ import {
 	spotifyUser,
 } from "@/lib/auth/views/stores/session";
 import {
+	exportYouTubeCookiesFile,
 	signOutYouTube,
 	youtubeAccount,
 	youtubeSessionFull,
@@ -17,8 +19,24 @@ import {
 	YouTubeSignIn,
 } from "@/lib/auth/views/ui/youtube-sign-in";
 import { t } from "@/lib/shared/i18n";
+import { translateError } from "@/lib/shared/i18n/errors";
 
 export function AccountSettings() {
+	const exportBusy = useSignal(false);
+	const error = useSignal<string | null>(null);
+
+	async function doExport() {
+		exportBusy.value = true;
+		error.value = null;
+		try {
+			await exportYouTubeCookiesFile();
+		} catch (err) {
+			error.value = translateError(err);
+		} finally {
+			exportBusy.value = false;
+		}
+	}
+
 	return (
 		<section class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
 			<div class="flex items-center gap-2">
@@ -85,6 +103,19 @@ export function AccountSettings() {
 								<BrowserImport />
 							</div>
 						)}
+
+						<button
+							type="button"
+							onClick={() => void doExport()}
+							disabled={exportBusy.value}
+							class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-(--dominant-color) px-3 py-2 text-xs font-semibold text-(--binary-color) transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
+						>
+							{exportBusy.value
+								? t("common.saving")
+								: t("auth.account.exportCookies")}
+						</button>
+
+						{error.value && <p class="text-xs text-red-400">{error.value}</p>}
 					</div>
 				) : (
 					<div class="rounded-xl bg-zinc-950 p-4 ring-1 ring-zinc-800">

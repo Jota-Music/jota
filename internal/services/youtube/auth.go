@@ -35,6 +35,10 @@ var (
 	authLoaded bool
 )
 
+// Cookies returns the currently stored account cookie string (normalized), so it
+// can be exported for use on another device.
+func Cookies() string { return cookies() }
+
 // cookies returns the account cookie string, preferring YOUTUBE_COOKIES so a
 // headless setup can be configured without the UI.
 func cookies() string {

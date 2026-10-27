@@ -1,6 +1,8 @@
 import {
 	ClearYouTubeCookies,
 	CookiesBrowsers,
+	ExportYouTubeCookiesFile,
+	ImportYouTubeCookies,
 	SetYouTubeCookies,
 	YouTubeAccount,
 	YouTubeBrowserAccounts,
@@ -62,6 +64,18 @@ export async function syncYouTubeStatus(): Promise<void> {
 // bot check for that account's session. The UI must show the ban risk first.
 export async function saveYouTubeCookies(cookies: string): Promise<void> {
 	await SetYouTubeCookies(cookies);
+	await syncYouTubeStatus();
+}
+
+export async function exportYouTubeCookiesFile(): Promise<string> {
+	return await ExportYouTubeCookiesFile();
+}
+
+export async function importYouTubeCookies(
+	data: string,
+	pass: string,
+): Promise<void> {
+	await ImportYouTubeCookies(data, pass);
 	await syncYouTubeStatus();
 }
 
