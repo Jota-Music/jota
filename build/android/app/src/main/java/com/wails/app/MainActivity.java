@@ -81,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_REQUEST = 7010;
     private static final int WEBVIEW_CAMERA_PERMISSION_REQUEST = 7011;
     private static final int WEBVIEW_FILE_CHOOSER_REQUEST = 7012;
+    private static final int SYNC_FILE_PICKER_REQUEST = SyncDocuments.PICK_REQUEST;
     // In-flight <input type="file"> callback; must be resolved exactly once or
     // the input stops working after the first pick.
     private ValueCallback<Uri[]> pendingFileChooser;
@@ -655,6 +656,15 @@ public class MainActivity extends AppCompatActivity {
             }
             return;
         }
+        if (requestCode == SYNC_FILE_PICKER_REQUEST) {
+            if (bridge != null) bridge.filePicked(resultCode, data);
+            return;
+        }
+        if (requestCode == YouTubeLoginActivity.REQUEST) {
+            if (bridge != null) bridge.youtubeResult(resultCode, data);
+            return;
+        }
+
         if (requestCode != FILE_PICKER_REQUEST) {
             return;
         }

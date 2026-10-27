@@ -72,6 +72,10 @@ import java.util.concurrent.Executor;
  * - Passing messages between JavaScript and Go
  * - Native facilities the Go side calls via JNI (dialogs, clipboard,
  *   screen/device info, toasts, vibration, main-thread dispatch)
+ *
+ * This file and its neighbours under com/wails/app come from the Wails Android
+ * template, so an update that regenerates them can overwrite the additions
+ * here. Keep them small and re-apply them on top of a fresh template.
  */
 public class WailsBridge {
     private static final String TAG = "WailsBridge";
@@ -84,6 +88,8 @@ public class WailsBridge {
     }
 
     private final Activity activity;
+    private final SyncDocuments docs;
+    private String youtubeLoginId;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private WebView webView;
     private volatile boolean initialized = false;
@@ -130,6 +136,7 @@ public class WailsBridge {
 
     public WailsBridge(Activity activity) {
         this.activity = activity;
+        this.docs = new SyncDocuments(activity);
     }
 
     /**
@@ -180,10 +187,24 @@ public class WailsBridge {
 
     public void onResume() {
         if (initialized) nativeOnResume();
+        wakeSync();
     }
 
     public void onPause() {
         if (initialized) nativeOnPause();
+        wakeSync();
+    }
+
+    /**
+     * Ask the page to reconcile the sync document. Returning to the app and
+     * leaving it are exactly the moments a sync is wanted, and a native call is
+     * the only reliable trigger: the page keeps its own timers either way.
+     */
+    private void wakeSync() {
+        WebView view = webView;
+        if (view == null) return;
+        mainHandler.post(() -> view.evaluateJavascript(
+                "window.__jotaSync&&window.__jotaSync()", null));
     }
 
     public void onStop() {
@@ -1195,6 +1216,83 @@ public class WailsBridge {
         } catch (Exception e) {
             return "{\"free\":0,\"total\":0}";
         }
+    }
+
+    // SAF document access for the sync folder lives in SyncDocuments; these stay
+    // public because the JS bridge is bound to them.
+
+    /** Open the system document picker and return the chosen file URI. */
+    public String pickSyncFile() {
+        return docs.pick();
+    }
+
+    /** Ask the system to create a new sync document and return its URI. */
+    public String createSyncFile() {
+        return docs.create();
+    }
+
+    /** Called from MainActivity.onActivityResult for SyncDocuments.PICK_REQUEST. */
+    public void filePicked(int resultCode, Intent data) {
+        docs.picked(resultCode, data);
+    }
+
+    /** Read a text file from a content URI, or null when it cannot be read. */
+    public String readTextFile(String uriStr) {
+        return docs.read(uriStr);
+    }
+
+    /** Write text content to a content URI. Returns empty on success. */
+    public String writeTextFile(String uriStr, String content) {
+        return docs.write(uriStr, content);
+    }
+
+    /** Document metadata as {"lastModified":ms,"size":bytes}, {} when unknown. */
+    public String syncFileInfo(String uriStr) {
+        return docs.info(uriStr);
+    }
+
+    /**
+     * Open the YouTube sign-in WebView. The answer goes to the page through
+     * window.__jotaYouTubeCookies once the activity finishes, so the JS side
+     * keeps a promise instead of blocking.
+     */
+    public void loginYouTube(final String id) {
+        mainHandler.post(() -> {
+            youtubeLoginId = id;
+            activity.startActivityForResult(
+                    new Intent(activity, YouTubeLoginActivity.class),
+                    YouTubeLoginActivity.REQUEST);
+        });
+    }
+
+    /**
+     * Called from MainActivity.onActivityResult for YouTubeLoginActivity.REQUEST.
+     * The activity answers with the cookie header plus the visitor id and client
+     * version its session speaks as, so the app adopts them instead of probing
+     * YouTube for a visitor of its own.
+     */
+    public void youtubeResult(int resultCode, Intent data) {
+        String id = youtubeLoginId != null ? youtubeLoginId : "";
+        youtubeLoginId = null;
+        boolean ok = resultCode == Activity.RESULT_OK && data != null;
+        String cookies = ok
+                ? data.getStringExtra(YouTubeLoginActivity.EXTRA_COOKIES)
+                : "";
+        String visitor = ok
+                ? data.getStringExtra(YouTubeLoginActivity.EXTRA_VISITOR)
+                : "";
+        String version = ok
+                ? data.getStringExtra(YouTubeLoginActivity.EXTRA_VERSION)
+                : "";
+        WebView view = webView;
+        if (view == null) return;
+        String js = String.format(
+                "window.__jotaYouTubeCookies && window.__jotaYouTubeCookies(%s, %s, %s, %s);",
+                JSONObject.quote(id),
+                JSONObject.quote(cookies != null ? cookies : ""),
+                JSONObject.quote(visitor != null ? visitor : ""),
+                JSONObject.quote(version != null ? version : ""));
+        mainHandler.post(() -> view.evaluateJavascript(js, null));
     }
 
     /** Absolute path to the app's private internal files directory

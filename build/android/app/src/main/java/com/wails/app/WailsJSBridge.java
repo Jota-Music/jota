@@ -159,22 +159,37 @@ public class WailsJSBridge {
      * Send a callback response to JavaScript
      */
     private void sendCallback(String callbackId, String result, String error) {
-        final String js;
         if (error != null) {
-            js = String.format(
-                    "window._wailsAndroidCallback && window._wailsAndroidCallback('%s', null, '%s');",
-                    escapeJsString(callbackId),
-                    escapeJsString(error)
-            );
+            send(callbackId, "window._wailsAndroidCallback", null, error);
         } else {
-            js = String.format(
-                    "window._wailsAndroidCallback && window._wailsAndroidCallback('%s', '%s', null);",
-                    escapeJsString(callbackId),
-                    escapeJsString(result != null ? result : "")
-            );
+            send(callbackId, "window._wailsAndroidCallback", result != null ? result : "", null);
         }
+    }
+
+    /**
+     * Answer a sync-file call. The page keeps its own callback table, so the
+     * result goes to window.__jotaSyncCallback and not the runtime callback:
+     * nothing in the frontend defines that one for these calls.
+     */
+    private void sendSyncCallback(String callbackId, String result, String error) {
+        send(callbackId, "window.__jotaSyncCallback", result, error);
+    }
+
+    private void send(String callbackId, String target, String result, String error) {
+        final String js = String.format(
+                "%s && %s('%s', %s, %s);",
+                target,
+                target,
+                escapeJsString(callbackId),
+                jsValue(result),
+                jsValue(error)
+        );
 
         webView.post(() -> webView.evaluateJavascript(js, null));
+    }
+
+    private String jsValue(String value) {
+        return value == null ? "null" : "'" + escapeJsString(value) + "'";
     }
 
     private String escapeJsString(String str) {
@@ -187,5 +202,47 @@ public class WailsJSBridge {
                 // (char) casts so the Java lexer does not reinterpret them as newlines.
                 .replace(String.valueOf((char) 0x2028), "\\u2028")
                 .replace(String.valueOf((char) 0x2029), "\\u2029");
+    }
+
+
+    @JavascriptInterface
+    public void loginYouTube(String id) {
+        bridge.loginYouTube(id);
+    }
+
+    @JavascriptInterface
+    public String pickSyncFile() {
+        return bridge.pickSyncFile();
+    }
+
+    @JavascriptInterface
+    public String createSyncFile() {
+        return bridge.createSyncFile();
+    }
+
+    // A document behind a content provider can take long enough to freeze the
+    // WebView while it is read, written or stat-ed, so the page uses these
+    // variants: they run on the pool and answer through window.__jotaSyncCallback.
+
+    @JavascriptInterface
+    public void readSyncText(final String callbackId, final String uri) {
+        executor.execute(() -> {
+            String text = bridge.readTextFile(uri);
+            if (text == null) sendSyncCallback(callbackId, null, "unreadable document");
+            else sendSyncCallback(callbackId, text, null);
+        });
+    }
+
+    @JavascriptInterface
+    public void writeSyncText(final String callbackId, final String uri, final String content) {
+        executor.execute(() -> {
+            String error = bridge.writeTextFile(uri, content);
+            sendSyncCallback(callbackId, null, error == null || error.isEmpty() ? null : error);
+        });
+    }
+
+    @JavascriptInterface
+    public void syncFileInfoAsync(final String callbackId, final String uri) {
+        executor.execute(() -> sendSyncCallback(callbackId, bridge.syncFileInfo(uri), null));
     }
 }
