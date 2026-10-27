@@ -38,6 +38,13 @@ export interface SyncStatus {
      * only resolved again once they are older than the refresh interval.
      */
     "snapshotsAt": number;
+
+    /**
+     * MTime and FileSize fingerprint the canonical document this device last
+     * reconciled, so an unchanged folder is skipped without reading it.
+     */
+    "mtime": number;
+    "fileSize": number;
     "bytes": number;
     "remote": number;
     "imported": number;
