@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 )
 
-// Setting is one backed-up setting: the raw value its owner stored, and the
-// moment it was written, so the newest copy wins a merge.
+// Setting is one carried value: the raw value its owner stored, and the moment
+// it was written, so the newest copy wins a merge.
 type Setting struct {
 	Value json.RawMessage `json:"value"`
 	At    int64           `json:"at"`
@@ -17,8 +17,14 @@ type Setting struct {
 // device travel here; a local path or the state of this device stays out.
 type Settings map[string]Setting
 
-// SettingsStore is the settings store a document carries. The app implements it
-// over its own bucket, so the document never touches storage itself.
+// Sessions is the sessions part of a backup document, keyed by source (youtube,
+// spotify). Each value is the encrypted blob its source stored, carried exactly
+// like a setting.
+type Sessions = Settings
+
+// SettingsStore is a section the document carries as settings. The app
+// implements it over its own bucket, so the document never touches storage
+// itself; the sessions section uses the same port.
 type SettingsStore interface {
 	Section() (Settings, error)
 	Apply(Settings) error
