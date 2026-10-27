@@ -25,18 +25,23 @@ export function Scrollbar({
 
 		const m = metrics.current;
 		let frame = 0;
+		let pending = 0;
 		let watch = 0;
 		let el: HTMLElement;
 		let detach: (() => void) | undefined;
 
 		const place = () => {
-			frame = 0;
 			const ratio = m.max > 0 ? el.scrollTop / m.max : 0;
 			node.style.transform = `translateY(${m.inset + ratio * m.travel}px)`;
 		};
 
 		const sync = () => {
-			if (frame === 0) frame = requestAnimationFrame(place);
+			if (frame === 0) {
+				frame = requestAnimationFrame(() => {
+					frame = 0;
+					place();
+				});
+			}
 		};
 
 		const measure = () => {
@@ -65,7 +70,17 @@ export function Scrollbar({
 			sizes.disconnect();
 			sizes.observe(el);
 			for (const child of el.children) sizes.observe(child);
-			measure();
+		};
+
+		// Children arrive in bursts (virtualised lists, image loads), and measuring
+		// on every mutation is a forced reflow per frame; batch both to one frame.
+		const queue = () => {
+			if (pending === 0) {
+				pending = requestAnimationFrame(() => {
+					pending = 0;
+					measure();
+				});
+			}
 		};
 
 		const attach = () => {
@@ -79,9 +94,14 @@ export function Scrollbar({
 			}
 			el = scroller;
 
-			const mutations = new MutationObserver(observeContent);
+			const mutations = new MutationObserver(() => {
+				observeContent();
+				queue();
+			});
 			mutations.observe(el, { childList: true });
 			observeContent();
+			// The first measure stays synchronous so the thumb is placed before paint.
+			measure();
 
 			el.addEventListener("scroll", sync, { passive: true });
 			detach = () => {
@@ -95,6 +115,7 @@ export function Scrollbar({
 
 		return () => {
 			if (frame !== 0) cancelAnimationFrame(frame);
+			if (pending !== 0) cancelAnimationFrame(pending);
 			if (watch !== 0) cancelAnimationFrame(watch);
 			detach?.();
 		};
