@@ -10,7 +10,7 @@ export type Pending = {
 export const pending = signal<Pending | null>(null);
 
 const ignored = new Set<string>();
-const POLL_MS = 1500;
+const POLL_MS = 5000;
 const MOBILE_POLL_MS = 5000;
 
 let watching = false;
