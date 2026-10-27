@@ -99,6 +99,27 @@ func TestDoRequestSendsVisitorHeader(t *testing.T) {
 	}
 }
 
+func TestPostSendsBrowserHeaders(t *testing.T) {
+	seedVisitor(t, "vis-token")
+
+	var accept, language string
+	withInnertubeTransport(t, func(r *http.Request) (*http.Response, error) {
+		accept = r.Header.Get("Accept")
+		language = r.Header.Get("Accept-Language")
+		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("{}"))}, nil
+	})
+
+	if _, err := retryRequest(preferredClient, "https://example.test/player", map[string]any{}, 1); err != nil {
+		t.Fatalf("retryRequest: %v", err)
+	}
+	if accept != "*/*" {
+		t.Fatalf("Accept = %q, want */*", accept)
+	}
+	if language != "en-US,en;q=0.9" {
+		t.Fatalf("Accept-Language = %q, want en-US,en;q=0.9", language)
+	}
+}
+
 func TestGetVisitorDataNegativeCache(t *testing.T) {
 	origClient := visitorClient
 	defer func() { visitorClient = origClient }()

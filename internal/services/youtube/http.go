@@ -38,6 +38,8 @@ func post(c clientConfig, url string, payload map[string]any, raw string) (*http
 	}
 	origin := originOf(url)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	req.Header.Set("User-Agent", c.UserAgent)
 	req.Header.Set("X-YouTube-Client-Name", fmt.Sprintf("%d", c.ClientName))
 	req.Header.Set("X-YouTube-Client-Version", c.Version)
