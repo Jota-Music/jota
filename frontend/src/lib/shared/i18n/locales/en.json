@@ -208,8 +208,6 @@
 			"unavailable": "In-app sign-in is not available on this platform. Paste your cookies or import a cookies.txt in Settings → Account.",
 			"errorHint": "{error} — you can paste your cookies in Settings → Account instead.",
 			"settingsRisk": "Signing in with a Google account and using it to play audio can get that account banned by Google. Use an account you can afford to lose, and prefer a secondary one.",
-			"loginClosed": "Sign-in was closed before YouTube accepted the session.",
-			"loginTimeout": "YouTube did not finish the sign-in in time.",
 			"signInWindow": "Sign in in the app window",
 			"browserImport": "Use the {browser} session",
 			"browserImportHint": "Reads the YouTube session {browser} already holds on this machine. Close it first if the read fails.",

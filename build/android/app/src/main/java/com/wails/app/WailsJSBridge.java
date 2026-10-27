@@ -206,11 +206,6 @@ public class WailsJSBridge {
 
 
     @JavascriptInterface
-    public void loginYouTube(String id) {
-        bridge.loginYouTube(id);
-    }
-
-    @JavascriptInterface
     public String pickSyncFile() {
         return bridge.pickSyncFile();
     }

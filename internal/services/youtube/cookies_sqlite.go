@@ -1,4 +1,4 @@
-//go:build !darwin
+//go:build !android && !darwin
 
 package youtube
 

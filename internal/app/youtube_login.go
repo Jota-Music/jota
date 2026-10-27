@@ -18,8 +18,8 @@ import (
 
 // YouTubeBrowserLoginSupported reports whether the desktop in-app window can
 // run. Android has no room for an external page inside its single fullscreen
-// WebView; it signs in through its own YouTubeLoginActivity and the bridge
-// instead, so this answers false there.
+// WebView and no sign-in of its own, so this answers false there: a session
+// reaches the phone as an imported cookies.txt or through the sync document.
 func (a *App) YouTubeBrowserLoginSupported() bool {
 	return runtime.GOOS != "android"
 }

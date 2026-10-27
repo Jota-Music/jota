@@ -95,18 +95,6 @@ func (a *App) SetYouTubeCookies(cookies string) error {
 	return nil
 }
 
-// SetYouTubeSession stores what an Android sign-in hands over: the whole cookie
-// jar the WebView holds plus the visitor id and client version of that session.
-// The visitor is adopted after the cookies are verified, because a signed
-// request that speaks as a guest is answered as if it were anonymous.
-func (a *App) SetYouTubeSession(cookies, visitor, version string) error {
-	if err := a.SetYouTubeCookies(cookies); err != nil {
-		return err
-	}
-	youtube.AdoptSession(visitor, version)
-	return nil
-}
-
 func (a *App) ClearYouTubeCookies() error {
 	return youtube.ClearCookies()
 }

@@ -2,7 +2,6 @@ import {
 	ClearYouTubeCookies,
 	CookiesBrowsers,
 	SetYouTubeCookies,
-	SetYouTubeSession,
 	YouTubeAccount,
 	YouTubeBrowserAccounts,
 	YouTubeBrowserLogin,
@@ -13,7 +12,7 @@ import {
 } from "@bindings/app";
 import { signal } from "@preact/signals";
 import { Events } from "@wailsio/runtime";
-import { t } from "@/lib/shared/i18n";
+
 import { queryClient } from "@/lib/shared/views/ui/query-client";
 
 export const youtubeSignedIn = signal(false);
@@ -27,68 +26,10 @@ export const youtubeAccount = signal("");
 // private ones, so the account's own lists stay closed. The panel says so.
 export const youtubeSessionFull = signal(true);
 
-// Desktop opens a window on youtube.com. Android is a single fullscreen WebView
-// that cannot load an external URL, so it opens a separate activity instead;
-// both hand the account's cookies back, so the panel offers the same button.
+// Desktop opens a window on youtube.com and hands the account's cookies back,
+// so the panel offers the same button. Android has no in-app sign-in; it relies
+// on pasting or importing a cookies.txt instead.
 export const youtubeBrowserLoginSupported = signal(false);
-
-const ANDROID = /Android/i.test(navigator.userAgent);
-
-type Session = { cookies: string; visitor: string; version: string };
-type LoginBridge = { loginYouTube(id: string): void };
-
-declare global {
-	interface Window {
-		// Answers the Android sign-in started by loginYouTube.
-		__jotaYouTubeCookies?: (
-			id: string,
-			cookies: string | null,
-			visitor: string | null,
-			version: string | null,
-		) => void;
-	}
-}
-
-const waiting = new Map<string, (session: Session) => void>();
-let calls = 0;
-
-window.__jotaYouTubeCookies = (id, cookies, visitor, version) => {
-	const settle = waiting.get(id);
-	if (!settle) return;
-	waiting.delete(id);
-	settle({
-		cookies: cookies ?? "",
-		visitor: visitor ?? "",
-		version: version ?? "",
-	});
-};
-
-function loginBridge(): LoginBridge | null {
-	if (!ANDROID) return null;
-	return (window as unknown as { wails?: LoginBridge }).wails ?? null;
-}
-
-// The sign-in activity runs in its own WebView, so the page gets the answer
-// through a callback: a synchronous call would freeze this one until the user
-// finished signing in.
-function cookiesFromWindow(bridge: LoginBridge): Promise<Session> {
-	return new Promise((resolve, reject) => {
-		const id = String(++calls);
-		const timer = setTimeout(
-			() => {
-				waiting.delete(id);
-				reject(new Error(t("auth.youtube.loginTimeout")));
-			},
-			5 * 60 * 1000,
-		);
-		waiting.set(id, (session) => {
-			clearTimeout(timer);
-			if (session.cookies) resolve(session);
-			else reject(new Error(t("auth.youtube.loginClosed")));
-		});
-		bridge.loginYouTube(id);
-	});
-}
 
 // Set when a track fails because it needs a signed-in YouTube session.
 export const youtubeSignInSuggested = signal(false);
@@ -112,7 +53,7 @@ export async function syncYouTubeStatus(): Promise<void> {
 	]);
 	youtubeSignedIn.value = signedIn;
 	youtubeSessionFull.value = full;
-	youtubeBrowserLoginSupported.value = supported || loginBridge() !== null;
+	youtubeBrowserLoginSupported.value = supported;
 	youtubeAccount.value = account ?? "";
 	if (youtubeSignedIn.value) youtubeSignInSuggested.value = false;
 }
@@ -165,17 +106,7 @@ export async function signInFromBrowser(browser: string): Promise<void> {
 // paths store and verify them here.
 export async function loginYouTubeWithBrowser(): Promise<void> {
 	try {
-		const bridge = loginBridge();
-		if (bridge) {
-			const session = await cookiesFromWindow(bridge);
-			await SetYouTubeSession(
-				session.cookies,
-				session.visitor,
-				session.version,
-			);
-		} else {
-			await YouTubeBrowserLogin();
-		}
+		await YouTubeBrowserLogin();
 	} finally {
 		await syncYouTubeStatus();
 	}

@@ -56,11 +56,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".YouTubeLoginActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboardHidden|keyboard|navigation|layoutDirection|fontScale|uiMode" />
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

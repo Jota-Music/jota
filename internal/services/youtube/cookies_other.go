@@ -1,12 +1,12 @@
-//go:build !linux
+//go:build !linux || android
 
 package youtube
 
 import "errors"
 
-// Reading a browser's cookie jar is Linux-only for now. Android signs in through
-// its own WebView, and the desktop ports have no jar reader yet, so the UI must
-// report the feature as unavailable rather than offer a button that cannot work.
+// Reading a browser's cookie jar is Linux-only for now. Android has no in-app
+// sign-in and the desktop ports have no jar reader yet, so the UI must report the
+// feature as unavailable rather than offer a button that cannot work.
 func CookiesBrowsers() []string {
 	return nil
 }

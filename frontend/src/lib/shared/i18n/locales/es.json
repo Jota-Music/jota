@@ -208,8 +208,6 @@
 			"unavailable": "El inicio de sesión integrado no está disponible en esta plataforma. Pega tus cookies o importa un cookies.txt en Ajustes → Cuenta.",
 			"errorHint": "{error} — también puedes pegar tus cookies en Ajustes → Cuenta.",
 			"settingsRisk": "Iniciar sesión con una cuenta de Google y usarla para reproducir audio puede hacer que Google la banee. Usa una cuenta que puedas permitirte perder y prefiere una secundaria.",
-			"loginClosed": "El inicio de sesión se cerró antes de que YouTube aceptara la sesión.",
-			"loginTimeout": "YouTube no terminó el inicio de sesión a tiempo.",
 			"signInWindow": "Iniciar sesión en la ventana de la app",
 			"browserImport": "Usar la sesión de {browser}",
 			"browserImportHint": "Lee la sesión de YouTube que {browser} ya tiene en este equipo. Ciérralo primero si la lectura falla.",

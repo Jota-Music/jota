@@ -89,7 +89,7 @@ public class WailsBridge {
 
     private final Activity activity;
     private final SyncDocuments docs;
-    private String youtubeLoginId;
+
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private WebView webView;
     private volatile boolean initialized = false;
@@ -1249,50 +1249,6 @@ public class WailsBridge {
     /** Document metadata as {"lastModified":ms,"size":bytes}, {} when unknown. */
     public String syncFileInfo(String uriStr) {
         return docs.info(uriStr);
-    }
-
-    /**
-     * Open the YouTube sign-in WebView. The answer goes to the page through
-     * window.__jotaYouTubeCookies once the activity finishes, so the JS side
-     * keeps a promise instead of blocking.
-     */
-    public void loginYouTube(final String id) {
-        mainHandler.post(() -> {
-            youtubeLoginId = id;
-            activity.startActivityForResult(
-                    new Intent(activity, YouTubeLoginActivity.class),
-                    YouTubeLoginActivity.REQUEST);
-        });
-    }
-
-    /**
-     * Called from MainActivity.onActivityResult for YouTubeLoginActivity.REQUEST.
-     * The activity answers with the cookie header plus the visitor id and client
-     * version its session speaks as, so the app adopts them instead of probing
-     * YouTube for a visitor of its own.
-     */
-    public void youtubeResult(int resultCode, Intent data) {
-        String id = youtubeLoginId != null ? youtubeLoginId : "";
-        youtubeLoginId = null;
-        boolean ok = resultCode == Activity.RESULT_OK && data != null;
-        String cookies = ok
-                ? data.getStringExtra(YouTubeLoginActivity.EXTRA_COOKIES)
-                : "";
-        String visitor = ok
-                ? data.getStringExtra(YouTubeLoginActivity.EXTRA_VISITOR)
-                : "";
-        String version = ok
-                ? data.getStringExtra(YouTubeLoginActivity.EXTRA_VERSION)
-                : "";
-        WebView view = webView;
-        if (view == null) return;
-        String js = String.format(
-                "window.__jotaYouTubeCookies && window.__jotaYouTubeCookies(%s, %s, %s, %s);",
-                JSONObject.quote(id),
-                JSONObject.quote(cookies != null ? cookies : ""),
-                JSONObject.quote(visitor != null ? visitor : ""),
-                JSONObject.quote(version != null ? version : ""));
-        mainHandler.post(() -> view.evaluateJavascript(js, null));
     }
 
     /** Absolute path to the app's private internal files directory

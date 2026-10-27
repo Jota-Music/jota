@@ -660,10 +660,6 @@ public class MainActivity extends AppCompatActivity {
             if (bridge != null) bridge.filePicked(resultCode, data);
             return;
         }
-        if (requestCode == YouTubeLoginActivity.REQUEST) {
-            if (bridge != null) bridge.youtubeResult(resultCode, data);
-            return;
-        }
 
         if (requestCode != FILE_PICKER_REQUEST) {
             return;

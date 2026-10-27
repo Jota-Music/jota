@@ -386,16 +386,6 @@ export function SetYouTubeId(cacheKey: string, youtubeId: string): $CancellableP
     return $Call.ByID(965987300, cacheKey, youtubeId);
 }
 
-/**
- * SetYouTubeSession stores what an Android sign-in hands over: the whole cookie
- * jar the WebView holds plus the visitor id and client version of that session.
- * The visitor is adopted after the cookies are verified, because a signed
- * request that speaks as a guest is answered as if it were anonymous.
- */
-export function SetYouTubeSession(cookies: string, visitor: string, version: string): $CancellablePromise<void> {
-    return $Call.ByID(1434092371, cookies, visitor, version);
-}
-
 export function SpotifyDisconnect(): $CancellablePromise<void> {
     return $Call.ByID(3257614804);
 }
