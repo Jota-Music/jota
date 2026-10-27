@@ -221,6 +221,13 @@ func cookieValue(raw, name string) string {
 	return ""
 }
 
+// Full reports whether a raw cookie string carries the private session ones.
+// A full session can open the account's own lists; a partial one only signs
+// requests.
+func Full(raw string) bool {
+	return sessionValue(raw) != ""
+}
+
 // SessionFull reports whether the stored cookies carry the private session ones
 // (__Secure-3PSID, __Secure-1PSID or SSID). A set without them signs requests
 // but stays anonymous to YouTube, so the account's own lists and any private

@@ -38,6 +38,7 @@ type Document struct {
 	Saved     saved.Section
 	Order     ordering.Section
 	Settings  Settings
+	Sessions  Settings
 }
 
 // Empty reports whether the document carries no section at all.
@@ -46,7 +47,8 @@ func (d Document) Empty() bool {
 		d.Follows.Empty() &&
 		d.Saved.Empty() &&
 		d.Order.Empty() &&
-		len(d.Settings) == 0
+		len(d.Settings) == 0 &&
+		len(d.Sessions) == 0
 }
 
 // MarshalJSON omits the sections the library has nothing for, so an empty
@@ -59,6 +61,7 @@ func (d Document) MarshalJSON() ([]byte, error) {
 		Saved     *saved.Section     `json:"saved,omitempty"`
 		Order     *ordering.Section  `json:"order,omitempty"`
 		Settings  *Settings          `json:"settings,omitempty"`
+		Sessions  *Settings          `json:"sessions,omitempty"`
 	}
 	out := body{Version: d.Version}
 	if !d.Playlists.Empty() {
@@ -75,6 +78,9 @@ func (d Document) MarshalJSON() ([]byte, error) {
 	}
 	if len(d.Settings) > 0 {
 		out.Settings = &d.Settings
+	}
+	if len(d.Sessions) > 0 {
+		out.Sessions = &d.Sessions
 	}
 	return json.Marshal(out)
 }

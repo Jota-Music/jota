@@ -44,6 +44,7 @@ func syncApp(t *testing.T) *App {
 			Saved:     kept,
 			Order:     order,
 			Settings:  settingsSync,
+			Sessions:  sessionsSync,
 		},
 	}
 }
@@ -190,7 +191,7 @@ func TestImportBackupCountsSections(t *testing.T) {
 		`"follows":{"items":[{"id":"bob","at":1}]},` +
 		`"saved":{"items":[{"id":"spotify:playlist:x","name":"Liked","at":1}]},` +
 		`"order":[{"scope":"library","account":"alice","ids":["a","b"],"at":1}],` +
-		`"settings":{"sync-interval":{"value":30,"at":1}}}`
+		`"settings":{"sync":{"value":{"interval":30},"at":1}}}`
 
 	stats, err := a.ImportBackup(data)
 	if err != nil {

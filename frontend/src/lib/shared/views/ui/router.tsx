@@ -3,6 +3,7 @@ import {
 	RamMB,
 	ReloadWindow,
 	RevalidateFollowing,
+	RevalidateMyYouTubePlaylists,
 } from "@bindings/app";
 import { QueryClientProvider } from "@tanstack/preact-query";
 import { Events } from "@wailsio/runtime";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/auth/views/stores/session";
 import { syncYouTubeStatus } from "@/lib/auth/views/stores/youtube";
 import { RequireSpotify } from "@/lib/auth/views/ui/spotify-connect";
+import { autosave } from "@/lib/music/app/backup";
 import { revalidateUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { compactPlayer, Player } from "@/lib/music/views/ui/player";
@@ -78,6 +80,17 @@ Events.On("refresh:updated", () => void queryClient.invalidateQueries());
 // Cache entries never expire, so invalidating alone would just refetch the same
 // stale bytes from the store. Revalidate over the live session first, then drop
 // the queries so open views pick the fresh values up.
+Events.On("youtube:session-updated", async () => {
+	await syncYouTubeStatus();
+	try {
+		await RevalidateMyYouTubePlaylists();
+	} catch {}
+	await queryClient.invalidateQueries();
+	// A cleared session is carried as a tombstone; write it now instead of
+	// waiting for the next scheduled pass so it stops coming back.
+	void autosave("auto").catch(() => {});
+});
+
 Events.On("spotify:reconnected", async () => {
 	// The session is live again, so flip `connected` too. Clearing only
 	// `degraded` would hide the banner while every gate stayed closed.

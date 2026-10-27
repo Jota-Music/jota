@@ -46,6 +46,7 @@ type Stats struct {
 	Saved     int  `json:"saved"`
 	Order     int  `json:"order"`
 	Settings  int  `json:"settings"`
+	Sessions  int  `json:"sessions"`
 	Modified  bool `json:"modified"`
 	// Snapshots reports that the playlists the sources own were resolved on this
 	// pass and now travel in the document, whatever the store did with it.
@@ -57,7 +58,7 @@ type Stats struct {
 
 // Changed is how many records this pass applied, across every section.
 func (s Stats) Changed() int {
-	return s.Playlists + s.Follows + s.Saved + s.Order + s.Settings
+	return s.Playlists + s.Follows + s.Saved + s.Order + s.Settings + s.Sessions
 }
 
 // read resolves the folder's backup: the canonical file when it is there,

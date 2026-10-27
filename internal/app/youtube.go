@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/services/youtube"
@@ -62,6 +63,12 @@ func (a *App) GetMyYouTubePlaylists() ([]music.PlaylistSummary, error) {
 	list, err := a.YouTube.GetMyYouTubePlaylists()
 	if err != nil {
 		log.Printf("youtube: account playlists: %v", err)
+		// A session YouTube rejects can never open the account's lists, so
+		// drop it instead of leaving the panel saying it is signed in.
+		if errors.Is(err, youtube.ErrSession) {
+			log.Printf("youtube: clearing session YouTube rejected")
+			dropYouTubeSession()
+		}
 		return []music.PlaylistSummary{}, nil
 	}
 	return list, nil
@@ -69,6 +76,13 @@ func (a *App) GetMyYouTubePlaylists() ([]music.PlaylistSummary, error) {
 
 func (a *App) RevalidateYouTubeChannel(channel string) error {
 	return a.YouTube.RevalidateChannel(channel)
+}
+
+// RevalidateMyYouTubePlaylists drops the cached list of the signed-in
+// account's playlists, so a session applied from the sync document is followed
+// by a fresh download on the next read.
+func (a *App) RevalidateMyYouTubePlaylists() error {
+	return a.YouTube.RevalidateMyYouTubePlaylists()
 }
 
 func (a *App) GetYouTubeChannelVideos(channel string) ([]music.Song, error) {
@@ -93,6 +107,7 @@ func (a *App) SetYouTubeCookies(cookies string) error {
 		_ = youtube.ClearCookies()
 		return err
 	}
+	a.syncYouTubeCookies()
 	return nil
 }
 
@@ -118,8 +133,96 @@ func (a *App) ImportYouTubeCookies(data, pass string) error {
 	return a.SetYouTubeCookies(pt)
 }
 
+// applyYouTubeCookies decrypts a synced cookie blob with the local pass and
+// stores it as the account session. It is a no-op when there is no pass or
+// the blob cannot be opened.
+func applyYouTubeCookies(blob string) {
+	blob = strings.TrimSpace(blob)
+	if blob == "" {
+		return
+	}
+	pass := storedPass()
+	if pass == "" {
+		return
+	}
+	pt, err := decryptWithPass(pass, blob)
+	if err != nil {
+		return
+	}
+	localFull, incomingFull := youtube.Full(youtube.Cookies()), youtube.Full(pt)
+	// A partial session must not overwrite a full one: the account's own
+	// playlists stay closed with the partial set. Startup staging pushes the
+	// full local session back to the document.
+	if localFull && !incomingFull {
+		return
+	}
+	if err := youtube.SetCookies(pt); err != nil {
+		return
+	}
+	if app := application.Get(); app != nil {
+		app.Event.Emit("youtube:session-updated")
+	}
+	go func() {
+		if !errors.Is(youtube.Verify(), youtube.ErrSession) {
+			return
+		}
+		log.Printf("youtube: clearing synced session YouTube rejected")
+		dropYouTubeSession()
+	}()
+}
+
+// dropYouTubeSession forgets a session YouTube rejected, so the panel stops
+// claiming it is signed in and offers a fresh sign-in.
+func dropYouTubeSession() {
+	_ = youtube.ClearCookies()
+	tombstoneSession("youtube")
+	if app := application.Get(); app != nil {
+		app.Event.Emit("youtube:session-updated")
+	}
+}
+
+// verifyYouTubeSession drops a stored session YouTube no longer accepts, so
+// the panel stops claiming it is signed in and offers a fresh sign-in.
+func verifyYouTubeSession() {
+	if !youtube.HasAuth() {
+		return
+	}
+	if !errors.Is(youtube.Verify(), youtube.ErrSession) {
+		return
+	}
+	log.Printf("youtube: clearing stored session YouTube rejected")
+	dropYouTubeSession()
+}
+
+// syncYouTubeCookies encrypts the stored cookies with the local pass and stages
+// them for the next sync pass. It does nothing when there is no pass or no
+// session.
+func (a *App) syncYouTubeCookies() {
+	pass := a.SessionPass()
+	if pass == "" {
+		return
+	}
+	raw := youtube.Cookies()
+	if raw == "" {
+		return
+	}
+	enc, err := encryptWithPass(pass, raw)
+	if err != nil {
+		return
+	}
+	if err := settings.SetObject("session:youtube", enc); err != nil {
+		return
+	}
+	_ = settings.SetObject("session:youtube"+settingAt, time.Now().UnixMilli())
+	sessionsSync.dirty.Store(true)
+	a.syncInBackground()
+}
+
 func (a *App) ClearYouTubeCookies() error {
-	return youtube.ClearCookies()
+	err := youtube.ClearCookies()
+	tombstoneSession("youtube")
+	a.syncInBackground()
+	return err
 }
 
 // CookiesBrowsers lists the browsers on this machine whose cookie jar holds a

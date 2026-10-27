@@ -424,6 +424,38 @@ func saveCreds(username string, data []byte) error {
 	})
 }
 
+// StoredSession returns the credentials saved for this install, so they can be
+// encrypted and carried to another device. The data is the raw session blob.
+func (s *SpotifyService) StoredSession() (string, []byte, error) {
+	sc, err := loadCreds()
+	if err != nil {
+		return "", nil, err
+	}
+	data, err := hex.DecodeString(sc.Data)
+	if err != nil {
+		return "", nil, err
+	}
+	return sc.Username, data, nil
+}
+
+// AdoptSession replaces the stored credentials and reconnects, even when a live
+// session is open for another account. It reports whether the session is live.
+func (s *SpotifyService) AdoptSession(username string, data []byte) bool {
+	if err := saveCreds(username, data); err != nil {
+		return false
+	}
+	s.mu.Lock()
+	if s.sess != nil {
+		s.sess.Close()
+		s.sess = nil
+	}
+	s.username = username
+	s.degraded = false
+	s.done = false
+	s.mu.Unlock()
+	return s.Reconnect()
+}
+
 type browserLogger struct {
 	librespot.NullLogger
 }

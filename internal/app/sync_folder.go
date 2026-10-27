@@ -137,41 +137,71 @@ func (a *App) SetSyncAuto(enabled bool) error {
 	return nil
 }
 
+type syncSettings struct {
+	Import   *bool `json:"import,omitempty"`
+	Interval *int  `json:"interval,omitempty"`
+}
+
+// readSyncSettings reads the compound key. An install upgraded from the split
+// keys still holds sync-import and sync-interval, so they are read as a
+// fallback until the next write moves them into the compound.
+func readSyncSettings() syncSettings {
+	var v syncSettings
+	_ = settings.GetObject("sync", &v)
+	if v.Import == nil {
+		var imported bool
+		if err := settings.GetObject("sync-import", &imported); err == nil {
+			v.Import = &imported
+		}
+	}
+	if v.Interval == nil {
+		var interval int
+		if err := settings.GetObject("sync-interval", &interval); err == nil {
+			v.Interval = &interval
+		}
+	}
+	return v
+}
+
 // SyncImport decides whether a pass also applies the document to this library.
 // Missing means on: that was the only behaviour before the switch existed.
 func (a *App) SyncImport() bool {
-	var enabled bool
-	if err := settings.GetObject("sync-import", &enabled); err != nil {
+	v := readSyncSettings()
+	if v.Import == nil {
 		return true
 	}
-	return enabled
+	return *v.Import
 }
 
 func (a *App) SetSyncImport(enabled bool) error {
-	if err := settings.SetObject("sync-import", enabled); err != nil {
+	v := readSyncSettings()
+	v.Import = &enabled
+	if err := settings.SetObject("sync", v); err != nil {
 		return err
 	}
-	touch("sync-import")
+	touch("sync")
 	a.syncInBackground()
 	return nil
 }
 
 func (a *App) SyncInterval() int {
-	var minutes int
-	if err := settings.GetObject("sync-interval", &minutes); err != nil || minutes < 1 {
+	v := readSyncSettings()
+	if v.Interval == nil || *v.Interval < 1 {
 		return 15
 	}
-	return minutes
+	return *v.Interval
 }
 
 func (a *App) SetSyncInterval(minutes int) error {
 	if minutes < 1 {
 		minutes = 15
 	}
-	if err := settings.SetObject("sync-interval", minutes); err != nil {
+	v := readSyncSettings()
+	v.Interval = &minutes
+	if err := settings.SetObject("sync", v); err != nil {
 		return err
 	}
-	touch("sync-interval")
+	touch("sync")
 	a.syncInBackground()
 	return nil
 }

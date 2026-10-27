@@ -18,6 +18,7 @@ type Service struct {
 	Saved     *saved.Service
 	Order     *ordering.Service
 	Settings  SettingsStore
+	Sessions  SettingsStore
 }
 
 // Export builds the document a backup file carries: every section of this
@@ -58,6 +59,13 @@ func (s *Service) Export(external []playlists.Snapshot) (string, error) {
 			return "", err
 		}
 		doc.Settings = section
+	}
+	if s.Sessions != nil {
+		section, err := s.Sessions.Section()
+		if err != nil {
+			return "", err
+		}
+		doc.Sessions = section
 	}
 	return marshal(doc)
 }
@@ -175,6 +183,13 @@ func (s *Service) merge(doc Document, restore, apply bool) (Document, Stats, err
 		}
 		doc.Settings, stats.Settings = section, applied
 	}
+	if s.Sessions != nil {
+		section, applied, err := mergeSettings(s.Sessions, doc.Sessions, restore, apply)
+		if err != nil {
+			return Document{}, stats, err
+		}
+		doc.Sessions, stats.Sessions = section, applied
+	}
 	return doc, stats, nil
 }
 
@@ -194,6 +209,9 @@ func (s *Service) Pending() bool {
 		return true
 	}
 	if s.Settings != nil && s.Settings.Pending() {
+		return true
+	}
+	if s.Sessions != nil && s.Sessions.Pending() {
 		return true
 	}
 	return false

@@ -311,6 +311,15 @@ export function RevalidateFullPlaylist(id: string): $CancellablePromise<void> {
     return $Call.ByID(3671769412, id);
 }
 
+/**
+ * RevalidateMyYouTubePlaylists drops the cached list of the signed-in
+ * account's playlists, so a session applied from the sync document is followed
+ * by a fresh download on the next read.
+ */
+export function RevalidateMyYouTubePlaylists(): $CancellablePromise<void> {
+    return $Call.ByID(4063400865);
+}
+
 export function RevalidateUserPlaylists(user: string): $CancellablePromise<void> {
     return $Call.ByID(771735787, user);
 }
@@ -377,6 +386,14 @@ export function SetDiscordEnabled(enabled: boolean): $CancellablePromise<void> {
 
 export function SetIdleReload(enabled: boolean): $CancellablePromise<void> {
     return $Call.ByID(4291922887, enabled);
+}
+
+/**
+ * SetSessionPass stores the shared passphrase. When it is cleared, the staged
+ * sessions are dropped from the sync so they stop travelling.
+ */
+export function SetSessionPass(pass: string): $CancellablePromise<void> {
+    return $Call.ByID(1739543765, pass);
 }
 
 export function SetSyncAuto(enabled: boolean): $CancellablePromise<void> {
@@ -582,8 +599,8 @@ export function YouTubeBrowserLogin(): $CancellablePromise<void> {
 /**
  * YouTubeBrowserLoginSupported reports whether the desktop in-app window can
  * run. Android has no room for an external page inside its single fullscreen
- * WebView; it signs in through its own YouTubeLoginActivity and the bridge
- * instead, so this answers false there.
+ * WebView and no sign-in of its own, so this answers false there: a session
+ * reaches the phone as an imported cookies.txt or through the sync document.
  */
 export function YouTubeBrowserLoginSupported(): $CancellablePromise<boolean> {
     return $Call.ByID(716896478);

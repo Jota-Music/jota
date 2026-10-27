@@ -1,6 +1,20 @@
 package app
 
-import "github.com/Jota-Music/jota/internal/music"
+import (
+	"bytes"
+	"encoding/hex"
+	"encoding/json"
+	"strings"
+	"time"
+
+	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/services/spotify"
+	"github.com/wailsapp/wails/v3/pkg/application"
+)
+
+// spotifyService is the package-level handle used by sync apply, which has no
+// App instance. It is set during New().
+var spotifyService *spotify.SpotifyService
 
 type SpotifyStatus struct {
 	Connected bool   `json:"connected"`
@@ -37,11 +51,18 @@ func (a *App) SpotifyLogin() (string, error) {
 
 func (a *App) SpotifyLoginAndWait() error {
 	defer release()
-	return a.Spotify.CompleteLogin()
+	if err := a.Spotify.CompleteLogin(); err != nil {
+		return err
+	}
+	a.syncSpotifySession()
+	return nil
 }
 
 func (a *App) SpotifyDisconnect() error {
-	return a.Spotify.Disconnect()
+	err := a.Spotify.Disconnect()
+	tombstoneSession("spotify")
+	a.syncInBackground()
+	return err
 }
 
 func (a *App) GetUserPlaylists(user string) ([]music.PlaylistSummary, error) {
@@ -88,4 +109,80 @@ func (a *App) GetArtistDiscography(uri string) (music.ArtistDiscography, error) 
 
 func (a *App) GetAlbumTracks(uri string) ([]music.Song, error) {
 	return a.Spotify.GetAlbumTracks(uri)
+}
+
+func (a *App) syncSpotifySession() {
+	pass := a.SessionPass()
+	if pass == "" {
+		return
+	}
+	username, data, err := a.Spotify.StoredSession()
+	if err != nil || username == "" {
+		return
+	}
+	payload, err := json.Marshal(map[string]string{
+		"username": username,
+		"data":     hex.EncodeToString(data),
+	})
+	if err != nil {
+		return
+	}
+	enc, err := encryptWithPass(pass, string(payload))
+	if err != nil {
+		return
+	}
+	if err := settings.SetObject("session:spotify", enc); err != nil {
+		return
+	}
+	_ = settings.SetObject("session:spotify"+settingAt, time.Now().UnixMilli())
+	sessionsSync.dirty.Store(true)
+	a.syncInBackground()
+}
+
+func applySpotifySession(blob string) {
+	blob = strings.TrimSpace(blob)
+	if blob == "" {
+		return
+	}
+	pass := storedPass()
+	if pass == "" {
+		return
+	}
+	pt, err := decryptWithPass(pass, blob)
+	if err != nil {
+		return
+	}
+	var p struct {
+		Username string `json:"username"`
+		Data     string `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(pt), &p); err != nil {
+		return
+	}
+	if p.Username == "" || p.Data == "" {
+		return
+	}
+	data, err := hex.DecodeString(p.Data)
+	if err != nil {
+		return
+	}
+	if spotifyService == nil {
+		return
+	}
+	// Only touch the session when the incoming copy differs from what this
+	// device already holds, so a pass that carries nothing new does not
+	// disconnect a working session.
+	if curUser, curData, err := spotifyService.StoredSession(); err == nil {
+		if curUser == p.Username && bytes.Equal(curData, data) {
+			return
+		}
+	}
+	go func() {
+		if !spotifyService.AdoptSession(p.Username, data) {
+			return
+		}
+		if app := application.Get(); app != nil {
+			app.Event.Emit("spotify:reconnected")
+		}
+	}()
 }

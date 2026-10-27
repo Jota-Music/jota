@@ -37,6 +37,23 @@ func storedPass() string {
 	return pass
 }
 
+// SetSessionPass stores the shared passphrase. When it is cleared, the staged
+// sessions are dropped from the sync so they stop travelling.
+func (a *App) SetSessionPass(pass string) error {
+	if err := settings.SetObject(sessionPassKey, pass); err != nil {
+		return err
+	}
+	if pass == "" {
+		tombstoneSession("youtube")
+		tombstoneSession("spotify")
+		a.syncInBackground()
+		return nil
+	}
+	a.syncYouTubeCookies()
+	a.syncSpotifySession()
+	return nil
+}
+
 // encryptWithPass encrypts plain with pass (AES-GCM, key from PBKDF2). An empty
 // pass leaves the value untouched, so callers can treat the result uniformly.
 func encryptWithPass(pass, plain string) (string, error) {

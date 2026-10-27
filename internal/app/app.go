@@ -70,6 +70,7 @@ var installMu sync.Mutex
 func New(version string) *App {
 	cfg := env.Load()
 	spotifySvc := spotify.NewSpotifyService(cfg.SpotifyClientID)
+	spotifyService = spotifySvc
 	// Late-bound like the relay emit below: Watch fires long after New returns,
 	// so the application is resolvable by then.
 	spotifySvc.OnReconnect(func() {
@@ -113,6 +114,7 @@ func New(version string) *App {
 			Saved:     savedSvc,
 			Order:     orderingSvc,
 			Settings:  settingsSync,
+			Sessions:  sessionsSync,
 		},
 	}
 
@@ -125,6 +127,16 @@ func New(version string) *App {
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
 	kv.Start()
+
+	// Stage the sessions already on this device, so a pass set after login (or
+	// a real session replacing an older staged one) reaches the next pass.
+	if a.SessionPass() != "" {
+		go func() {
+			a.syncYouTubeCookies()
+			a.syncSpotifySession()
+		}()
+	}
+	go verifyYouTubeSession()
 
 	go func() {
 		for {

@@ -34,6 +34,9 @@ var errNoPlaylists = errors.New("no playlists in my playlists response")
 // looks like to it.
 var errSession = errors.New("the YouTube session cannot open private resources: import a cookies.txt export")
 
+// ErrSession reports a session YouTube no longer accepts as signed in.
+var ErrSession = errSession
+
 // GetMyYouTubePlaylists returns the playlists of the signed-in account. It
 // requires account cookies (HasAuth). Results are cached; call
 // RevalidateMyYouTubePlaylists to refresh.

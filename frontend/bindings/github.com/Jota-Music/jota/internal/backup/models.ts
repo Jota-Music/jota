@@ -16,5 +16,6 @@ export interface Stats {
     "saved": number;
     "order": number;
     "settings": number;
+    "sessions": number;
     "modified": boolean;
 }
