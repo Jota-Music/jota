@@ -93,6 +93,99 @@ func TestSyncPending(t *testing.T) {
 	}
 }
 
+// A focus pass that lands on the same canonical file and has nothing local to
+// write costs a stat, not a full read and merge.
+func TestSyncSkipsUnchangedFolder(t *testing.T) {
+	a := syncApp(t)
+	if _, err := a.Playlists.Create("Mix"); err != nil {
+		t.Fatalf("create playlist: %v", err)
+	}
+	if err := a.SetSyncFolder(t.TempDir()); err != nil {
+		t.Fatalf("set folder: %v", err)
+	}
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+
+	counted := &passes{}
+	a.Backup.Settings = counted
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if got := counted.count.Load(); got != 0 {
+		t.Fatalf("unchanged folder ran %d passes, want 0", got)
+	}
+
+	if _, err := a.Playlists.Create("B Sides"); err != nil {
+		t.Fatalf("create playlist: %v", err)
+	}
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if got := counted.count.Load(); got != 1 {
+		t.Fatalf("a local change ran %d passes, want 1", got)
+	}
+}
+
+// The save button is an explicit ask: an unchanged folder still runs a pass and
+// records it, or the panel keeps the previous pass as the last save.
+func TestSyncSaveRunsOnUnchangedFolder(t *testing.T) {
+	a := syncApp(t)
+	if _, err := a.Playlists.Create("Mix"); err != nil {
+		t.Fatalf("create playlist: %v", err)
+	}
+	if err := a.SetSyncFolder(t.TempDir()); err != nil {
+		t.Fatalf("set folder: %v", err)
+	}
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	before := a.SyncStatus().At
+
+	counted := &passes{}
+	a.Backup.Settings = counted
+	// At is a millisecond stamp, so the save has to land in a later one.
+	time.Sleep(2 * time.Millisecond)
+	if err := a.SyncSave(); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	if got := counted.count.Load(); got != 1 {
+		t.Fatalf("a manual save ran %d passes, want 1", got)
+	}
+	if after := a.SyncStatus().At; after <= before {
+		t.Fatalf("manual save left At at %d, want later than %d", after, before)
+	}
+}
+
+// A due snapshot refresh is work a pass still has to do even when the file did
+// not move.
+func TestSyncRefreshesDueSnapshots(t *testing.T) {
+	a := syncApp(t)
+	if _, err := a.Playlists.Create("Mix"); err != nil {
+		t.Fatalf("create playlist: %v", err)
+	}
+	if err := a.SetSyncFolder(t.TempDir()); err != nil {
+		t.Fatalf("set folder: %v", err)
+	}
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+
+	counted := &passes{}
+	a.Backup.Settings = counted
+	status := a.SyncStatus()
+	status.SnapshotsAt = 0
+	if err := settings.SetObject(syncStatusKey, status); err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if got := counted.count.Load(); got != 1 {
+		t.Fatalf("due snapshots ran %d passes, want 1", got)
+	}
+}
+
 // A setting the document carries is local news too, so changing it must offer the
 // manual save until a pass writes it out.
 func TestSyncPendingSetting(t *testing.T) {

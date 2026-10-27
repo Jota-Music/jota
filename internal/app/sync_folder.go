@@ -4,6 +4,7 @@ import (
 	"hash/fnv"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -35,11 +36,15 @@ type SyncStatus struct {
 	// the document. Their download is the expensive part of a pass, so they are
 	// only resolved again once they are older than the refresh interval.
 	SnapshotsAt int64 `json:"snapshotsAt"`
-	Bytes       int   `json:"bytes"`
-	Remote      int   `json:"remote"`
-	Imported    int   `json:"imported"`
-	Modified    bool  `json:"modified"`
-	Stale       bool  `json:"stale"`
+	// MTime and FileSize fingerprint the canonical document this device last
+	// reconciled, so an unchanged folder is skipped without reading it.
+	MTime    int64 `json:"mtime"`
+	FileSize int64 `json:"fileSize"`
+	Bytes    int   `json:"bytes"`
+	Remote   int   `json:"remote"`
+	Imported int   `json:"imported"`
+	Modified bool  `json:"modified"`
+	Stale    bool  `json:"stale"`
 }
 
 func (a *App) SyncStatus() SyncStatus {
@@ -80,6 +85,13 @@ func (a *App) recordSync(stats backup.Stats, fresh bool) {
 	// snapshots this pass resolved.
 	if stats.Snapshots && !stale {
 		status.SnapshotsAt = status.At
+	}
+	status.MTime, status.FileSize = 0, 0
+	if uri != "" {
+		if info, err := os.Stat(filepath.Join(uri, backup.BackupFile)); err == nil {
+			status.MTime = info.ModTime().UnixNano()
+			status.FileSize = info.Size()
+		}
 	}
 	if err := settings.SetObject(syncStatusKey, status); err != nil {
 		log.Printf("sync status: %v", err)
@@ -209,7 +221,7 @@ func (a *App) SetSyncInterval(minutes int) error {
 // SyncPlaylists is the automatic pass: it reconciles the document and only
 // downloads the playlists the sources own once their snapshot is old.
 func (a *App) SyncPlaylists() error {
-	return a.syncFolder(a.options(false, a.snapshotsDue()))
+	return a.syncFolder(a.options(false, a.snapshotsDue()), true)
 }
 
 // SyncSave is the manual save: it writes this library now, and only resolves the
@@ -217,13 +229,13 @@ func (a *App) SyncPlaylists() error {
 // automatic pass. Downloading the whole account on every click is what made the
 // button look frozen.
 func (a *App) SyncSave() error {
-	return a.syncFolder(a.options(false, a.snapshotsDue()))
+	return a.syncFolder(a.options(false, a.snapshotsDue()), false)
 }
 
 // SyncOverwrite is the emergency exit: it writes our document over a file a
 // normal save cannot read.
 func (a *App) SyncOverwrite() error {
-	return a.syncFolder(a.options(true, false))
+	return a.syncFolder(a.options(true, false), false)
 }
 
 func (a *App) options(force, refresh bool) backup.Options {
@@ -235,7 +247,10 @@ func (a *App) options(force, refresh bool) backup.Options {
 	}
 }
 
-func (a *App) syncFolder(opts backup.Options) error {
+// settle lets an unchanged folder answer an automatic pass with a stat instead
+// of a full read and merge. A save the user asked for always runs: skipping it
+// would leave the panel showing the previous pass as the last one.
+func (a *App) syncFolder(opts backup.Options, settle bool) error {
 	folder := a.SyncFolder()
 	if folder == "" {
 		return nil
@@ -244,6 +259,9 @@ func (a *App) syncFolder(opts backup.Options) error {
 	// triggers now arrive from many callers at once.
 	a.syncMu.Lock()
 	defer a.syncMu.Unlock()
+	if settle && !opts.Refresh && a.syncSettled(folder) {
+		return nil
+	}
 	stats, err := a.Backup.Sync(folder, opts)
 	if err != nil {
 		return err
@@ -256,6 +274,21 @@ func (a *App) syncFolder(opts backup.Options) error {
 		}
 	}
 	return nil
+}
+
+// syncSettled reports whether the folder still holds the copy this device last
+// reconciled and the library has nothing new to write, which makes a pass a
+// stat call instead of a full read and merge.
+func (a *App) syncSettled(folder string) bool {
+	if a.SyncPending() {
+		return false
+	}
+	info, err := os.Stat(filepath.Join(folder, backup.BackupFile))
+	if err != nil {
+		return false
+	}
+	status := a.SyncStatus()
+	return info.ModTime().UnixNano() == status.MTime && info.Size() == status.FileSize
 }
 
 // SyncDocument merges a backup document read from the platform picker (an
