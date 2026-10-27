@@ -168,6 +168,7 @@ async function merge(
 	bridge: Bridge,
 	uri: string,
 	force: boolean,
+	manual: boolean,
 ): Promise<void> {
 	const remote = await read(bridge, uri);
 	if (remote === null) throw new Error(t("settings.autosave.errors.read"));
@@ -178,7 +179,11 @@ async function merge(
 		status.uri === uri && status.writeAt > 0
 			? { at: status.writeAt, hash: status.hash }
 			: null;
-	const current = force || fresh(remote, await info(bridge, uri), previous);
+	// A manual save is the user asking for the file now, so it trusts the copy
+	// it just read even when the provider's timestamp did not move. Automatic
+	// passes keep the conservative rule.
+	const current =
+		force || manual || fresh(remote, await info(bridge, uri), previous);
 	const merged = await SyncDocument(remote, current);
 	if (merged === remote || !current) return;
 	await write(bridge, uri, merged);
@@ -248,7 +253,7 @@ async function deliver(mode: Mode, force: boolean): Promise<boolean> {
 	}
 	const uri = await SyncFolder();
 	if (!uri) return false;
-	await merge(bridge, uri, force);
+	await merge(bridge, uri, force, mode === "manual");
 	void queryClient.invalidateQueries();
 	return true;
 }
