@@ -28,6 +28,9 @@ export function pageLink(
 	if (page === "playlist" && id.startsWith("youtube:")) {
 		return `https://www.youtube.com/playlist?list=${id.slice("youtube:".length)}`;
 	}
-	if (!SPOTIFY_ID.test(id)) return null;
-	return `https://open.spotify.com/${page}/${id}`;
+	const spotifyId = id.startsWith("spotify:")
+		? id.slice("spotify:".length)
+		: id;
+	if (!SPOTIFY_ID.test(spotifyId)) return null;
+	return `https://open.spotify.com/${page}/${spotifyId}`;
 }

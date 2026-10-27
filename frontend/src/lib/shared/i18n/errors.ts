@@ -9,6 +9,10 @@ const BACKEND: Record<string, string> = {
 	"login timed out": "errors.backend.loginTimedOut",
 	"empty cookies": "errors.backend.emptyCookies",
 	"cookies missing SAPISID": "errors.backend.missingSapisid",
+	"the browser's cookies could not be decrypted: unlock the keyring and try again":
+		"errors.backend.keyringLocked",
+	"the YouTube session cannot open private resources: import a cookies.txt export":
+		"errors.backend.sessionPartial",
 	"update: install already in progress": "errors.backend.installInProgress",
 	"update: automatic install is not supported on this channel":
 		"errors.backend.installUnsupported",
@@ -20,6 +24,8 @@ const BACKEND: Record<string, string> = {
 	"every recovery attempt failed": "errors.recoveryFailed",
 	"the browser needs a click to allow playback": "errors.playbackBlocked",
 	"consensus timeout": "errors.consensusTimeout",
+	"the backup file was written by another version":
+		"settings.autosave.errors.version",
 };
 
 export function translateError(error: unknown): string {

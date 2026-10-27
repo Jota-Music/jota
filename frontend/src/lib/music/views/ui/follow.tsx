@@ -1,5 +1,4 @@
 import { Heart } from "lucide-preact";
-import { spotifyUser } from "@/lib/auth/views/stores/session";
 import { saveLabel, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { follows, useFollows } from "@/lib/music/views/ui/user/follow";
 import { t } from "@/lib/shared/i18n";
@@ -63,8 +62,7 @@ export function FollowButton({
 	id: string;
 	variant?: Variant;
 }) {
-	const account = spotifyUser.value ?? "";
-	const { users, follow, unfollow } = useFollows(account);
+	const { users, follow, unfollow } = useFollows();
 
 	const on = follows(users, id);
 	const label = on ? t("music.unfollow") : t("music.follow");
@@ -74,7 +72,7 @@ export function FollowButton({
 			on={on}
 			label={label}
 			variant={variant}
-			disabled={!account || follow.isPending || unfollow.isPending}
+			disabled={follow.isPending || unfollow.isPending}
 			onClick={() => (on ? unfollow : follow).mutate(id)}
 		/>
 	);

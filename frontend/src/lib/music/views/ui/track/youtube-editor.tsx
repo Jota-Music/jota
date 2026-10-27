@@ -413,7 +413,7 @@ export default function YoutubeEditor() {
 																? "rounded-md outline-2 outline-(--dominant-color)"
 																: undefined
 														}
-														imgClass="size-10 shrink-0 rounded-md"
+														imgClass="size-10 shrink-0 rounded-md object-cover"
 													/>
 													<div class="flex min-w-0 flex-1 flex-col text-start">
 														<span

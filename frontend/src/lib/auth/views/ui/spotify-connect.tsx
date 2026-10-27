@@ -36,6 +36,7 @@ export function SpotifyConnect() {
 		<div class="flex flex-col items-center gap-3 text-center">
 			<SpotifyIcon size={24} class="text-zinc-400" />
 			<p class="text-sm text-zinc-400">{t("auth.spotify.prompt")}</p>
+			<p class="text-xs text-zinc-500">{t("auth.spotify.thirdPartyNote")}</p>
 			<button
 				type="button"
 				onClick={() => void handleLogin()}

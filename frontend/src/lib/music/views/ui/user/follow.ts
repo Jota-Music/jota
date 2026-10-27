@@ -13,14 +13,13 @@ import type { Action } from "@/lib/shared/views/ui/components/context-menu";
 export const follows = (users: string[], id: string) =>
 	users.some((u) => u.toLowerCase() === id.toLowerCase());
 
-export function useFollows(account: string) {
+export function useFollows() {
 	const queryClient = useQueryClient();
-	const key = ["followed-users", account];
+	const key = ["followed-users"];
 
 	const query = useQuery({
 		queryKey: key,
-		queryFn: () => getFollowedUsers(account),
-		enabled: !!account,
+		queryFn: getFollowedUsers,
 	});
 
 	const invalidate = () => queryClient.invalidateQueries({ queryKey: key });
@@ -28,13 +27,13 @@ export function useFollows(account: string) {
 	// A failed follow looks exactly like a broken button unless it is surfaced:
 	// mutate swallows the error, so the heart would just stay put.
 	const follow = useMutation({
-		mutationFn: (user: string) => followUser(account, user),
+		mutationFn: followUser,
 		onSuccess: invalidate,
 		onError: (error) => addError(error, "follow"),
 	});
 
 	const unfollow = useMutation({
-		mutationFn: (user: string) => unfollowUser(account, user),
+		mutationFn: unfollowUser,
 		onSuccess: invalidate,
 		onError: (error) => addError(error, "unfollow"),
 	});

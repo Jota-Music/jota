@@ -84,10 +84,52 @@
 			"description": "Recarga la app tras estar oculta un rato para liberar imágenes en caché. No afecta la reproducción.",
 			"label": "Recarga en reposo"
 		},
+		"backups": {
+			"title": "Copias de seguridad"
+		},
 		"logs": {
 			"title": "Registros",
 			"description": "Comparte el registro de la app al reportar un problema.",
 			"download": "Guardar registros"
+		},
+		"playlists": {
+			"title": "Guardados",
+			"description": "Copia todas tus playlists, también las de Spotify y YouTube, en un archivo JSON o restáuralas. Al reimportar se conserva la copia más reciente si la playlist ya existe.",
+			"export": "Exportar copia",
+			"import": "Importar copia",
+			"exported": "Copia exportada",
+			"exporting": "Exportando {done}/{total}…",
+			"imported": "Copia restaurada: {playlists} playlists, {follows} seguidos, {saved} guardadas, {order} órdenes y {settings} ajustes"
+		},
+		"autosave": {
+			"title": "Autoguardado",
+			"description": "Guarda tus playlists en jota.backup.json cada cierto tiempo, en una carpeta o una cuenta como Google Drive o Dropbox.",
+			"location": "Ubicación",
+			"none": "Sin ubicación seleccionada",
+			"choose": "Elegir ubicación",
+			"create": "Crear fichero",
+			"save": "Guardar ahora",
+			"overwrite": "Sobrescribir el fichero",
+			"done": "Playlists guardadas",
+			"status": {
+				"at": "Último guardado",
+				"size": "Tamaño",
+				"playlists": "Playlists en el fichero",
+				"imported": "Importadas"
+			},
+			"stale": "El último guardado no pudo escribir: el servicio sirvió una copia en caché del fichero. Vuelve a elegir la ubicación.",
+			"auto": "Autoguardado automático",
+			"import": "Autoimportar",
+			"importHint": "Trae también a tu biblioteca lo que otros dispositivos hayan guardado en el fichero.",
+			"secret": "El fichero lleva la dirección de tu relay y su token en claro, así que cualquiera que pueda abrirlo puede usarlos.",
+			"interval": "Cada",
+			"errors": {
+				"picker": "El selector de ficheros no está disponible",
+				"selected": "Ningún fichero seleccionado",
+				"read": "No se puede leer el fichero de guardado. Vuelve a elegirlo.",
+				"write": "No se puede escribir el fichero de guardado. Revisa la ubicación e inténtalo de nuevo.",
+				"version": "Ese fichero lo escribió otra versión de Jota. Sobrescríbelo para empezar de cero."
+			}
 		}
 	},
 	"pages": {
@@ -150,6 +192,7 @@
 		"spotify": {
 			"connect": "Conectar con Spotify",
 			"prompt": "Conecta con Spotify para usar esto.",
+			"thirdPartyNote": "Riesgo: Jota usa su propio cliente de terceros de Spotify, y Spotify puede bloquear la cuenta que conectes.",
 			"completeLogin": "Completa el inicio de sesión de Spotify y vuelve aquí.",
 			"couldNotConnect": "No se pudo conectar con Spotify.",
 			"offline": "Spotify no responde — mostrando tu biblioteca guardada",
@@ -164,20 +207,26 @@
 			"waiting": "Esperando el inicio de sesión…",
 			"unavailable": "El inicio de sesión integrado no está disponible en esta plataforma. Pega tus cookies o importa un cookies.txt en Ajustes → Cuenta.",
 			"errorHint": "{error} — también puedes pegar tus cookies en Ajustes → Cuenta.",
-			"riskLabel": "Riesgo.",
 			"settingsRisk": "Iniciar sesión con una cuenta de Google y usarla para reproducir audio puede hacer que Google la banee. Usa una cuenta que puedas permitirte perder y prefiere una secundaria.",
-			"signInBrowser": "Iniciar sesión con el navegador",
-			"orPaste": "o pega las cookies",
+			"loginClosed": "El inicio de sesión se cerró antes de que YouTube aceptara la sesión.",
+			"loginTimeout": "YouTube no terminó el inicio de sesión a tiempo.",
+			"signInWindow": "Iniciar sesión en la ventana de la app",
+			"browserImport": "Usar la sesión de {browser}",
+			"browserImportHint": "Lee la sesión de YouTube que {browser} ya tiene en este equipo. Ciérralo primero si la lectura falla.",
+			"browserImportBusy": "Leyendo las cookies de {browser}…",
+			"browserImportPick": "Navegador",
+			"cookiesManual": "Pegar cookies o importar cookies.txt",
 			"unavailableShort": "El inicio de sesión integrado no está disponible en esta plataforma. Pega tus cookies o importa un cookies.txt abajo.",
-			"pasteHint": "En una pestaña de youtube.com con sesión iniciada, ejecuta copy(document.cookie) en la consola y pégalo abajo, o importa un archivo cookies.txt.",
+			"pasteHint": "Importa un cookies.txt exportado con la sesión abierta: en una pestaña de youtube.com usa una extensión (Get cookies.txt) o ejecuta copy(document.cookie) sólo si no necesitas playlists privadas. Las cookies que abren tus listas (__Secure-3PSID) son HttpOnly y no están en document.cookie.",
 			"pastePlaceholder": "Pega las cookies (deben incluir SAPISID) o un cookies.txt",
-			"importFile": "Importar cookies.txt"
+			"importFile": "Importar cookies.txt",
+			"partial": "Esta sesión no puede abrir playlists privadas. Usa la sesión de un navegador:"
 		},
 		"account": {
 			"title": "Cuenta",
 			"connectedAs": "Conectado como",
 			"disconnect": "Desconectar",
-			"youtubeHint": "YouTube — necesario para vídeos con restricción de edad",
+			"youtubeHint": "YouTube — necesario para vídeos con restricción de edad y tus playlists",
 			"signedIn": "Sesión iniciada",
 			"signOut": "Cerrar sesión",
 			"cachedAs": "Biblioteca guardada de"
@@ -252,7 +301,8 @@
 				"reverse": "Más recientes",
 				"durationAsc": "Más cortas",
 				"durationDesc": "Más largas"
-			}
+			},
+			"spotifyLoginNeeded": "Inicia sesión en Spotify para reproducir estas canciones."
 		},
 		"track": {
 			"actions": "Más acciones",
@@ -260,7 +310,8 @@
 			"noSongs": "Sin canciones",
 			"broken": "Esta canción ya no está disponible en su origen.",
 			"brokenLabel": "No disponible",
-			"jumpToCurrent": "Ir a la canción actual"
+			"jumpToCurrent": "Ir a la canción actual",
+			"spotifyLogin": "Requiere sesión de Spotify"
 		},
 		"player": {
 			"enableShuffle": "Activar aleatorio",
@@ -326,7 +377,6 @@
 			"deselect": "Deseleccionar",
 			"deselectAll": "Deseleccionar todo",
 			"noPlaylists": "Aún no hay playlists. Crea una abajo.",
-
 			"undo": "Deshacer",
 			"deletePlaylist": "Eliminar playlist",
 			"rename": "Renombrar playlist"
@@ -438,8 +488,10 @@
 			"loginTimedOut": "el inicio de sesión agotó el tiempo",
 			"emptyCookies": "cookies vacías",
 			"missingSapisid": "faltan cookies SAPISID",
+			"keyringLocked": "No se pudieron leer las cookies del navegador: desbloquea el llavero, cierra el navegador y vuelve a intentarlo.",
 			"installInProgress": "update: ya hay una instalación en curso",
-			"installUnsupported": "update: la instalación automática no está soportada en este canal"
+			"installUnsupported": "update: la instalación automática no está soportada en este canal",
+			"sessionPartial": "YouTube no acepta esta sesión, así que las playlists privadas, tus listas y los me gusta no se pueden abrir. Vuelve a entrar con el navegador o importa un cookies.txt exportado con la sesión iniciada."
 		},
 		"relay": {
 			"hostLeft": "el anfitrión se fue",

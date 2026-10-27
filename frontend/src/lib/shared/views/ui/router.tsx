@@ -4,7 +4,7 @@ import {
 	ReloadWindow,
 	RevalidateFollowing,
 } from "@bindings/app";
-import { QueryClient, QueryClientProvider } from "@tanstack/preact-query";
+import { QueryClientProvider } from "@tanstack/preact-query";
 import { Events } from "@wailsio/runtime";
 import { lazy, Suspense } from "preact/compat";
 import { useEffect } from "preact/hooks";
@@ -23,6 +23,7 @@ import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
 import SettingsPage from "@/lib/shared/views/ui/pages/settings";
+import { queryClient } from "@/lib/shared/views/ui/query-client";
 import { loadRelay } from "@/lib/sync/app/transport";
 import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
 
@@ -66,21 +67,6 @@ const NotFoundPage = lazy(() =>
 		default: m.NotFoundPage,
 	})),
 );
-
-const queryClient = new QueryClient({
-	defaultOptions: {
-		queries: {
-			staleTime: 5 * 60 * 1000,
-			// Keep unmounted queries as long as they are fresh; the idle shed
-			// (IDLE_SHED_MS) is what bounds memory, so back/forward navigation can
-			// reuse the cache instead of refetching over the bridge.
-			gcTime: 5 * 60 * 1000,
-			// A desktop window regains focus constantly; refetching every active
-			// query on each focus just churns network and allocations.
-			refetchOnWindowFocus: false,
-		},
-	},
-});
 
 // Hidden for this long means the app is genuinely idle, not just unfocused, so
 // it is safe to drop every cached query and let them refetch on return.

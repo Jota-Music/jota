@@ -1,5 +1,6 @@
 import { effect } from "@preact/signals";
 import { render } from "preact";
+import { startAutosave } from "@/lib/music/app/backup";
 import { t } from "@/lib/shared/i18n";
 import { logError } from "@/lib/shared/views/stores/errors";
 import { dismiss } from "@/lib/shared/views/stores/overlays";
@@ -45,6 +46,10 @@ declare global {
 // route out from under an open sheet; it asks the page first and only goes
 // back when nothing was holding.
 window.__jotaBack = dismiss;
+
+// Coming back to the app, and on a timer while it is open, is when the sync
+// folder is reconciled; the settings switch decides whether that happens.
+startAutosave();
 
 const appRoot = document.getElementById("app");
 if (!appRoot) throw new Error("Missing #app root");

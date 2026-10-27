@@ -1,16 +1,13 @@
 import { FollowUser, GetFollowedUsers, UnfollowUser } from "@bindings/app";
 
-export async function getFollowedUsers(account: string): Promise<string[]> {
-	return (await GetFollowedUsers(account)) ?? [];
+export async function getFollowedUsers(): Promise<string[]> {
+	return (await GetFollowedUsers()) ?? [];
 }
 
-export async function followUser(account: string, user: string): Promise<void> {
-	await FollowUser(account, user);
+export async function followUser(user: string): Promise<void> {
+	await FollowUser(user);
 }
 
-export async function unfollowUser(
-	account: string,
-	user: string,
-): Promise<void> {
-	await UnfollowUser(account, user);
+export async function unfollowUser(user: string): Promise<void> {
+	await UnfollowUser(user);
 }

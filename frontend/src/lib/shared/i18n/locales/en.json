@@ -84,10 +84,52 @@
 			"description": "Reload the app after it has been hidden for a while to free cached images. Playback is not affected.",
 			"label": "Idle reload"
 		},
+		"backups": {
+			"title": "Backups"
+		},
 		"logs": {
 			"title": "Logs",
 			"description": "Share the app log when reporting a problem.",
 			"download": "Save logs"
+		},
+		"playlists": {
+			"title": "Saved",
+			"description": "Back up every playlist, Spotify and YouTube included, in a JSON file or restore them. Re-importing keeps the newer copy when a playlist already exists.",
+			"export": "Export backup",
+			"import": "Import backup",
+			"exported": "Backup exported",
+			"exporting": "Exporting {done}/{total}…",
+			"imported": "Backup restored: {playlists} playlists, {follows} follows, {saved} saved, {order} orders, {settings} settings"
+		},
+		"autosave": {
+			"title": "Autosave",
+			"description": "Save your playlists to jota.backup.json every so often, in a folder or an account like Google Drive or Dropbox.",
+			"location": "Location",
+			"none": "No location selected",
+			"choose": "Choose location",
+			"create": "Create file",
+			"save": "Save now",
+			"overwrite": "Overwrite the file",
+			"done": "Playlists saved",
+			"status": {
+				"at": "Last save",
+				"size": "Size",
+				"playlists": "Playlists in the file",
+				"imported": "Imported"
+			},
+			"stale": "The last save could not write: the service served a cached copy of the file. Choose the location again.",
+			"auto": "Autosave automatically",
+			"import": "Autoimport",
+			"importHint": "Bring to your library what other devices have saved in the file too.",
+			"secret": "The file carries your relay address and its token in plain text, so anyone who can open it can use them.",
+			"interval": "Every",
+			"errors": {
+				"picker": "The file picker is not available",
+				"selected": "No file selected",
+				"read": "The save file cannot be read. Choose it again.",
+				"write": "The save file cannot be written. Check the location and try again.",
+				"version": "That file was written by another version of Jota. Overwrite it to start fresh."
+			}
 		}
 	},
 	"pages": {
@@ -150,6 +192,7 @@
 		"spotify": {
 			"connect": "Connect with Spotify",
 			"prompt": "Connect with Spotify to use this.",
+			"thirdPartyNote": "Risk: Jota uses its own third-party Spotify client, and Spotify may block the account you connect.",
 			"completeLogin": "Complete Spotify login, then return here.",
 			"couldNotConnect": "Could not connect to Spotify.",
 			"offline": "Spotify is unreachable — showing your saved library",
@@ -161,23 +204,29 @@
 			"signInBody": "This track needs a signed-in YouTube account — it is age-restricted or YouTube asked to confirm you are not a bot.",
 			"signInRisk": "Risk: using an account this way can get it banned by Google. Prefer a secondary account.",
 			"signIn": "Sign in",
-			"waiting": "Waiting for sign-in…",
+			"waiting": "Waiting for the sign-in…",
 			"unavailable": "In-app sign-in is not available on this platform. Paste your cookies or import a cookies.txt in Settings → Account.",
 			"errorHint": "{error} — you can paste your cookies in Settings → Account instead.",
-			"riskLabel": "Risk.",
 			"settingsRisk": "Signing in with a Google account and using it to play audio can get that account banned by Google. Use an account you can afford to lose, and prefer a secondary one.",
-			"signInBrowser": "Sign in with browser",
-			"orPaste": "or paste cookies",
+			"loginClosed": "Sign-in was closed before YouTube accepted the session.",
+			"loginTimeout": "YouTube did not finish the sign-in in time.",
+			"signInWindow": "Sign in in the app window",
+			"browserImport": "Use the {browser} session",
+			"browserImportHint": "Reads the YouTube session {browser} already holds on this machine. Close it first if the read fails.",
+			"browserImportBusy": "Reading the cookies of {browser}…",
+			"browserImportPick": "Browser",
+			"cookiesManual": "Paste cookies or import a cookies.txt",
 			"unavailableShort": "In-app sign-in is not available on this platform. Paste your cookies or import a cookies.txt export below.",
-			"pasteHint": "On a signed-in youtube.com tab, run copy(document.cookie) in the console and paste it below, or import a cookies.txt export.",
+			"pasteHint": "Import a cookies.txt exported while signed in: on a youtube.com tab use an extension (Get cookies.txt), or run copy(document.cookie) only if you do not need private playlists. The cookies that open your lists (__Secure-3PSID) are HttpOnly and are not in document.cookie.",
 			"pastePlaceholder": "Paste cookies (must include SAPISID) or a cookies.txt export",
-			"importFile": "Import cookies.txt"
+			"importFile": "Import cookies.txt",
+			"partial": "This session cannot open private playlists. Use the session from a browser:"
 		},
 		"account": {
 			"title": "Account",
 			"connectedAs": "Connected as",
 			"disconnect": "Disconnect",
-			"youtubeHint": "YouTube — needed for age-restricted videos",
+			"youtubeHint": "YouTube — needed for age-restricted videos and your own playlists",
 			"signedIn": "Signed in",
 			"signOut": "Sign out",
 			"cachedAs": "Saved library of"
@@ -252,7 +301,8 @@
 				"reverse": "Newest",
 				"durationAsc": "Shortest",
 				"durationDesc": "Longest"
-			}
+			},
+			"spotifyLoginNeeded": "Sign in to Spotify to play these songs."
 		},
 		"track": {
 			"actions": "More actions",
@@ -260,7 +310,8 @@
 			"noSongs": "No songs",
 			"broken": "This song is no longer available at its source.",
 			"brokenLabel": "Unavailable",
-			"jumpToCurrent": "Jump to current song"
+			"jumpToCurrent": "Jump to current song",
+			"spotifyLogin": "Requires Spotify sign-in"
 		},
 		"player": {
 			"enableShuffle": "Enable shuffle",
@@ -326,7 +377,6 @@
 			"deselect": "Deselect",
 			"deselectAll": "Deselect all",
 			"noPlaylists": "No playlists yet. Create one below.",
-
 			"undo": "Undo",
 			"deletePlaylist": "Delete playlist",
 			"rename": "Rename playlist"
@@ -438,8 +488,10 @@
 			"loginTimedOut": "login timed out",
 			"emptyCookies": "empty cookies",
 			"missingSapisid": "cookies missing SAPISID",
+			"keyringLocked": "The browser's cookies could not be read: unlock the keyring, close the browser and try again.",
 			"installInProgress": "update: install already in progress",
-			"installUnsupported": "update: automatic install is not supported on this channel"
+			"installUnsupported": "update: automatic install is not supported on this channel",
+			"sessionPartial": "YouTube did not accept this session, so private playlists, your own lists and liked songs cannot be opened. Sign in again from the browser, or import a cookies.txt exported while signed in."
 		},
 		"relay": {
 			"hostLeft": "host left",

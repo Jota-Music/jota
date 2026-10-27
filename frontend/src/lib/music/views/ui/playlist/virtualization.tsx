@@ -8,6 +8,7 @@ import {
 import { memo } from "preact/compat";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
+import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import type { Song } from "@/lib/music/model";
 import { rowSelect } from "@/lib/music/views/hooks/row-select";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
@@ -108,7 +109,13 @@ function PlaylistRow({
 			data-id={song.id}
 			data-playlist-index={index}
 			role="none"
-			title={broken ? t("music.track.broken") : undefined}
+			title={
+				broken
+					? song.id.startsWith("spotify:") && !spotifyConnected.value
+						? t("music.track.spotifyLogin")
+						: t("music.track.broken")
+					: undefined
+			}
 			onClick={onClick}
 			onContextMenu={(e) => {
 				if (broken) return;
@@ -148,7 +155,7 @@ function PlaylistRow({
 								? "rounded-md outline-2 outline-(--dominant-color)"
 								: undefined
 						}
-						imgClass="h-10 w-10 rounded-md"
+						imgClass="h-10 w-10 rounded-md object-cover"
 					/>
 					{reorderable && (
 						<span

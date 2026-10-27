@@ -46,11 +46,7 @@ function link(id: string): string {
 // so the shelf is populated on login without the user adding anything.
 export function FollowingShelf({ account }: { account: string }) {
 	const queryClient = useQueryClient();
-	const {
-		users: followed,
-		isLoading: followedLoading,
-		toggle,
-	} = useFollows(account);
+	const { users: followed, isLoading: followedLoading, toggle } = useFollows();
 
 	const friends = useQuery({
 		queryKey: ["friends", account],
@@ -65,8 +61,8 @@ export function FollowingShelf({ account }: { account: string }) {
 	});
 
 	const orderQuery = useQuery({
-		queryKey: ["shelf-order", "following", account],
-		queryFn: () => getOrder("following", account),
+		queryKey: ["shelf-order", "following"],
+		queryFn: () => getOrder("following", ""),
 		enabled: !!account,
 	});
 
@@ -217,7 +213,7 @@ export function FollowingShelf({ account }: { account: string }) {
 			toId,
 		);
 		queryClient.setQueryData(["shelf-order", "following", account], next);
-		void saveOrder("following", account, next);
+		void saveOrder("following", "", next);
 	};
 
 	return (

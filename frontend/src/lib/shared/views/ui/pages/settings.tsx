@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import { AccountSettings } from "@/lib/auth/views/ui/account-settings";
 import { t } from "@/lib/shared/i18n";
 import { browse } from "@/lib/shared/utils/open";
+import { BackupsSettings } from "@/lib/shared/views/ui/components/backups-settings";
 import { DiscordSettings } from "@/lib/shared/views/ui/components/discord-settings";
 import { IdleSettings } from "@/lib/shared/views/ui/components/idle-settings";
 import { LanguageSettings } from "@/lib/shared/views/ui/components/language-settings";
@@ -46,6 +47,7 @@ function SettingsPage() {
 				<IdleSettings />
 				<RelaySettings />
 				<AboutSettings />
+				<BackupsSettings />
 				<LogsSettings />
 
 				<footer class="mt-auto pt-5 text-center text-xs text-zinc-600 md:pt-6">

@@ -5,7 +5,6 @@ import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Disc3, ListMusic, Loader } from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import { useParams } from "wouter-preact";
-import { spotifyUser } from "@/lib/auth/views/stores/session";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import { pageLink } from "@/lib/music/app/share";
 import type { AlbumSummary, Song } from "@/lib/music/model";
@@ -77,10 +76,8 @@ export function ArtistPage() {
 	const queryClient = useQueryClient();
 	const { id } = useParams<{ id: string }>();
 
-	// The follow is local, so it needs an account to live in, same as the
-	// button next to the play button disables itself without one.
-	const account = spotifyUser.value ?? "";
-	const { toggle } = useFollows(account);
+	// The follow is local to this install, so it needs no account.
+	const { toggle } = useFollows();
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["artist", id],
@@ -148,9 +145,7 @@ export function ArtistPage() {
 					activeTab === "tracks" ? (
 						<TrackActions
 							songs={tracks}
-							playlistActions={
-								account && id ? [toggle(`artist:${id}`)] : undefined
-							}
+							playlistActions={id ? [toggle(`artist:${id}`)] : undefined}
 							share={shareLink(pageLink("artist", id ?? ""))}
 							onSelectAll={selectAll}
 							reserve={isLoading}

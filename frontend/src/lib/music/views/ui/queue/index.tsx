@@ -141,7 +141,7 @@ const QueueRow = memo(function QueueRow({
 				loading={loading}
 				playing={playing}
 				imgClass={cn(
-					"h-9 w-9 shrink-0 rounded-md sm:h-10 sm:w-10",
+					"h-9 w-9 shrink-0 rounded-md object-cover sm:h-10 sm:w-10",
 					isCurrent && "ring-2 ring-(--dominant-color)/80",
 				)}
 			/>

@@ -17,6 +17,7 @@ import {
 } from "lucide-preact";
 import { useEffect, useMemo, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
+import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import {
 	getFullPlaylist,
 	revalidateFullPlaylist,
@@ -53,6 +54,7 @@ import { shareLink } from "@/lib/music/views/ui/share";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
+import { translateError } from "@/lib/shared/i18n/errors";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
 import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
@@ -164,7 +166,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		search.value = "";
 	}, [id]);
 
-	const { data, isLoading, isError, refetch } = useQuery<Playlist>({
+	const { data, isLoading, isError, error, refetch } = useQuery<Playlist>({
 		queryKey: ["playlist", id],
 		queryFn: () => getFullPlaylist(id),
 	});
@@ -289,6 +291,10 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		};
 	}, [songs, custom, query, order.value]);
 
+	const hasBrokenSpotify = songs.some(
+		(song) => song.broken && song.id.startsWith("spotify:"),
+	);
+
 	const handleReorder = (from: number, to: number) => {
 		const fromSong = songs[from];
 		const toSong = songs[to];
@@ -316,6 +322,9 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		return (
 			<div className="flex min-h-0 flex-1 flex-col items-start gap-3 p-4 text-sm">
 				<p className="text-red-400">{t("music.playlist.failed")}</p>
+				<p className="max-w-xl text-xs break-words text-zinc-500">
+					{translateError(error)}
+				</p>
 				<button
 					type="button"
 					onClick={handleRefresh}
@@ -438,6 +447,12 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				</div>
 			)}
 
+			{!isLoading && hasBrokenSpotify && !spotifyConnected.value && (
+				<div class="rounded-md border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+					{t("music.playlist.spotifyLoginNeeded")}
+				</div>
+			)}
+
 			{isLoading ? (
 				<div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
 					<Loader size={40} class="animate-spin" />
@@ -502,7 +517,6 @@ export default function PlaylistPlain({ id }: { id: string }) {
 						id="rename-playlist-input"
 						type="text"
 						value={renameDraft.value}
-						autoFocus
 						onInput={(e) => {
 							renameDraft.value = (e.target as HTMLInputElement).value;
 						}}
@@ -627,9 +641,9 @@ function PlaylistHeader({
 			link={link}
 			linkReserve
 			beforePlay={
-				follow || custom ? (
-					follow && <SaveButton id={id} variant="toolbar" />
-				) : undefined
+				follow || custom
+					? follow && <SaveButton id={id} variant="toolbar" />
+					: undefined
 			}
 			onPlay={
 				playable.length > 0 ? () => void playList(playable, id) : undefined

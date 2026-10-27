@@ -1,3 +1,4 @@
+import { GetMyYouTubePlaylists } from "@bindings/app";
 import { useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Disc3 } from "lucide-preact";
@@ -7,6 +8,7 @@ import {
 	spotifyDegraded,
 	spotifyUser,
 } from "@/lib/auth/views/stores/session";
+import { youtubeSignedIn } from "@/lib/auth/views/stores/youtube";
 import { getUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import { playlistSource } from "@/lib/music/app/playlist-source";
@@ -49,6 +51,14 @@ export function MainPage() {
 		enabled: spotifyConnected.value || spotifyDegraded.value,
 	});
 
+	// The YouTube account's own playlists sit next to Spotify's, in the same
+	// shelf: the signed-in account is a source of playlists, not a setting.
+	const youtubeQuery = useQuery({
+		queryKey: ["user-playlists", "youtube"],
+		queryFn: () => GetMyYouTubePlaylists(),
+		enabled: youtubeSignedIn.value,
+	});
+
 	const { saved, isLoading: loadingSaved } = useSaved();
 
 	const customQuery = useQuery({
@@ -70,9 +80,13 @@ export function MainPage() {
 		onError: (error) => addError(error, "playlist"),
 	});
 
-	// A playlist the account already owns is listed by the Spotify query above,
-	// so keeping it out of the saved list avoids showing it twice.
-	const own = new Set((spotifyQuery.data ?? []).map((p) => p.id));
+	// A playlist the account already owns is listed by the account queries
+	// above, so keeping it out of the saved list avoids showing it twice.
+	const own = new Set(
+		[...(spotifyQuery.data ?? []), ...(youtubeQuery.data ?? [])].map(
+			(p) => p.id,
+		),
+	);
 	const followed = new Set(saved.map((p) => p.id));
 
 	const items: Item[] = [
@@ -84,6 +98,17 @@ export function MainPage() {
 				source: "spotify",
 			}),
 		),
+		...(youtubeQuery.data ?? [])
+			.filter((p) => !followed.has(p.id))
+			.map(
+				(p): Item => ({
+					id: p.id,
+					name: p.name,
+					cover: p.cover,
+					subtitle: p.subtitle,
+					source: "youtube",
+				}),
+			),
 		// The heart is what unfollows a saved playlist, so it needs no trash:
 		// the shelf keeps one way to drop an external playlist and one to delete
 		// a local one.
@@ -149,7 +174,10 @@ export function MainPage() {
 						}
 						actions={(id) => <PlaylistPlayButton id={id} />}
 						isLoading={
-							spotifyQuery.isLoading || loadingSaved || customQuery.isLoading
+							spotifyQuery.isLoading ||
+							youtubeQuery.isLoading ||
+							loadingSaved ||
+							customQuery.isLoading
 						}
 						emptyMessage={<AllHint />}
 						onPlay={(id) => void playPlaylist(queryClient, id)}
