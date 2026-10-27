@@ -152,11 +152,18 @@ public class SyncDocuments {
                 if (!cursor.moveToFirst()) return "{}";
                 long modified = 0;
                 long size = -1;
+                String displayName = "";
                 int modIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED);
                 if (modIdx >= 0 && !cursor.isNull(modIdx)) modified = cursor.getLong(modIdx);
                 int sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE);
                 if (sizeIdx >= 0 && !cursor.isNull(sizeIdx)) size = cursor.getLong(sizeIdx);
-                return new JSONObject().put("lastModified", modified).put("size", size).toString();
+                int nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (nameIdx >= 0 && !cursor.isNull(nameIdx)) displayName = cursor.getString(nameIdx);
+                return new JSONObject()
+                        .put("lastModified", modified)
+                        .put("size", size)
+                        .put("displayName", displayName)
+                        .toString();
             } finally {
                 cursor.close();
             }

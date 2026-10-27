@@ -103,14 +103,15 @@
 		},
 		"autosave": {
 			"title": "Autoguardado",
-			"description": "Guarda tus playlists en jota.backup.json cada cierto tiempo, en una carpeta o una cuenta como Google Drive o Dropbox.",
+			"description": "Guarda tu biblioteca en jota.backup.json cada cierto tiempo, en una carpeta o una cuenta como Google Drive o Dropbox.",
 			"location": "Ubicación",
 			"none": "Sin ubicación seleccionada",
 			"choose": "Elegir ubicación",
+			"change": "Cambiar ubicación",
 			"create": "Crear fichero",
 			"save": "Guardar ahora",
 			"overwrite": "Sobrescribir el fichero",
-			"done": "Playlists guardadas",
+			"done": "Guardado",
 			"status": {
 				"at": "Último guardado",
 				"size": "Tamaño",
@@ -122,6 +123,11 @@
 			"import": "Autoimportar",
 			"importHint": "Trae también a tu biblioteca lo que otros dispositivos hayan guardado en el fichero.",
 			"secret": "El fichero lleva la dirección de tu relay y su token en claro, así que cualquiera que pueda abrirlo puede usarlos.",
+			"session": {
+				"title": "Cifrado de sesiones",
+				"pass": "La misma contraseña en todos los dispositivos",
+				"hint": "Con contraseña, las sesiones de YouTube y Spotify se cifran y viajan en el backup. Déjala vacía para mantenerlas solo en este dispositivo."
+			},
 			"interval": "Cada",
 			"errors": {
 				"picker": "El selector de ficheros no está disponible",

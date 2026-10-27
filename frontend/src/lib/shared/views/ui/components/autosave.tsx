@@ -1,5 +1,7 @@
 import {
 	ChooseSyncFolder,
+	SessionPass,
+	SetSessionPass,
 	SetSyncAuto,
 	SetSyncImport,
 	SetSyncInterval,
@@ -13,15 +15,18 @@ import {
 import { useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { FolderPlus, FolderSync, Save, TriangleAlert } from "lucide-preact";
+import { useEffect } from "preact/hooks";
 import {
 	autosave,
 	chooseFile,
 	createFile,
 	isAndroid,
+	syncName,
 } from "@/lib/music/app/backup";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError, notify } from "@/lib/shared/views/stores/errors";
+import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
 import { Switch } from "@/lib/shared/views/ui/components/switch";
 
 // Numeric and compact on purpose: "this minute" reads worse than "0 min" and
@@ -55,11 +60,30 @@ export function Autosave() {
 	const queryClient = useQueryClient();
 
 	const failed = useSignal(false);
+	const cookiePass = useSignal("");
+
+	useEffect(() => {
+		void SessionPass().then((p) => {
+			cookiePass.value = p ?? "";
+		});
+	}, []);
 
 	const { data: folder = "" } = useQuery({
 		queryKey: ["sync-folder"],
 		queryFn: SyncFolder,
 	});
+
+	const folderName = useSignal("");
+
+	useEffect(() => {
+		if (!folder) {
+			folderName.value = "";
+			return;
+		}
+		void syncName(folder).then((name) => {
+			folderName.value = name;
+		});
+	}, [folder]);
 
 	const { data: auto = false } = useQuery({
 		queryKey: ["sync-auto"],
@@ -82,6 +106,13 @@ export function Autosave() {
 		mutationFn: SetSyncImport,
 		onSuccess: (_value, variables) =>
 			queryClient.setQueryData(["sync-import"], variables),
+		onError: (error) => addError(error, "sync"),
+	});
+
+	// The pass is only stored on blur: every keystroke would re-encrypt the
+	// sessions and start a sync pass.
+	const passMutation = useMutation({
+		mutationFn: SetSessionPass,
 		onError: (error) => addError(error, "sync"),
 	});
 
@@ -165,7 +196,34 @@ export function Autosave() {
 				{t("settings.autosave.secret")}
 			</p>
 
-			<div class="rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
+			<div class="space-y-2 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+				<p class="text-xs font-semibold text-zinc-400">
+					{t("settings.autosave.session.title")}
+				</p>
+				<PasswordInput
+					value={cookiePass.value}
+					onValue={(v) => {
+						cookiePass.value = v;
+					}}
+					onBlur={() => passMutation.mutate(cookiePass.value)}
+					placeholder={t("settings.autosave.session.pass")}
+					class="w-full rounded-lg border border-zinc-800 bg-zinc-950 p-2 text-xs text-zinc-200 outline-none transition-all focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+				/>
+				<p class="text-xs text-zinc-500">
+					{t("settings.autosave.session.hint")}
+				</p>
+			</div>
+
+			<button
+				type="button"
+				disabled={busy}
+				onClick={() => chooseMutation.mutate()}
+				class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-100 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				<FolderSync size={12} />
+				{folder ? t("settings.autosave.change") : t("settings.autosave.choose")}
+			</button>
+			<div class="space-y-2 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
 				<p class="text-[11px] text-zinc-500">
 					{t("settings.autosave.location")}
 				</p>
@@ -173,7 +231,9 @@ export function Autosave() {
 					class="truncate text-xs font-medium text-zinc-300"
 					title={folder || undefined}
 				>
-					{folder ? name(folder) : t("settings.autosave.none")}
+					{folder
+						? folderName.value || name(folder)
+						: t("settings.autosave.none")}
 				</p>
 				{status && status.at > 0 && (
 					<dl class="mt-2 grid grid-cols-[1fr_auto] items-baseline gap-x-4 gap-y-1 text-[11px]">
@@ -204,6 +264,32 @@ export function Autosave() {
 					</dl>
 				)}
 			</div>
+
+			<button
+				type="button"
+				disabled={busy || !folder}
+				onClick={() => saveMutation.mutate(false)}
+				class={cn(
+					"flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+					pending
+						? "bg-(--dominant-color) text-(--binary-color) hover:opacity-85"
+						: "border border-zinc-700 bg-zinc-950 text-zinc-100 hover:border-zinc-500",
+				)}
+			>
+				<Save size={12} />
+				{t("settings.autosave.save")}
+			</button>
+			{isAndroid && !folder && (
+				<button
+					type="button"
+					disabled={busy}
+					onClick={() => createMutation.mutate()}
+					class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-100 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					<FolderPlus size={12} />
+					{t("settings.autosave.create")}
+				</button>
+			)}
 
 			{status?.stale && (
 				<div class="flex items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
@@ -262,43 +348,6 @@ export function Autosave() {
 						</option>
 					))}
 				</select>
-			</div>
-
-			<div class="flex flex-wrap gap-2">
-				<button
-					type="button"
-					disabled={busy || !folder}
-					onClick={() => saveMutation.mutate(false)}
-					class={cn(
-						"flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:w-auto disabled:cursor-not-allowed disabled:opacity-50",
-						pending
-							? "bg-(--dominant-color) text-(--binary-color) hover:opacity-85"
-							: "border border-zinc-700 bg-zinc-950 text-zinc-100 hover:border-zinc-500",
-					)}
-				>
-					<Save size={12} />
-					{t("settings.autosave.save")}
-				</button>
-				<button
-					type="button"
-					disabled={busy}
-					onClick={() => chooseMutation.mutate()}
-					class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg sm:w-auto border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-100 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					<FolderSync size={12} />
-					{t("settings.autosave.choose")}
-				</button>
-				{isAndroid && !folder && (
-					<button
-						type="button"
-						disabled={busy}
-						onClick={() => createMutation.mutate()}
-						class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg sm:w-auto border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-100 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-					>
-						<FolderPlus size={12} />
-						{t("settings.autosave.create")}
-					</button>
-				)}
 			</div>
 
 			{failed.value && folder && (

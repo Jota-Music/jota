@@ -103,14 +103,15 @@
 		},
 		"autosave": {
 			"title": "Autosave",
-			"description": "Save your playlists to jota.backup.json every so often, in a folder or an account like Google Drive or Dropbox.",
+			"description": "Save your library to jota.backup.json every so often, in a folder or an account like Google Drive or Dropbox.",
 			"location": "Location",
 			"none": "No location selected",
 			"choose": "Choose location",
+			"change": "Change location",
 			"create": "Create file",
 			"save": "Save now",
 			"overwrite": "Overwrite the file",
-			"done": "Playlists saved",
+			"done": "Saved",
 			"status": {
 				"at": "Last save",
 				"size": "Size",
@@ -122,6 +123,11 @@
 			"import": "Autoimport",
 			"importHint": "Bring to your library what other devices have saved in the file too.",
 			"secret": "The file carries your relay address and its token in plain text, so anyone who can open it can use them.",
+			"session": {
+				"title": "Session encryption",
+				"pass": "Same pass on every device",
+				"hint": "When set, the YouTube and Spotify sessions are encrypted and synced through the backup. Leave empty to keep them local only."
+			},
 			"interval": "Every",
 			"errors": {
 				"picker": "The file picker is not available",

@@ -15,7 +15,7 @@ import { queryClient } from "@/lib/shared/views/ui/query-client";
 
 const ANDROID = /Android/i.test(navigator.userAgent);
 
-type Info = { lastModified: number; size: number };
+type Info = { lastModified: number; size: number; displayName?: string };
 
 // The document calls run off the JS thread on Android, so each one takes a
 // callback id and the native side answers through window.__jotaSyncCallback.
@@ -141,10 +141,23 @@ async function info(bridge: Bridge, uri: string): Promise<Info | null> {
 		const answer = await ask((id) => bridge.syncFileInfoAsync(id, uri));
 		const parsed = JSON.parse(answer) as Partial<Info>;
 		if (typeof parsed.lastModified !== "number") return null;
-		return { lastModified: parsed.lastModified, size: parsed.size ?? -1 };
+		return {
+			lastModified: parsed.lastModified,
+			size: parsed.size ?? -1,
+			displayName: parsed.displayName,
+		};
 	} catch {
 		return null;
 	}
+}
+
+// The document URI is a provider id, not a path; the readable name comes from
+// the provider's metadata.
+export async function syncName(uri: string): Promise<string> {
+	const bridge = native();
+	if (!bridge || !uri) return "";
+	const found = await info(bridge, uri);
+	return found?.displayName ?? "";
 }
 
 // A cloud provider can serve a cached copy of the file we wrote minutes ago.
