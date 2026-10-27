@@ -93,16 +93,21 @@ func (d *Document) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if in.Version != Version {
-		return fmt.Errorf("%w: version %d", ErrUnreadable, in.Version)
+		return fmt.Errorf("%w: version %d", ErrVersion, in.Version)
 	}
 	*d = Document(in)
 	return nil
 }
 
-// ErrUnreadable is the one failure a caller can act on: a file this build
-// cannot read, which the user solves by overwriting it. The detail goes to the
-// log, never to the panel, because a JSON decoder message says nothing useful.
-var ErrUnreadable = errors.New("the backup file was written by another version")
+// ErrVersion is a document this build does not write. ErrUnreadable is a file
+// it cannot parse at all, which a provider that serves a truncated copy (a
+// cloud mount mid-upload) produces. Both are solved the same way — overwriting
+// it — but they are not the same thing, and saying "another version" about a
+// damaged file sends the user looking for the wrong cause.
+var (
+	ErrVersion    = errors.New("the backup file was written by another version")
+	ErrUnreadable = errors.New("the backup file cannot be read")
+)
 
 // Parse reads a document. A blank file is an empty one, so a backup file that
 // was just created can be filled in instead of being reported as broken.
@@ -113,6 +118,9 @@ func Parse(data []byte) (Document, error) {
 	var doc Document
 	if err := json.Unmarshal(data, &doc); err != nil {
 		log.Printf("backup: %v", err)
+		if errors.Is(err, ErrVersion) {
+			return Document{}, ErrVersion
+		}
 		return Document{}, ErrUnreadable
 	}
 	return doc, nil

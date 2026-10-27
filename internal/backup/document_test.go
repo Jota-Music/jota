@@ -2,6 +2,7 @@ package backup
 
 import (
 	"encoding/json"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -123,9 +124,15 @@ func TestDocumentRoundTrip(t *testing.T) {
 // guessed at, and a blank file is an empty document, not a broken one.
 func TestDocumentRejectsOtherVersions(t *testing.T) {
 	for _, text := range []string{`{"version":2}`, `{"version":0}`, `{"playlists":{"items":[]}}`} {
-		if _, err := Parse([]byte(text)); err == nil {
-			t.Fatalf("parsed %s", text)
+		if _, err := Parse([]byte(text)); !errors.Is(err, ErrVersion) {
+			t.Fatalf("parsed %s: %v, want ErrVersion", text, err)
 		}
+	}
+
+	// A copy a provider cut short is not another version: it is unreadable, and
+	// the panel has to say so instead of sending the user after a version.
+	if _, err := Parse([]byte(`{"version":1,"playlists":{"items":[`)); !errors.Is(err, ErrUnreadable) {
+		t.Fatalf("truncated document = %v, want ErrUnreadable", err)
 	}
 
 	doc, err := Parse([]byte(" \n"))
