@@ -80,8 +80,10 @@ cd frontend && bun run typecheck && bun run lint
 
 The account's cookies let innertube requests sign with `SAPISIDHASH`, which is what
 unlocks age-restricted videos, the bot check and the account's own playlists. The
-string lives in the `youtube-auth` bucket and never travels in the sync document.
-The UI warns before storing it: Google can ban an account used this way.
+string lives in the `youtube-auth` bucket and leaves a device only through a file
+the user exports (encrypted when a pass is set) or through the `sessions` section
+of the sync document, which only travels behind that pass (see Playlist sync). The
+UI warns before storing it: Google can ban an account used this way.
 
 - **Linux reads the browser's jar** (`internal/services/youtube/cookies_*_linux.go`).
   Chromium's `Cookies` SQLite file is copied (with `-wal`/`-shm`) before reading, and
@@ -92,23 +94,24 @@ The UI warns before storing it: Google can ban an account used this way.
 - **Chrome's app-bound encryption is not readable.** A `v20` row (Chrome 127+) is
   not `v10`/`v11`, so it fails like a locked keyring and the import answers
   `errKeyring`. Firefox still works, and so does pasting a cookies.txt.
-- **Android cannot read a browser jar.** It opens its own `YouTubeLoginActivity`
-  WebView. After each page load a probe polls `/feed/playlists` with the WebView's
-  cookies, the HttpOnly ones included, and takes `"LOGGED_IN":true` in the answer
-  as the verdict; `document.cookie` and `ytcfg` are not trusted for it. Once that
-  says the session is signed in, the activity reads `CookieManager.getCookie`,
-  the page's `VISITOR_DATA` and its client version, and the bridge hands all
-  three to `SetYouTubeSession`, which stores the cookies and adopts the visitor,
-  so requests speak as that session instead of a probing guest. The activity
-  logs cookie **names** only: logcat shows `SSID`, `HSID` and `__Secure-3PSID`
-  without ever printing a value.
+- **Android cannot read a browser jar and has no sign-in of its own.** The app is
+  one fullscreen WebView that cannot load an external URL, so a session reaches the
+  phone through a cookies.txt it imports, or through the sync document (below).
+  `cookies_linux.go` is tagged `!android` for that reason, and `cookies_other.go`
+  (`!linux || android`) reports the jar import as unsupported instead of offering a
+  button that cannot work.
+- **A session can be carried between devices as a file.** `ExportYouTubeCookiesFile`
+  writes the stored cookies to a file the user picks (on Android it shares it
+  instead), encrypting it when a pass is set; `ImportYouTubeCookies` accepts that
+  file back, decrypting it with the pass this device has. The export is the way a
+  desktop session reaches a phone.
 - A session started from the desktop in-app window is read from the window's own
   cookie store, not from `document.cookie`, which never carries the HttpOnly ones.
   `WebviewCookies` reads WebKitGTK's `cookies.sqlite` (libsoup's plaintext
   `moz_cookies`), WebView2's `Network/Cookies` (AES-256-GCM with the DPAPI key in
   `Local State`) and WKWebView's `Cookies.binarycookies`. macOS needs no SQLite at
-  all, so `cookies_sqlite.go` is tagged `!darwin` and the driver stays out of that
-  binary. The store is flushed on
+  all, so `cookies_sqlite.go` is tagged `!android && !darwin` and the driver stays
+  out of those binaries. The store is flushed on
   the webview's own schedule, so `youtube_login.go` polls it for ten seconds and
   falls back to the page it already fetched. Windows and macOS still have no
   *browser* jar reader (`cookies_other.go`), only this one.
@@ -118,17 +121,22 @@ The UI warns before storing it: Google can ban an account used this way.
   memory and only the visible half of the session can be handed over.
 - A session is verified against YouTube (`Verify`) before it is kept. A partial one
   still signs requests but cannot open private playlists or the account's own lists,
-  which is what `SessionFull` reports to the panel.
+  which is what `SessionFull` reports to the panel and `youtube.Full` reports in Go.
+- **Startup checks the session.** `verifyYouTubeSession` runs in the background
+  after `ServiceStartup` and drops a stored session YouTube answers with
+  `ErrSession`, so the panel stops claiming it is signed in. The same verdict from
+  `GetMyYouTubePlaylists` drops it too, and `dropYouTubeSession` tombstones it so
+  the removal reaches the other devices instead of the next merge restoring it.
 - **Playback asks anonymously first.** `playerRequest` sends the player call as a
 guest and only retries it signed when the answer is `LOGIN_REQUIRED` and cookies
 are stored, so the account is spent only where it is needed. `audioURL` then
 tries the client that last produced a playable stream first (`youtube-client`
 bucket) and keeps the other innertube clients as a fallback, so a session does
 not walk the whole list on every track.
-- **`build/android/**` comes from the Wails template.** `YouTubeLoginActivity`,
-  `SyncDocuments`, the hooks in `WailsBridge`/`MainActivity`/`WailsJSBridge` and the
-  manifest entry are additions on top of it. A template regeneration overwrites
-  them, so re-apply them afterwards instead of hand-merging.
+- **`build/android/**` comes from the Wails template.** `SyncDocuments`, the hooks
+  in `WailsBridge`/`MainActivity`/`WailsJSBridge` and the manifest entry are
+  additions on top of it. A template regeneration overwrites them, so re-apply them
+  afterwards instead of hand-merging.
 
 ## Playlist sync
 
@@ -138,11 +146,12 @@ directory, so any file-sync tool works. On Android it is a `content://` document
 URI from the SAF picker, and there the provider may hand back a **cached copy**
 instead of the current file.
 
-- The document lays five sections side by side: `playlists`, `follows`, `saved`,
-`order` and `settings`. Each belongs to the package that owns its records
-(`internal/{playlists,follows,ordering}/section.go`,
-`internal/services/discord/saved/section.go`, `internal/app/backup_settings.go`),
-and a section the library has nothing for is omitted from the file.
+- The document lays six sections side by side: `playlists`, `follows`, `saved`,
+`order`, `settings` and `sessions`. Each belongs to the package that owns its
+records (`internal/{playlists,follows,ordering}/section.go`,
+`internal/services/discord/saved/section.go`, `internal/app/backup_settings.go`,
+`internal/app/sessions_store.go`), and a section the library has nothing for is
+omitted from the file.
 - The document is written compact. Measured on a real 4.6 MB library, indentation was 40% of the
 bytes, so it is dropped; the sections share metadata, which is what the size is really about
 (`internal/backup/size_test.go` pins it). gzip measured 4.4x and is out: it would need a binary
@@ -161,9 +170,31 @@ the `-at` companion key to date each value.
 [...], "at": ...}`, keyed by scope plus the owning account, so the library order
 of two accounts — and the rooms shelf, which has no account — never collide. A
 record stored before the scope existed still reads as a bare list of ids.
-- Only the settings that make sense on another device travel: `sync-interval`,
-`sync-import` and `relay`. A folder path belongs to the device, the sync status
-is this device's own state, and everything else stays out.
+- Only the settings that make sense on another device travel: the compound
+`sync` key (its `import` and `interval`) and `relay`. A folder path belongs to the
+device, the sync status is this device's own state, and everything else stays out.
+`readSyncSettings` still reads the older `sync-import`/`sync-interval` keys as a
+fallback, so an upgrade does not silently reset them.
+- `sessions` carries the YouTube cookies and the Spotify credentials, one entry per
+source (`youtube`, `spotify`), as an encrypted blob that merges exactly like a
+setting: `internal/backup/settings.go` aliases `Sessions` to `Settings`, so
+`mergeSettings` is the one merge and the `-at` companion still dates it. Both are
+staged into `session:<source>` when they change (`syncYouTubeCookies`,
+`syncSpotifySession`) and applied on a pass (`applyYouTubeCookies`,
+`applySpotifySession`), which reconnects or re-signs the source on the spot.
+- **The sessions only travel behind a pass.** `encryptWithPass` derives a 32-byte
+key with PBKDF2-SHA256 (100k iterations, random 16-byte salt) and seals the blob
+with AES-GCM under a random 12-byte nonce, prefixed `JOTAENC1:` so a plaintext
+value still reads back unchanged. The pass is the `session-pass` setting; a value
+written before the sessions existed lives in `youtube-cookie-pass`, which is still
+read as a fallback. With no pass nothing is staged, an empty value is a tombstone
+and a blob that will not open with the local pass is skipped.
+- A partial session never overwrites a full one: `applyYouTubeCookies` compares
+`youtube.Full` on both sides and leaves the local cookies alone when the incoming
+blob cannot open the account's own lists. The local full session is re-staged at
+startup, so it wins the next pass instead. The Spotify copy is applied only when
+it differs from the stored credentials, so a pass carrying nothing new does not
+disconnect a working session.
 - **The relay token is written in cleartext in the file**: the `relay` setting
 stores the URL and the token together, so anyone who can read the backup can use
 it. The settings UI says so next to the autosave controls.
@@ -206,7 +237,9 @@ erase them, so re-apply them on top.
   reports no timestamp, are safe to write: a merge is a union. Only a copy that is
   not ours and whose `lastModified` did not move after our write is treated as
   stale and merged read-only, so a merge still pending on another device is never
-  overwritten.
+  overwritten. A manual save is the user asking for the file now, so it trusts the
+  copy it just read even when the timestamp did not move; automatic passes keep the
+  conservative rule.
 - Only an applied write moves that baseline. A sync that just pulled must not, or
   the phone would consider every later copy stale and stop pushing forever.
 - The reading side decides `fresh` and passes it to `SyncDocument`, which records
