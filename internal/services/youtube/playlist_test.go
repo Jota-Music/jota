@@ -2,6 +2,7 @@ package youtube
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 )
 
@@ -265,5 +266,115 @@ func TestNormalizePlaylistId(t *testing.T) {
 		if got := normalizePlaylistId(in); got != want {
 			t.Fatalf("normalize(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+// The web client, the only one that opens a private playlist, nests the list
+// under a tab and moves it between releases: the walk has to find it anyway.
+const webBrowseFixture = `{
+  "contents": {
+    "twoColumnBrowseResultsRenderer": {
+      "tabs": [{
+        "tabRenderer": {
+          "content": {
+            "sectionListRenderer": {
+              "contents": [{
+                "itemSectionRenderer": {
+                  "contents": [{
+                    "playlistVideoListRenderer": {
+                      "contents": [
+                        { "playlistVideoRenderer": {
+                            "videoId": "privateVid1",
+                            "title": { "runs": [{ "text": "Private Song" }] },
+                            "shortBylineText": { "runs": [{ "text": "Artist" }] },
+                            "lengthSeconds": "200"
+                        }},
+                        { "continuationItemRenderer": {
+                            "continuationEndpoint": {
+                              "continuationCommand": { "token": "page-two" }
+                            }
+                        }}
+                      ]
+                    }
+                  }]
+                }
+              }]
+            }
+          }
+        }
+      }]
+    }
+  }
+}`
+
+func TestWebShapeFindsTheList(t *testing.T) {
+	list, ok := playlistList([]byte(webBrowseFixture))
+	if !ok {
+		t.Fatal("the web shape was not found")
+	}
+	songs := extractSongs(list, "test")
+	if len(songs) != 1 || songs[0].Id != "youtube:privateVid1" {
+		t.Fatalf("songs = %+v, want the private one", songs)
+	}
+	if got := playlistNext([]byte(webBrowseFixture)); got != "page-two" {
+		t.Fatalf("next = %q, want the list continuation", got)
+	}
+}
+
+// The known shape keeps being read by the typed path, so the walk does not
+// change what already worked.
+func TestKnownShapeStillParses(t *testing.T) {
+	var res playlistBrowseResponse
+	if err := json.Unmarshal([]byte(browseFixture), &res); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := res.firstList(); !ok {
+		t.Fatal("the known shape stopped parsing")
+	}
+	if _, ok := playlistList([]byte(browseFixture)); !ok {
+		t.Fatal("the walk does not see the known shape")
+	}
+}
+
+// A private playlist answers 200 with an empty page to the anonymous request, so
+// the read has to fall through to the account instead of stopping there.
+func TestPickPlaylistPrefersTheReadThatHasTheVideos(t *testing.T) {
+	empty := []byte(`{"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[]}}}`)
+
+	got, err := pickPlaylist(empty, nil, []byte(webBrowseFixture), nil, true)
+	if err != nil || !hasPlaylistPage(got) {
+		t.Fatalf("pick = %v/%v, want the signed page", len(got), err)
+	}
+
+	// The readable anonymous page is kept when asking the account fails.
+	got, err = pickPlaylist([]byte(browseFixture), nil, nil, errors.New("account unreachable"), true)
+	if err != nil || string(got) != browseFixture {
+		t.Fatalf("pick = %v/%v, want the anonymous page", len(got), err)
+	}
+
+	// Nothing readable on either side, with a full session: the caller reports it
+	// as not found; with a partial one, the session is the thing to fix.
+	if _, err := pickPlaylist(empty, nil, empty, nil, true); err != nil {
+		t.Fatalf("pick = %v, want the not-found path left to the caller", err)
+	}
+	if _, err := pickPlaylist(empty, nil, empty, nil, false); !errors.Is(err, errSession) {
+		t.Fatalf("pick = %v, want the session error", err)
+	}
+
+	// YouTube refusing the account is a session problem, not a missing playlist.
+	if _, err := pickPlaylist(empty, nil, nil, &apiError{Code: 401}, true); !errors.Is(err, errSession) {
+		t.Fatalf("pick = %v, want the session error on 401", err)
+	}
+}
+
+// The continuation shape carries the list under its own key.
+func TestContinuationShapeIsFound(t *testing.T) {
+	data := []byte(`{"continuationContents":{"playlistVideoListContinuation":{
+		"contents":[{"playlistVideoRenderer":{"videoId":"nextVid","title":{"runs":[{"text":"Next"}]}}}],
+		"continuations":[{"nextContinuationData":{"continuation":"page-three"}}]}}}`)
+
+	list, next, ok := playlistPage(data)
+	if !ok || len(extractSongs(list, "x")) != 1 || next != "page-three" {
+		t.Fatalf("page = %+v/%q/%v, want the continued videos", list, next, ok)
 	}
 }

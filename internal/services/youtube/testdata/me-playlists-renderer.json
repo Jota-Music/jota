@@ -1,0 +1,82 @@
+{
+  "contents": {
+    "twoColumnBrowseResultsRenderer": {
+      "tabs": [
+        {
+          "tabRenderer": {
+            "content": {
+              "sectionListRenderer": {
+                "contents": [
+                  {
+                    "itemSectionRenderer": {
+                      "contents": [
+                        {
+                          "compactPlaylistRenderer": {
+                            "playlistId": "PLBTanuC8SLeZUH4mYXFvRbDfxTMKvNLHJ",
+                            "title": {
+                              "runs": [
+                                {
+                                  "text": "Lofi Hip Hop 2026 - Lofi Music 2026 Playlist - Lo fi Playlist"
+                                }
+                              ]
+                            },
+                            "shortBylineText": {
+                              "runs": [
+                                {
+                                  "text": "Hitsify"
+                                }
+                              ]
+                            },
+                            "thumbnail": {
+                              "thumbnails": [
+                                {
+                                  "url": "https://i.ytimg.com/vi/GgVcgbtHY9k/mqdefault.jpg"
+                                },
+                                {
+                                  "url": "https://i.ytimg.com/vi/GgVcgbtHY9k/hq720.jpg"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "compactPlaylistRenderer": {
+                            "playlistId": "PLmxm7yELedw-19LktYIv1OtVgisjLXo90",
+                            "title": {
+                              "runs": [
+                                {
+                                  "text": "Lofi House Mix by Kiffen Beats"
+                                }
+                              ]
+                            },
+                            "shortBylineText": {
+                              "runs": [
+                                {
+                                  "text": "Zlone star"
+                                }
+                              ]
+                            },
+                            "thumbnail": {
+                              "thumbnails": [
+                                {
+                                  "url": "https://i.ytimg.com/vi/Khd-uyOuhGo/mqdefault.jpg"
+                                },
+                                {
+                                  "url": "https://i.ytimg.com/vi/Khd-uyOuhGo/hq720.jpg"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

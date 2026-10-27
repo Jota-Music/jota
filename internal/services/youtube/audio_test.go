@@ -25,6 +25,45 @@ func resetPotCache(t *testing.T) {
 	})
 }
 
+// resetSticky clears the remembered client so a test's order does not depend on
+// what an earlier test resolved, restoring the previous value afterwards.
+func resetSticky(t *testing.T) {
+	t.Helper()
+	orig, err := clientBucket.GetString(clientKey)
+	_ = clientBucket.Delete(clientKey)
+	t.Cleanup(func() {
+		if err == nil && orig != "" {
+			_ = clientBucket.SetString(clientKey, orig)
+			return
+		}
+		_ = clientBucket.Delete(clientKey)
+	})
+}
+
+func TestClientOrderPutsStickyClientFirst(t *testing.T) {
+	resetSticky(t)
+	if err := clientBucket.SetString(clientKey, "IOS"); err != nil {
+		t.Fatalf("seed sticky client: %v", err)
+	}
+
+	want := []string{"IOS"}
+	for _, c := range allClients() {
+		if c.Name != "IOS" {
+			want = append(want, c.Name)
+		}
+	}
+
+	order := clientOrder()
+	if len(order) != len(want) {
+		t.Fatalf("clients = %d, want %d", len(order), len(want))
+	}
+	for i, name := range want {
+		if order[i].Name != name {
+			t.Fatalf("order[%d] = %q, want %q", i, order[i].Name, name)
+		}
+	}
+}
+
 func TestWebPoTokenProviderFailures(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -290,6 +329,7 @@ func TestClientByName(t *testing.T) {
 }
 
 func TestAudioURLRejectsUnplayableStreams(t *testing.T) {
+	resetSticky(t)
 	oldFn := playerStreamURLFn
 	defer func() { playerStreamURLFn = oldFn }()
 
@@ -304,6 +344,7 @@ func TestAudioURLRejectsUnplayableStreams(t *testing.T) {
 }
 
 func TestAudioURLDoesNotRefreshWhenFallbackWorks(t *testing.T) {
+	resetSticky(t)
 	oldFn := playerStreamURLFn
 	defer func() { playerStreamURLFn = oldFn }()
 
@@ -347,6 +388,7 @@ func TestAudioURLDoesNotRefreshWhenFallbackWorks(t *testing.T) {
 }
 
 func TestAudioURLRefreshesVisitorWhenNoClientPlays(t *testing.T) {
+	resetSticky(t)
 	oldFn := playerStreamURLFn
 	defer func() { playerStreamURLFn = oldFn }()
 
@@ -384,6 +426,7 @@ func TestAudioURLRefreshesVisitorWhenNoClientPlays(t *testing.T) {
 }
 
 func TestAudioURLReturnsFirstPlayableClient(t *testing.T) {
+	resetSticky(t)
 	oldFn := playerStreamURLFn
 	defer func() { playerStreamURLFn = oldFn }()
 
@@ -413,5 +456,68 @@ func TestAudioURLReturnsFirstPlayableClient(t *testing.T) {
 	}
 	if callCount < 2 {
 		t.Fatalf("expected fallback probes, got %d calls", callCount)
+	}
+}
+
+// TestPlayerRequestSignsInAfterLoginRequired pins the fallback: the anonymous
+// player answer is retried signed, and that second request is the one carrying
+// the account cookies.
+func TestPlayerRequestSignsInAfterLoginRequired(t *testing.T) {
+	resetAuth(t)
+	seedVisitor(t, "v-test")
+	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
+		t.Fatalf("seed cookies: %v", err)
+	}
+
+	var hits, signed int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		if r.Header.Get("Cookie") == "" {
+			_, _ = io.WriteString(w, `{"playabilityStatus":{"status":"LOGIN_REQUIRED"}}`)
+			return
+		}
+		atomic.AddInt32(&signed, 1)
+		_, _ = io.WriteString(w, `{"playabilityStatus":{"status":"OK"}}`)
+	}))
+	defer server.Close()
+
+	data, err := playerRequest(preferredClient, server.URL, map[string]any{"videoId": "vid12345678"})
+	if err != nil {
+		t.Fatalf("playerRequest: %v", err)
+	}
+	if loginRequired(data) {
+		t.Fatalf("expected the signed answer, got %s", data)
+	}
+	if got := atomic.LoadInt32(&hits); got != 2 {
+		t.Fatalf("requests = %d, want 2 (anonymous, then signed)", got)
+	}
+	if got := atomic.LoadInt32(&signed); got != 1 {
+		t.Fatalf("signed requests = %d, want 1", got)
+	}
+}
+
+func TestPlayerRequestStaysAnonymousWithoutCookies(t *testing.T) {
+	resetAuth(t)
+	seedVisitor(t, "v-test")
+
+	var hits int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		if cookie := r.Header.Get("Cookie"); cookie != "" {
+			t.Errorf("anonymous request carried cookies: %q", cookie)
+		}
+		_, _ = io.WriteString(w, `{"playabilityStatus":{"status":"LOGIN_REQUIRED"}}`)
+	}))
+	defer server.Close()
+
+	data, err := playerRequest(preferredClient, server.URL, map[string]any{"videoId": "vid12345678"})
+	if err != nil {
+		t.Fatalf("playerRequest: %v", err)
+	}
+	if !loginRequired(data) {
+		t.Fatalf("expected the anonymous answer, got %s", data)
+	}
+	if got := atomic.LoadInt32(&hits); got != 1 {
+		t.Fatalf("requests = %d, want 1 (nothing to sign in with)", got)
 	}
 }

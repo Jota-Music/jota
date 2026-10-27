@@ -53,6 +53,10 @@ var visitorBucket = kv.UseBucket("youtube-visitor")
 const (
 	visitorKey = "data"
 	versionKey = "web-version"
+	// accountVisitorKey is the visitor id the signed-in session reported. It
+	// travels with the cookies and has no expiry of its own: it stops being
+	// valid when the session does.
+	accountVisitorKey = "account-visitor"
 )
 
 var visitorClient = &http.Client{Timeout: visitorFetchWait, CheckRedirect: visitorRedirect}
@@ -79,6 +83,14 @@ func fetchHomepage() ([]byte, error) {
 	}
 	req.Header.Set("User-Agent", preferredClient.UserAgent)
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	// Only a full session gets a token bound to it: a partial cookie set would
+	// just earn the bot check, and the guest token this fetch returns is still
+	// the one the rest of the app needs.
+	if sessionValue(cookies()) != "" {
+		for k, v := range authHeaders("https://www.youtube.com") {
+			req.Header.Set(k, v)
+		}
+	}
 
 	resp, err := visitorClient.Do(req)
 	if err != nil {
@@ -172,6 +184,30 @@ func allClients() []clientConfig {
 	return append(clients, webClient())
 }
 
+// clientBucket remembers the client that last produced a playable stream, so a
+// session resumes with it instead of falling through the whole list per track.
+var clientBucket = kv.UseBucket("youtube-client")
+
+const clientKey = "sticky"
+
+// clientOrder puts the remembered client first, keeping the rest in allClients
+// order. A missing or unknown name leaves the default order alone.
+func clientOrder() []clientConfig {
+	clients := allClients()
+	name, err := clientBucket.GetString(clientKey)
+	if err != nil || name == "" || name == clients[0].Name {
+		return clients
+	}
+	for i, c := range clients {
+		if c.Name != name {
+			continue
+		}
+		ordered := append([]clientConfig{c}, clients[:i]...)
+		return append(ordered, clients[i+1:]...)
+	}
+	return clients
+}
+
 var (
 	apiKeyMu      sync.RWMutex
 	apiKey        = initialAPIKey()
@@ -198,7 +234,7 @@ func currentAPIKey() string {
 }
 
 func clientContext(c clientConfig) map[string]any {
-	return map[string]any{
+	context := map[string]any{
 		"clientName":    c.Name,
 		"clientVersion": c.Version,
 		"deviceMake":    c.DeviceMake,
@@ -207,6 +243,66 @@ func clientContext(c clientConfig) map[string]any {
 		"osVersion":     c.OsVersion,
 		"hl":            "en",
 	}
+	// The visitor id is part of the context innertube validates, not just a
+	// header: a signed request that carries a visitor from another session is
+	// answered as if it were anonymous.
+	if visitor := contextVisitor(); visitor != "" {
+		context["visitorData"] = visitor
+	}
+	return context
+}
+
+var (
+	accountVisitorMu sync.RWMutex
+	accountVisitor   string
+)
+
+// AdoptSession takes the visitor id and client version the signed-in page
+// reported, so the app's own requests speak as that session instead of as a
+// guest. Without them YouTube answers 401 for the account's library even though
+// the cookies are signed.
+func AdoptSession(visitor, version string) {
+	if visitor != "" {
+		accountVisitorMu.Lock()
+		accountVisitor = visitor
+		accountVisitorMu.Unlock()
+		_ = visitorBucket.SetString(accountVisitorKey, visitor)
+	}
+	if version != "" {
+		webVersionMu.Lock()
+		webVersion = version
+		webVersionMu.Unlock()
+		_ = visitorBucket.SetString(versionKey, version, versionTTL)
+	}
+}
+
+// sessionVisitor is the visitor the signed-in session uses, if one was adopted.
+func sessionVisitor() string {
+	accountVisitorMu.RLock()
+	visitor := accountVisitor
+	accountVisitorMu.RUnlock()
+	if visitor != "" {
+		return visitor
+	}
+	stored, err := visitorBucket.GetString(accountVisitorKey)
+	if err != nil || stored == "" {
+		return ""
+	}
+	accountVisitorMu.Lock()
+	accountVisitor = stored
+	accountVisitorMu.Unlock()
+	return stored
+}
+
+// contextVisitor prefers the session's visitor and falls back to the guest token
+// already in memory, without fetching anything on this path.
+func contextVisitor() string {
+	if visitor := sessionVisitor(); visitor != "" {
+		return visitor
+	}
+	visitorDataMu.RLock()
+	defer visitorDataMu.RUnlock()
+	return visitorData
 }
 
 // invalidateVisitor drops the cached visitor token so the next request

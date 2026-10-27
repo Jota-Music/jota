@@ -10,10 +10,18 @@ import (
 // RefreshCatalog refetches every cached catalog entry in the background and
 // rewrites only the ones that changed. Channel-id mappings are stable, so they
 // are skipped; song entries outside the song:v2 prefix are audio source
-// mappings, not catalog content.
+// mappings, not catalog content. The signed-in account's playlist list is
+// refreshed too, so a library that gained a playlist elsewhere catches up.
 func (s *Service) RefreshCatalog() error {
 	if err := playlistBucket.ForEach(func(key string, _ []byte) error {
 		switch {
+		case key == myPlaylistsKey:
+			// A session the sign-in window handed over cannot sign a browse, so
+			// refreshing it would only earn a 401.
+			if sessionValue(cookies()) == "" {
+				return nil
+			}
+			kv.Refreshable(playlistBucket, key, fetchMyPlaylists)
 		case strings.HasPrefix(key, "channel:playlists:"):
 			id := strings.TrimPrefix(key, "channel:playlists:")
 			kv.Refreshable(playlistBucket, key, func() ([]music.PlaylistSummary, error) {

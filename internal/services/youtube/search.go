@@ -22,7 +22,9 @@ var searchFn = search
 
 // search runs an innertube search with an optional filter param and decodes
 // the shared response envelope. The music endpoint is used for plain video
-// search; the web endpoint for the playlist/channel filtered queries.
+// search; the web endpoint for the playlist/channel filtered queries. It asks
+// anonymously first: signing risks the account, so the session only steps in
+// when the anonymous request fails.
 func search(url, query, params string) (searchResponse, error) {
 	payload := map[string]any{
 		"query":          query,
@@ -34,7 +36,10 @@ func search(url, query, params string) (searchResponse, error) {
 		payload["params"] = params
 	}
 
-	data, err := retryRequest(preferredClient, url, payload, 3)
+	data, err := retryAnonymous(preferredClient, url, payload, 3)
+	if err != nil && cookies() != "" {
+		data, err = retryRequest(preferredClient, url, payload, 3)
+	}
 	if err != nil {
 		return searchResponse{}, fmt.Errorf("search request failed: %w", err)
 	}
@@ -139,7 +144,7 @@ func fetchPlayer(id string) (playerResponse, error) {
 		"racyCheckOk":    true,
 	}
 
-	data, err := retryRequest(preferredClient, "https://www.youtube.com/youtubei/v1/player", payload, 3)
+	data, err := playerRequest(preferredClient, playerEndpoint, payload)
 	if err != nil {
 		return playerResponse{}, fmt.Errorf("player request failed: %w", err)
 	}

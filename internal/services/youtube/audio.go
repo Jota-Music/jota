@@ -238,13 +238,42 @@ func playerPayload(c clientConfig, videoID string) map[string]any {
 	return payload
 }
 
+const playerEndpoint = "https://www.youtube.com/youtubei/v1/player"
+
+// loginRequired reports whether a player answer asks for a session: the bot
+// check or an age-restricted video.
+func loginRequired(data []byte) bool {
+	var status struct {
+		PlayabilityStatus struct {
+			Status string `json:"status"`
+		} `json:"playabilityStatus"`
+	}
+	return json.Unmarshal(data, &status) == nil && status.PlayabilityStatus.Status == "LOGIN_REQUIRED"
+}
+
+// playerRequest asks the player anonymously first. Only a failed request or a
+// LOGIN_REQUIRED answer with stored cookies is retried signed: signing is what
+// unlocks age-restricted videos, but it also risks the account, so it is never
+// the default.
+func playerRequest(c clientConfig, url string, payload map[string]any) ([]byte, error) {
+	data, err := retryAnonymous(c, url, payload, 3)
+	if cookies() == "" || (err == nil && !loginRequired(data)) {
+		return data, err
+	}
+	signed, signedErr := retryRequest(c, url, payload, 3)
+	if signedErr != nil {
+		return data, err
+	}
+	return signed, nil
+}
+
 // playerStreamURLFn is a test hook; do not assign in production code.
 var playerStreamURLFn = playerStreamURL
 
 func playerStreamURL(c clientConfig, videoID string) (string, error) {
 	payload := playerPayload(c, videoID)
 
-	data, err := retryRequest(c, "https://www.youtube.com/youtubei/v1/player", payload, 3)
+	data, err := playerRequest(c, playerEndpoint, payload)
 	if err != nil {
 		return "", fmt.Errorf("player request failed: %w", err)
 	}
@@ -294,10 +323,10 @@ func streamPlayable(c clientConfig, raw string) bool {
 	}
 }
 
-// audioURL resolves a playable stream, trying the preferred innertube client
-// first and falling back to others when its URL is not usable by the player.
-// It only returns URLs that pass a HEAD probe with the same headers the player
-// will use.
+// audioURL resolves a playable stream, trying the client that last worked
+// first and the rest in allClients order when its URL is not usable by the
+// player. It only returns URLs that pass a HEAD probe with the same headers the
+// player will use, and it remembers the winner so the next track starts there.
 //
 // A bot-checked client may only need a fresh visitor token, but refreshing hits
 // YouTube's homepage, so it is deferred until no client worked at all. That way
@@ -308,13 +337,15 @@ func audioURL(videoID string) (string, clientConfig, error) {
 		return "", clientConfig{}, errors.New("invalid video ID length")
 	}
 
+	order := clientOrder()
+	sticky := order[0].Name
 	var firstErr error
 	refreshed := false
 
 	for {
 		loginRequired := false
 
-		for _, c := range allClients() {
+		for _, c := range order {
 			raw, err := playerStreamURLFn(c, videoID)
 			if err != nil {
 				if errors.Is(err, ErrLoginRequired) {
@@ -326,8 +357,9 @@ func audioURL(videoID string) (string, clientConfig, error) {
 				continue
 			}
 			if streamPlayable(c, raw) {
-				if c.Name != preferredClient.Name {
-					log.Printf("youtube: %s fell back to client %s", videoID, c.Name)
+				if c.Name != sticky {
+					log.Printf("youtube: %s switched to client %s", videoID, c.Name)
+					_ = clientBucket.SetString(clientKey, c.Name)
 				}
 				return raw, c, nil
 			}

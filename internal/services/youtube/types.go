@@ -98,7 +98,8 @@ type expireAndDuration struct {
 }
 
 type text struct {
-	Runs []struct {
+	SimpleText string `json:"simpleText"`
+	Runs       []struct {
 		Text               string `json:"text"`
 		NavigationEndpoint struct {
 			BrowseEndpoint struct {
@@ -109,6 +110,9 @@ type text struct {
 }
 
 func (t text) first() string {
+	if t.SimpleText != "" {
+		return t.SimpleText
+	}
 	if len(t.Runs) == 0 {
 		return ""
 	}

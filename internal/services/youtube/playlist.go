@@ -1,13 +1,16 @@
 package youtube
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Jota-Music/jota/internal/kv"
-	"github.com/Jota-Music/jota/internal/music"
+	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/music"
 )
 
 var playlistBucket = kv.UseBucket("youtube-playlists")
@@ -22,7 +25,34 @@ func normalizePlaylistId(id string) string {
 }
 
 func postBrowse(payload map[string]any) ([]byte, error) {
-	data, err := retryRequest(preferredClient, browseEndpoint, payload, 3)
+	return postBrowseWithClient(preferredClient, payload)
+}
+
+// apiError is an innertube response that carried an error object instead of
+// data. The code is kept so callers can tell an unauthenticated session from a
+// request that was simply malformed.
+type apiError struct {
+	Code    int
+	Message string
+}
+
+func (e *apiError) Error() string { return "browse error: " + e.Message }
+
+// postBrowseWithClient is the same as postBrowse but lets the caller pick the
+// innertube client. The web client is the one YouTube ties to the account
+// session, so reading a private playlist needs it; the VISIONOS client is the
+// anonymous one.
+func postBrowseWithClient(c clientConfig, payload map[string]any) ([]byte, error) {
+	return browseResult(retryRequest(c, browseEndpoint, payload, 3))
+}
+
+// postBrowseAnonymously browses without the account session, so a session
+// YouTube rejects cannot poison the public request that follows it.
+func postBrowseAnonymously(c clientConfig, payload map[string]any) ([]byte, error) {
+	return browseResult(retryAnonymous(c, browseEndpoint, payload, 3))
+}
+
+func browseResult(data []byte, err error) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("browse request failed: %w", err)
 	}
@@ -34,23 +64,83 @@ func postBrowse(payload map[string]any) ([]byte, error) {
 		} `json:"error"`
 	}
 	if err := json.Unmarshal(data, &res); err == nil && res.Error.Code != 0 {
-		return nil, fmt.Errorf("browse error: %s", res.Error.Message)
+		return nil, &apiError{Code: res.Error.Code, Message: res.Error.Message}
 	}
 
 	return data, nil
 }
 
-func browseData(playlistID, continuation string) ([]byte, error) {
+// playlistPayload builds the browse body for a playlist page or its next page of
+// videos, for the given innertube client.
+func playlistPayload(c clientConfig, playlistID, continuation string) map[string]any {
 	payload := map[string]any{
-		"context": map[string]any{"client": clientContext(preferredClient)},
+		"context": map[string]any{"client": clientContext(c)},
 	}
 	if continuation != "" {
 		payload["continuation"] = continuation
 	} else {
 		payload["browseId"] = "VL" + playlistID
 	}
+	return payload
+}
 
-	return postBrowse(payload)
+// signedPlaylistClient is the client a private or own playlist is read with: the
+// account session is a web session, so the web client is the only one that both
+// carries the cookies and accepts them for a playlist the account owns.
+var signedPlaylistClient = webClient()
+
+// browseData reads a playlist, anonymously first: that is the path every public
+// playlist takes and the shape this package parses. The account is asked next
+// whenever the anonymous answer carries no playlist at all, which is what a
+// private one looks like: YouTube answers 200 with an empty page instead of an
+// error, so "the request worked" never means "the playlist is readable".
+func browseData(playlistID, continuation string) ([]byte, error) {
+	anonymous, anonymousErr := postBrowseAnonymously(preferredClient, playlistPayload(preferredClient, playlistID, continuation))
+	if anonymousErr == nil && hasPlaylistPage(anonymous) {
+		return anonymous, nil
+	}
+	if !HasAuth() {
+		return anonymous, anonymousErr
+	}
+
+	signed, signedErr := postBrowseWithClient(signedPlaylistClient, playlistPayload(signedPlaylistClient, playlistID, continuation))
+	return pickPlaylist(anonymous, anonymousErr, signed, signedErr, sessionValue(cookies()) != "")
+}
+
+// pickPlaylist answers which of the two reads to keep: the signed one when it
+// carries the playlist, the anonymous one when the account could not open it.
+// A session YouTube refuses is reported as such, because that is what the user
+// can act on.
+func pickPlaylist(anonymous []byte, anonymousErr error, signed []byte, signedErr error, hasSession bool) ([]byte, error) {
+	if signedErr != nil {
+		var api *apiError
+		if errors.As(signedErr, &api) && api.Code == http.StatusUnauthorized {
+			return nil, errSession
+		}
+		if hasPlaylistPage(anonymous) {
+			return anonymous, anonymousErr
+		}
+		return nil, signedErr
+	}
+	if hasPlaylistPage(signed) {
+		return signed, nil
+	}
+	// A partial session (the sign-in window cannot read the HttpOnly cookies)
+	// signs requests without opening anything: say so instead of "not found".
+	if !hasSession {
+		return nil, errSession
+	}
+	if hasPlaylistPage(anonymous) {
+		return anonymous, anonymousErr
+	}
+	return signed, nil
+}
+
+// hasPlaylistPage reports whether a browse answer carries a playlist at all. A
+// byte scan is enough, and it keeps the public path from parsing the page twice.
+func hasPlaylistPage(data []byte) bool {
+	return bytes.Contains(data, []byte(`"playlistVideoListRenderer"`)) ||
+		bytes.Contains(data, []byte(`"playlistVideoListContinuation"`))
 }
 
 // Innertube filters that open a channel's "Playlists" or "Videos" tab, so one
@@ -290,11 +380,6 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 		return music.Playlist{}, fmt.Errorf("invalid browse JSON: %w", err)
 	}
 
-	list, ok := res.firstList()
-	if !ok {
-		return music.Playlist{}, errors.New("playlist not found or has no videos")
-	}
-
 	name, cover, owner, ownerID := "", "", "", ""
 	if header, ok := res.headerRenderer(); ok {
 		name = header.Title.first()
@@ -303,8 +388,32 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 		ownerID = header.OwnerText.browseID()
 	}
 
+	list, next, ok := playlistPage(data)
+	if !ok {
+		// The page a session gets for an own or private playlist keeps its
+		// videos in lockupViewModel items and its title in pageHeaderRenderer.
+		songs, title := webPlaylistPage(data)
+		if name == "" {
+			name = title
+		}
+		// A header means the playlist exists; it may simply hold no video.
+		if len(songs) == 0 && name == "" {
+			return music.Playlist{}, errors.New("playlist not found or has no videos")
+		}
+		if cover == "" && len(songs) > 0 && len(songs[0].Album.Covers) > 0 {
+			cover = songs[0].Album.Covers[0]
+		}
+		return music.Playlist{Name: name, Cover: cover, Owner: owner, OwnerId: ownerID, Songs: songs}, nil
+	}
+
+	if name == "" {
+		// A private or own playlist answers with the modern page header, which
+		// keeps its title outside playlistHeaderRenderer.
+		name = pageTitle(data)
+	}
+
 	songs := extractSongs(list, name)
-	continuation := list.next()
+	continuation := next
 
 	for pages := 1; continuation != ""; pages++ {
 		// ponytail: cap the loop so a repeated continuation token can't spin forever
@@ -317,14 +426,12 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 			return music.Playlist{}, err
 		}
 
-		var cont playlistContinuationResponse
-		if err := json.Unmarshal(data, &cont); err != nil {
-			return music.Playlist{}, fmt.Errorf("invalid continuation JSON: %w", err)
+		list, next, ok := playlistPage(data)
+		if !ok {
+			return music.Playlist{}, errors.New("playlist page lost its videos mid-read")
 		}
-
-		list := cont.ContinuationContents.PlaylistVideoListContinuation
 		songs = append(songs, extractSongs(list, name)...)
-		continuation = list.next()
+		continuation = next
 	}
 
 	return music.Playlist{
@@ -348,7 +455,12 @@ func fetchPlaylistSummary(playlistID string) (music.PlaylistSummary, error) {
 	}
 
 	header, ok := res.headerRenderer()
-	if !ok {
+	if !ok || header.Title.first() == "" {
+		// A private or own playlist answers with the modern page header, which
+		// keeps its title outside playlistHeaderRenderer.
+		header.Title.SimpleText = pageTitle(data)
+	}
+	if header.Title.first() == "" {
 		return music.PlaylistSummary{}, errors.New("playlist not found or unavailable")
 	}
 
@@ -356,6 +468,16 @@ func fetchPlaylistSummary(playlistID string) (music.PlaylistSummary, error) {
 	if cover == "" {
 		if list, ok := res.firstList(); ok && len(list.Contents) > 0 {
 			cover = list.Contents[0].PlaylistVideoRenderer.Thumbnail.url()
+		}
+	}
+	if cover == "" {
+		if list, ok := playlistList(data); ok && len(list.Contents) > 0 {
+			cover = list.Contents[0].PlaylistVideoRenderer.Thumbnail.url()
+		}
+	}
+	if cover == "" {
+		if songs, _ := webPlaylistPage(data); len(songs) > 0 && len(songs[0].Album.Covers) > 0 {
+			cover = songs[0].Album.Covers[0]
 		}
 	}
 
@@ -480,4 +602,135 @@ func (r playlistBrowseResponse) firstList() (playlistVideoListRenderer, bool) {
 	}
 	list := contents[0].PlaylistVideoListRenderer
 	return list, len(list.Contents) > 0
+}
+
+// playlistPage finds the playlist's videos and their continuation anywhere in a
+// browse response. The anonymous clients answer the shape firstList knows; the
+// web client, which is the one that opens a private playlist, nests the same
+// renderer deeper and moves it between releases, so it is found by walking
+// instead of by path.
+func playlistPage(data []byte) (list playlistVideoListRenderer, next string, ok bool) {
+	var root any
+	if err := json.Unmarshal(data, &root); err != nil {
+		return playlistVideoListRenderer{}, "", false
+	}
+
+	walkPlaylists(root, func(raw any) {
+		if ok {
+			return
+		}
+		body, err := json.Marshal(raw)
+		if err != nil {
+			return
+		}
+		var candidate playlistVideoListRenderer
+		if err := json.Unmarshal(body, &candidate); err != nil {
+			return
+		}
+		if len(candidate.Contents) == 0 {
+			return
+		}
+		list, ok = candidate, true
+		next = firstContinuationToken(raw)
+		if next == "" {
+			next = candidate.next()
+		}
+	})
+	if !ok {
+		next = firstContinuationToken(root)
+	}
+	return list, next, ok
+}
+
+// playlistList finds the playlist's videos anywhere in a browse response.
+func playlistList(data []byte) (playlistVideoListRenderer, bool) {
+	var root any
+	if err := json.Unmarshal(data, &root); err != nil {
+		return playlistVideoListRenderer{}, false
+	}
+
+	var list playlistVideoListRenderer
+	found := false
+	walkPlaylists(root, func(raw any) {
+		if found {
+			return
+		}
+		body, err := json.Marshal(raw)
+		if err != nil {
+			return
+		}
+		var candidate playlistVideoListRenderer
+		if err := json.Unmarshal(body, &candidate); err != nil {
+			return
+		}
+		if len(candidate.Contents) > 0 {
+			list, found = candidate, true
+		}
+	})
+	return list, found
+}
+
+// playlistNext finds the continuation of the list playlistList answered.
+func playlistNext(data []byte) string {
+	var root any
+	if err := json.Unmarshal(data, &root); err != nil {
+		return ""
+	}
+
+	next := ""
+	walkPlaylists(root, func(raw any) {
+		if next == "" {
+			next = firstContinuationToken(raw)
+		}
+	})
+	if next == "" {
+		// No list object: the continuation response carries the token on its own.
+		next = firstContinuationToken(root)
+	}
+	return next
+}
+
+func firstContinuationToken(v any) string {
+	switch val := v.(type) {
+	case map[string]any:
+		// The anonymous shape names it "continuation"; the web shape wraps it in
+		// a continuationCommand whose field is "token".
+		for _, key := range []string{"continuation", "token"} {
+			if token, ok := val[key].(string); ok && token != "" {
+				return token
+			}
+		}
+		for _, vv := range val {
+			if token := firstContinuationToken(vv); token != "" {
+				return token
+			}
+		}
+	case []any:
+		for _, vv := range val {
+			if token := firstContinuationToken(vv); token != "" {
+				return token
+			}
+		}
+	}
+	return ""
+}
+
+// walkPlaylists calls visit with every playlistVideoListRenderer object in the
+// tree, wherever it is nested.
+func walkPlaylists(v any, visit func(any)) {
+	switch val := v.(type) {
+	case map[string]any:
+		for _, key := range []string{"playlistVideoListRenderer", "playlistVideoListContinuation"} {
+			if raw, has := val[key]; has {
+				visit(raw)
+			}
+		}
+		for _, vv := range val {
+			walkPlaylists(vv, visit)
+		}
+	case []any:
+		for _, vv := range val {
+			walkPlaylists(vv, visit)
+		}
+	}
 }

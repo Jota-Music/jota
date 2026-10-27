@@ -1,0 +1,304 @@
+{
+  "contents": {
+    "twoColumnBrowseResultsRenderer": {
+      "tabs": [
+        {
+          "tabRenderer": {
+            "content": {
+              "sectionListRenderer": {
+                "contents": [
+                  {
+                    "itemSectionRenderer": {
+                      "contents": [
+                        {
+                          "lockupViewModel": {
+                            "contentImage": {
+                              "collectionThumbnailViewModel": {
+                                "primaryThumbnail": {
+                                  "thumbnailViewModel": {
+                                    "image": {
+                                      "sources": [
+                                        {
+                                          "url": "https://i.ytimg.com/vi/GgVcgbtHY9k/hq720.jpg?sqp=-oaymwEXCOgCEMoBSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLATGhjM4qSA9tjfpAye_4qfmc8rpA",
+                                          "width": 360,
+                                          "height": 202
+                                        },
+                                        {
+                                          "url": "https://i.ytimg.com/vi/GgVcgbtHY9k/hq720.jpg?sqp=-oaymwEXCNAFEJQDSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLAezXop9XR8gtosdixiMA66ILSklQ",
+                                          "width": 720,
+                                          "height": 404
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "metadata": {
+                              "lockupMetadataViewModel": {
+                                "title": {
+                                  "content": "Lofi Hip Hop 2026 - Lofi Music 2026 Playlist - Lo fi Playlist"
+                                },
+                                "metadata": {
+                                  "contentMetadataViewModel": {
+                                    "metadataRows": [
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "Hitsify"
+                                            }
+                                          },
+                                          {
+                                            "text": {
+                                              "content": "Playlist"
+                                            }
+                                          }
+                                        ],
+                                        "lockupContentMetadataRowExtension": {
+                                          "contentType": "METADATA_ROW_CONTENT_TYPE_BYLINE"
+                                        }
+                                      },
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "Updated 3 days ago"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "isSpacerRow": true
+                                      },
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "burbank - sorry i like you · 2:04"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "ＦＯＲ ＹＯＵ · 3:29"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "View full playlist"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "Dive into a world of relaxation with our curated lofi beats playlist. Perfect for studying, working, or just unwinding. Lofi, lofi Hip Hop, Lofi Chill Beats, Lofi Study Music, Lofi Mix, Lofi Chill Study, Lofi Music Playlist,Lofi Playlist, Chill Lofi Playlist, Lofi Hip Hop Playlist, Lofi Study Playlist, Lofi Relaxing Music, Lofi Chill Beats Playlist 2026, 2026 lofi, lofi hiphop 2026."
+                                            },
+                                            "maxLines": 2
+                                          }
+                                        ],
+                                        "lockupContentMetadataRowExtension": {
+                                          "contentType": "METADATA_ROW_CONTENT_TYPE_DESCRIPTION"
+                                        }
+                                      }
+                                    ],
+                                    "delimiter": " • "
+                                  }
+                                }
+                              }
+                            },
+                            "contentId": "PLBTanuC8SLeZUH4mYXFvRbDfxTMKvNLHJ",
+                            "contentType": "LOCKUP_CONTENT_TYPE_PLAYLIST",
+                            "rendererContext": {
+                              "loggingContext": {
+                                "loggingDirectives": {
+                                  "trackingParams": "CFcQ0sQMGAAiEwjs99uZ4tiXAxXWYk8EHVZwK-E=",
+                                  "visibility": {
+                                    "types": "12"
+                                  }
+                                }
+                              },
+                              "commandContext": {
+                                "onTap": {
+                                  "innertubeCommand": {
+                                    "commandMetadata": {
+                                      "webCommandMetadata": {
+                                        "url": "/watch?v=GgVcgbtHY9k&list=PLBTanuC8SLeZUH4mYXFvRbDfxTMKvNLHJ",
+                                        "webPageType": "WEB_PAGE_TYPE_WATCH",
+                                        "rootVe": 3832
+                                      }
+                                    },
+                                    "watchEndpoint": {
+                                      "videoId": "GgVcgbtHY9k",
+                                      "playlistId": "PLBTanuC8SLeZUH4mYXFvRbDfxTMKvNLHJ",
+                                      "params": "OAI%3D",
+                                      "loggingContext": {
+                                        "vssLoggingContext": {
+                                          "serializedContextData": "GiJQTEJUYW51QzhTTGVaVUg0bVlYRnZSYkRmeFRNS3ZOTEhK"
+                                        }
+                                      },
+                                      "watchEndpointSupportedOnesieConfig": {
+                                        "html5PlaybackOnesieConfig": {
+                                          "commonConfig": {
+                                            "url": "https://rr2---sn-vg5obxn25po-2hpl.googlevideo.com/initplayback?source=youtube&oeis=1&c=WEB&oad=3200&ovd=3200&oaad=11000&oavd=11000&ocs=700&oewis=1&oputc=1&epbp=1&msp=1&odepv=1&id=1a055c81bb4763d9&ip=188.126.152.216&initcwndbps=3216625&mt=1793054706&oweuc="
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "lockupViewModel": {
+                            "contentImage": {
+                              "collectionThumbnailViewModel": {
+                                "primaryThumbnail": {
+                                  "thumbnailViewModel": {
+                                    "image": {
+                                      "sources": [
+                                        {
+                                          "url": "https://i.ytimg.com/vi/Khd-uyOuhGo/hq720.jpg?sqp=-oaymwEXCOgCEMoBSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLD0Pv9xOnsuwPhH1rjIQJZ9aPsWwA",
+                                          "width": 360,
+                                          "height": 202
+                                        },
+                                        {
+                                          "url": "https://i.ytimg.com/vi/Khd-uyOuhGo/hq720.jpg?sqp=-oaymwEXCNAFEJQDSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLCM5KY9eysld7JURRidQamBWanB6w",
+                                          "width": 720,
+                                          "height": 404
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "metadata": {
+                              "lockupMetadataViewModel": {
+                                "title": {
+                                  "content": "Lofi House Mix by Kiffen Beats"
+                                },
+                                "metadata": {
+                                  "contentMetadataViewModel": {
+                                    "metadataRows": [
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "Zlone star"
+                                            }
+                                          },
+                                          {
+                                            "text": {
+                                              "content": "Playlist"
+                                            }
+                                          }
+                                        ],
+                                        "lockupContentMetadataRowExtension": {
+                                          "contentType": "METADATA_ROW_CONTENT_TYPE_BYLINE"
+                                        }
+                                      },
+                                      {
+                                        "isSpacerRow": true
+                                      },
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "ＨＯＵＳＥ¹ (Lo-Fi House Mix) · 40:00"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "ＨＯＵＳＥ 2 (Lofi House Mix) · 45:17"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "metadataParts": [
+                                          {
+                                            "text": {
+                                              "content": "View full playlist"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ],
+                                    "delimiter": " • "
+                                  }
+                                }
+                              }
+                            },
+                            "contentId": "PLmxm7yELedw-19LktYIv1OtVgisjLXo90",
+                            "contentType": "LOCKUP_CONTENT_TYPE_PLAYLIST",
+                            "rendererContext": {
+                              "loggingContext": {
+                                "loggingDirectives": {
+                                  "trackingParams": "CFYQ0sQMGAEiEwjs99uZ4tiXAxXWYk8EHVZwK-E=",
+                                  "visibility": {
+                                    "types": "12"
+                                  }
+                                }
+                              },
+                              "commandContext": {
+                                "onTap": {
+                                  "innertubeCommand": {
+                                    "commandMetadata": {
+                                      "webCommandMetadata": {
+                                        "url": "/watch?v=Khd-uyOuhGo&list=PLmxm7yELedw-19LktYIv1OtVgisjLXo90",
+                                        "webPageType": "WEB_PAGE_TYPE_WATCH",
+                                        "rootVe": 3832
+                                      }
+                                    },
+                                    "watchEndpoint": {
+                                      "videoId": "Khd-uyOuhGo",
+                                      "playlistId": "PLmxm7yELedw-19LktYIv1OtVgisjLXo90",
+                                      "params": "OAI%3D",
+                                      "loggingContext": {
+                                        "vssLoggingContext": {
+                                          "serializedContextData": "GiJQTG14bTd5RUxlZHctMTlMa3RZSXYxT3RWZ2lzakxYbzkw"
+                                        }
+                                      },
+                                      "watchEndpointSupportedOnesieConfig": {
+                                        "html5PlaybackOnesieConfig": {
+                                          "commonConfig": {
+                                            "url": "https://rr1---sn-vg5obxn25po-2hpl.googlevideo.com/initplayback?source=youtube&oeis=1&c=WEB&oad=3200&ovd=3200&oaad=11000&oavd=11000&ocs=700&oewis=1&oputc=1&epbp=1&msp=1&odepv=1&id=2a177ebb23ae846a&ip=188.126.152.216&initcwndbps=3216625&mt=1793054706&oweuc="
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

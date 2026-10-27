@@ -13,7 +13,10 @@ import (
 // a hung connection would stall a resolve (and playback) forever.
 var innertubeClient = &http.Client{Timeout: 15 * time.Second}
 
-func doRequest(c clientConfig, url string, payload map[string]any) (*http.Response, error) {
+// post sends one innertube request signed with raw, or anonymously when raw is
+// empty. A jar that is not the stored session goes through here, so the app can
+// ask about a browser before adopting it.
+func post(c clientConfig, url string, payload map[string]any, raw string) (*http.Response, error) {
 	visitor, key, err := getVisitorData()
 	if err != nil {
 		return nil, fmt.Errorf("getting visitor data: %w", err)
@@ -40,22 +43,43 @@ func doRequest(c clientConfig, url string, payload map[string]any) (*http.Respon
 	req.Header.Set("X-YouTube-Client-Version", c.Version)
 	req.Header.Set("Origin", origin)
 	req.Header.Set("Referer", origin+"/")
+	if raw != "" {
+		if session := sessionVisitor(); session != "" {
+			visitor = session
+		}
+	}
 	if visitor != "" {
 		req.Header.Set("X-Goog-Visitor-Id", visitor)
 	}
 	// Signed-in requests carry SAPISIDHASH, which is what unlocks age-restricted
 	// videos and avoids the bot check for the account's session.
-	for k, v := range authHeaders(origin) {
-		req.Header.Set(k, v)
+	if raw != "" {
+		for k, v := range authHeadersFor(raw, origin) {
+			req.Header.Set(k, v)
+		}
 	}
 
 	return innertubeClient.Do(req)
 }
 
 func retryRequest(c clientConfig, url string, payload map[string]any, retries int) ([]byte, error) {
+	return retry(c, url, payload, retries, cookies())
+}
+
+// retryAnonymous is retryRequest without the account session.
+func retryAnonymous(c clientConfig, url string, payload map[string]any, retries int) ([]byte, error) {
+	return retry(c, url, payload, retries, "")
+}
+
+// retryAs is retryRequest signed with a jar that is not the stored session.
+func retryAs(raw string, c clientConfig, url string, payload map[string]any, retries int) ([]byte, error) {
+	return retry(c, url, payload, retries, raw)
+}
+
+func retry(c clientConfig, url string, payload map[string]any, retries int, raw string) ([]byte, error) {
 	var lastErr error
 	for i := range retries {
-		resp, err := doRequest(c, url, payload)
+		resp, err := post(c, url, payload, raw)
 		if err != nil {
 			lastErr = err
 			time.Sleep(time.Duration(100+(i*200)) * time.Millisecond)

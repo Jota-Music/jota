@@ -1,8 +1,10 @@
 package youtube
 
 import (
+	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -75,7 +77,10 @@ func TestSetCookiesAcceptsCookiesTxt(t *testing.T) {
 	resetAuth(t)
 
 	txt := ".youtube.com\tTRUE\t/\tTRUE\t0\tSAPISID\tsapisid123\n" +
-		".youtube.com\tTRUE\t/\tFALSE\t0\tSID\tabc\n"
+		".youtube.com\tTRUE\t/\tFALSE\t0\tSID\tabc\n" +
+		".youtube.com\tTRUE\t/\tFALSE\t0\tSSID\tssid\n" +
+		".youtube.com\tTRUE\t/\tFALSE\t0\tHSID\thsid\n" +
+		".youtube.com\tTRUE\t/\tFALSE\t0\tAPISID\tapisid\n"
 	if err := SetCookies(txt); err != nil {
 		t.Fatalf("SetCookies(cookies.txt): %v", err)
 	}
@@ -100,7 +105,7 @@ func TestSetCookiesAcceptsSecure3Papisid(t *testing.T) {
 
 func TestAuthHeadersSignature(t *testing.T) {
 	resetAuth(t)
-	if err := SetCookies("SAPISID=sapisid123; SID=abc"); err != nil {
+	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
 		t.Fatalf("SetCookies: %v", err)
 	}
 
@@ -153,7 +158,7 @@ func TestAuthHeadersAbsentWhenSignedOut(t *testing.T) {
 
 func TestDoRequestSignsWhenSignedIn(t *testing.T) {
 	resetAuth(t)
-	if err := SetCookies("SAPISID=sapisid123"); err != nil {
+	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
 		t.Fatalf("SetCookies: %v", err)
 	}
 	seedVisitor(t, "vis-token")
@@ -173,5 +178,123 @@ func TestDoRequestSignsWhenSignedIn(t *testing.T) {
 	}
 	if gotOrigin != "https://www.youtube.com" {
 		t.Fatalf("X-Origin = %q", gotOrigin)
+	}
+}
+
+// withHomepageTransport serves the page Verify and fetchHomepage read.
+func withHomepageTransport(t *testing.T, body string) {
+	t.Helper()
+	orig := visitorClient
+	visitorClient = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}, nil
+	})}
+	t.Cleanup(func() { visitorClient = orig })
+}
+
+func TestVerifyRejectsAnonymousSession(t *testing.T) {
+	resetAuth(t)
+	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
+		t.Fatalf("SetCookies: %v", err)
+	}
+	withHomepageTransport(t, `{"LOGGED_IN":false}`)
+
+	if err := Verify(); !errors.Is(err, errSession) {
+		t.Fatalf("expected a rejected session, got %v", err)
+	}
+}
+
+func TestVerifyAcceptsSignedInSession(t *testing.T) {
+	resetAuth(t)
+	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
+		t.Fatalf("SetCookies: %v", err)
+	}
+	withHomepageTransport(t, `{"ytcfg":{"LOGGED_IN":true}}`)
+
+	if err := Verify(); err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+}
+
+func TestBrowseDataSignsPlaylistsWhenSignedIn(t *testing.T) {
+	resetAuth(t)
+	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
+		t.Fatalf("SetCookies: %v", err)
+	}
+	seedVisitor(t, "vis-token")
+
+	type call struct {
+		client string
+		signed bool
+	}
+	var calls []call
+	withInnertubeTransport(t, func(r *http.Request) (*http.Response, error) {
+		calls = append(calls, call{
+			client: r.Header.Get("X-YouTube-Client-Name"),
+			signed: r.Header.Get("Authorization") != "",
+		})
+		return &http.Response{
+			StatusCode: http.StatusUnauthorized,
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader(`{"error":{"code":401,"message":"You must be signed in"}}`)),
+		}, nil
+	})
+
+	// The test transport rejects both attempts, so the call fails, but by then
+	// both clients have been asked: the anonymous one first, which is the path
+	// every public playlist takes, then the signed one, which is what a private
+	// playlist needs.
+	_, _ = browseData("PL1234567890abcdefgh", "")
+
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 attempts, got %d: %+v", len(calls), calls)
+	}
+	if calls[0].signed {
+		t.Fatalf("first attempt should be anonymous, got %+v", calls[0])
+	}
+	if calls[1].client != strconv.Itoa(signedPlaylistClient.ClientName) || !calls[1].signed {
+		t.Fatalf("second attempt should be the signed Android VR client, got %+v", calls[1])
+	}
+}
+
+// A signed request has to speak as the session: the visitor id the sign-in page
+// reported goes in the header and in the context. A guest visitor is what made
+// YouTube answer 401 for the account's own library.
+func TestSignedRequestUsesTheSessionVisitor(t *testing.T) {
+	AdoptSession("session-visitor", "2.20260101.00.00")
+	t.Cleanup(func() {
+		accountVisitorMu.Lock()
+		accountVisitor = ""
+		accountVisitorMu.Unlock()
+		_ = visitorBucket.Delete(accountVisitorKey)
+	})
+
+	if got := sessionVisitor(); got != "session-visitor" {
+		t.Fatalf("sessionVisitor = %q, want the adopted one", got)
+	}
+	context := clientContext(webClient())
+	if got, _ := context["visitorData"].(string); got != "session-visitor" {
+		t.Fatalf("context visitor = %v, want the session's", context["visitorData"])
+	}
+	if got := currentWebVersion(); got != "2.20260101.00.00" {
+		t.Fatalf("web version = %q, want the session's", got)
+	}
+}
+
+func TestNormalizeCookiesDedupesDomains(t *testing.T) {
+	jar := "# Netscape HTTP Cookie File\n" +
+		".google.com\tTRUE\t/\tTRUE\t0\tSAPISID\tgooglecopy\n" +
+		".youtube.com\tTRUE\t/\tTRUE\t0\tSAPISID\tyoutubecopy\n" +
+		".google.com\tTRUE\t/\tTRUE\t0\tNID\tnid\n"
+
+	got := normalizeCookies(jar)
+	if strings.Count(got, "SAPISID=") != 1 {
+		t.Fatalf("SAPISID duplicated: %q", got)
+	}
+	if !strings.Contains(got, "SAPISID=youtubecopy") {
+		t.Fatalf("the youtube copy should win: %q", got)
+	}
+	// A cookie that only exists on google.com is kept, so nothing is lost.
+	if !strings.Contains(got, "NID=nid") {
+		t.Fatalf("google-only cookie dropped: %q", got)
 	}
 }
