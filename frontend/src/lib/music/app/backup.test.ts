@@ -155,11 +155,11 @@ test("a stale copy is merged but never overwritten", async () => {
 	files.set(uri, "remote-v1");
 	meta = { lastModified: 1000, size: 9 };
 	merged = (remote) => (remote === "remote-v1" ? "merged-v1" : "merged-v2");
-	await autosave();
+	await autosave("lifecycle");
 
 	files.set(uri, "remote-v2");
 	meta = { lastModified: 500, size: 9 };
-	await autosave();
+	await autosave("lifecycle");
 
 	expect(calls.at(-1)).toEqual({ data: "remote-v2", fresh: false });
 	expect(writes.filter((w) => w.uri === uri)).toEqual([
@@ -263,7 +263,9 @@ test("a native write resolves and a failure rejects with a translated error", as
 });
 
 const clock = Date.now;
-let now = 1_000_000;
+// Start past any earlier automatic run, so the interval tests below are not
+// throttled by the lifecycle pass the stale-copy case just made.
+let now = Date.now() + 86_400_000;
 // A run that synced nothing must not burn the interval, or a document chosen
 // later would sit untouched until the next window.
 test("auto sync with no folder does not start the interval", async () => {

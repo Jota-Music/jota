@@ -177,12 +177,14 @@ function fresh(
 	return info.lastModified > written.at;
 }
 
+// Answers whether this pass brought anything into the library, so the caller
+// only refetches when the document actually moved.
 async function merge(
 	bridge: Bridge,
 	uri: string,
 	force: boolean,
 	manual: boolean,
-): Promise<void> {
+): Promise<boolean> {
 	const remote = await read(bridge, uri);
 	if (remote === null) throw new Error(t("settings.autosave.errors.read"));
 	// The backend persisted our last write, so the rule survives a reload. A
@@ -198,8 +200,9 @@ async function merge(
 	const current =
 		force || manual || fresh(remote, await info(bridge, uri), previous);
 	const merged = await SyncDocument(remote, current);
-	if (merged === remote || !current) return;
-	await write(bridge, uri, merged);
+	if (merged === remote) return false;
+	if (current) await write(bridge, uri, merged);
+	return true;
 }
 
 type Mode = "manual" | "auto" | "lifecycle";
@@ -261,12 +264,18 @@ async function deliver(mode: Mode, force: boolean): Promise<boolean> {
 	if (!bridge) {
 		if (force) await SyncOverwrite();
 		else await (mode === "manual" ? SyncSave() : SyncPlaylists());
-		void queryClient.invalidateQueries();
+		await panel();
 		return true;
 	}
 	const uri = await SyncFolder();
 	if (!uri) return false;
-	await merge(bridge, uri, force, mode === "manual");
-	void queryClient.invalidateQueries();
+	const changed = await merge(bridge, uri, force, mode === "manual");
+	await panel();
+	if (changed) void queryClient.invalidateQueries();
 	return true;
+}
+
+async function panel(): Promise<void> {
+	await queryClient.invalidateQueries({ queryKey: ["sync-status"] });
+	await queryClient.invalidateQueries({ queryKey: ["sync-pending"] });
 }
