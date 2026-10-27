@@ -26,6 +26,8 @@ const BACKEND: Record<string, string> = {
 	"consensus timeout": "errors.consensusTimeout",
 	"the backup file was written by another version":
 		"settings.autosave.errors.version",
+	"the backup file cannot be read": "settings.autosave.errors.unreadable",
+	"cipher: message authentication failed": "auth.youtube.badPass",
 };
 
 export function translateError(error: unknown): string {
@@ -34,6 +36,17 @@ export function translateError(error: unknown): string {
 	// ("RuntimeError: room is full"), so the map is consulted without it too:
 	// the name is an implementation detail the user should never read.
 	const bare = message.replace(/^\w*(Error|Exception): /, "");
-	const key = BACKEND[bare];
-	return key ? t(key) : bare;
+	return translated(bare) ?? bare;
+}
+
+// A Go error reaches the page wrapped in whichever walk carried it ("Binding
+// call failed: <method>: <reason>"), so every suffix is tried and the inner
+// reason is the part worth translating.
+function translated(message: string): string | undefined {
+	const parts = message.split(": ");
+	for (let i = 0; i < parts.length; i++) {
+		const key = BACKEND[parts.slice(i).join(": ")];
+		if (key) return t(key);
+	}
+	return undefined;
 }

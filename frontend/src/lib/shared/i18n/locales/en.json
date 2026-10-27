@@ -134,7 +134,8 @@
 				"selected": "No file selected",
 				"read": "The save file cannot be read. Choose it again.",
 				"write": "The save file cannot be written. Check the location and try again.",
-				"version": "That file was written by another version of Jota. Overwrite it to start fresh."
+				"version": "That file was written by another version of Jota. Overwrite it to start fresh.",
+				"unreadable": "The save file is damaged or incomplete. Overwrite it to start fresh."
 			}
 		}
 	},
@@ -223,7 +224,10 @@
 			"unavailableShort": "In-app sign-in is not available on this platform. Paste your cookies or import a cookies.txt export below.",
 			"pasteHint": "Import a cookies.txt exported while signed in: on a youtube.com tab use an extension (Get cookies.txt), or run copy(document.cookie) only if you do not need private playlists. The cookies that open your lists (__Secure-3PSID) are HttpOnly and are not in document.cookie.",
 			"pastePlaceholder": "Paste cookies (must include SAPISID) or a cookies.txt export",
-			"importFile": "Import cookies.txt",
+			"importFile": "Import file",
+			"imported": "YouTube session imported",
+			"unreadable": "The file you opened with Jota could not be read.",
+			"badPass": "The session pass does not match the one that file was encrypted with.",
 			"partial": "This session cannot open private playlists. Use the session from a browser:"
 		},
 		"account": {

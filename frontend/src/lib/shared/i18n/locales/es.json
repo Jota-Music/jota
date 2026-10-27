@@ -134,7 +134,8 @@
 				"selected": "Ningún fichero seleccionado",
 				"read": "No se puede leer el fichero de guardado. Vuelve a elegirlo.",
 				"write": "No se puede escribir el fichero de guardado. Revisa la ubicación e inténtalo de nuevo.",
-				"version": "Ese fichero lo escribió otra versión de Jota. Sobrescríbelo para empezar de cero."
+				"version": "Ese fichero lo escribió otra versión de Jota. Sobrescríbelo para empezar de cero.",
+				"unreadable": "El fichero de guardado está dañado o incompleto. Sobrescríbelo para empezar de cero."
 			}
 		}
 	},
@@ -223,7 +224,10 @@
 			"unavailableShort": "El inicio de sesión integrado no está disponible en esta plataforma. Pega tus cookies o importa un cookies.txt abajo.",
 			"pasteHint": "Importa un cookies.txt exportado con la sesión abierta: en una pestaña de youtube.com usa una extensión (Get cookies.txt) o ejecuta copy(document.cookie) sólo si no necesitas playlists privadas. Las cookies que abren tus listas (__Secure-3PSID) son HttpOnly y no están en document.cookie.",
 			"pastePlaceholder": "Pega las cookies (deben incluir SAPISID) o un cookies.txt",
-			"importFile": "Importar cookies.txt",
+			"importFile": "Importar fichero",
+			"imported": "Sesión de YouTube importada",
+			"unreadable": "No se pudo leer el fichero que abriste con Jota.",
+			"badPass": "La contraseña de sesión no coincide con la que cifró ese fichero.",
 			"partial": "Esta sesión no puede abrir playlists privadas. Usa la sesión de un navegador:"
 		},
 		"account": {
