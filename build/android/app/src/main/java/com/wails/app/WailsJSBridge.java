@@ -225,32 +225,39 @@ public class WailsJSBridge {
 
 
     @JavascriptInterface
-    public String pickSyncFile() {
-        return bridge.pickSyncFile();
+    public String pickSyncFolder() {
+        return bridge.pickSyncFolder();
     }
 
     @JavascriptInterface
-    public String createSyncFile() {
-        return bridge.createSyncFile();
+    public String pickSyncDocument(final String last) {
+        return bridge.pickSyncDocument(last);
+    }
+
+    @JavascriptInterface
+    public String createSyncDocument(final String last) {
+        return bridge.createSyncDocument(last);
     }
 
     // A document behind a content provider can take long enough to freeze the
-    // WebView while it is read, written or stat-ed, so the page uses these
+    // WebView while it is copied, written or stat-ed, so the page uses these
     // variants: they run on the pool and answer through window.__jotaSyncCallback.
+    // Only metadata and a verdict cross the bridge; the document itself moves
+    // through the stage dir the backend reads and writes.
 
     @JavascriptInterface
-    public void readSyncText(final String callbackId, final String uri) {
+    public void stageSyncText(final String callbackId, final String uri) {
         executor.execute(() -> {
-            String text = bridge.readTextFile(uri);
-            if (text == null) sendSyncCallback(callbackId, null, "unreadable document");
-            else sendSyncCallback(callbackId, text, null);
+            String meta = bridge.stageSyncText(uri);
+            if (meta == null) sendSyncCallback(callbackId, null, "unreadable document");
+            else sendSyncCallback(callbackId, meta, null);
         });
     }
 
     @JavascriptInterface
-    public void writeSyncText(final String callbackId, final String uri, final String content) {
+    public void commitSyncText(final String callbackId, final String uri) {
         executor.execute(() -> {
-            String error = bridge.writeTextFile(uri, content);
+            String error = bridge.commitSyncText(uri);
             sendSyncCallback(callbackId, null, error == null || error.isEmpty() ? null : error);
         });
     }

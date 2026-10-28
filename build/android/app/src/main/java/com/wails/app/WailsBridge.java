@@ -1260,14 +1260,28 @@ public class WailsBridge {
     // SAF document access for the sync folder lives in SyncDocuments; these stay
     // public because the JS bridge is bound to them.
 
-    /** Open the system document picker and return the chosen file URI. */
-    public String pickSyncFile() {
-        return docs.pick();
+    /**
+     * Open the system folder picker and answer the sync document inside the
+     * chosen folder as {"uri":...,"created":bool}, or {"uri":"","error":...}.
+     */
+    public String pickSyncFolder() {
+        return docs.folder();
     }
 
-    /** Ask the system to create a new sync document and return its URI. */
-    public String createSyncFile() {
-        return docs.create();
+    /**
+     * Open the system document picker on an existing backup and answer it as
+     * {"uri":...}, or {"uri":"","error":...}. Empty on cancel.
+     */
+    public String pickSyncDocument(String last) {
+        return docs.pick(last);
+    }
+
+    /**
+     * Create a backup document through the system picker and answer it as
+     * {"uri":...,"created":true}, or {"uri":"","error":...}. Empty on cancel.
+     */
+    public String createSyncDocument(String last) {
+        return docs.create(last);
     }
 
     /** Called from MainActivity.onActivityResult for SyncDocuments.PICK_REQUEST. */
@@ -1275,14 +1289,17 @@ public class WailsBridge {
         docs.picked(resultCode, data);
     }
 
-    /** Read a text file from a content URI, or null when it cannot be read. */
-    public String readTextFile(String uriStr) {
-        return docs.read(uriStr);
+    /**
+     * Copy a content URI into the staged incoming.json and answer its metadata,
+     * or null when the document cannot be read.
+     */
+    public String stageSyncText(String uriStr) {
+        return docs.stage(uriStr);
     }
 
-    /** Write text content to a content URI. Returns empty on success. */
-    public String writeTextFile(String uriStr, String content) {
-        return docs.write(uriStr, content);
+    /** Write the staged outgoing.json back to a content URI. Empty on success. */
+    public String commitSyncText(String uriStr) {
+        return docs.commit(uriStr);
     }
 
     /** Document metadata as {"lastModified":ms,"size":bytes}, {} when unknown. */

@@ -106,10 +106,23 @@
 			"description": "Save your library to jota.backup.json every so often, in a folder or an account like Google Drive or Dropbox.",
 			"location": "Location",
 			"none": "No location selected",
+			"place": {
+				"phone": "Phone",
+				"drive": "Google Drive"
+			},
 			"choose": "Choose location",
 			"change": "Change location",
-			"create": "Create file",
+			"source": {
+				"title": "Where to save?",
+				"folder": "Phone folder",
+				"folderHint": "A local folder, such as the one Syncthing syncs.",
+				"open": "Open from the cloud",
+				"openHint": "Pick the jota.backup.json you already have in Google Drive or Dropbox.",
+				"create": "Create in the cloud",
+				"createHint": "Creates the file in the cloud. If it already existed, the provider makes a duplicate."
+			},
 			"save": "Save now",
+			"reload": "Reload backup",
 			"overwrite": "Overwrite the file",
 			"done": "Saved",
 			"status": {
@@ -119,6 +132,8 @@
 				"imported": "Imported"
 			},
 			"stale": "The last save could not write: the service served a cached copy of the file. Choose the location again.",
+			"duplicate": "The provider created a new file instead of using the one that already existed. There are two backups now: pick the right one.",
+			"problem": "The last save failed. Check the location and its permissions.",
 			"auto": "Autosave automatically",
 			"import": "Autoimport",
 			"importHint": "Bring to your library what other devices have saved in the file too.",
@@ -126,7 +141,8 @@
 			"session": {
 				"title": "Session encryption",
 				"pass": "Same pass on every device",
-				"hint": "When set, the YouTube and Spotify sessions are encrypted and synced through the backup. Leave empty to keep them local only."
+				"hint": "When set, the YouTube and Spotify sessions are encrypted and synced through the backup. Leave empty to keep them local only.",
+				"sealed": "The file carries a session this device cannot open. Set the pass it was encrypted with to bring it here."
 			},
 			"interval": "Every",
 			"errors": {

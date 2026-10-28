@@ -106,10 +106,23 @@
 			"description": "Guarda tu biblioteca en jota.backup.json cada cierto tiempo, en una carpeta o una cuenta como Google Drive o Dropbox.",
 			"location": "Ubicación",
 			"none": "Sin ubicación seleccionada",
+			"place": {
+				"phone": "Teléfono",
+				"drive": "Google Drive"
+			},
 			"choose": "Elegir ubicación",
 			"change": "Cambiar ubicación",
-			"create": "Crear fichero",
+			"source": {
+				"title": "¿Dónde guardar?",
+				"folder": "Carpeta del teléfono",
+				"folderHint": "Una carpeta local, como la que sincroniza Syncthing.",
+				"open": "Abrir en la nube",
+				"openHint": "Elige el jota.backup.json que ya tienes en Google Drive o Dropbox.",
+				"create": "Crear en la nube",
+				"createHint": "Crea el fichero en la nube. Si ya existía, el proveedor hará un duplicado."
+			},
 			"save": "Guardar ahora",
+			"reload": "Recargar backup",
 			"overwrite": "Sobrescribir el fichero",
 			"done": "Guardado",
 			"status": {
@@ -119,6 +132,8 @@
 				"imported": "Importadas"
 			},
 			"stale": "El último guardado no pudo escribir: el servicio sirvió una copia en caché del fichero. Vuelve a elegir la ubicación.",
+			"duplicate": "El proveedor creó un archivo nuevo en vez de usar el que ya existía. Ahora hay dos backups: elige el correcto.",
+			"problem": "El último guardado falló. Revisa la ubicación y sus permisos.",
 			"auto": "Autoguardado automático",
 			"import": "Autoimportar",
 			"importHint": "Trae también a tu biblioteca lo que otros dispositivos hayan guardado en el fichero.",
@@ -126,7 +141,8 @@
 			"session": {
 				"title": "Cifrado de sesiones",
 				"pass": "La misma contraseña en todos los dispositivos",
-				"hint": "Con contraseña, las sesiones de YouTube y Spotify se cifran y viajan en el backup. Déjala vacía para mantenerlas solo en este dispositivo."
+				"hint": "Con contraseña, las sesiones de YouTube y Spotify se cifran y viajan en el backup. Déjala vacía para mantenerlas solo en este dispositivo.",
+				"sealed": "El archivo trae una sesión que este dispositivo no puede abrir. Escribe la contraseña con la que se cifró para traerla aquí."
 			},
 			"interval": "Cada",
 			"errors": {

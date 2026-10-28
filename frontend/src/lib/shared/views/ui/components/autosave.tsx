@@ -14,19 +14,30 @@ import {
 } from "@bindings/app";
 import { useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
-import { FolderPlus, FolderSync, Save, TriangleAlert } from "lucide-preact";
+import {
+	CloudDownload,
+	CloudUpload,
+	FolderSync,
+	RotateCcw,
+	Save,
+	Smartphone,
+	TriangleAlert,
+} from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import {
 	autosave,
-	chooseFile,
-	createFile,
+	chooseFolder,
+	createDocument,
 	isAndroid,
+	openDocument,
+	reload,
 	syncName,
 } from "@/lib/music/app/backup";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError, notify } from "@/lib/shared/views/stores/errors";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
+import { Sheet } from "@/lib/shared/views/ui/components/sheet";
 import { Switch } from "@/lib/shared/views/ui/components/switch";
 
 // Numeric and compact on purpose: "this minute" reads worse than "0 min" and
@@ -56,11 +67,26 @@ function name(uri: string): string {
 	}
 }
 
+// The authority is the only part of a content:// URI that says where the
+// document actually lives, and the phone versus the cloud is what the user has
+// to see at a glance.
+function place(uri: string): string {
+	switch (uri.split("/")[2]) {
+		case "com.google.android.apps.docs.storage":
+			return t("settings.autosave.place.drive");
+		case "com.android.externalstorage.documents":
+			return t("settings.autosave.place.phone");
+		default:
+			return "";
+	}
+}
+
 export function Autosave() {
 	const queryClient = useQueryClient();
 
 	const failed = useSignal(false);
 	const cookiePass = useSignal("");
+	const sheet = useSignal(false);
 
 	useEffect(() => {
 		void SessionPass().then((p) => {
@@ -157,30 +183,88 @@ export function Autosave() {
 		},
 	});
 
-	// Picking a location is the moment the first pass is expected: syncing here
-	// spares a second click and fills the panel with the real numbers.
-	const chooseMutation = useMutation({
-		mutationFn: () => (isAndroid ? chooseFile() : ChooseSyncFolder()),
-		onSuccess: (path) => {
-			queryClient.setQueryData(["sync-folder"], path);
-			saveMutation.mutate(false);
+	// A reload is explicit too, and it is the one action that lets the file undo
+	// a local deletion, so its notice says what the document brought in.
+	const reloadMutation = useMutation({
+		mutationFn: reload,
+		onSuccess: (stats) => {
+			failed.value = false;
+			notify(
+				t("settings.playlists.imported", {
+					playlists: stats.playlists,
+					follows: stats.follows,
+					saved: stats.saved,
+					order: stats.order,
+					settings: stats.settings,
+				}),
+			);
 		},
+		onError: (error) => addError(error, "sync"),
+	});
+
+	// Picking a location is the moment the first pass is expected: syncing here
+	// spares a second click and fills the panel with the real numbers. A cancel
+	// answers nothing and leaves everything as it was.
+	function adopt(path: string) {
+		if (!path) return;
+		queryClient.setQueryData(["sync-folder"], path);
+		saveMutation.mutate(false);
+	}
+
+	const chooseMutation = useMutation({
+		mutationFn: () => (isAndroid ? chooseFolder() : ChooseSyncFolder()),
+		onSuccess: adopt,
+		onError: (error) => addError(error, "sync"),
+	});
+
+	const openMutation = useMutation({
+		mutationFn: openDocument,
+		onSuccess: adopt,
 		onError: (error) => addError(error, "sync"),
 	});
 
 	const createMutation = useMutation({
-		mutationFn: createFile,
-		onSuccess: (path) => {
-			queryClient.setQueryData(["sync-folder"], path);
-			saveMutation.mutate(false);
-		},
+		mutationFn: createDocument,
+		onSuccess: adopt,
 		onError: (error) => addError(error, "sync"),
 	});
 
+	// Android has three sources, so both entry points open the same sheet: the
+	// folder picker alone is not the only place a location can live.
+	function pick() {
+		if (isAndroid) sheet.value = true;
+		else chooseMutation.mutate();
+	}
+
 	const busy =
 		chooseMutation.isPending ||
+		openMutation.isPending ||
 		createMutation.isPending ||
-		saveMutation.isPending;
+		saveMutation.isPending ||
+		reloadMutation.isPending;
+
+	// Three ways in, named by what they leave behind instead of by the mechanism:
+	// which system picker runs underneath is the phone's business.
+	const sources = [
+		{
+			icon: Smartphone,
+			title: t("settings.autosave.source.folder"),
+			hint: t("settings.autosave.source.folderHint"),
+			run: () => chooseMutation.mutate(),
+		},
+		{
+			icon: CloudDownload,
+			title: t("settings.autosave.source.open"),
+			hint: t("settings.autosave.source.openHint"),
+			run: () => openMutation.mutate(),
+		},
+		{
+			icon: CloudUpload,
+			title: t("settings.autosave.source.create"),
+			hint: t("settings.autosave.source.createHint"),
+			run: () => createMutation.mutate(),
+		},
+	];
 
 	return (
 		<div class="space-y-4">
@@ -217,7 +301,7 @@ export function Autosave() {
 			<button
 				type="button"
 				disabled={busy}
-				onClick={() => chooseMutation.mutate()}
+				onClick={pick}
 				class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-100 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				<FolderSync size={12} />
@@ -231,9 +315,16 @@ export function Autosave() {
 					class="truncate text-xs font-medium text-zinc-300"
 					title={folder || undefined}
 				>
-					{folder
-						? folderName.value || name(folder)
-						: t("settings.autosave.none")}
+					{folder ? (
+						<>
+							{folderName.value || name(folder)}
+							{place(folder) && (
+								<span class="text-zinc-500"> · {place(folder)}</span>
+							)}
+						</>
+					) : (
+						t("settings.autosave.none")
+					)}
 				</p>
 				{status && status.at > 0 && (
 					<dl class="mt-2 grid grid-cols-[1fr_auto] items-baseline gap-x-4 gap-y-1 text-[11px]">
@@ -263,6 +354,21 @@ export function Autosave() {
 						)}
 					</dl>
 				)}
+				{status?.sealed && (
+					<p class="mt-2 text-[11px] text-amber-300">
+						{t("settings.autosave.session.sealed")}
+					</p>
+				)}
+				{status?.problem && (
+					<div class="mt-2 space-y-0.5">
+						<p class="text-[11px] text-amber-300">
+							{t("settings.autosave.problem")}
+						</p>
+						<p class="break-words text-[11px] text-amber-300/70">
+							{status.problem}
+						</p>
+					</div>
+				)}
 			</div>
 
 			<button
@@ -279,25 +385,22 @@ export function Autosave() {
 				<Save size={12} />
 				{t("settings.autosave.save")}
 			</button>
-			{isAndroid && !folder && (
-				<button
-					type="button"
-					disabled={busy}
-					onClick={() => createMutation.mutate()}
-					class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-100 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					<FolderPlus size={12} />
-					{t("settings.autosave.create")}
-				</button>
-			)}
-
+			<button
+				type="button"
+				disabled={busy || !folder}
+				onClick={() => reloadMutation.mutate()}
+				class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-100 transition-colors hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				<RotateCcw size={12} />
+				{t("settings.autosave.reload")}
+			</button>
 			{status?.stale && (
 				<div class="flex items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
 					<p class="text-xs text-amber-300">{t("settings.autosave.stale")}</p>
 					<button
 						type="button"
 						disabled={busy}
-						onClick={() => chooseMutation.mutate()}
+						onClick={pick}
 						class="shrink-0 cursor-pointer rounded-lg border border-amber-500/40 px-2 py-1 text-xs font-semibold text-amber-200 transition-colors hover:border-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{t("settings.autosave.choose")}
@@ -360,6 +463,40 @@ export function Autosave() {
 					{t("settings.autosave.overwrite")}
 				</button>
 			)}
+
+			<Sheet
+				open={sheet.value}
+				close={() => {
+					sheet.value = false;
+				}}
+				mobileOnly
+				centered
+				labelledBy="autosave-source"
+			>
+				<p
+					id="autosave-source"
+					class="px-4 pb-2 text-sm font-semibold text-zinc-200"
+				>
+					{t("settings.autosave.source.title")}
+				</p>
+				{sources.map((source) => (
+					<button
+						key={source.title}
+						type="button"
+						onClick={() => {
+							sheet.value = false;
+							source.run();
+						}}
+						class="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-800/80"
+					>
+						<source.icon size={16} class="mt-0.5 shrink-0 text-zinc-500" />
+						<span class="min-w-0">
+							<span class="block text-sm text-zinc-200">{source.title}</span>
+							<span class="block text-xs text-zinc-500">{source.hint}</span>
+						</span>
+					</button>
+				))}
+			</Sheet>
 		</div>
 	);
 }
