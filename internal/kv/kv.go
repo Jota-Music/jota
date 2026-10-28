@@ -101,10 +101,12 @@ func Close() {
 	mu.Lock()
 	defer mu.Unlock()
 
+	// A failed open is not a verdict: the next caller may be asking from a
+	// different directory, so the error must not outlive the close.
+	openErr = nil
 	if db == nil {
 		return
 	}
 	_ = db.Close()
 	db = nil
-	openErr = nil
 }
