@@ -37,6 +37,9 @@ func (s *settingsStore) Section() (backup.Settings, error) {
 	if v.Interval != nil {
 		syncVal["interval"] = *v.Interval
 	}
+	if v.Auto != nil {
+		syncVal["auto"] = *v.Auto
+	}
 	if len(syncVal) > 0 {
 		raw, err := json.Marshal(syncVal)
 		if err == nil {

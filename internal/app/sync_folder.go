@@ -133,18 +133,24 @@ func (a *App) ChooseSyncFolder() (string, error) {
 	return path, nil
 }
 
+// SyncAuto decides whether focus, the app lifecycle and the interval reconcile
+// the folder. Missing means on, like SyncImport: the switch is new and the
+// document already travels without it.
 func (a *App) SyncAuto() bool {
-	var enabled bool
-	if err := settings.GetObject("sync-auto", &enabled); err != nil {
-		return false
+	v := readSyncSettings()
+	if v.Auto == nil {
+		return true
 	}
-	return enabled
+	return *v.Auto
 }
 
 func (a *App) SetSyncAuto(enabled bool) error {
-	if err := settings.SetObject("sync-auto", enabled); err != nil {
+	v := readSyncSettings()
+	v.Auto = &enabled
+	if err := settings.SetObject("sync", v); err != nil {
 		return err
 	}
+	touch("sync")
 	a.syncInBackground()
 	return nil
 }
@@ -152,6 +158,7 @@ func (a *App) SetSyncAuto(enabled bool) error {
 type syncSettings struct {
 	Import   *bool `json:"import,omitempty"`
 	Interval *int  `json:"interval,omitempty"`
+	Auto     *bool `json:"auto,omitempty"`
 }
 
 // readSyncSettings reads the compound key. An install upgraded from the split
@@ -170,6 +177,12 @@ func readSyncSettings() syncSettings {
 		var interval int
 		if err := settings.GetObject("sync-interval", &interval); err == nil {
 			v.Interval = &interval
+		}
+	}
+	if v.Auto == nil {
+		var auto bool
+		if err := settings.GetObject("sync-auto", &auto); err == nil {
+			v.Auto = &auto
 		}
 	}
 	return v
