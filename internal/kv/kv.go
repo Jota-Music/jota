@@ -21,7 +21,6 @@ var (
 	db             *badger.DB
 	mu             sync.Mutex
 	openErr        error
-	closed         bool
 	valueLogGCOn   sync.Once
 	valueLogGCRate = 0.5
 )
@@ -29,12 +28,7 @@ var (
 func EnsureStarted() error {
 	mu.Lock()
 	defer mu.Unlock()
-	return ensureLocked()
-}
 
-// ensureLocked opens the database on first use. closed only gates Start, so an
-// explicit later use can still reopen and clears it.
-func ensureLocked() error {
 	if db != nil {
 		return nil
 	}
@@ -70,7 +64,6 @@ func ensureLocked() error {
 		return err
 	}
 	db = d
-	closed = false
 	startValueLogGC()
 	return nil
 }
@@ -99,14 +92,7 @@ func startValueLogGC() {
 }
 
 func Start() {
-	mu.Lock()
-	if closed {
-		mu.Unlock()
-		return
-	}
-	err := ensureLocked()
-	mu.Unlock()
-	if err != nil {
+	if err := EnsureStarted(); err != nil {
 		log.Printf("kv: unavailable, running without persistence: %v", err)
 	}
 }
@@ -115,15 +101,10 @@ func Close() {
 	mu.Lock()
 	defer mu.Unlock()
 
-	// A background open that has not run yet must not leave a database nobody
-	// closes: the process is leaving.
-	closed = true
-	// A failed open is not a verdict: the next caller may be asking from a
-	// different directory, so the error must not outlive the close.
-	openErr = nil
 	if db == nil {
 		return
 	}
 	_ = db.Close()
 	db = nil
+	openErr = nil
 }

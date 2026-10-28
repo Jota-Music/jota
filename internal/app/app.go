@@ -126,9 +126,7 @@ func New(version string) *App {
 
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
-	// In the background: opening Badger replays the value log, and neither the
-	// service startup nor the first render should wait for that.
-	go kv.Start()
+	kv.Start()
 
 	// Stage the sessions already on this device, so a pass set after login (or
 	// a real session replacing an older staged one) reaches the next pass.
