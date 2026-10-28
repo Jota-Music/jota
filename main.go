@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
 	"errors"
 	"io"
 	"log"
@@ -39,6 +40,12 @@ type windowState struct {
 }
 
 var windowBucket = kv.UseBucket("window")
+
+// legacyWindowPath is where the builds between 0.2.12 and 0.2.13 kept the
+// geometry, a file next to the log instead of a Badger key. Set by setupLogging
+// and read once, so the restore uses the window the user last left rather than a
+// position from before that release.
+var legacyWindowPath string
 
 const (
 	windowMinWidth  = 500
@@ -96,6 +103,7 @@ func (w *rotatingWriter) rotate() {
 // desktop entry or an AppImage. Best-effort: no writable dir means stderr only.
 func setupLogging() func() {
 	path := app.LogPath()
+	legacyWindowPath = filepath.Join(filepath.Dir(path), "window.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return func() {}
 	}
@@ -180,6 +188,19 @@ func loadWindowState() windowState {
 	var st windowState
 	_ = kv.EnsureStarted()
 	_ = windowBucket.GetObject("state", &st)
+	if legacyWindowPath == "" {
+		return st
+	}
+	data, err := os.ReadFile(legacyWindowPath)
+	if err != nil {
+		return st
+	}
+	var file windowState
+	if json.Unmarshal(data, &file) == nil && file.Width > 0 {
+		st = file
+		_ = windowBucket.SetObject("state", st)
+	}
+	_ = os.Remove(legacyWindowPath)
 	return st
 }
 
@@ -188,9 +209,9 @@ func loadWindowState() windowState {
 // "normal" window the size of the whole monitor (dragging and maximize/restore
 // then appear dead). Drop a geometry that fills a screen's work area and cap
 // any oversized one to the screen it sits on.
-func clampWindowState(st *windowState, screens []*application.Screen) {
+func clampWindowState(st *windowState, screens []*application.Screen) *application.Screen {
 	if st.Width <= 0 || len(screens) == 0 {
-		return
+		return nil
 	}
 	screen := screens[0]
 	for _, s := range screens {
@@ -203,7 +224,7 @@ func clampWindowState(st *windowState, screens []*application.Screen) {
 	wa := screen.WorkArea
 	if st.Width >= wa.Width && st.Height >= wa.Height {
 		st.Width, st.Height = 0, 0
-		return
+		return screen
 	}
 	st.Width = min(st.Width, wa.Width)
 	st.Height = min(st.Height, wa.Height)
@@ -213,6 +234,7 @@ func clampWindowState(st *windowState, screens []*application.Screen) {
 	// back. Pull it inside the work area.
 	st.X = min(max(st.X, wa.X), wa.X+wa.Width-st.Width)
 	st.Y = min(max(st.Y, wa.Y), wa.Y+wa.Height-st.Height)
+	return screen
 }
 
 // Moving or resizing the window floods WindowDidMove/Resize events at every
@@ -465,8 +487,18 @@ func main() {
 		URL: "/",
 	}
 	if state.Width > 0 {
-		clampWindowState(&state, application.Get().Screen.GetAll())
+		screen := clampWindowState(&state, application.Get().Screen.GetAll())
 		opts.Width, opts.Height = state.Width, state.Height
+		// Wails centres a window whose InitialPosition is left unset and the ready
+		// event then moves it, which is the jump the user sees. Linux takes X/Y
+		// relative to a screen's work area, so the screen holding the saved point
+		// is handed over too; the other platforms keep the restore they had.
+		if runtime.GOOS == "linux" && screen != nil {
+			opts.Screen = screen
+			opts.InitialPosition = application.WindowXY
+			opts.X = state.X - screen.WorkArea.X
+			opts.Y = state.Y - screen.WorkArea.Y
+		}
 		if state.Maximised {
 			opts.StartState = application.WindowStateMaximised
 		}
@@ -484,12 +516,10 @@ func main() {
 		markRunning(markerReady)
 		log.Printf("window ready")
 		application.Get().Event.Emit("window:always-on-top", state.AlwaysOnTop)
-		clampWindowState(&state, application.Get().Screen.GetAll())
-		if restored.Swap(true) || state.Width <= 0 {
-			return
-		}
-		window.SetPosition(state.X, state.Y)
-		window.SetSize(max(state.Width, windowMinWidth), max(state.Height, windowMinHeight))
+		// The geometry is already the one the window was created with, so there is
+		// nothing to move here. Marking it restored lets the move/resize events start
+		// saving.
+		restored.Store(true)
 	})
 	window.OnWindowEvent(events.Common.WindowDidMove, func(*application.WindowEvent) {
 		if !restored.Load() {
