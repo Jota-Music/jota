@@ -37,6 +37,8 @@ func fetchSong(id string) (music.Song, error) {
 	duration, _ := pr.VideoDetails.LengthSeconds.Int64()
 	watchURL := "https://www.youtube.com/watch?v=" + id
 
+	// shortcut: a player answer without videoDetails.thumbnail leaves the cover
+	// empty; derive https://i.ytimg.com/vi/<id>/hqdefault.jpg when that shows up.
 	return music.Song{
 		Id:        music.YouTubePrefix + id,
 		Url:       watchURL,

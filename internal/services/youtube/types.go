@@ -154,10 +154,14 @@ func absolute(url string) string {
 // capThumbnail caps i.ytimg.com thumbnails at hqdefault (480px). Art is shown
 // at 40-220px, but the API hands out maxresdefault/hq720 (~1280px), and each
 // one decodes to a few MB in WebKit. Smaller variants are left untouched so
-// nothing is ever upscaled.
+// nothing is ever upscaled. The query is dropped because innertube signs the
+// path it handed out; the unsigned variant is public and needs no signature.
 func capThumbnail(url string) string {
 	if !strings.HasPrefix(url, "https://i.ytimg.com/") {
 		return url
+	}
+	if i := strings.IndexAny(url, "?#"); i >= 0 {
+		url = url[:i]
 	}
 	slash := strings.LastIndexByte(url, '/')
 	dot := strings.LastIndexByte(url, '.')
