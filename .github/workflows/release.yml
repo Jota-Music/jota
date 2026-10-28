@@ -213,6 +213,15 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Check the APK size
+        # In-app updates download this exact file, so a change that grows it is
+        # paid for by every phone on every update.
+        run: |
+          size=$(stat -c %s bin/*.apk)
+          echo "apk: ${size} bytes (budget ${APK_BUDGET})"
+          test "$size" -le "$APK_BUDGET"
+        env:
+          APK_BUDGET: 10700000
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android-apk
@@ -255,6 +264,15 @@ jobs:
         run: wails3 task windows:create:nsis:installer VERSION="${RELEASE_TAG#v}" INSTALL_SCOPE=user
       - name: Name the raw executable for the in-app updater
         run: cp bin/jota.exe bin/jota-windows-amd64.exe
+      - name: Check the installer size
+        # The installer is the first download a Windows user sees, and the
+        # compressor is most of it: LZMA solid keeps it near 9 MB.
+        run: |
+          size=$(stat -c %s bin/*-installer.exe)
+          echo "installer: ${size} bytes (budget ${INSTALLER_BUDGET})"
+          test "$size" -le "$INSTALLER_BUDGET"
+        env:
+          INSTALLER_BUDGET: 11000000
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-installer

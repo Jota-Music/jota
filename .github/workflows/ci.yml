@@ -97,3 +97,13 @@ jobs:
         run: cd frontend && bun install --frozen-lockfile && bun run build
       - name: Build app binary (embeds frontend/dist)
         run: go build -tags production,gtk3 -trimpath -buildvcs=false -ldflags="-w -s" -o bin/jota .
+      - name: Size budget
+        # The frontend is embedded here, so this same binary is what every
+        # release artifact wraps: a change that grows it fails on the push,
+        # before a tag turns it into a download for every user.
+        run: |
+          size=$(stat -c %s bin/jota)
+          echo "bin/jota: ${size} bytes (budget ${BINARY_BUDGET})"
+          test "$size" -le "$BINARY_BUDGET"
+        env:
+          BINARY_BUDGET: 29500000
