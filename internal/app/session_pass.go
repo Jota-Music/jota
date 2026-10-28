@@ -38,7 +38,10 @@ func storedPass() string {
 }
 
 // SetSessionPass stores the shared passphrase. When it is cleared, the staged
-// sessions are dropped from the sync so they stop travelling.
+// sessions are dropped from the sync so they stop travelling. When it is set,
+// what the document already staged is opened first: the pass is the only thing
+// those blobs were waiting for, and staging the local session over them before
+// applying them would throw the other device's session away.
 func (a *App) SetSessionPass(pass string) error {
 	if err := settings.SetObject(sessionPassKey, pass); err != nil {
 		return err
@@ -46,9 +49,13 @@ func (a *App) SetSessionPass(pass string) error {
 	if pass == "" {
 		tombstoneSession("youtube")
 		tombstoneSession("spotify")
+		markSealed()
 		a.syncInBackground()
 		return nil
 	}
+	applyYouTubeCookies(stagedSession("youtube"))
+	applySpotifySession(stagedSession("spotify"))
+	markSealed()
 	a.syncYouTubeCookies()
 	a.syncSpotifySession()
 	return nil

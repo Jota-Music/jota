@@ -2,6 +2,8 @@ package app
 
 import (
 	"encoding/json"
+	"log"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -60,7 +62,48 @@ func (s *sessionsStore) Apply(part backup.Settings) error {
 			applySpotifySession(blob)
 		}
 	}
+	markSealed()
 	return nil
+}
+
+// sealedSession reports whether a staged blob still needs a pass this device
+// does not hold or cannot open it with.
+func sealedSession(blob string) bool {
+	blob = strings.TrimSpace(blob)
+	if blob == "" {
+		return false
+	}
+	pass := storedPass()
+	if pass == "" {
+		return true
+	}
+	_, err := decryptWithPass(pass, blob)
+	return err != nil
+}
+
+// markSealed records in the status whether the document carries a session that
+// is waiting for a pass, so the panel can say so instead of showing silence.
+func markSealed() {
+	sealed := sealedSession(stagedSession("youtube")) || sealedSession(stagedSession("spotify"))
+	var status SyncStatus
+	if err := settings.GetObject(syncStatusKey, &status); err != nil {
+		status = SyncStatus{}
+	}
+	if status.Sealed == sealed {
+		return
+	}
+	status.Sealed = sealed
+	if err := settings.SetObject(syncStatusKey, status); err != nil {
+		log.Printf("sync status: %v", err)
+	}
+}
+
+// stagedSession reads the blob a pass staged for one source, empty when the
+// source was tombstoned or never staged.
+func stagedSession(key string) string {
+	var blob string
+	_ = settings.GetObject("session:"+key, &blob)
+	return blob
 }
 
 // tombstoneSession marks a session as removed with a write time, so the

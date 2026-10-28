@@ -67,7 +67,7 @@ func (a *App) GetMyYouTubePlaylists() ([]music.PlaylistSummary, error) {
 		// drop it instead of leaving the panel saying it is signed in.
 		if errors.Is(err, youtube.ErrSession) {
 			log.Printf("youtube: clearing session YouTube rejected")
-			dropYouTubeSession()
+			clearYouTubeSession()
 		}
 		return []music.PlaylistSummary{}, nil
 	}
@@ -167,12 +167,24 @@ func applyYouTubeCookies(blob string) {
 			return
 		}
 		log.Printf("youtube: clearing synced session YouTube rejected")
-		dropYouTubeSession()
+		clearYouTubeSession()
 	}()
 }
 
-// dropYouTubeSession forgets a session YouTube rejected, so the panel stops
-// claiming it is signed in and offers a fresh sign-in.
+// clearYouTubeSession forgets a session YouTube rejected on this device alone, so
+// the panel stops claiming it is signed in. It leaves the synced copy in place: a
+// session this device cannot use may still work on another one, and only the user
+// clearing it may delete it everywhere.
+func clearYouTubeSession() {
+	_ = youtube.ClearCookies()
+	if app := application.Get(); app != nil {
+		app.Event.Emit("youtube:session-updated")
+	}
+}
+
+// dropYouTubeSession forgets the session everywhere: the panel stops claiming it
+// is signed in and the tombstone removes it from the other devices. Only the user
+// clearing the session asks for that.
 func dropYouTubeSession() {
 	_ = youtube.ClearCookies()
 	tombstoneSession("youtube")
@@ -181,7 +193,7 @@ func dropYouTubeSession() {
 	}
 }
 
-// verifyYouTubeSession drops a stored session YouTube no longer accepts, so
+// verifyYouTubeSession clears a stored session YouTube no longer accepts, so
 // the panel stops claiming it is signed in and offers a fresh sign-in.
 func verifyYouTubeSession() {
 	if !youtube.HasAuth() {
@@ -191,7 +203,7 @@ func verifyYouTubeSession() {
 		return
 	}
 	log.Printf("youtube: clearing stored session YouTube rejected")
-	dropYouTubeSession()
+	clearYouTubeSession()
 }
 
 // syncYouTubeCookies encrypts the stored cookies with the local pass and stages
