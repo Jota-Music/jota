@@ -106,25 +106,31 @@ export function ClipboardBanner() {
 
 	return (
 		<div class="relative flex items-center gap-3 border-b border-zinc-800 bg-zinc-900/60 px-4 py-2 text-sm">
-			<Link2 size={16} class="shrink-0 text-(--dominant-color)" />
+			{/* The whole bar acts, not only the round button, so a tap anywhere but
+			    the dismiss reaches the same action. The icon stays a span: the
+			    button keeps its look without nesting a button inside a button. */}
+			<button
+				type="button"
+				onClick={() => void open()}
+				disabled={busy}
+				title={label(link)}
+				aria-label={label(link)}
+				class="-mx-4 -my-2 flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-4 py-2 text-left disabled:cursor-default"
+			>
+				<Link2 size={16} class="shrink-0 text-(--dominant-color)" />
 
-			<p class="min-w-0 flex-1 truncate text-zinc-400">{link.text}</p>
+				<p class="min-w-0 flex-1 truncate text-zinc-400">{link.text}</p>
 
-			{busy ? (
-				<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-zinc-300">
-					<Loader2 size={14} class="animate-spin" />
-				</span>
-			) : (
-				<button
-					type="button"
-					onClick={() => void open()}
-					title={label(link)}
-					aria-label={label(link)}
-					class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition-opacity hover:opacity-85"
-				>
-					<Icon size={14} class={playable ? "fill-current" : undefined} />
-				</button>
-			)}
+				{busy ? (
+					<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-zinc-300">
+						<Loader2 size={14} class="animate-spin" />
+					</span>
+				) : (
+					<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color) transition-opacity hover:opacity-85">
+						<Icon size={14} class={playable ? "fill-current" : undefined} />
+					</span>
+				)}
+			</button>
 
 			<button
 				type="button"
