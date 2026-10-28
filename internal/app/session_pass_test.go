@@ -13,6 +13,12 @@ import (
 // for, and the panel says so in the meantime instead of staying silent.
 func TestSessionPassAppliesStagedBlob(t *testing.T) {
 	a := syncApp(t)
+	// Setting the pass queues a background pass, and a pass that outlives the test
+	// writes into a store whose directory is already gone. The test is about what
+	// the call applies, not about that pass.
+	if err := a.SetSyncAuto(false); err != nil {
+		t.Fatalf("disable autosave: %v", err)
+	}
 	t.Setenv("YOUTUBE_COOKIES", "")
 	_ = youtube.ClearCookies()
 	t.Cleanup(func() { _ = youtube.ClearCookies() })

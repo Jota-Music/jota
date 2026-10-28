@@ -32,7 +32,10 @@ func TestRamMB(t *testing.T) {
 		t.Fatalf("could not read self RSS")
 	}
 	a := &App{}
-	if got := a.RamMB(); got < self {
-		t.Fatalf("RamMB() = %d MB, expected >= self %d MB", got, self)
+	// The two reads are milliseconds apart and the collector can hand pages back
+	// in between, so a strict comparison fails on a busy run. The margin still
+	// catches a walker that answers nothing.
+	if got := a.RamMB(); got < self*9/10 {
+		t.Fatalf("RamMB() = %d MB, expected at least 90%% of self %d MB", got, self)
 	}
 }
