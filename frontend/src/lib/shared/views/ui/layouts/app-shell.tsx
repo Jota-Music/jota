@@ -59,6 +59,8 @@ export function AppShell({
 			<div class="relative h-screen min-h-0 flex flex-col">
 				<div class="flex flex-col bg-stone-950">
 					<Header />
+					<UpdateBanner />
+					<ClipboardBanner />
 					<DegradedBanner />
 					<SignInPrompt />
 				</div>
@@ -102,10 +104,7 @@ export function AppShell({
 				</div>
 
 				<MobileBottomNav />
-				<NotificationBar>
-					<UpdateBanner />
-					<ClipboardBanner />
-				</NotificationBar>
+				<NotificationBar />
 			</div>
 		</OverlayHost.Provider>
 	);
