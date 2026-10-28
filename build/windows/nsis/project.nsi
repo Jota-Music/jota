@@ -1,5 +1,9 @@
 Unicode true
 
+# The installer carries the whole binary, so the compressor is most of its size.
+# LZMA solid roughly halves it against the zlib default.
+SetCompressor /SOLID lzma
+
 ####
 ## Please note: Template replacements don't work in this file. They are provided with default defines like
 ## mentioned underneath.
