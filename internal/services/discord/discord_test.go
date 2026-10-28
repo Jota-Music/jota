@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"testing"
+	"time"
 )
 
 func readFrameJSON(conn net.Conn) (map[string]any, error) {
@@ -124,5 +125,27 @@ func TestListenPongsPing(t *testing.T) {
 	}
 	if string(body) != string(payload) {
 		t.Fatalf("payload = %s, want %s", body, payload)
+	}
+}
+
+// A connect holds the lock across the handshake, which waits up to timeout on a
+// socket that may not be there. The shutdown runs on the UI thread, so waiting
+// for that lock is the window that never gets destroyed and asks to be force
+// quit. Close is best-effort and must not wait.
+func TestCloseDoesNotWaitForAConnect(t *testing.T) {
+	s := New("client")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	done := make(chan error, 1)
+	go func() { done <- s.Close() }()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("Close waited for the connect lock")
 	}
 }

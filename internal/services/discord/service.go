@@ -72,7 +72,14 @@ func (s *Service) Clear() error {
 }
 
 func (s *Service) Close() error {
-	s.mu.Lock()
+	// The lock is held for a whole connect, including a handshake that waits
+	// up to timeout on a Discord socket that may not be there. Waiting here
+	// freezes the shutdown, and the window never gets destroyed: on Linux that
+	// is the "force quit" prompt. Closing is best-effort, so a connect in
+	// flight just leaves the socket to the process exit.
+	if !s.mu.TryLock() {
+		return nil
+	}
 	defer s.mu.Unlock()
 	conn := s.conn
 	s.conn = nil
