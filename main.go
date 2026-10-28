@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -38,7 +40,10 @@ type windowState struct {
 	AlwaysOnTop         bool
 }
 
-var windowBucket = kv.UseBucket("window")
+// windowPath is where the window geometry lives: a tiny file next to the log,
+// not a Badger key, so opening the window never waits for the database. Set by
+// setupLogging, before the window is built.
+var windowPath string
 
 const (
 	windowMinWidth  = 500
@@ -96,6 +101,7 @@ func (w *rotatingWriter) rotate() {
 // desktop entry or an AppImage. Best-effort: no writable dir means stderr only.
 func setupLogging() func() {
 	path := app.LogPath()
+	windowPath = filepath.Join(filepath.Dir(path), "window.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return func() {}
 	}
@@ -178,9 +184,34 @@ func watchStartup() *time.Timer {
 
 func loadWindowState() windowState {
 	var st windowState
-	_ = kv.EnsureStarted()
-	_ = windowBucket.GetObject("state", &st)
+	data, err := os.ReadFile(windowPath)
+	if err != nil {
+		return st
+	}
+	_ = json.Unmarshal(data, &st)
 	return st
+}
+
+// migrateWindowState copies the geometry older builds kept in Badger into the
+// file, once. It runs off the launch path on purpose: opening the database there
+// is exactly what moving the state out of it avoided, so this session keeps the
+// defaults it started with and the next one gets the geometry back.
+func migrateWindowState() {
+	if _, err := os.Stat(windowPath); err == nil {
+		return
+	}
+	var st windowState
+	if err := kv.EnsureStarted(); err != nil {
+		return
+	}
+	if err := kv.UseBucket("window").GetObject("state", &st); err != nil {
+		return
+	}
+	// A window that already saved its own geometry is newer than the old key.
+	if _, err := os.Stat(windowPath); err == nil {
+		return
+	}
+	writeWindowStateFile(st)
 }
 
 // clampWindowState keeps the restored window usable. Save-on-resize stores the
@@ -216,9 +247,9 @@ func clampWindowState(st *windowState, screens []*application.Screen) {
 }
 
 // Moving or resizing the window floods WindowDidMove/Resize events at every
-// pointer move, and each state write churns the Badger value log. Throttle the
-// writes to one per interval and keep the freshest pending state; the last one
-// is flushed at WindowClosing and again after the app exits.
+// pointer move, and each one rewrites the file. Throttle the writes to one per
+// interval and keep the freshest pending state; the last one is flushed at
+// WindowClosing and again after the app exits.
 const windowSaveInterval = 400 * time.Millisecond
 
 var (
@@ -232,7 +263,7 @@ var (
 func writeWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
 	x, y := w.Position()
 	width, height := w.Size()
-	_ = windowBucket.SetObject("state", windowState{
+	writeWindowStateFile(windowState{
 		X:           x,
 		Y:           y,
 		Width:       width,
@@ -240,6 +271,24 @@ func writeWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
 		Maximised:   w.IsMaximised(),
 		AlwaysOnTop: alwaysOnTop,
 	})
+}
+
+// writeWindowStateFile publishes the geometry with temp + rename, so a kill
+// mid-write cannot leave a clipped one behind. The temp name is unique because
+// window events arrive on their own goroutines and two writers sharing one temp
+// file would truncate each other and publish the mix.
+func writeWindowStateFile(st windowState) {
+	data, err := json.Marshal(st)
+	if err != nil {
+		return
+	}
+	tmp := fmt.Sprintf("%s.%d.tmp", windowPath, time.Now().UnixNano())
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return
+	}
+	if err := os.Rename(tmp, windowPath); err != nil {
+		_ = os.Remove(tmp)
+	}
 }
 
 func saveWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
@@ -440,6 +489,7 @@ func main() {
 	})
 
 	state := loadWindowState()
+	go migrateWindowState()
 
 	opts := application.WebviewWindowOptions{
 		Title:            "Jota",

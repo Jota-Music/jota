@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -82,6 +83,36 @@ func TestRotatingWriterCapsFileSize(t *testing.T) {
 	}
 	if w.size > 100 {
 		t.Fatalf("active log not capped: %d bytes", w.size)
+	}
+}
+
+func TestWindowStateRoundTrip(t *testing.T) {
+	windowPath = filepath.Join(t.TempDir(), "window.json")
+	want := windowState{X: 10, Y: 20, Width: 800, Height: 600, Maximised: true, AlwaysOnTop: true}
+	writeWindowStateFile(want)
+	if got := loadWindowState(); got != want {
+		t.Fatalf("state = %+v, want %+v", got, want)
+	}
+}
+
+// Window events arrive on their own goroutines, so two writers can overlap. A
+// shared temp file let one truncate the other's copy and publish the mix.
+func TestWindowStateConcurrentWritesStayReadable(t *testing.T) {
+	windowPath = filepath.Join(t.TempDir(), "window.json")
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			writeWindowStateFile(windowState{X: i, Width: 800, Height: 600})
+		}(i)
+	}
+	wg.Wait()
+
+	st := loadWindowState()
+	if st.Width != 800 || st.Height != 600 {
+		t.Fatalf("a concurrent write left a clipped file: %+v", st)
 	}
 }
 
