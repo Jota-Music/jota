@@ -21,12 +21,14 @@ function hostOf(url: string): string | null {
 }
 
 function youtube(url: string, size: number): string {
+	// hqdefault is the largest variant every video has: sddefault, hq720 and
+	// maxresdefault answer 404 for anything uploaded without HD art.
 	const variant =
-		YOUTUBE_VARIANTS.find((entry) => size <= entry.max)?.variant ?? "sddefault";
-	const slash = url.lastIndexOf("/");
-	const dot = url.lastIndexOf(".");
-	if (slash < 0 || dot <= slash) return url;
-	return `${url.slice(0, slash + 1)}${variant}${url.slice(dot)}`;
+		YOUTUBE_VARIANTS.find((entry) => size <= entry.max)?.variant ?? "hqdefault";
+	const parsed = new URL(url);
+	const slash = parsed.pathname.lastIndexOf("/");
+	if (slash < 0) return url;
+	return `${parsed.origin}${parsed.pathname.slice(0, slash + 1)}${variant}.jpg`;
 }
 
 // cover rewrites a remote cover URL to the smallest variant the given display
