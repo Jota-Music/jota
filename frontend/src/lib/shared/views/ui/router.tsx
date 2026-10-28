@@ -162,7 +162,9 @@ function Router() {
 				cancel();
 				return;
 			}
-			shed = setTimeout(() => queryClient.clear(), IDLE_SHED_MS);
+			shed = setTimeout(() => {
+				void queryClient.invalidateQueries();
+			}, IDLE_SHED_MS);
 			const deadline = Date.now() + IDLE_RELOAD_MS;
 			reload = setInterval(async () => {
 				if (isPlaying.value) return;
