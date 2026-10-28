@@ -268,12 +268,15 @@ test("an unchanged document is not rewritten", async () => {
 	news = true;
 	await autosave();
 
-	meta = { lastModified: Date.now() + 1000, size: 9 };
+	// One stamp: the pass copies whatever the provider reported, so comparing
+	// against a second Date.now() makes the test fail when the clock ticks.
+	const at = Date.now() + 1000;
+	meta = { lastModified: at, size: 9 };
 	news = false;
 	await autosave();
 
 	expect(calls.at(-1)).toEqual({
-		lastModified: Date.now() + 1000,
+		lastModified: at,
 		trust: true,
 	});
 	expect(commits).toEqual([uri]);
