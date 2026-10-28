@@ -50,4 +50,17 @@ export interface SyncStatus {
     "imported": number;
     "modified": boolean;
     "stale": boolean;
+
+    /**
+     * Sealed says a session the document carried cannot be opened with the pass
+     * this device holds, so a session is waiting for it instead of the panel
+     * staying silent about it.
+     */
+    "sealed"?: boolean;
+
+    /**
+     * Problem is why the last pass failed. A pass that keeps failing between
+     * intervals would otherwise be invisible until the next one.
+     */
+    "problem"?: string;
 }

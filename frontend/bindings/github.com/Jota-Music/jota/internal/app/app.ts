@@ -76,18 +76,22 @@ export function DiscordEnabled(): $CancellablePromise<boolean> {
 }
 
 /**
- * ExportBackup stages the serialized playlists, plus the ones the sources
- * own, inside the app files dir and hands the file to the system share chooser.
- * Resolving the sources is network work while the user may leave the app.
+ * ExportBackup serializes the user's playlists, plus the ones the sources
+ * own, and asks where to save the file. It returns the chosen path, or an empty
+ * string when the dialog is dismissed. The dialog comes first so the network
+ * work only starts once the user picked a destination, and the file carries the
+ * same name as the sync document: saving it inside the sync folder updates that
+ * document instead of creating a second file.
  */
 export function ExportBackup(): $CancellablePromise<string> {
     return $Call.ByID(119988368);
 }
 
 /**
- * ExportYouTubeCookiesFile exports the stored YouTube session to the app storage
- * and hands it to the system share chooser. The passphrase stored in settings
- * decides whether the file is encrypted.
+ * ExportYouTubeCookiesFile exports the stored YouTube session to a file chosen
+ * by the user. The passphrase stored in settings decides whether the file is
+ * encrypted. It returns the chosen path, or an empty string when the dialog
+ * is dismissed.
  */
 export function ExportYouTubeCookiesFile(): $CancellablePromise<string> {
     return $Call.ByID(3031681012);
@@ -279,8 +283,8 @@ export function RemoveSavedPlaylist(id: string): $CancellablePromise<void> {
     return $Call.ByID(3652012245, id);
 }
 
-export function RemoveSongFromPlaylist(id: string, ref: string): $CancellablePromise<void> {
-    return $Call.ByID(4016821159, id, ref);
+export function RemoveSongsFromPlaylist(id: string, refs: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(723120468, id, refs);
 }
 
 export function RenamePlaylist(id: string, name: string): $CancellablePromise<void> {
@@ -325,10 +329,9 @@ export function RevalidateYouTubeChannel(channel: string): $CancellablePromise<v
 }
 
 /**
- * SaveLogs has no counterpart on Android: a save dialog cannot hand back a
- * filesystem path there. The log is staged inside the app files dir (exposed to
- * the system by the "logs" FileProvider path) and handed to the share chooser
- * as a file attachment instead.
+ * SaveLogs asks the user where to save a copy of the log, so a crash report can
+ * be shared. It returns the chosen path, or an empty string when the dialog is
+ * dismissed.
  */
 export function SaveLogs(): $CancellablePromise<string> {
     return $Call.ByID(2876203262);
@@ -387,7 +390,10 @@ export function SetIdleReload(enabled: boolean): $CancellablePromise<void> {
 
 /**
  * SetSessionPass stores the shared passphrase. When it is cleared, the staged
- * sessions are dropped from the sync so they stop travelling.
+ * sessions are dropped from the sync so they stop travelling. When it is set,
+ * what the document already staged is opened first: the pass is the only thing
+ * those blobs were waiting for, and staging the local session over them before
+ * applying them would throw the other device's session away.
  */
 export function SetSessionPass(pass: string): $CancellablePromise<void> {
     return $Call.ByID(1739543765, pass);
@@ -461,6 +467,11 @@ export function SpotifyReconnect(): $CancellablePromise<boolean> {
     return $Call.ByID(4133825283);
 }
 
+/**
+ * SyncAuto decides whether focus, the app lifecycle and the interval reconcile
+ * the folder. Missing means on, like SyncImport: the switch is new and the
+ * document already travels without it.
+ */
 export function SyncAuto(): $CancellablePromise<boolean> {
     return $Call.ByID(3037513824);
 }
@@ -474,13 +485,15 @@ export function SyncConnect(relayURL: string, room: string, role: string, token:
 }
 
 /**
- * SyncDocument merges a backup document read from the platform picker (an
- * Android content:// document) and returns the document both sides agree on.
- * fresh reports whether the copy is newer than our own last write: only the
- * side that read the file can tell a cache miss from a cached copy.
+ * SyncDocument reconciles the copy the platform staged in incoming.json and
+ * answers whether the merge has to be written back, leaving the document both
+ * sides agree on in outgoing.json. lastModified is the provider's stamp for the
+ * copy it served, 0 when it reports none; trust is the caller asking for this
+ * copy to be reconciled now (a manual save or the forced overwrite), which skips
+ * the freshness rule.
  */
-export function SyncDocument(data: string, fresh: boolean): $CancellablePromise<string> {
-    return $Call.ByID(392385374, data, fresh);
+export function SyncDocument(lastModified: number, trust: boolean): $CancellablePromise<boolean> {
+    return $Call.ByID(392385374, lastModified, trust);
 }
 
 export function SyncFolder(): $CancellablePromise<string> {
@@ -524,6 +537,25 @@ export function SyncPlaylists(): $CancellablePromise<void> {
 }
 
 /**
+ * SyncProblem records a failure the page saw and Go did not: the document it
+ * merged could not be written back to the provider. Without it the panel would
+ * keep showing the pass before it as the last one, since nothing reached the
+ * file the other devices read.
+ */
+export function SyncProblem(reason: string): $CancellablePromise<void> {
+    return $Call.ByID(2213583866, reason);
+}
+
+/**
+ * SyncReload applies the document the location holds to this library, letting
+ * the file win over local deletions because the user asked for it. Android has
+ * staged the provider's copy already; the desktop reads the folder.
+ */
+export function SyncReload(): $CancellablePromise<backup$0.Stats> {
+    return $Call.ByID(543343842);
+}
+
+/**
  * SyncRoomStatus reports whether a saved room is live and how many members it
  * has, without joining it.
  */
@@ -551,6 +583,15 @@ export function SyncStatus(): $CancellablePromise<$models.SyncStatus> {
 
 export function SyncStop(): $CancellablePromise<void> {
     return $Call.ByID(3298596019);
+}
+
+/**
+ * SyncWritten is the platform confirming the merged copy reached the file, which
+ * is the only moment our write baseline may move: the bytes are what the other
+ * devices will read, and a stale flag they set has just stopped being true.
+ */
+export function SyncWritten(): $CancellablePromise<void> {
+    return $Call.ByID(239414486);
 }
 
 export function UnfollowUser(user: string): $CancellablePromise<void> {
