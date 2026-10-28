@@ -62,12 +62,17 @@ func ensureLocked() error {
 		WithIndexCacheSize(4 << 20).
 		WithValueLogFileSize(64 << 20).
 		WithCompression(options.ZSTD)
-	db, openErr = badger.Open(opts)
-	if openErr == nil {
-		closed = false
-		startValueLogGC()
+	// Open only ever publishes a usable database: Badger can answer a partial one
+	// next to its error, and closing that later panics.
+	d, err := badger.Open(opts)
+	openErr = err
+	if err != nil {
+		return err
 	}
-	return openErr
+	db = d
+	closed = false
+	startValueLogGC()
+	return nil
 }
 
 // startValueLogGC keeps the value log compacted: every write (window state,
