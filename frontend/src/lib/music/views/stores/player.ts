@@ -206,6 +206,24 @@ export function playList(songs: Song[], source: string | null = null) {
 	return playAll(songs, source);
 }
 
+// playNow takes the slot of the track that is playing and leaves the rest of
+// the queue alone: a song the user just pointed at should not cost them the
+// queue they built. An empty queue is the same thing with one slot.
+export async function playNow(song: Song) {
+	const at = currentIndex.value;
+	if (at < 0 || at >= queue.value.length) {
+		await playAll([song], null);
+		return;
+	}
+
+	const next = queue.value.slice();
+	next[at] = song;
+	queue.value = next;
+	persistQueue();
+	pingQueue();
+	await playAtIndex(at);
+}
+
 // Adds to the queue land right after the playing track, so they are the next to
 // play. Nothing is anchored to a previous add: once playback moves on, an old
 // anchor would drop the new songs far below instead of next.

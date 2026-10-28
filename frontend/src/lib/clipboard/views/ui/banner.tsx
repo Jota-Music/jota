@@ -19,7 +19,7 @@ import {
 	isPlaying,
 	pendingStart,
 } from "@/lib/music/views/stores/audio";
-import { playList } from "@/lib/music/views/stores/player";
+import { playNow } from "@/lib/music/views/stores/player";
 import { t } from "@/lib/shared/i18n";
 import { addError } from "@/lib/shared/views/stores/errors";
 
@@ -95,7 +95,7 @@ export function ClipboardBanner() {
 		}
 		setBusy(true);
 		try {
-			playList([await getSong(link.to)]);
+			await playNow(await getSong(link.to));
 			pending.value = null;
 		} catch (error) {
 			addError(error, "clipboard");
