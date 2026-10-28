@@ -162,6 +162,24 @@ export function Shelf({
 			? items
 			: items.filter((i) => i.source === sourceFilter);
 
+	// An empty shelf and a filter that left nothing look the same to the reader,
+	// so both answer with the same hint: the filter, not the library, is what
+	// is missing there.
+	const empty = () =>
+		sourceFilter === "spotify" &&
+		!spotifyConnected.value &&
+		!spotifyDegraded.value ? (
+			<SpotifyConnect />
+		) : sourceFilter === "spotify" ? (
+			t("music.shelf.noSpotify")
+		) : sourceFilter === "local" ? (
+			<LocalHint />
+		) : sourceFilter === "youtube" ? (
+			<YouTubeHint />
+		) : (
+			emptyMessage
+		);
+
 	return (
 		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
 			{isLoading ? (
@@ -186,19 +204,7 @@ export function Shelf({
 
 					{items.length === 0 ? (
 						<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
-							{sourceFilter === "spotify" &&
-							!spotifyConnected.value &&
-							!spotifyDegraded.value ? (
-								<SpotifyConnect />
-							) : sourceFilter === "spotify" ? (
-								t("music.shelf.noSpotify")
-							) : sourceFilter === "local" ? (
-								<LocalHint />
-							) : sourceFilter === "youtube" ? (
-								<YouTubeHint />
-							) : (
-								emptyMessage
-							)}
+							{empty()}
 							{onCreate && sourceFilter === "local" && (
 								<button
 									type="button"
@@ -222,17 +228,7 @@ export function Shelf({
 							>
 								{filteredItems.length === 0 ? (
 									<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
-										{sourceFilter === "spotify" &&
-										!spotifyConnected.value &&
-										!spotifyDegraded.value ? (
-											<SpotifyConnect />
-										) : sourceFilter === "spotify" ? (
-											t("music.shelf.noSpotify")
-										) : sourceFilter === "local" ? (
-											<LocalHint />
-										) : (
-											emptyMessage
-										)}
+										{empty()}
 									</div>
 								) : variant === "grid" ? (
 									<Grid
