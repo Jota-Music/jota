@@ -237,32 +237,82 @@ store's own value and the mark in place, so the change is still waiting.
 overwrite the same temp file, and the triggers now arrive from many callers at
 once; the frontend's `autosave` also keeps one run in flight and chains a manual
 call behind it instead of dropping it.
+- On Android the document moves as a **file, never as a string over the bridge**:
+`SyncDocuments.stage` copies the provider's document into `filesDir/sync/incoming.json`
+and answers its metadata from that same pass, the backend reconciles it into
+`outgoing.json` (the staged names are `syncIncoming`/`syncOutgoing` in
+`internal/app/sync_folder.go`), and `commit` streams that back with `"wt"` so a
+shorter document cannot keep the old tail. A library is megabytes, and a string
+through the WebView costs three copies of it on each side. Off Android
+`syncStageDir` is empty and the folder is read and written in place.
 - On Android every document call is asynchronous: `readSyncText`, `writeSyncText`
 and `syncFileInfoAsync` answer through `window.__jotaSyncCallback`, because a
 synchronous SAF or Drive read would freeze the WebView for as long as the
 provider takes. `SyncDocuments` (the SAF half), the bridge methods that forward
 to it and the `window.__jotaSync` call from `onResume`/`onPause` live under
 `build/android/**`, which comes from the Wails template: a template update can
-erase them, so re-apply them on top.
-- SAF/Drive can serve a cached copy. `frontend/src/lib/music/app/backup.ts` compares
-  the copy against our **own last write** (`SyncStatus.writeAt` + a FNV-1a hash of
-  what we wrote, both in settings). Bytes that are our own, or a provider that
-  reports no timestamp, are safe to write: a merge is a union. Only a copy that is
-  not ours and whose `lastModified` did not move after our write is treated as
-  stale and merged read-only, so a merge still pending on another device is never
-  overwritten. A manual save is the user asking for the file now, so it trusts the
-  copy it just read even when the timestamp did not move; automatic passes keep the
-  conservative rule.
-- Only an applied write moves that baseline. A sync that just pulled must not, or
-  the phone would consider every later copy stale and stop pushing forever.
-- The reading side decides `fresh` and passes it to `SyncDocument`, which records
-  the outcome (and the new baseline when it applied) in `SyncStatus`.
+erase them, so re-apply them on top and keep the staged filenames matching the
+Go constants. Neither the APK nor the Drive picker can be exercised on desktop,
+only on a device.
+- SAF/Drive can serve a cached copy. The pass compares the copy against our
+  **own last write** (`SyncStatus.writeAt` + a FNV-1a hash of what we wrote, both
+  in settings). Bytes that are our own, or a provider that reports no timestamp,
+  are safe to write: a merge is a union. A copy that is not ours and whose
+  `lastModified` did not move after our write is treated as stale: the page reads
+  it once more, and if the provider still serves it, writes the union anyway. The
+  refusal exists so a merge another device has not uploaded is never silently
+  dropped; the retry exists because refusing *forever* would keep this device's
+  records out of the file until the provider felt like refreshing, which on Drive
+  never happens. A manual save is the user asking for the file now, so it trusts
+  the copy it just read even when the timestamp did not move.
+- **The write baseline moves only once the file really holds the document.** The
+  folder path knows because `backup.Service.Sync` wrote it before answering; the
+  platform path cannot know, because the page commits the staged copy afterwards,
+  so `SyncWritten` (after the commit) is what records `WriteAt`/`Hash` and clears
+  `Stale`/`Problem`. A commit that failed therefore leaves the baseline where it
+  was and the next pass writes again, instead of this device trusting bytes the
+  provider never received. A sync that only pulled must not move it either.
+- The freshness rule lives in the backend, not in the page: `freshCopy`
+  (`internal/app/sync_folder.go`) compares the fingerprint of the document this
+  device last wrote (`SyncStatus.WriteAt` + `Hash`) against the copy the provider
+  served and its `lastModified`. `SyncDocument(lastModified, trust)` applies it,
+  leaves the merged document in `outgoing.json`, records what the pass read in
+  `SyncStatus`, and answers whether there is something to write back.
+- A copy that cannot be parsed is a truncated transfer or a write cut short, not a
+  library. Both paths rebuild the document from this device's library instead of
+  failing every later pass; a document of a version this build does not write is
+  not damage, so it fails the pass and is left untouched. The failure is recorded
+  in `SyncStatus.Problem`, which the panel shows and which keeps `SyncPending`
+  true so the manual save stays offered.
+- "Reload backup" in the panel applies the document the location holds, the file
+  winning over local deletions (`SyncReload` → `backup.Service.Restore`), and
+  leaves the file untouched: it is the read direction. It goes through the same
+  queue as a pass, so it never lands in the middle of one staging or committing.
 - Export uses the same filename, so saving into the sync folder updates the sync
   document instead of creating a second file. A backup found under an older name
   is adopted and renamed to the canonical one.
-- The document itself can be created from the Android picker (`SyncDocuments.create()`,
-  `ACTION_CREATE_DOCUMENT`, `application/json`), so a fresh install can bootstrap it
-  instead of only opening an existing file.
+- On Android the button opens a sheet with three sources, because no single system
+  picker reaches all of them (`SyncDocuments.folder`/`pick`/`create`):
+  - **Phone folder** (`ACTION_OPEN_DOCUMENT_TREE`): the tree picker lists the local
+    storage and every provider that announces tree support, and the native side
+    answers the `jota.backup.json` inside the chosen folder, creating it
+    (`application/json`) when the folder holds none, so a fresh install bootstraps
+    the document instead of only opening an existing file. What is stored is the
+    **document** URI, rebuilt onto the tree (`buildDocumentUriUsingTree`, also for
+    what `createDocument` answers, which may be a plain document URI): the
+    persistable grant is held on the folder, and a tree grant does not open a loose
+    document URI. **Drive never appears here**: its provider announces no tree
+    support, and MIUI additionally hides every non-local root from the tree picker.
+  - **Open from the cloud** (`ACTION_OPEN_DOCUMENT`) and **create in the cloud**
+    (`ACTION_CREATE_DOCUMENT`, `application/json`): the cloud is reached one
+    document at a time. With no document stored yet, `EXTRA_INITIAL_URI` starts the
+    picker at the Drive provider's first writable root (found by querying
+    `buildRootsUri` and its `FLAG_SUPPORTS_CREATE`), so it opens in Drive instead of
+    "Recent"; afterwards it starts where the current document already lives.
+  - No picker can be summoned programmatically and no grant can be taken without
+    one: `takePersistableUriPermission` only succeeds on the URI a system picker
+    just answered, which is why every path goes through `startActivityForResult`
+    and the grant is what keeps the document readable across launches.
 - The reliable path is a local folder synced by Syncthing (a real directory on
   desktop, a local SAF folder on Android), not a Drive document behind the SAF
   cache.
