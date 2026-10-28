@@ -27,7 +27,7 @@ import { playlistSource } from "@/lib/music/app/playlist-source";
 import {
 	deletePlaylist,
 	isCustom,
-	removeSongFromPlaylist,
+	removeSongsFromPlaylist,
 	renamePlaylist,
 	reorderPlaylist,
 } from "@/lib/music/app/playlists";
@@ -171,8 +171,8 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		queryFn: () => getFullPlaylist(id),
 	});
 
-	const removeSong = useMutation({
-		mutationFn: (ref: string) => removeSongFromPlaylist(id, ref),
+	const removeSongs = useMutation({
+		mutationFn: (refs: string[]) => removeSongsFromPlaylist(id, refs),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["playlist", id] });
 			queryClient.invalidateQueries({ queryKey: ["playlists"] });
@@ -184,14 +184,11 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	const confirmRemove = () => {
 		if (!removing.value) return;
+		const refs = removing.value.map((song) => song.id);
 		const order = (data?.songs ?? []).map((song) => song.id);
-		for (const song of removing.value) removeSong.mutate(song.id);
+		removeSongs.mutate(refs);
 		clearSelection();
-		stageRemoval({
-			playlistId: id,
-			refs: removing.value.map((song) => song.id),
-			order,
-		});
+		stageRemoval({ playlistId: id, refs, order });
 		removing.value = null;
 	};
 
@@ -482,7 +479,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			<ConfirmModal
 				open={!!removing.value}
 				danger
-				pending={removeSong.isPending}
+				pending={removeSongs.isPending}
 				close={() => {
 					removing.value = null;
 				}}

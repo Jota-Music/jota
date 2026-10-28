@@ -40,8 +40,8 @@ func (a *App) AddSongsToPlaylist(id string, refs []string) error {
 	return err
 }
 
-func (a *App) RemoveSongFromPlaylist(id string, ref string) error {
-	err := a.Playlists.RemoveSong(id, ref)
+func (a *App) RemoveSongsFromPlaylist(id string, refs []string) error {
+	err := a.Playlists.RemoveSongs(id, refs)
 	if err == nil {
 		a.syncInBackground()
 	}

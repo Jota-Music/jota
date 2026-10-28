@@ -184,7 +184,14 @@ func (s *Service) AddSongs(id string, refs []string) error {
 	return s.save(pl)
 }
 
-func (s *Service) RemoveSong(id string, ref string) error {
+// RemoveSongs drops every reference at once, so removing a selection costs one
+// write instead of one per track.
+func (s *Service) RemoveSongs(id string, refs []string) error {
+	refs = normalizeRefs(refs)
+	if len(refs) == 0 {
+		return nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.dirty = true
@@ -194,16 +201,27 @@ func (s *Service) RemoveSong(id string, ref string) error {
 		return err
 	}
 
-	out := pl.Songs[:0]
+	drop := make(map[string]struct{}, len(refs))
+	for _, ref := range refs {
+		drop[ref] = struct{}{}
+	}
+
+	out := make([]string, 0, len(pl.Songs))
 	for _, existing := range pl.Songs {
-		if existing != ref {
+		if _, gone := drop[existing]; !gone {
 			out = append(out, existing)
 		}
 	}
-	delete(pl.Tracks, ref)
+	for ref := range drop {
+		delete(pl.Tracks, ref)
+	}
 	pl.Songs = out
 	pl.ModifiedAt = time.Now().UnixMilli()
 	return s.save(pl)
+}
+
+func (s *Service) RemoveSong(id string, ref string) error {
+	return s.RemoveSongs(id, []string{ref})
 }
 
 // Reorder replaces the playlist order with refs. Unknown references are dropped,

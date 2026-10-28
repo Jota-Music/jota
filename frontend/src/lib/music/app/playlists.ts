@@ -3,7 +3,7 @@ import {
 	CreatePlaylist,
 	DeletePlaylist,
 	GetPlaylists,
-	RemoveSongFromPlaylist,
+	RemoveSongsFromPlaylist,
 	RenamePlaylist,
 	ReorderPlaylist,
 } from "@bindings/app";
@@ -38,11 +38,11 @@ export async function addSongsToPlaylist(
 	await AddSongsToPlaylist(id, refs);
 }
 
-export async function removeSongFromPlaylist(
+export async function removeSongsFromPlaylist(
 	id: string,
-	ref: string,
+	refs: string[],
 ): Promise<void> {
-	await RemoveSongFromPlaylist(id, ref);
+	await RemoveSongsFromPlaylist(id, refs);
 }
 
 export async function reorderPlaylist(
