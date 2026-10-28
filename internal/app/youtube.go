@@ -163,7 +163,7 @@ func applyYouTubeCookies(blob string) {
 		app.Event.Emit("youtube:session-updated")
 	}
 	go func() {
-		if !errors.Is(youtube.Verify(), youtube.ErrSession) {
+		if !errors.Is(verifyCookies(), youtube.ErrSession) {
 			return
 		}
 		log.Printf("youtube: clearing synced session YouTube rejected")
@@ -193,13 +193,18 @@ func dropYouTubeSession() {
 	}
 }
 
+// verifyCookies is youtube.Verify. It is a variable so a test can answer a
+// session without the network round trip and without the clear a rejected one
+// triggers behind the caller's back.
+var verifyCookies = youtube.Verify
+
 // verifyYouTubeSession clears a stored session YouTube no longer accepts, so
 // the panel stops claiming it is signed in and offers a fresh sign-in.
 func verifyYouTubeSession() {
 	if !youtube.HasAuth() {
 		return
 	}
-	if !errors.Is(youtube.Verify(), youtube.ErrSession) {
+	if !errors.Is(verifyCookies(), youtube.ErrSession) {
 		return
 	}
 	log.Printf("youtube: clearing stored session YouTube rejected")

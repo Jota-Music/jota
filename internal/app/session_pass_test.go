@@ -46,3 +46,11 @@ func TestSessionPassAppliesStagedBlob(t *testing.T) {
 		t.Fatal("a pass that opened the staged session still reports it as sealed")
 	}
 }
+
+func init() {
+	// Applying a session verifies it in the background and clears it when YouTube
+	// rejects it. Without a network every session is rejected, so the test would
+	// race the clear it just applied. The stub answers a healthy session; the
+	// package has no test that needs a rejected one.
+	verifyCookies = func() error { return nil }
+}
