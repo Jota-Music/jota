@@ -1,5 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { Link } from "wouter-preact";
+import { prefetch } from "@/lib/music/app/prefetch";
 import { hover } from "@/lib/music/views/ui/cover-hover";
 import { SourceBadge } from "@/lib/music/views/ui/shelf/badge";
 import { Cover } from "@/lib/music/views/ui/shelf/cover";
@@ -42,6 +43,8 @@ export function Compact({
 				>
 					<Link
 						href={to(item.id)}
+						onPointerEnter={() => prefetch(to(item.id))}
+						onFocus={() => prefetch(to(item.id))}
 						{...dragProps(item.id)}
 						onClick={(e) => select(item, e)}
 						onContextMenu={menu(item)}

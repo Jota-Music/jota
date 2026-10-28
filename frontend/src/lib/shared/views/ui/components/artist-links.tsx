@@ -1,5 +1,6 @@
 import type { JSX } from "preact";
 import { Link } from "wouter-preact";
+import { prefetch } from "@/lib/music/app/prefetch";
 import type { Artist } from "@/lib/music/model";
 import { cn } from "@/lib/shared/utils/tw";
 
@@ -26,6 +27,8 @@ function ArtistLink({
 		<Link
 			href={href}
 			class={cn(className, "hover:underline")}
+			onPointerEnter={() => prefetch(href)}
+			onFocus={() => prefetch(href)}
 			onClick={(e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
 				e.stopPropagation();
 			}}

@@ -1,5 +1,6 @@
 import type { JSX } from "preact";
 import { Link } from "wouter-preact";
+import { prefetch } from "@/lib/music/app/prefetch";
 import type { Album } from "@/lib/music/model";
 import { cn } from "@/lib/shared/utils/tw";
 
@@ -16,6 +17,8 @@ export function AlbumLink({ album, class: className }: Props) {
 		<Link
 			href={`/album/${album.id}`}
 			class={cn(className, "hover:underline")}
+			onPointerEnter={() => prefetch(`/album/${album.id}`)}
+			onFocus={() => prefetch(`/album/${album.id}`)}
 			onClick={(e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
 				e.stopPropagation();
 			}}

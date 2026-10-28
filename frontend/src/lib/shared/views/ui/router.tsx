@@ -29,49 +29,50 @@ import { queryClient } from "@/lib/shared/views/ui/query-client";
 import { loadRelay } from "@/lib/sync/app/transport";
 import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
 
-const PlaylistPage = lazy(() =>
-	import("@/lib/shared/views/ui/pages/playlist").then((m) => ({
-		default: m.PlaylistPage,
-	})),
-);
-const ArtistPage = lazy(() =>
-	import("@/lib/shared/views/ui/pages/artist").then((m) => ({
-		default: m.ArtistPage,
-	})),
-);
-const AlbumPage = lazy(() =>
-	import("@/lib/shared/views/ui/pages/album").then((m) => ({
-		default: m.AlbumPage,
-	})),
-);
-const RadioPage = lazy(() =>
-	import("@/lib/shared/views/ui/pages/radio").then((m) => ({
-		default: m.RadioPage,
-	})),
-);
-const YouTubeSearchPage = lazy(() =>
-	import("@/lib/shared/views/ui/pages/youtube-search").then((m) => ({
-		default: m.YouTubeSearchPage,
-	})),
-);
-const SearchPage = lazy(() =>
-	import("@/lib/shared/views/ui/pages/search").then((m) => ({
-		default: m.SearchPage,
-	})),
-);
-const UserPage = lazy(() =>
-	import("@/lib/shared/views/ui/pages/user").then((m) => ({
-		default: m.UserPage,
-	})),
-);
-const NotFoundPage = lazy(() =>
-	import("@/lib/shared/views/ui/pages/not-found").then((m) => ({
-		default: m.NotFoundPage,
-	})),
-);
+const pages = {
+	playlist: () =>
+		import("@/lib/shared/views/ui/pages/playlist").then((m) => ({
+			default: m.PlaylistPage,
+		})),
+	artist: () =>
+		import("@/lib/shared/views/ui/pages/artist").then((m) => ({
+			default: m.ArtistPage,
+		})),
+	album: () =>
+		import("@/lib/shared/views/ui/pages/album").then((m) => ({
+			default: m.AlbumPage,
+		})),
+	radio: () =>
+		import("@/lib/shared/views/ui/pages/radio").then((m) => ({
+			default: m.RadioPage,
+		})),
+	youtubeSearch: () =>
+		import("@/lib/shared/views/ui/pages/youtube-search").then((m) => ({
+			default: m.YouTubeSearchPage,
+		})),
+	search: () =>
+		import("@/lib/shared/views/ui/pages/search").then((m) => ({
+			default: m.SearchPage,
+		})),
+	user: () =>
+		import("@/lib/shared/views/ui/pages/user").then((m) => ({
+			default: m.UserPage,
+		})),
+	notFound: () =>
+		import("@/lib/shared/views/ui/pages/not-found").then((m) => ({
+			default: m.NotFoundPage,
+		})),
+};
 
-// Hidden for this long means the app is genuinely idle, not just unfocused, so
-// it is safe to drop every cached query and let them refetch on return.
+const PlaylistPage = lazy(pages.playlist);
+const ArtistPage = lazy(pages.artist);
+const AlbumPage = lazy(pages.album);
+const RadioPage = lazy(pages.radio);
+const YouTubeSearchPage = lazy(pages.youtubeSearch);
+const SearchPage = lazy(pages.search);
+const UserPage = lazy(pages.user);
+const NotFoundPage = lazy(pages.notFound);
+
 // A background refresh pass revalidated cached catalog content; drop stale
 // queries so open views pick up changes on their next render. Unmounted queries
 // are not refetched, so untouched views keep their cached snapshot.
@@ -105,6 +106,10 @@ Events.On("spotify:reconnected", async () => {
 	await queryClient.invalidateQueries();
 });
 
+// Hidden this long means the app is genuinely idle, not just unfocused, so its
+// cache is marked stale instead of being dropped: the views keep the data they
+// already painted and refetch it behind the first frame on return. Discarding
+// everything from memory is ReloadWindow's job below, which is deliberate.
 const IDLE_SHED_MS = 5 * 60 * 1000;
 
 // Reload the webview when it has been hidden this long and playback is paused,
@@ -124,6 +129,20 @@ function Router() {
 		void loadVersion();
 		void checkUpdate();
 		void loadRelay();
+	}, []);
+
+	// Warm the route chunks once the first paint is done, so a navigation never
+	// waits on the network and never falls into the Suspense boundary.
+	useEffect(() => {
+		const warm = () => {
+			for (const load of Object.values(pages)) void load().catch(() => {});
+		};
+		if (typeof requestIdleCallback === "function") {
+			const id = requestIdleCallback(warm, { timeout: 2000 });
+			return () => cancelIdleCallback(id);
+		}
+		const id = setTimeout(warm, 200);
+		return () => clearTimeout(id);
 	}, []);
 
 	useEffect(() => {
@@ -175,7 +194,11 @@ function Router() {
 					</div>
 				}
 			>
-				<Suspense fallback={null}>
+				<Suspense
+					fallback={
+						<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6" />
+					}
+				>
 					<Switch>
 						<Route path="/playlist/:id" component={PlaylistPage} />
 						<Route path="/artist/:id">
