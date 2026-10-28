@@ -2,6 +2,7 @@ package backup
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -424,6 +425,69 @@ func TestSyncForceOverwritesUnreadableBackup(t *testing.T) {
 	}
 	if _, err := (&Service{Playlists: s}).Sync(dir, Options{Import: true}); err != nil {
 		t.Fatalf("sync after the forced write: %v", err)
+	}
+}
+
+// A damaged document is not a reason to stop backing up: the pass writes this
+// device's library over it, so autosave revives on its own.
+func TestSyncRecoversUnreadableBackup(t *testing.T) {
+	setup(t)
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, BackupFile)
+	broken := `{"version":1,"playlists":{"items":[`
+	if err := os.WriteFile(path, []byte(broken), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s := playlists.New(nil)
+	if _, err := s.Create("Mix"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := (&Service{Playlists: s}).Sync(dir, Options{Import: true}); err != nil {
+		t.Fatalf("sync of a damaged document: %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != BackupFile {
+		t.Fatalf("folder = %v, want only the document", entries)
+	}
+	doc := readDoc(t, path)
+	if doc.Version != Version || len(doc.Playlists.Items) != 1 || doc.Playlists.Items[0].Name != "Mix" {
+		t.Fatalf("recovered document = %+v", doc)
+	}
+	list, err := s.List()
+	if err != nil || len(list) != 1 || list[0].Name != "Mix" {
+		t.Fatalf("library after the recovery = %+v, %v", list, err)
+	}
+}
+
+// A document of a format this build does not write is not damage: writing over
+// it would lose whatever that build stored, so the pass fails and leaves it.
+func TestSyncKeepsForeignVersionBackup(t *testing.T) {
+	setup(t)
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, BackupFile)
+	foreign := `{"version":2,"playlists":{"items":[]}}`
+	if err := os.WriteFile(path, []byte(foreign), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s := playlists.New(nil)
+	if _, err := s.Create("Mix"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := (&Service{Playlists: s}).Sync(dir, Options{Import: true}); !errors.Is(err, ErrVersion) {
+		t.Fatalf("sync = %v, want ErrVersion", err)
+	}
+	if data, err := os.ReadFile(path); err != nil || string(data) != foreign {
+		t.Fatalf("foreign document = %q, %v; want it untouched", data, err)
 	}
 }
 

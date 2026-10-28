@@ -133,13 +133,23 @@ func (s *Service) Sync(folder string, opts Options) (Stats, error) {
 	}
 
 	doc, path, size, found, err := read(folder)
-	if err != nil {
-		if !opts.Force {
-			return Stats{}, fmt.Errorf("sync %s: %w", folder, err)
-		}
+	switch {
+	case err == nil:
+	// A file that cannot be parsed is a truncated copy or a lost write, not a
+	// library: the pass overwrites it with this device's document, so autosave
+	// revives instead of failing forever. found stays true because the folder is
+	// not empty. A version this build does not know and an I/O error on the mount
+	// are not recoverable that way, and still fail the pass.
+	case errors.Is(err, ErrUnreadable):
+		log.Printf("sync: overwriting the unreadable %s: %v", path, err)
+		doc = Document{Version: Version}
+		path, size, found = filepath.Join(folder, BackupFile), 0, true
+	case opts.Force:
 		log.Printf("sync: overwriting %s: %v", folder, err)
 		doc = Document{Version: Version}
 		path, size, found = filepath.Join(folder, BackupFile), 0, false
+	default:
+		return Stats{}, fmt.Errorf("sync %s: %w", folder, err)
 	}
 	// Outside the lock: resolving a source is a network round trip.
 	doc, refreshed := s.prepare(doc, opts.Snapshots, opts.Force || opts.Refresh)

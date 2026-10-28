@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"hash/fnv"
 	"log"
 	"os"
@@ -19,6 +20,12 @@ import (
 const (
 	syncFolderKey = "sync-folder"
 	syncStatusKey = "sync-status"
+
+	// The staged document: the native side copies the provider's file into
+	// incoming.json and writes outgoing.json back, so the bytes never cross the
+	// bridge as a string.
+	syncIncoming = "incoming.json"
+	syncOutgoing = "outgoing.json"
 )
 
 // SyncStatus is what the last sync read and changed. It lives in settings
@@ -45,6 +52,13 @@ type SyncStatus struct {
 	Imported int   `json:"imported"`
 	Modified bool  `json:"modified"`
 	Stale    bool  `json:"stale"`
+	// Sealed says a session the document carried cannot be opened with the pass
+	// this device holds, so a session is waiting for it instead of the panel
+	// staying silent about it.
+	Sealed bool `json:"sealed,omitempty"`
+	// Problem is why the last pass failed. A pass that keeps failing between
+	// intervals would otherwise be invisible until the next one.
+	Problem string `json:"problem,omitempty"`
 }
 
 func (a *App) SyncStatus() SyncStatus {
@@ -63,9 +77,13 @@ func stamp(document string) uint32 {
 	return h.Sum32()
 }
 
-func (a *App) recordSync(stats backup.Stats, fresh bool) {
+// recordSync is the read side of a pass: what it read and what it applied.
+// written says the document is already in the file, which the folder path knows
+// because Sync wrote it before answering. The platform path never knows: the page
+// commits the merged copy afterwards and confirms with SyncWritten, so a commit
+// that failed cannot leave a baseline that makes the next pass refuse to write.
+func (a *App) recordSync(stats backup.Stats, fresh, written bool) {
 	stale := stats.Modified && !fresh
-	wrote := stats.Modified && fresh
 	var uri string
 	_ = settings.GetObject(syncFolderKey, &uri)
 	var status SyncStatus
@@ -77,7 +95,8 @@ func (a *App) recordSync(stats backup.Stats, fresh bool) {
 	status.Imported = stats.Changed()
 	status.Modified = stats.Modified
 	status.Stale = stale
-	if wrote {
+	status.Problem = ""
+	if written && stats.Modified {
 		status.WriteAt = status.At
 		status.Hash = stamp(stats.Document)
 	}
@@ -97,6 +116,80 @@ func (a *App) recordSync(stats backup.Stats, fresh bool) {
 		log.Printf("sync status: %v", err)
 	}
 }
+
+// recordProblem keeps a failed pass in the status, so the panel can say why the
+// library stopped being written instead of showing the previous pass as the last
+// one. It is also logged: the panel only carries the reason to whoever looks at
+// it, and a failure that repeats every interval must leave a trace.
+func (a *App) recordProblem(err error) {
+	log.Printf("sync: %v", err)
+	var status SyncStatus
+	_ = settings.GetObject(syncStatusKey, &status)
+	status.At = time.Now().UnixMilli()
+	status.Problem = err.Error()
+	if setErr := settings.SetObject(syncStatusKey, status); setErr != nil {
+		log.Printf("sync status: %v", setErr)
+	}
+}
+
+// SyncProblem records a failure the page saw and Go did not: the document it
+// merged could not be written back to the provider. Without it the panel would
+// keep showing the pass before it as the last one, since nothing reached the
+// file the other devices read.
+func (a *App) SyncProblem(reason string) {
+	if strings.TrimSpace(reason) == "" {
+		return
+	}
+	a.recordProblem(errors.New(reason))
+}
+
+// SyncWritten is the platform confirming the merged copy reached the file, which
+// is the only moment our write baseline may move: the bytes are what the other
+// devices will read, and a stale flag they set has just stopped being true.
+func (a *App) SyncWritten() error {
+	return a.syncWrittenAt(syncStageDir())
+}
+
+// syncWrittenAt is split from SyncWritten so the file path can be exercised where
+// no stage dir exists (every platform but Android).
+func (a *App) syncWrittenAt(dir string) error {
+	if dir == "" {
+		return nil
+	}
+	path := filepath.Join(dir, syncOutgoing)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	_ = os.Remove(path)
+	var status SyncStatus
+	_ = settings.GetObject(syncStatusKey, &status)
+	status.At = time.Now().UnixMilli()
+	status.Uri = a.SyncFolder()
+	status.WriteAt = status.At
+	status.Hash = stamp(string(data))
+	status.Stale = false
+	status.Problem = ""
+	if setErr := settings.SetObject(syncStatusKey, status); setErr != nil {
+		log.Printf("sync status: %v", setErr)
+	}
+	// The document now carries every section this device wrote, so nothing is
+	// waiting to be saved any more.
+	Synced()
+	return nil
+}
+
+// touchSync moves At alone. A settled pass reconciled nothing, but it did run,
+// so the panel's "last save" is the moment of that pass and not the last write.
+func (a *App) touchSync() {
+	var status SyncStatus
+	_ = settings.GetObject(syncStatusKey, &status)
+	status.At = time.Now().UnixMilli()
+	if err := settings.SetObject(syncStatusKey, status); err != nil {
+		log.Printf("sync status: %v", err)
+	}
+}
+
 func (a *App) SyncFolder() string {
 	var folder string
 	if err := settings.GetObject(syncFolderKey, &folder); err != nil {
@@ -251,6 +344,39 @@ func (a *App) SyncOverwrite() error {
 	return a.syncFolder(a.options(true, false), false)
 }
 
+// SyncReload applies the document the location holds to this library, letting
+// the file win over local deletions because the user asked for it. Android has
+// staged the provider's copy already; the desktop reads the folder.
+func (a *App) SyncReload() (backup.Stats, error) {
+	dir := syncStageDir()
+	path := ""
+	if dir != "" {
+		path = filepath.Join(dir, syncIncoming)
+	} else if folder := a.SyncFolder(); folder != "" {
+		path = filepath.Join(folder, backup.BackupFile)
+	}
+	if path == "" {
+		return backup.Stats{}, errors.New("sync: no location")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		a.recordProblem(err)
+		return backup.Stats{}, err
+	}
+	stats, err := a.Backup.Restore(string(data))
+	if err != nil {
+		a.recordProblem(err)
+		return backup.Stats{}, err
+	}
+	if dir != "" {
+		_ = os.Remove(path)
+	}
+	if app := application.Get(); app != nil {
+		app.Event.Emit("refresh:updated")
+	}
+	return stats, nil
+}
+
 func (a *App) options(force, refresh bool) backup.Options {
 	return backup.Options{
 		Force:     force,
@@ -273,15 +399,19 @@ func (a *App) syncFolder(opts backup.Options, settle bool) error {
 	a.syncMu.Lock()
 	defer a.syncMu.Unlock()
 	if settle && !opts.Refresh && a.syncSettled(folder) {
+		a.touchSync()
 		return nil
 	}
 	stats, err := a.Backup.Sync(folder, opts)
 	if err != nil {
+		a.recordProblem(err)
 		return err
 	}
-	a.recordSync(stats, true)
+	a.recordSync(stats, true, stats.Modified)
+	// The file holds the union of both sides, so whatever this device wrote into it
+	// is in place and nothing is waiting to be saved.
+	Synced()
 	if stats.Modified {
-		Synced()
 		if app := application.Get(); app != nil {
 			app.Event.Emit("refresh:updated")
 		}
@@ -304,11 +434,49 @@ func (a *App) syncSettled(folder string) bool {
 	return info.ModTime().UnixNano() == status.MTime && info.Size() == status.FileSize
 }
 
-// SyncDocument merges a backup document read from the platform picker (an
-// Android content:// document) and returns the document both sides agree on.
-// fresh reports whether the copy is newer than our own last write: only the
-// side that read the file can tell a cache miss from a cached copy.
-func (a *App) SyncDocument(data string, fresh bool) (string, error) {
+// SyncDocument reconciles the copy the platform staged in incoming.json and
+// answers whether the merge has to be written back, leaving the document both
+// sides agree on in outgoing.json. lastModified is the provider's stamp for the
+// copy it served, 0 when it reports none; trust is the caller asking for this
+// copy to be reconciled now (a manual save or the forced overwrite), which skips
+// the freshness rule.
+func (a *App) SyncDocument(lastModified int64, trust bool) (bool, error) {
+	dir := syncStageDir()
+	if dir == "" {
+		return false, nil
+	}
+	return a.syncDocumentAt(dir, lastModified, trust)
+}
+
+// syncDocumentAt reconciles the copy staged in dir. It is split from SyncDocument
+// so the file path can be exercised where no stage dir exists (every platform
+// but Android).
+func (a *App) syncDocumentAt(dir string, lastModified int64, trust bool) (bool, error) {
+	incoming := filepath.Join(dir, syncIncoming)
+	data, err := os.ReadFile(incoming)
+	if err != nil {
+		a.recordProblem(err)
+		return false, err
+	}
+	merged, write, err := a.syncDocument(string(data), lastModified, trust)
+	if err != nil {
+		return false, err
+	}
+	if !write {
+		_ = os.Remove(incoming)
+		return false, nil
+	}
+	if err := os.WriteFile(filepath.Join(dir, syncOutgoing), []byte(merged), 0o600); err != nil {
+		a.recordProblem(err)
+		return false, err
+	}
+	return true, nil
+}
+
+// syncDocument merges a backup document in memory and answers the document both
+// sides agree on, plus whether it has to be written back.
+func (a *App) syncDocument(data string, lastModified int64, trust bool) (string, bool, error) {
+	fresh := trust || a.freshCopy(data, lastModified)
 	var snapshotsOf func() []playlists.Snapshot
 	refresh := false
 	if fresh {
@@ -316,14 +484,43 @@ func (a *App) SyncDocument(data string, fresh bool) (string, error) {
 		refresh = a.snapshotsDue()
 	}
 	merged, stats, err := a.Backup.ImportDocument(data, snapshotsOf, refresh, a.SyncImport())
-	if err != nil {
-		return "", err
+	// A copy that will not parse is a truncated transfer, not a library: the pass
+	// rebuilds the document from this device, exactly like the folder path does,
+	// so a half-uploaded copy cannot stop autosave on either platform.
+	if err != nil && errors.Is(err, backup.ErrUnreadable) {
+		log.Printf("sync: recovering the document: %v", err)
+		merged, stats, err = a.Backup.ImportDocument("", snapshotsOf, refresh, a.SyncImport())
+		// The panel reports the size of the copy the pass read, not of the empty
+		// document it merged from, or a recovered save looks like an empty file.
+		stats.Bytes = len(data)
 	}
-	a.recordSync(stats, fresh)
-	if stats.Modified && fresh {
+	if err != nil {
+		a.recordProblem(err)
+		return "", false, err
+	}
+	a.recordSync(stats, fresh, false)
+	if !stats.Modified {
+		// The copy already carried everything this device holds: there is nothing to
+		// write, so nothing is waiting either.
 		Synced()
 	}
-	return merged, nil
+	return merged, fresh && merged != data, nil
+}
+
+// freshCopy is the rule the reading side applies to a copy a provider served.
+// Only positive evidence of a stale copy skips the write: bytes that are not
+// ours and a provider timestamp that did not move after our own last write. Our
+// own bytes, or no timestamp at all, carry no such proof, and a merge is a union
+// anyway, so writing is safe.
+func (a *App) freshCopy(data string, lastModified int64) bool {
+	status := a.SyncStatus()
+	if status.Uri != a.SyncFolder() || status.WriteAt == 0 {
+		return true
+	}
+	if stamp(data) == status.Hash {
+		return true
+	}
+	return lastModified == 0 || lastModified > status.WriteAt
 }
 
 // SyncPending reports whether a manual sync could still change the document: our
@@ -334,9 +531,9 @@ func (a *App) SyncPending() bool {
 		return false
 	}
 	status := a.SyncStatus()
-	// A location never reconciled here, or a write that failed, needs a sync
-	// whatever the stores say.
-	if status.At == 0 || status.Uri != folder || status.Stale {
+	// A location never reconciled here, a write that failed, or a pass that failed
+	// outright needs a sync whatever the stores say.
+	if status.At == 0 || status.Uri != folder || status.Stale || status.Problem != "" {
 		return true
 	}
 	return a.Backup.Pending()
