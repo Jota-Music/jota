@@ -35,6 +35,8 @@ export function AppShell({
 }) {
 	const overlayLayer = useRef<HTMLDivElement>(null);
 	const [location] = useLocation();
+	// The app paints at full opacity; only an arriving page fades in.
+	const firstRoute = useRef(location);
 
 	useEffect(() => {
 		clearSelection();
@@ -57,8 +59,6 @@ export function AppShell({
 			<div class="relative h-screen min-h-0 flex flex-col">
 				<div class="flex flex-col bg-stone-950">
 					<Header />
-					<UpdateBanner />
-					<ClipboardBanner />
 					<DegradedBanner />
 					<SignInPrompt />
 				</div>
@@ -79,7 +79,18 @@ export function AppShell({
 							mainClass,
 						)}
 					>
-						{children}
+						{/* Keyed on the route so the incoming page fades in instead of
+						    cutting: opacity only, so nothing about the geometry moves. */}
+						<div
+							key={location}
+							class={cn(
+								"flex min-h-0 flex-1 flex-col",
+								location !== firstRoute.current &&
+									"animate-[page-in_140ms_ease-out]",
+							)}
+						>
+							{children}
+						</div>
 					</main>
 
 					<PlayerBar />
@@ -91,7 +102,10 @@ export function AppShell({
 				</div>
 
 				<MobileBottomNav />
-				<NotificationBar />
+				<NotificationBar>
+					<UpdateBanner />
+					<ClipboardBanner />
+				</NotificationBar>
 			</div>
 		</OverlayHost.Provider>
 	);

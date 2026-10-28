@@ -22,7 +22,7 @@ export function UpdateBanner() {
 	const p = installing.value ? percent() : null;
 
 	return (
-		<div class="relative flex items-center gap-3 border-b border-zinc-800 bg-zinc-900/60 px-4 py-2 text-sm">
+		<div class="pointer-events-auto relative flex items-center gap-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm">
 			<ArrowDownToLine size={16} class="shrink-0 text-(--dominant-color)" />
 
 			<p class="min-w-0 flex-1 truncate text-zinc-400">

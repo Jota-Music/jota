@@ -2,12 +2,14 @@ import { useSignal } from "@preact/signals";
 import { Loader2, WifiOff } from "lucide-preact";
 import { retrySpotify, spotifyDegraded } from "@/lib/auth/views/stores/session";
 import { t } from "@/lib/shared/i18n";
+import { cn } from "@/lib/shared/utils/tw";
 
 // Not dismissible: this is a standing state, not a one-off notice. Hiding it
-// would leave search and radio failing with no visible explanation.
+// would leave search and radio failing with no visible explanation. It holds
+// its height even while Spotify is healthy, so the bar arriving after the
+// session is checked does not move the page under the reader.
 export function DegradedBanner() {
 	const retrying = useSignal(false);
-	if (!spotifyDegraded.value) return null;
 
 	async function retry() {
 		retrying.value = true;
@@ -19,7 +21,12 @@ export function DegradedBanner() {
 	}
 
 	return (
-		<div class="relative flex items-center gap-3 border-b border-zinc-800 bg-zinc-900/60 px-4 py-2 text-sm">
+		<div
+			class={cn(
+				"relative flex h-9 shrink-0 items-center gap-3 border-b border-zinc-800 bg-zinc-900/60 px-4 text-sm",
+				!spotifyDegraded.value && "invisible",
+			)}
+		>
 			<WifiOff size={16} class="shrink-0 text-amber-500/80" />
 
 			<p class="min-w-0 flex-1 truncate text-zinc-400">
