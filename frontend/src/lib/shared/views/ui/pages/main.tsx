@@ -2,10 +2,12 @@ import { GetMyYouTubePlaylists } from "@bindings/app";
 import { useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Disc3 } from "lucide-preact";
+import { useMemo } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import {
 	spotifyConnected,
 	spotifyDegraded,
+	spotifyReady,
 	spotifyUser,
 } from "@/lib/auth/views/stores/session";
 import { youtubeSignedIn } from "@/lib/auth/views/stores/youtube";
@@ -69,6 +71,7 @@ export function MainPage() {
 	const orderQuery = useQuery({
 		queryKey: ["shelf-order", "library", spotifyHandle],
 		queryFn: () => getOrder("library", spotifyHandle),
+		enabled: spotifyReady.value,
 	});
 
 	const removeCustom = useMutation({
@@ -82,60 +85,66 @@ export function MainPage() {
 
 	// A playlist the account already owns is listed by the account queries
 	// above, so keeping it out of the saved list avoids showing it twice.
-	const own = new Set(
-		[...(spotifyQuery.data ?? []), ...(youtubeQuery.data ?? [])].map(
-			(p) => p.id,
-		),
+	const followed = useMemo(() => new Set(saved.map((p) => p.id)), [saved]);
+
+	const items = useMemo<Item[]>(() => {
+		const own = new Set(
+			[...(spotifyQuery.data ?? []), ...(youtubeQuery.data ?? [])].map(
+				(p) => p.id,
+			),
+		);
+
+		return [
+			...(spotifyQuery.data ?? []).map(
+				(p): Item => ({
+					id: p.id,
+					name: isLiked(p.id) ? t("music.likedSongs") : p.name,
+					cover: isLiked(p.id) ? likedCover : p.cover,
+					source: "spotify",
+				}),
+			),
+			...(youtubeQuery.data ?? [])
+				.filter((p) => !followed.has(p.id))
+				.map(
+					(p): Item => ({
+						id: p.id,
+						name: p.name,
+						cover: p.cover,
+						subtitle: p.subtitle,
+						source: "youtube",
+					}),
+				),
+			// The heart is what unfollows a saved playlist, so it needs no trash:
+			// the shelf keeps one way to drop an external playlist and one to delete
+			// a local one.
+			...saved
+				.filter((p) => !own.has(p.id))
+				.map(
+					(p): Item => ({
+						id: p.id,
+						name: p.name,
+						cover: p.cover,
+						subtitle: p.subtitle,
+						source: playlistSource(p.id),
+					}),
+				),
+			...(customQuery.data ?? []).map(
+				(p): Item => ({
+					id: p.id,
+					name: p.name,
+					covers: p.covers ?? [],
+					icon: Disc3,
+					source: "local",
+					removable: true,
+				}),
+			),
+		];
+	}, [spotifyQuery.data, youtubeQuery.data, saved, followed, customQuery.data]);
+
+	const ordered = useMemo(
+		() => applyOrder(items, orderQuery.data ?? []),
+		[items, orderQuery.data],
 	);
-	const followed = new Set(saved.map((p) => p.id));
-
-	const items: Item[] = [
-		...(spotifyQuery.data ?? []).map(
-			(p): Item => ({
-				id: p.id,
-				name: isLiked(p.id) ? t("music.likedSongs") : p.name,
-				cover: isLiked(p.id) ? likedCover : p.cover,
-				source: "spotify",
-			}),
-		),
-		...(youtubeQuery.data ?? [])
-			.filter((p) => !followed.has(p.id))
-			.map(
-				(p): Item => ({
-					id: p.id,
-					name: p.name,
-					cover: p.cover,
-					subtitle: p.subtitle,
-					source: "youtube",
-				}),
-			),
-		// The heart is what unfollows a saved playlist, so it needs no trash:
-		// the shelf keeps one way to drop an external playlist and one to delete
-		// a local one.
-		...saved
-			.filter((p) => !own.has(p.id))
-			.map(
-				(p): Item => ({
-					id: p.id,
-					name: p.name,
-					cover: p.cover,
-					subtitle: p.subtitle,
-					source: playlistSource(p.id),
-				}),
-			),
-		...(customQuery.data ?? []).map(
-			(p): Item => ({
-				id: p.id,
-				name: p.name,
-				covers: p.covers ?? [],
-				icon: Disc3,
-				source: "local",
-				removable: true,
-			}),
-		),
-	];
-
-	const ordered = applyOrder(items, orderQuery.data ?? []);
 
 	const reorder = (fromId: string, toId: string) => {
 		const next = move(
@@ -177,7 +186,8 @@ export function MainPage() {
 							spotifyQuery.isLoading ||
 							youtubeQuery.isLoading ||
 							loadingSaved ||
-							customQuery.isLoading
+							customQuery.isLoading ||
+							orderQuery.isLoading
 						}
 						emptyMessage={<AllHint />}
 						onPlay={(id) => void playPlaylist(queryClient, id)}

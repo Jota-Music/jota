@@ -21,6 +21,7 @@ import { addError, notify } from "@/lib/shared/views/stores/errors";
 import { queryClient } from "@/lib/shared/views/ui/query-client";
 
 export const youtubeSignedIn = signal(false);
+export const youtubeReady = signal(false);
 
 // Who the stored session belongs to, shown next to "Connected as" the way the
 // Spotify panel names its user. Empty when YouTube cannot say (a partial
@@ -48,19 +49,23 @@ export function dismissYouTubeSignInSuggestion(): void {
 }
 
 export async function syncYouTubeStatus(): Promise<void> {
-	// Independent reads, so both crosses the bridge at once instead of
-	// stacking two round trips on every mount.
-	const [signedIn, full, supported, account] = await Promise.all([
-		YouTubeSignedIn().catch(() => false),
-		YouTubeSessionFull().catch(() => true),
-		YouTubeBrowserLoginSupported().catch(() => false),
-		YouTubeAccount().catch(() => ""),
-	]);
-	youtubeSignedIn.value = signedIn;
-	youtubeSessionFull.value = full;
-	youtubeBrowserLoginSupported.value = supported;
-	youtubeAccount.value = account ?? "";
-	if (youtubeSignedIn.value) youtubeSignInSuggested.value = false;
+	try {
+		// Independent reads, so both crosses the bridge at once instead of
+		// stacking two round trips on every mount.
+		const [signedIn, full, supported, account] = await Promise.all([
+			YouTubeSignedIn().catch(() => false),
+			YouTubeSessionFull().catch(() => true),
+			YouTubeBrowserLoginSupported().catch(() => false),
+			YouTubeAccount().catch(() => ""),
+		]);
+		youtubeSignedIn.value = signedIn;
+		youtubeSessionFull.value = full;
+		youtubeBrowserLoginSupported.value = supported;
+		youtubeAccount.value = account ?? "";
+		if (youtubeSignedIn.value) youtubeSignInSuggested.value = false;
+	} finally {
+		youtubeReady.value = true;
+	}
 }
 
 // Storing account cookies is what unlocks age-restricted videos and avoids the

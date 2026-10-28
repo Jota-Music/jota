@@ -20,6 +20,7 @@ import { FollowButton } from "@/lib/music/views/ui/follow";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
+import { Rows } from "@/lib/music/views/ui/track/rows";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { useFollows } from "@/lib/music/views/ui/user/follow";
 import { t } from "@/lib/shared/i18n";
@@ -209,9 +210,7 @@ export function ArtistPage() {
 
 			{activeTab === "tracks" ? (
 				isLoading ? (
-					<div class="flex min-h-0 flex-1 items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-						<Loader size={24} class="animate-spin" />
-					</div>
+					<Rows />
 				) : tracks.length === 0 ? (
 					<p class="text-sm text-zinc-500">{t("pages.artist.noSongs")}</p>
 				) : (

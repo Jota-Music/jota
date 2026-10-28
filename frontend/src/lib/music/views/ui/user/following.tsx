@@ -1,5 +1,6 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Mic2, User as UserIcon } from "lucide-preact";
+import { spotifyReady } from "@/lib/auth/views/stores/session";
 import { getArtist } from "@/lib/music/app/get-artist";
 import { getChannelInfo } from "@/lib/music/app/get-channel";
 import getFollowing from "@/lib/music/app/get-following";
@@ -63,7 +64,7 @@ export function FollowingShelf({ account }: { account: string }) {
 	const orderQuery = useQuery({
 		queryKey: ["shelf-order", "following"],
 		queryFn: () => getOrder("following", ""),
-		enabled: !!account,
+		enabled: spotifyReady.value,
 	});
 
 	// Spotify follows and friends are read-only, so they get no follow key
@@ -221,7 +222,13 @@ export function FollowingShelf({ account }: { account: string }) {
 			items={items}
 			to={link}
 			viewKey="following_view"
-			isLoading={followedLoading || friends.isLoading || following.isLoading}
+			isLoading={
+				!spotifyReady.value ||
+				followedLoading ||
+				friends.isLoading ||
+				following.isLoading ||
+				orderQuery.isLoading
+			}
 			emptyMessage={<FollowingHint />}
 			showLocal={false}
 			onReorder={reorder}

@@ -24,6 +24,7 @@ import {
 	selectionActive,
 	toggleSelection,
 } from "@/lib/music/views/stores/selection";
+import { ROW_PX } from "@/lib/music/views/ui/track/rows";
 import TrackActions, {
 	buildActions,
 } from "@/lib/music/views/ui/track/track-actions";
@@ -52,8 +53,6 @@ type Props = {
 	onRemove?: (songs: Song[]) => void;
 	onReorder?: (from: number, to: number) => void;
 };
-
-const ROW_PX = 64;
 
 // Scroll offset per list, kept for the session: a list that is unmounted and
 // mounted again (a route change, a cleared query) continues where it was.

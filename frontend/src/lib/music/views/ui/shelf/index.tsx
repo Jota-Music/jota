@@ -22,7 +22,8 @@ import {
 	defaultViewKey,
 	useView,
 } from "@/lib/music/views/ui/shelf/hooks/use-view";
-import type { Item, Props } from "@/lib/music/views/ui/shelf/types";
+import type { Item, Props, Variant } from "@/lib/music/views/ui/shelf/types";
+import { Row } from "@/lib/music/views/ui/track/rows";
 import { t } from "@/lib/shared/i18n";
 import {
 	type Action,
@@ -48,6 +49,25 @@ function shareTo(to: (id: string) => string, id: string): Action[] {
 		return shareLink(pageLink(page, id));
 	}
 	return [];
+}
+
+function Loading({ variant }: { variant: Variant }) {
+	return (
+		<div class="relative min-h-0 flex-1 overflow-hidden pb-3 pl-1 pr-[15px]">
+			{variant === "compact" ? (
+				Array.from({ length: 12 }, (_, index) => <Row key={index} />)
+			) : (
+				<div class="grid grid-cols-3 gap-0.5 md:gap-4">
+					{Array.from({ length: 12 }, (_, index) => (
+						<div key={index} class="flex flex-col gap-2 p-1.5">
+							<div class="shimmer aspect-square w-full rounded-md" />
+							<div class="shimmer h-5 w-3/4 rounded" />
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
 }
 
 export function Shelf({
@@ -182,81 +202,73 @@ export function Shelf({
 
 	return (
 		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
+			<Controls
+				filterable={filterable}
+				sourceFilter={sourceFilter}
+				setFilter={setFilter}
+				variant={variant}
+				setVariant={setVariant}
+				sortMode={canSort ? sortMode.value : undefined}
+				onSortMode={canSort ? toggleSortMode : undefined}
+				onCreate={items.length > 0 ? onCreate : undefined}
+				showLocal={showLocal}
+				disabled={isLoading}
+			/>
 			{isLoading ? (
-				<div class="flex flex-1 items-center justify-center p-8 text-sm text-zinc-400">
-					{t("common.loading")}
+				<Loading variant={variant} />
+			) : items.length === 0 ? (
+				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
+					{empty()}
+					{onCreate && sourceFilter === "local" && (
+						<button
+							type="button"
+							onClick={onCreate}
+							title={t("music.custom.create")}
+							aria-label={t("music.custom.create")}
+							class="flex h-10 md:h-8 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 px-4 text-zinc-400 transition-colors hover:text-white"
+						>
+							<Plus size={18} class="md:hidden" />
+							<Plus size={14} class="hidden md:block" />
+							{t("music.custom.create")}
+						</button>
+					)}
 				</div>
 			) : (
-				<>
-					{filterable && (
-						<Controls
-							filterable={filterable}
-							sourceFilter={sourceFilter}
-							setFilter={setFilter}
-							variant={variant}
-							setVariant={setVariant}
-							sortMode={canSort ? sortMode.value : undefined}
-							onSortMode={canSort ? toggleSortMode : undefined}
-							onCreate={items.length > 0 ? onCreate : undefined}
-							showLocal={showLocal}
-						/>
-					)}
-
-					{items.length === 0 ? (
-						<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
-							{empty()}
-							{onCreate && sourceFilter === "local" && (
-								<button
-									type="button"
-									onClick={onCreate}
-									title={t("music.custom.create")}
-									aria-label={t("music.custom.create")}
-									class="flex h-10 md:h-8 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 px-4 text-zinc-400 transition-colors hover:text-white"
-								>
-									<Plus size={18} class="md:hidden" />
-									<Plus size={14} class="hidden md:block" />
-									{t("music.custom.create")}
-								</button>
-							)}
-						</div>
-					) : (
-						<div class="relative min-h-0 flex-1">
-							<div
-								ref={listRef}
-								class="h-full overflow-y-auto pl-1 pr-[15px] pb-3"
-								onClickCapture={captureClick}
-							>
-								{filteredItems.length === 0 ? (
-									<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
-										{empty()}
-									</div>
-								) : variant === "grid" ? (
-									<Grid
-										items={filteredItems}
-										to={to}
-										dragProps={dragProps}
-										select={select}
-										menu={openItemMenu}
-										actions={renderActions}
-										leading={renderLeading}
-									/>
-								) : (
-									<Compact
-										items={filteredItems}
-										to={to}
-										dragProps={dragProps}
-										select={select}
-										menu={openItemMenu}
-										actions={renderActions}
-										leading={renderLeading}
-										hoverable={hoverable}
-									/>
-								)}
+				<div class="relative min-h-0 flex-1">
+					<div
+						ref={listRef}
+						class="h-full overflow-y-auto pl-1 pr-[15px] pb-3"
+						onClickCapture={captureClick}
+					>
+						{filteredItems.length === 0 ? (
+							<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
+								{empty()}
 							</div>
-							<Scrollbar target={listRef} />
-						</div>
-					)}
-				</>
+						) : variant === "grid" ? (
+							<Grid
+								items={filteredItems}
+								to={to}
+								dragProps={dragProps}
+								select={select}
+								menu={openItemMenu}
+								actions={renderActions}
+								leading={renderLeading}
+							/>
+						) : (
+							<Compact
+								items={filteredItems}
+								to={to}
+								dragProps={dragProps}
+								select={select}
+								menu={openItemMenu}
+								actions={renderActions}
+								leading={renderLeading}
+								hoverable={hoverable}
+							/>
+						)}
+					</div>
+					<Scrollbar target={listRef} />
+				</div>
 			)}
 		</div>
 	);
