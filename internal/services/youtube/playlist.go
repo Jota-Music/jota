@@ -370,6 +370,10 @@ func (s itemSection) next() string {
 }
 
 func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
+	if seed := mixSeed(playlistID); seed != "" {
+		return fetchMix(playlistID, seed)
+	}
+
 	data, err := browseData(playlistID, "")
 	if err != nil {
 		return music.Playlist{}, err
@@ -444,6 +448,10 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 }
 
 func fetchPlaylistSummary(playlistID string) (music.PlaylistSummary, error) {
+	if seed := mixSeed(playlistID); seed != "" {
+		return mixSummary(playlistID, seed)
+	}
+
 	data, err := browseData(playlistID, "")
 	if err != nil {
 		return music.PlaylistSummary{}, err
