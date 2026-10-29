@@ -57,6 +57,54 @@ go fmt ./...
 cd frontend && bun run typecheck && bun run lint
 ```
 
+## Startup budget
+
+Every launch logs `window ready in <ms>`, measured from the top of `main()`. It is
+the number to compare across releases: no profiler needed, and a regression shows
+up as a bigger number instead of a feeling.
+
+Measured on a release build, warm cache, 5120x1440 Wayland session (2026-10-29):
+
+| phase | time |
+|-------|------|
+| `main()` → window created (`app.New` + `application.New` + geometry) | 1-2 ms |
+| `Run()` → first frame painted (frontend `performance.now()`) | 60-80 ms |
+| `main()` → `window ready` (the logged number) | 187-238 ms |
+
+The logged number lands *after* the paint: the window is shown with its solid
+background as soon as it is created (`webview_window_linux.go`), so the content
+arriving at 60-80 ms is what the user sees. The rest is WebKit's renderer
+processor and the runtime handshake, which is not ours. In the AppImage smoke
+test under xvfb the same line reads ~240 ms; `build/linux/test-appimage.sh` fails
+the release above 3000 ms.
+
+Rules that keep it there:
+
+- Nothing on the launch path may touch Badger or the sync folder. The window
+  geometry lives in `window.json` next to the log for that reason
+  (`loadWindowState`), and the store opens in the background at
+  `WindowRuntimeReady`.
+- The sync document is never read at launch: the frontend throttles itself for
+  `BOOT_GRACE_MS` and the backend's ticker only starts after `syncTick`.
+- A blocking call on the GTK thread is a frozen window, not a slow one. The
+  clipboard poll is the known one (`gtk_clipboard_wait_for_text`); on desktop it
+  only reads on focus.
+- Closing the window must end the process, and nothing slow may run there. The
+  store is closed only by tests, never on the way out: a Badger checkpoint waits
+  for the write in flight and the value-log GC (`shutdownBudget` = 3s exists for
+  exactly that), and the replay it avoids is paid on the next open, which happens
+  in the background. `build/linux/test-appimage.sh` clicks the close button and
+  fails the release if the process outlives it.
+- A launch that dies before its window exists is retried in the software
+  renderer (`compatRenderer` in `main.go`, driven by the crash marker). Creating
+  the WebKit view can segfault inside cgo — nothing to recover from in-process,
+  and the alternative was a crash loop. It lasts one session: a launch that opens
+  its window clears the marker.
+- Blocking the GTK thread freezes the window rather than slowing it. The
+  clipboard is the known one: `gtk_clipboard_wait_for_text` waits on the
+  compositor's selection bridge from an XWayland client, so `internal/clipboard`
+  asks with `gtk_clipboard_request_text` instead and gives up after 400ms.
+
 ## Env
 
 | Variable | Default | Description |
@@ -75,6 +123,15 @@ cd frontend && bun run typecheck && bun run lint
   (`internal/{playlists,follows,ordering,rooms,update}`), external service adapters
   (`internal/services/{spotify,youtube,discord}`), `internal/{kv,env}`.
 - Frontend: features in `frontend/src/lib/{auth,music,sync,shared}`.
+
+## Shutdown
+
+Closing goes through `Window.Close()`, never `Application.Quit()`: the latter calls
+`impl.destroy()` and skips `WindowClosing` entirely, so the geometry flush, the exit
+watchdog and Badger's checkpoint never run, and WebKit is torn down hard enough that
+the next launch can segfault inside `create_webview`. `Window.Close()` emits the event,
+`Run()` returns, and `main` flushes the geometry, checkpoints the store and exits.
+SIGTERM/SIGINT/SIGHUP take the same cleanup (see the signal handler in `main.go`).
 
 ## YouTube sign-in
 
