@@ -61,6 +61,11 @@ const (
 	// the store lock and the single-instance socket away from the next launch.
 	shutdownBudget = 3 * time.Second
 
+	// storeSlow is the Badger open time past which the page has very likely
+	// already asked for its library and been answered with an empty store: the
+	// reads answer nothing rather than failing, so the page has to ask again.
+	storeSlow = time.Second
+
 	// markerStarted and markerReady are the states recorded in the crash marker.
 	// A session that dies in "starting" never opened its window.
 	markerStarted = "starting"
@@ -629,8 +634,17 @@ func main() {
 		// In the background: opening Badger replays the value log, and neither the
 		// service startup nor the first render should wait for that.
 		go func() {
+			opened := time.Now()
 			kv.Start()
 			migrateWindowState()
+			// The page asks for its library while this opens, and an unopened
+			// store answers an empty one instead of failing. An open that took
+			// long enough to lose that race is announced so the page asks again;
+			// a fast one stays silent and costs no second pass.
+			if took := time.Since(opened); took > storeSlow {
+				log.Printf("store ready in %s, asking the page to read again", took.Round(time.Millisecond))
+				application.Get().Event.Emit("store:ready")
+			}
 		}()
 		application.Get().Event.Emit("window:always-on-top", getAlwaysOnTop())
 		// The geometry is already the one the window was created with, so there is

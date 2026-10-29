@@ -79,6 +79,11 @@ const UserPage = lazy(pages.user);
 const NotFoundPage = lazy(pages.notFound);
 const SettingsPage = lazy(pages.settings);
 
+// A store that opened late may have answered the first reads with an empty one:
+// every local store reports nothing instead of failing while Badger opens, so the
+// page asks again for everything it may have painted empty.
+Events.On("store:ready", () => void queryClient.invalidateQueries());
+
 // A background refresh pass revalidated cached catalog content; drop stale
 // queries so open views pick up changes on their next render. Unmounted queries
 // are not refetched, so untouched views keep their cached snapshot.
