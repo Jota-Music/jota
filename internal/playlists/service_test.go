@@ -3,6 +3,8 @@ package playlists
 import (
 	"slices"
 	"testing"
+
+	"github.com/Jota-Music/jota/internal/music"
 )
 
 func TestPlaylistLifecycle(t *testing.T) {
@@ -54,11 +56,13 @@ func TestPlaylistLifecycle(t *testing.T) {
 		t.Fatalf("after failed add = %d songs, want 2", len(pl.Songs))
 	}
 
-	// A reference that stops resolving later is marked broken, not dropped.
+	// A stored track keeps the metadata it was added with even when the source
+	// stops answering: the playlist opens from the store, which is what keeps it
+	// readable offline.
 	fail["spotifyId"] = true
 	pl, _ = s.GetFullPlaylist(summary.Id)
-	if !pl.Songs[0].Broken || pl.Songs[0].Id != "spotifyId" {
-		t.Fatalf("broken = %+v", pl.Songs[0])
+	if pl.Songs[0].Broken || pl.Songs[0].Name != "Song spotifyId" {
+		t.Fatalf("stored song = %+v", pl.Songs[0])
 	}
 	fail["spotifyId"] = false
 
@@ -85,6 +89,47 @@ func TestPlaylistLifecycle(t *testing.T) {
 	list, _ = s.List()
 	if len(list) != 0 {
 		t.Fatalf("after delete = %v", list)
+	}
+}
+
+// A playlist restored from the sync document carries the metadata of every
+// reference, so opening it and drawing its mosaic must never ask the source: on
+// a device that restored the file the source has no cached entry for these.
+func TestStoredTracksSkipTheSource(t *testing.T) {
+	setup(t)
+
+	calls := 0
+	s := New(func(id string) (music.Song, error) {
+		calls++
+		return music.Song{Id: id, Name: "live " + id}, nil
+	})
+	seed(t, s, []exportPlaylist{{
+		Id:    "local:restored",
+		Name:  "Restored",
+		Songs: []string{"a", "b"},
+		Tracks: map[string]music.Song{
+			"a": {Id: "a", Name: "stored a", Album: music.Album{Covers: []string{"cover-a"}}},
+			"b": {Id: "b", Name: "stored b", Album: music.Album{Covers: []string{"cover-b"}}},
+		},
+	}})
+
+	pl, err := s.GetFullPlaylist("local:restored")
+	if err != nil {
+		t.Fatalf("full: %v", err)
+	}
+	if len(pl.Songs) != 2 || pl.Songs[0].Name != "stored a" || pl.Songs[1].Name != "stored b" {
+		t.Fatalf("songs = %+v", pl.Songs)
+	}
+
+	list, err := s.List()
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if want := []string{"cover-a", "cover-b"}; !slices.Equal(list[0].Covers, want) {
+		t.Fatalf("covers = %v, want %v", list[0].Covers, want)
+	}
+	if calls != 0 {
+		t.Fatalf("resolver calls = %d, want 0", calls)
 	}
 }
 

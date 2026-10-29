@@ -37,25 +37,35 @@ func (s *Service) summary(pl Playlist) music.PlaylistSummary {
 	return music.PlaylistSummary{
 		Id:     pl.Id,
 		Name:   pl.Name,
-		Covers: s.covers(pl.Songs),
+		Covers: s.covers(pl),
 	}
 }
 
 // covers collects the album covers of the first tracks, skipping unresolved
-// tracks and duplicate covers so the mosaic never repeats the same art.
-func (s *Service) covers(refs []string) []string {
-	if s.resolve == nil {
-		return nil
-	}
-
+// tracks and duplicate covers so the mosaic never repeats the same art. Stored
+// metadata answers first: the shelf is painted on every launch, and resolving a
+// reference the playlist already carries would make it wait on the network.
+func (s *Service) covers(pl Playlist) []string {
 	covers := make([]string, 0, coverCount)
 	seen := make(map[string]struct{}, coverCount)
-	for _, ref := range refs {
+	attempts := 0
+	for _, ref := range pl.Songs {
 		if len(covers) == coverCount {
 			break
 		}
-		song, err := s.resolve(ref)
-		if err != nil || len(song.Album.Covers) == 0 {
+		song, ok := pl.Tracks[ref]
+		if !ok {
+			if s.resolve == nil || attempts == coverResolveCap {
+				continue
+			}
+			attempts++
+			var err error
+			song, err = s.resolve(ref)
+			if err != nil {
+				continue
+			}
+		}
+		if len(song.Album.Covers) == 0 {
 			continue
 		}
 		cover := song.Album.Covers[0]

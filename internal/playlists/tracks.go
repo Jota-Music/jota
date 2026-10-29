@@ -11,9 +11,9 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
-// GetFullPlaylist implements music.Source: it resolves each stored reference to
-// its metadata. A reference that no longer resolves is marked Broken instead of
-// failing the whole playlist.
+// GetFullPlaylist implements music.Source: it serves the metadata stored with
+// each reference and resolves only the ones it does not have. A reference that
+// no longer resolves is marked Broken instead of failing the whole playlist.
 func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 	pl, err := s.load(id)
 	if err != nil {
@@ -26,6 +26,14 @@ func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 	songs := make([]music.Song, 0, len(pl.Songs))
 	known := make(map[string]music.Song, len(pl.Songs))
 	for _, ref := range pl.Songs {
+		// The metadata was persisted when the reference was added, so a playlist
+		// opens from the store instead of resolving every track again: on a
+		// restored library that resolve is a network round trip per song.
+		if stored, ok := pl.Tracks[ref]; ok {
+			songs = append(songs, stored)
+			continue
+		}
+
 		var song music.Song
 		err := errors.New("no resolver")
 		if s.resolve != nil {
@@ -33,10 +41,7 @@ func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 		}
 		if err != nil {
 			broken := music.Song{Id: ref, Broken: true}
-			if cached, ok := pl.Tracks[ref]; ok {
-				broken = cached
-				broken.Broken = true
-			} else if s.trackCache != nil {
+			if s.trackCache != nil {
 				if cached, ok := s.trackCache(ref); ok {
 					broken = cached
 					broken.Broken = true
