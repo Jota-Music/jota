@@ -45,7 +45,14 @@ export function AboutSettings() {
 				<div class="min-w-0">
 					<p class="text-xs text-zinc-500">{t("update.about.version")}</p>
 					<p class="truncate text-sm text-zinc-100">
-						{version.value || t("update.about.dev")}
+						{version.value === "" ? (
+							<span
+								class="shimmer inline-block h-[1em] w-24 rounded align-middle"
+								aria-hidden
+							/>
+						) : (
+							version.value
+						)}
 					</p>
 				</div>
 				<div class="flex shrink-0 items-center gap-2">

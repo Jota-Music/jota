@@ -4,12 +4,14 @@ import {
 	disconnectSpotify,
 	spotifyConnected,
 	spotifyDegraded,
+	spotifyReady,
 	spotifyUser,
 } from "@/lib/auth/views/stores/session";
 import {
 	exportYouTubeCookiesFile,
 	signOutYouTube,
 	youtubeAccount,
+	youtubeReady,
 	youtubeSessionFull,
 	youtubeSignedIn,
 } from "@/lib/auth/views/stores/youtube";
@@ -54,7 +56,14 @@ export function AccountSettings() {
 								: t("auth.account.connectedAs")}
 						</p>
 						<p class="truncate text-sm text-zinc-100">
-							{spotifyUser.value ?? "Spotify"}
+							{spotifyReady.value ? (
+								(spotifyUser.value ?? "Spotify")
+							) : (
+								<span
+									class="shimmer inline-block h-[1em] w-24 rounded align-middle"
+									aria-hidden
+								/>
+							)}
 						</p>
 					</div>
 					<button
@@ -83,7 +92,14 @@ export function AccountSettings() {
 									</p>
 								)}
 								<p class="truncate text-sm text-zinc-100">
-									{youtubeAccount.value || t("auth.account.signedIn")}
+									{youtubeReady.value ? (
+										youtubeAccount.value || t("auth.account.signedIn")
+									) : (
+										<span
+											class="shimmer inline-block h-[1em] w-24 rounded align-middle"
+											aria-hidden
+										/>
+									)}
 								</p>
 							</div>
 							<button

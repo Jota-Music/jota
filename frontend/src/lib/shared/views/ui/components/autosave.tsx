@@ -94,7 +94,7 @@ export function Autosave() {
 		});
 	}, []);
 
-	const { data: folder = "" } = useQuery({
+	const { data: folder = "", isLoading: folderLoading } = useQuery({
 		queryKey: ["sync-folder"],
 		queryFn: SyncFolder,
 	});
@@ -111,7 +111,7 @@ export function Autosave() {
 		});
 	}, [folder]);
 
-	const { data: auto = false } = useQuery({
+	const { data: auto = false, isLoading: autoLoading } = useQuery({
 		queryKey: ["sync-auto"],
 		queryFn: SyncAuto,
 	});
@@ -123,7 +123,7 @@ export function Autosave() {
 		onError: (error) => addError(error, "sync"),
 	});
 
-	const { data: importing = true } = useQuery({
+	const { data: importing = true, isLoading: importLoading } = useQuery({
 		queryKey: ["sync-import"],
 		queryFn: SyncImport,
 	});
@@ -142,7 +142,7 @@ export function Autosave() {
 		onError: (error) => addError(error, "sync"),
 	});
 
-	const { data: interval = 15 } = useQuery({
+	const { data: interval = 15, isLoading: intervalLoading } = useQuery({
 		queryKey: ["sync-interval"],
 		queryFn: SyncInterval,
 	});
@@ -315,7 +315,9 @@ export function Autosave() {
 					class="truncate text-xs font-medium text-zinc-300"
 					title={folder || undefined}
 				>
-					{folder ? (
+					{folderLoading ? (
+						<span class="shimmer block h-3.5 w-40 rounded" />
+					) : folder ? (
 						<>
 							{folderName.value || name(folder)}
 							{place(folder) && (
@@ -410,24 +412,32 @@ export function Autosave() {
 
 			<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
 				<p class="text-xs text-zinc-500">{t("settings.autosave.auto")}</p>
-				<Switch
-					checked={auto}
-					label={t("settings.autosave.auto")}
-					disabled={autoMutation.isPending}
-					onToggle={() => autoMutation.mutate(!auto)}
-				/>
+				{autoLoading ? (
+					<div class="shimmer h-6 w-11 shrink-0 rounded-full" />
+				) : (
+					<Switch
+						checked={auto}
+						label={t("settings.autosave.auto")}
+						disabled={autoLoading || autoMutation.isPending}
+						onToggle={() => autoMutation.mutate(!auto)}
+					/>
+				)}
 			</div>
 
 			<div class="grid grid-cols-[1fr_max-content] items-start gap-x-3 gap-y-1 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
 				<p class="text-balance text-xs text-zinc-500">
 					{t("settings.autosave.import")}
 				</p>
-				<Switch
-					checked={importing}
-					label={t("settings.autosave.import")}
-					disabled={importMutation.isPending}
-					onToggle={() => importMutation.mutate(!importing)}
-				/>
+				{importLoading ? (
+					<div class="shimmer h-6 w-11 shrink-0 rounded-full" />
+				) : (
+					<Switch
+						checked={importing}
+						label={t("settings.autosave.import")}
+						disabled={importLoading || importMutation.isPending}
+						onToggle={() => importMutation.mutate(!importing)}
+					/>
+				)}
 				<p class="col-start-1 text-balance text-[11px] text-zinc-500">
 					{t("settings.autosave.importHint")}
 				</p>
@@ -435,22 +445,26 @@ export function Autosave() {
 
 			<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
 				<p class="text-xs text-zinc-500">{t("settings.autosave.interval")}</p>
-				<select
-					value={interval}
-					disabled={intervalMutation.isPending}
-					onChange={(e) =>
-						intervalMutation.mutate(
-							Number((e.target as HTMLSelectElement).value),
-						)
-					}
-					class="cursor-pointer appearance-none rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 outline-none focus:border-zinc-600"
-				>
-					{[5, 10, 15, 30, 60].map((m) => (
-						<option key={m} value={m} class="bg-zinc-950">
-							{m} min
-						</option>
-					))}
-				</select>
+				{intervalLoading ? (
+					<div class="shimmer h-6 w-16 rounded-lg" />
+				) : (
+					<select
+						value={interval}
+						disabled={intervalLoading || intervalMutation.isPending}
+						onChange={(e) =>
+							intervalMutation.mutate(
+								Number((e.target as HTMLSelectElement).value),
+							)
+						}
+						class="cursor-pointer appearance-none rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 outline-none focus:border-zinc-600"
+					>
+						{[5, 10, 15, 30, 60].map((m) => (
+							<option key={m} value={m} class="bg-zinc-950">
+								{m} min
+							</option>
+						))}
+					</select>
+				)}
 			</div>
 
 			{failed.value && folder && (

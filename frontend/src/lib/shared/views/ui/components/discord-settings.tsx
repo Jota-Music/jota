@@ -44,12 +44,15 @@ export function DiscordSettings() {
 						{t("settings.discord.title")}
 					</h2>
 				</div>
-				<Switch
-					checked={enabled.value}
-					label={t("settings.discord.label")}
-					disabled={!ready.value}
-					onToggle={() => void toggle()}
-				/>
+				{ready.value ? (
+					<Switch
+						checked={enabled.value}
+						label={t("settings.discord.label")}
+						onToggle={() => void toggle()}
+					/>
+				) : (
+					<div class="shimmer h-6 w-11 shrink-0 rounded-full" />
+				)}
 			</div>
 			<p class="text-xs text-zinc-500">{t("settings.discord.description")}</p>
 		</section>

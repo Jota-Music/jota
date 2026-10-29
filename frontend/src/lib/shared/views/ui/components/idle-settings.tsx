@@ -42,12 +42,15 @@ export function IdleSettings() {
 						{t("settings.idle.title")}
 					</h2>
 				</div>
-				<Switch
-					checked={enabled.value}
-					label={t("settings.idle.label")}
-					disabled={!ready.value}
-					onToggle={() => void toggle()}
-				/>
+				{ready.value ? (
+					<Switch
+						checked={enabled.value}
+						label={t("settings.idle.label")}
+						onToggle={() => void toggle()}
+					/>
+				) : (
+					<div class="shimmer h-6 w-11 shrink-0 rounded-full" />
+				)}
 			</div>
 			<p class="text-xs text-zinc-500">{t("settings.idle.description")}</p>
 		</section>
