@@ -19,7 +19,6 @@ import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
-import { Rows, Tiles } from "@/lib/music/views/ui/shimmer";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
 import { cover } from "@/lib/shared/utils/cover";
@@ -30,6 +29,7 @@ import {
 } from "@/lib/shared/views/ui/components/context-menu";
 import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
+import { Loading } from "@/lib/shared/views/ui/components/loading";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 type SearchType = "user" | "track" | "album" | "playlist" | "artist";
@@ -196,7 +196,7 @@ export function SearchPage() {
 				</header>
 
 				{isLoading ? (
-					<Rows />
+					<Loading />
 				) : songs.length === 0 ? (
 					<p class="text-sm text-zinc-500">{t("common.noResults")}</p>
 				) : (
@@ -224,9 +224,7 @@ export function SearchPage() {
 					class="h-full flex flex-col gap-3 overflow-y-auto pr-[15px] pb-8"
 				>
 					{isLoading ? (
-						<div class="grid grid-cols-3 gap-0.5 md:gap-4">
-							<Tiles />
-						</div>
+						<Loading />
 					) : results.length === 0 ? (
 						<p class="text-sm text-zinc-500">{t("pages.search.noPlaylists")}</p>
 					) : (

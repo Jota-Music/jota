@@ -30,13 +30,13 @@ import {
 	editingSong,
 	editorMode,
 } from "@/lib/music/views/stores/youtube-editor";
-import { Row } from "@/lib/music/views/ui/shimmer";
 import TrackArt from "@/lib/music/views/ui/track/track-art";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { t } from "@/lib/shared/i18n";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
+import { Loading } from "@/lib/shared/views/ui/components/loading";
 import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import Progress from "@/lib/shared/views/ui/components/progress";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
@@ -347,7 +347,7 @@ export default function YoutubeEditor() {
 											{t("music.youtubeId.searchPrompt")}
 										</p>
 									) : videosQuery.isLoading ? (
-										Array.from({ length: 4 }, (_, index) => <Row key={index} />)
+										<Loading />
 									) : videosQuery.isError ? (
 										<p class="text-sm text-red-400">
 											{t("music.youtubeId.searchFailed")}

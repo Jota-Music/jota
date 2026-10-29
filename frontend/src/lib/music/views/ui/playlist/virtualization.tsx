@@ -24,7 +24,6 @@ import {
 	selectionActive,
 	toggleSelection,
 } from "@/lib/music/views/stores/selection";
-import { ROW_PX } from "@/lib/music/views/ui/shimmer";
 import TrackActions, {
 	buildActions,
 } from "@/lib/music/views/ui/track/track-actions";
@@ -40,6 +39,8 @@ import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
+
+const ROW_PX = 64;
 
 type Props = {
 	songs: Song[];

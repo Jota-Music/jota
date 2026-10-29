@@ -24,10 +24,10 @@ import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
-import { Rows } from "@/lib/music/views/ui/shimmer";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import { Loading } from "@/lib/shared/views/ui/components/loading";
 
 type Tab = "playlists" | "videos";
 
@@ -195,7 +195,7 @@ export function UserPage() {
 				</div>
 
 				{videosQuery.isLoading ? (
-					<Rows />
+					<Loading />
 				) : filteredVideos.length === 0 ? (
 					<p class="text-sm text-zinc-500">{t("pages.user.noVideos")}</p>
 				) : (

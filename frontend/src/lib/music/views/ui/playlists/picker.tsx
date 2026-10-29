@@ -15,6 +15,7 @@ import {
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError } from "@/lib/shared/views/stores/errors";
+import { Loading } from "@/lib/shared/views/ui/components/loading";
 import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 
 export function PlaylistPicker() {
@@ -94,14 +95,7 @@ export function PlaylistPicker() {
 
 				<div class="min-h-0 flex-1 overflow-y-auto p-2">
 					{isLoading ? (
-						<div class="flex flex-col" aria-hidden>
-							{Array.from({ length: 4 }, (_, index) => (
-								<div key={index} class="flex items-center gap-3 px-3 py-2">
-									<div class="shimmer size-5 shrink-0 rounded" />
-									<div class="shimmer h-3.5 w-2/3 rounded" />
-								</div>
-							))}
-						</div>
+						<Loading />
 					) : playlists.length === 0 ? (
 						<p class="px-2 py-3 text-xs text-zinc-500">
 							{t("music.custom.noPlaylists")}

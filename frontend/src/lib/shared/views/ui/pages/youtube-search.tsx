@@ -23,12 +23,12 @@ import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { shareLink } from "@/lib/music/views/ui/share";
 import { Shelf } from "@/lib/music/views/ui/shelf";
-import { Rows, Tiles } from "@/lib/music/views/ui/shimmer";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
+import { Loading } from "@/lib/shared/views/ui/components/loading";
 import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
@@ -201,9 +201,7 @@ export function YouTubeSearchPage() {
 						class="h-full flex flex-col overflow-y-auto pr-[15px]"
 					>
 						{playlistsQuery.isLoading ? (
-							<div class="grid grid-cols-2 gap-3 pt-1 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
-								<Tiles count={8} />
-							</div>
+							<Loading />
 						) : playlistsQuery.isError ? (
 							<p class="text-red-400">{t("pages.youtube.failed")}</p>
 						) : playlists.length === 0 ? (
@@ -221,7 +219,7 @@ export function YouTubeSearchPage() {
 					<Scrollbar target={listRef} />
 				</div>
 			) : videosQuery.isLoading ? (
-				<Rows />
+				<Loading />
 			) : videosQuery.isError ? (
 				<p class="text-red-400">{t("pages.youtube.failed")}</p>
 			) : songs.length === 0 ? (

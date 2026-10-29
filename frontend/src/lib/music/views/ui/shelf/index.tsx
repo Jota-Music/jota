@@ -22,13 +22,13 @@ import {
 	defaultViewKey,
 	useView,
 } from "@/lib/music/views/ui/shelf/hooks/use-view";
-import type { Item, Props, Variant } from "@/lib/music/views/ui/shelf/types";
-import { Row, Tiles } from "@/lib/music/views/ui/shimmer";
+import type { Item, Props } from "@/lib/music/views/ui/shelf/types";
 import { t } from "@/lib/shared/i18n";
 import {
 	type Action,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
+import { Loading } from "@/lib/shared/views/ui/components/loading";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 export {
@@ -39,20 +39,6 @@ export {
 	YouTubeHint,
 } from "@/lib/music/views/ui/shelf/hint";
 export type { IconType, Item, Source } from "@/lib/music/views/ui/shelf/types";
-
-function Loading({ variant }: { variant: Variant }) {
-	return (
-		<div class="relative min-h-0 flex-1 overflow-hidden pb-3 pl-1 pr-[15px]">
-			{variant === "compact" ? (
-				Array.from({ length: 12 }, (_, index) => <Row key={index} />)
-			) : (
-				<div class="grid grid-cols-3 gap-0.5 md:gap-4">
-					<Tiles />
-				</div>
-			)}
-		</div>
-	);
-}
 
 // The shelf route names the entity, so every shelf gets a share entry without
 // each caller spelling one out. Routes that are not a shareable page (rooms, a
@@ -214,7 +200,7 @@ export function Shelf({
 			)}
 
 			{isLoading ? (
-				<Loading variant={variant} />
+				<Loading />
 			) : items.length === 0 ? (
 				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
 					{empty()}

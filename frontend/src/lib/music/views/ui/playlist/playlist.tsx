@@ -50,7 +50,6 @@ import { SaveButton } from "@/lib/music/views/ui/follow";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
-import { Rows } from "@/lib/music/views/ui/shimmer";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
@@ -62,6 +61,7 @@ import {
 	type Action,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
+import { Loading } from "@/lib/shared/views/ui/components/loading";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
@@ -452,7 +452,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			)}
 
 			{isLoading ? (
-				<Rows />
+				<Loading />
 			) : (
 				<Virtualization
 					songs={filteredSongs}
