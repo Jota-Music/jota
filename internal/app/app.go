@@ -13,7 +13,6 @@ import (
 	"github.com/Jota-Music/jota/internal/backup"
 	"github.com/Jota-Music/jota/internal/env"
 	"github.com/Jota-Music/jota/internal/follows"
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/ordering"
 	"github.com/Jota-Music/jota/internal/playlists"
@@ -126,16 +125,18 @@ func New(version string) *App {
 
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
-	kv.Start()
 
 	// Stage the sessions already on this device, so a pass set after login (or
-	// a real session replacing an older staged one) reaches the next pass.
-	if a.SessionPass() != "" {
-		go func() {
-			a.syncYouTubeCookies()
-			a.syncSpotifySession()
-		}()
-	}
+	// a real session replacing an older staged one) reaches the next pass. The
+	// pass lives in Badger, so reading it here would open the database before
+	// the window exists; keep the whole block off the startup path instead.
+	go func() {
+		if a.SessionPass() == "" {
+			return
+		}
+		a.syncYouTubeCookies()
+		a.syncSpotifySession()
+	}()
 	go verifyYouTubeSession()
 
 	go func() {
@@ -174,7 +175,6 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 func (a *App) ServiceShutdown() error {
 	a.Discord.Close()
-	kv.Close()
 	return nil
 }
 

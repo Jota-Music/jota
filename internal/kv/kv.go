@@ -17,6 +17,13 @@ var (
 	ErrKeyNotFound = errors.New("key not found")
 )
 
+const (
+	// lockWait and lockRetry cover the handoff from the previous instance: the
+	// window opens before it has released the directory lock.
+	lockWait  = 2 * time.Second
+	lockRetry = 250 * time.Millisecond
+)
+
 var (
 	db             *badger.DB
 	mu             sync.Mutex
@@ -91,9 +98,25 @@ func startValueLogGC() {
 	})
 }
 
+// Start opens the store and gives the previous instance time to release the
+// directory lock: the window opens before that process is gone, and a session
+// running without persistence because of a sub-second overlap is not worth it.
+// It runs after the first paint, so a slow open here costs nobody.
 func Start() {
-	if err := EnsureStarted(); err != nil {
-		log.Printf("kv: unavailable, running without persistence: %v", err)
+	deadline := time.Now().Add(lockWait)
+	for {
+		err := EnsureStarted()
+		if err == nil || time.Now().After(deadline) {
+			if err != nil {
+				log.Printf("kv: store unavailable after %s, this session runs without persistence: %v", lockWait, err)
+			}
+			return
+		}
+		// A failed open is remembered, so a retry has to clear it to ask again.
+		mu.Lock()
+		openErr = nil
+		mu.Unlock()
+		time.Sleep(lockRetry)
 	}
 }
 

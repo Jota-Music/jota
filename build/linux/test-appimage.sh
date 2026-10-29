@@ -60,6 +60,11 @@ check "negative: missing WebKitGTK message" missing_message
 # window existed, so a stalled connection left the process alive, mute and
 # blocking each later launch. TestStalledAccesspointHonoursDeadline pins the
 # credential path; this is the end-to-end promise: no network, window anyway.
+#
+# The launch is budgeted: `window ready in <ms>` is what a regression on the
+# launch path looks like (opening the store or the sync folder before the window
+# once added hundreds of ms), and 5s in a container under xvfb leaves room for a
+# slow runner while still failing anything that waits on the network.
 blackholed() {
   local out
   out=$("$runtime" run --rm --cap-add NET_ADMIN -v "$app:/app.AppImage:ro" ubuntu:24.04 bash -lc '
@@ -71,11 +76,15 @@ blackholed() {
     iptables -A OUTPUT -p tcp -j DROP
     timeout 30 xvfb-run -a /app.AppImage --appimage-extract-and-run >/dev/null 2>&1 || true
     grep "window ready" /root/.config/jota/jota.log || echo "no window ready line within 30s"
+    ms=$(grep -o "window ready in [0-9]*" /root/.config/jota/jota.log | grep -o "[0-9]*$" || true)
+    echo "launch: ${ms:-none}ms"
+    [ -n "$ms" ] && [ "$ms" -lt 3000 ]
   ' 2>&1)
-  echo "$out" | tail -2
+  echo "$out" | tail -3
   echo "$out" | grep -q "window ready"
+  echo "$out" | grep -q "launch: "
 }
-check "blackholed network: window opens" blackholed
+check "blackholed network: window opens within budget" blackholed
 
 if [ "$failed" -eq 0 ]; then
   echo "all checks passed"

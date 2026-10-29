@@ -39,13 +39,10 @@ type windowState struct {
 	AlwaysOnTop         bool
 }
 
-var windowBucket = kv.UseBucket("window")
-
-// legacyWindowPath is where the builds between 0.2.12 and 0.2.13 kept the
-// geometry, a file next to the log instead of a Badger key. Set by setupLogging
-// and read once, so the restore uses the window the user last left rather than a
-// position from before that release.
-var legacyWindowPath string
+// windowPath is where the window geometry lives: a tiny file next to the log,
+// not a Badger key, so building the window never waits for the database. Set by
+// setupLogging, before the window is built.
+var windowPath string
 
 const (
 	windowMinWidth  = 500
@@ -103,7 +100,7 @@ func (w *rotatingWriter) rotate() {
 // desktop entry or an AppImage. Best-effort: no writable dir means stderr only.
 func setupLogging() func() {
 	path := app.LogPath()
-	legacyWindowPath = filepath.Join(filepath.Dir(path), "window.json")
+	windowPath = filepath.Join(filepath.Dir(path), "window.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return func() {}
 	}
@@ -186,22 +183,54 @@ func watchStartup() *time.Timer {
 
 func loadWindowState() windowState {
 	var st windowState
-	_ = kv.EnsureStarted()
-	_ = windowBucket.GetObject("state", &st)
-	if legacyWindowPath == "" {
-		return st
-	}
-	data, err := os.ReadFile(legacyWindowPath)
+	data, err := os.ReadFile(windowPath)
 	if err != nil {
 		return st
 	}
-	var file windowState
-	if json.Unmarshal(data, &file) == nil && file.Width > 0 {
-		st = file
-		_ = windowBucket.SetObject("state", st)
-	}
-	_ = os.Remove(legacyWindowPath)
+	_ = json.Unmarshal(data, &st)
 	return st
+}
+
+// migrateWindowState copies the geometry older builds kept in Badger into the
+// file, once. It runs off the launch path on purpose: opening the database there
+// is exactly what moving the state out of it avoided, so this session keeps the
+// defaults it started with and the next one gets the geometry back.
+func migrateWindowState() {
+	if _, err := os.Stat(windowPath); err == nil {
+		return
+	}
+	var st windowState
+	if err := kv.EnsureStarted(); err != nil {
+		return
+	}
+	if err := kv.UseBucket("window").GetObject("state", &st); err != nil {
+		return
+	}
+
+	windowSaveMu.Lock()
+	defer windowSaveMu.Unlock()
+	// A window that already saved its own geometry is newer than the old key.
+	if _, err := os.Stat(windowPath); err == nil {
+		return
+	}
+	writeWindowStateFile(st)
+}
+
+// writeWindowStateFile publishes the geometry with temp + rename, so a kill
+// mid-write cannot leave a clipped one behind. Every caller holds windowSaveMu,
+// so the single temp name cannot be shared by two writers.
+func writeWindowStateFile(st windowState) {
+	data, err := json.Marshal(st)
+	if err != nil {
+		return
+	}
+	tmp := windowPath + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return
+	}
+	if err := os.Rename(tmp, windowPath); err != nil {
+		_ = os.Remove(tmp)
+	}
 }
 
 // clampWindowState keeps the restored window usable. Save-on-resize stores the
@@ -243,52 +272,74 @@ func clampWindowState(st *windowState, screens []*application.Screen) *applicati
 // is flushed at WindowClosing and again after the app exits.
 const windowSaveInterval = 400 * time.Millisecond
 
+// windowSaveState is the state to persist. Only the event handlers and the pin
+// button write it, from a live window; the close hook only flushes it, so nothing
+// reads a window Wails is already tearing down. The pin lives here rather than in
+// the startup state, so the startup value is read-only once the window exists.
 var (
-	windowSaveMu     sync.Mutex
-	windowLastSave   time.Time
-	windowSaveWindow *application.WebviewWindow
-	windowSaveOnTop  atomic.Bool
-	windowSaveDirty  atomic.Bool
+	windowSaveMu    sync.Mutex
+	windowLastSave  time.Time
+	windowSaveState windowState
+	windowSaveDirty bool
 )
 
-func writeWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
+// snapshot reads the live window. Call it from an event handler only.
+func snapshot(w *application.WebviewWindow) windowState {
 	x, y := w.Position()
 	width, height := w.Size()
-	_ = windowBucket.SetObject("state", windowState{
-		X:           x,
-		Y:           y,
-		Width:       width,
-		Height:      height,
-		Maximised:   w.IsMaximised(),
-		AlwaysOnTop: alwaysOnTop,
-	})
+	return windowState{
+		X:         x,
+		Y:         y,
+		Width:     width,
+		Height:    height,
+		Maximised: w.IsMaximised(),
+	}
 }
 
-func saveWindowState(w *application.WebviewWindow, alwaysOnTop bool) {
+func saveWindowState(st windowState) {
 	windowSaveMu.Lock()
-	if time.Since(windowLastSave) >= windowSaveInterval {
+	st.AlwaysOnTop = windowSaveState.AlwaysOnTop
+	windowSaveState = st
+	windowSaveDirty = true
+	due := time.Since(windowLastSave) >= windowSaveInterval
+	if due {
 		windowLastSave = time.Now()
-		windowSaveMu.Unlock()
-		writeWindowState(w, alwaysOnTop)
-		return
 	}
-	if windowSaveWindow == nil {
-		windowSaveWindow = w
-	}
-	windowSaveOnTop.Store(alwaysOnTop)
-	windowSaveDirty.Store(true)
 	windowSaveMu.Unlock()
+	if due {
+		flushWindowState()
+	}
 }
 
+// flushWindowState persists the cache without touching the window. A cache with
+// no geometry is dropped: the window can report 0x0 before it is mapped, and
+// saving that would restore a window with no size.
 func flushWindowState() {
 	windowSaveMu.Lock()
 	defer windowSaveMu.Unlock()
-	if !windowSaveDirty.Load() || windowSaveWindow == nil {
+	if !windowSaveDirty || windowSaveState.Width <= 0 {
 		return
 	}
-	w := windowSaveWindow
-	windowSaveDirty.Store(false)
-	writeWindowState(w, windowSaveOnTop.Load())
+	windowSaveDirty = false
+	writeWindowStateFile(windowSaveState)
+}
+
+// getAlwaysOnTop reads the pinned flag from the cache, the single source of truth
+// after startup.
+func getAlwaysOnTop() bool {
+	windowSaveMu.Lock()
+	defer windowSaveMu.Unlock()
+	return windowSaveState.AlwaysOnTop
+}
+
+// setAlwaysOnTop records the pinned flag and persists it in the same pass, so a
+// relaunch restores the pin without waiting for a move or resize.
+func setAlwaysOnTop(on bool) {
+	windowSaveMu.Lock()
+	windowSaveState.AlwaysOnTop = on
+	windowSaveDirty = true
+	windowSaveMu.Unlock()
+	flushWindowState()
 }
 
 // shedMemory returns the Go heap to the OS once the window is hidden. The
@@ -377,7 +428,7 @@ func main() {
 		debug.SetMemoryLimit(128 << 20)
 	}
 
-	log.Printf("jota %s starting", currentVersion)
+	startedAt := time.Now()
 
 	// The single instance is decided before anything else starts, so a second
 	// launch costs a socket round trip and nothing more.
@@ -462,6 +513,7 @@ func main() {
 	})
 
 	state := loadWindowState()
+	windowSaveState = state
 
 	opts := application.WebviewWindowOptions{
 		Title:            "Jota",
@@ -514,8 +566,17 @@ func main() {
 	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
 		watchdog.Stop()
 		markRunning(markerReady)
-		log.Printf("window ready")
-		application.Get().Event.Emit("window:always-on-top", state.AlwaysOnTop)
+		// One number, always in the log: how long the launch took. Comparing it
+		// across releases needs no profiler, and a regression shows up as a
+		// bigger number instead of a feeling.
+		log.Printf("window ready in %s", time.Since(startedAt).Round(time.Millisecond))
+		// In the background: opening Badger replays the value log, and neither the
+		// service startup nor the first render should wait for that.
+		go func() {
+			kv.Start()
+			migrateWindowState()
+		}()
+		application.Get().Event.Emit("window:always-on-top", getAlwaysOnTop())
 		// The geometry is already the one the window was created with, so there is
 		// nothing to move here. Marking it restored lets the move/resize events start
 		// saving.
@@ -525,14 +586,14 @@ func main() {
 		if !restored.Load() {
 			return
 		}
-		saveWindowState(window, state.AlwaysOnTop)
+		saveWindowState(snapshot(window))
 	})
 	window.OnWindowEvent(events.Common.WindowDidResize, func(*application.WindowEvent) {
 		if !restored.Load() {
 			return
 		}
 		enforceMinSize(window)
-		saveWindowState(window, state.AlwaysOnTop)
+		saveWindowState(snapshot(window))
 	})
 	window.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
 		if quitting.CompareAndSwap(false, true) {
@@ -548,17 +609,17 @@ func main() {
 	})
 
 	application.Get().Event.On("window:always-on-top:toggle", func(*application.CustomEvent) {
-		state.AlwaysOnTop = !state.AlwaysOnTop
-		window.SetAlwaysOnTop(state.AlwaysOnTop)
-		writeWindowState(window, state.AlwaysOnTop)
-		application.Get().Event.Emit("window:always-on-top", state.AlwaysOnTop)
+		on := !getAlwaysOnTop()
+		window.SetAlwaysOnTop(on)
+		setAlwaysOnTop(on)
+		application.Get().Event.Emit("window:always-on-top", on)
 	})
 
 	// The window is created with the saved state before the frontend even loads,
 	// so the runtime-ready broadcast can beat the pin button's subscription and
 	// the two would disagree. Answer on demand instead of racing the mount.
 	application.Get().Event.On("window:always-on-top:get", func(*application.CustomEvent) {
-		application.Get().Event.Emit("window:always-on-top", state.AlwaysOnTop)
+		application.Get().Event.Emit("window:always-on-top", getAlwaysOnTop())
 	})
 
 	if err := wailsApp.Run(); err != nil {
