@@ -190,7 +190,9 @@ export function SearchPage() {
 		return (
 			<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
 				<header class="shrink-0">
-					<h2 class="text-xl font-semibold leading-tight">{query}</h2>
+					<h2 class="line-clamp-2 break-words text-xl font-semibold leading-tight">
+						{query}
+					</h2>
 				</header>
 
 				{isLoading ? (
@@ -210,7 +212,7 @@ export function SearchPage() {
 				<UserHeader source="spotify" identifier={query} />
 			) : (
 				<header class="shrink-0">
-					<h2 class="text-xl font-semibold leading-tight">
+					<h2 class="line-clamp-2 break-words text-xl font-semibold leading-tight">
 						{t("pages.search.playlistsBy", { query })}
 					</h2>
 				</header>

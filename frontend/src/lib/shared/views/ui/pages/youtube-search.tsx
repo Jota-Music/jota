@@ -144,7 +144,9 @@ export function YouTubeSearchPage() {
 	return (
 		<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
 			<header class="flex shrink-0 flex-col gap-3">
-				<h2 class="text-xl font-semibold leading-tight">{query}</h2>
+				<h2 class="line-clamp-2 break-words text-xl font-semibold leading-tight">
+					{query}
+				</h2>
 				{tabs.length > 1 && (
 					<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
 						{tabs.map((tab) => {
