@@ -1,5 +1,5 @@
 import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
-import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
+import { parseYoutubeLink, youtubeList } from "@/lib/music/app/youtube-link";
 
 export type ClipboardLink = {
 	kind: "playlist" | "album" | "artist" | "user" | "channel" | "song";
@@ -31,6 +31,17 @@ export function clipboardLink(text: string): ClipboardLink | null {
 					to: `/${spotify.type}/${spotify.id}`,
 				};
 		}
+	}
+
+	// A link copied from inside a playlist carries both, and the playlist is what
+	// was shared.
+	const list = youtubeList(trimmed);
+	if (list) {
+		return {
+			kind: "playlist",
+			text: trimmed,
+			to: `/playlist/youtube:${list}`,
+		};
 	}
 
 	const youtube = parseYoutubeLink(trimmed);

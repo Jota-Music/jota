@@ -52,6 +52,23 @@ test("youtube links open their route or play the video", () => {
 	});
 });
 
+test("a playlist parameter wins on the clipboard", () => {
+	expect(
+		clipboardLink(
+			`https://www.youtube.com/watch?v=${VIDEO}&list=${LIST}&index=3`,
+		),
+	).toEqual({
+		kind: "playlist",
+		text: `https://www.youtube.com/watch?v=${VIDEO}&list=${LIST}&index=3`,
+		to: `/playlist/youtube:${LIST}`,
+	});
+	expect(clipboardLink(`https://youtu.be/${VIDEO}?list=${LIST}`)).toEqual({
+		kind: "playlist",
+		text: `https://youtu.be/${VIDEO}?list=${LIST}`,
+		to: `/playlist/youtube:${LIST}`,
+	});
+});
+
 test("anything that is not a known link is ignored", () => {
 	expect(clipboardLink("just some text")).toBeNull();
 	expect(clipboardLink(`local:${TRACK}`)).toBeNull();

@@ -13,6 +13,26 @@ function hostOf(url: URL): string {
 	return url.hostname.replace(/^(www|music|m)\./, "");
 }
 
+function linkURL(query: string): URL | null {
+	try {
+		return new URL(query.includes("://") ? query : `https://${query}`);
+	} catch {
+		return null;
+	}
+}
+
+// The playlist a link carries, even when it also names a video. Pasting a link
+// copied from inside a playlist means the playlist: that is what was shared.
+export function youtubeList(query: string): string | null {
+	const trimmed = query.trim();
+	if (!trimmed) return null;
+
+	const url = linkURL(trimmed);
+	if (!url || !HOSTS.has(hostOf(url))) return null;
+
+	return url.searchParams.get("list");
+}
+
 // Accepts youtube.com / youtu.be links (watch, shorts, embed, live, playlist,
 // channel) and bare video, playlist, channel ID or @handle, and returns the
 // referenced entity. A video wins over a playlist, so a "song inside a
@@ -26,12 +46,8 @@ export function parseYoutubeLink(query: string): YouTubeRef | null {
 	if (VIDEO_ID.test(trimmed)) return { type: "video", id: trimmed };
 	if (PLAYLIST_ID.test(trimmed)) return { type: "playlist", id: trimmed };
 
-	let url: URL;
-	try {
-		url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
-	} catch {
-		return null;
-	}
+	const url = linkURL(trimmed);
+	if (!url) return null;
 	const host = hostOf(url);
 	if (!HOSTS.has(host)) return null;
 

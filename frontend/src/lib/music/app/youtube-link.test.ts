@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
+import { parseYoutubeLink, youtubeList } from "@/lib/music/app/youtube-link";
 
 const VIDEO = { type: "video", id: "dQw4w9WgXcQ" } as const;
 const PLAYLIST = { type: "playlist", id: "PL1234567890abcdef" } as const;
@@ -41,6 +41,22 @@ test("parses playlist links and bare IDs", () => {
 		),
 	).toEqual(PLAYLIST);
 	expect(parseYoutubeLink("PL1234567890abcdef")).toEqual(PLAYLIST);
+});
+
+test("finds the list a link carries, video or not", () => {
+	expect(
+		youtubeList(
+			"https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL1234567890abcdef",
+		),
+	).toBe("PL1234567890abcdef");
+	expect(
+		youtubeList("https://music.youtube.com/playlist?list=OLAK5uy_kABCDEFGHIJ"),
+	).toBe("OLAK5uy_kABCDEFGHIJ");
+	expect(youtubeList("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBeNull();
+	expect(youtubeList("PL1234567890abcdef")).toBeNull();
+	expect(
+		youtubeList("https://example.com/watch?v=dQw4w9WgXcQ&list=PL1234567890"),
+	).toBeNull();
 });
 
 test("parses channel links, handles and bare IDs", () => {
