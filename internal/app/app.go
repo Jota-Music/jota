@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -56,6 +55,15 @@ type App struct {
 	// a pass each, but one is enough: they all read the same stores.
 	syncQueued  atomic.Bool
 	syncRunning atomic.Bool
+	// syncTimer is the single debounce timer those asks arm, and syncFirst is
+	// when the current burst started: the cap that keeps a storm of mutations
+	// from postponing the pass forever is measured from it.
+	syncTimerMu sync.Mutex
+	syncTimer   *time.Timer
+	syncGen     uint64
+	syncFirst   time.Time
+	// syncTicking guards the interval goroutine against a second start.
+	syncTicking atomic.Bool
 }
 
 // Relay is the endpoint the app dials: a URL and the token that relay wants.
@@ -139,16 +147,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	}()
 	go verifyYouTubeSession()
 
-	go func() {
-		for {
-			if runtime.GOOS != "android" && a.SyncAuto() && a.SyncFolder() != "" {
-				if err := a.SyncPlaylists(); err != nil {
-					log.Printf("sync: %v", err)
-				}
-			}
-			time.Sleep(time.Duration(a.SyncInterval()) * time.Minute)
-		}
-	}()
+	a.syncTicker()
 
 	// Restoring the session is a network round trip, and startup runs before any
 	// window exists: blocking here means the app never opens at all, which is

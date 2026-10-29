@@ -18,6 +18,12 @@ import { queryClient } from "@/lib/shared/views/ui/query-client";
 
 const ANDROID = /Android/i.test(navigator.userAgent);
 
+// The launch belongs to the backend's ticker (syncTick in Go, one minute): the
+// window gets focus while it is still painting, and reading the document there
+// makes the open pay for a pass nobody asked for. Manual calls are not throttled.
+const BOOT_GRACE_MS = 60_000;
+const bootAt = Date.now();
+
 // Must match playlists.BackupFile in the Go backend.
 const BACKUP = "jota.backup.json";
 
@@ -349,9 +355,14 @@ async function run(mode: Mode, force: boolean): Promise<void> {
 }
 
 async function due(): Promise<boolean> {
-	if (!ANDROID) return true;
+	if (Date.now() - bootAt < BOOT_GRACE_MS) return false;
 	const minutes = await SyncInterval();
-	return Date.now() - lastAuto >= minutes * 60_000;
+	// Opening the app focuses the window right after the startup pass already
+	// pulled the whole document: reading those megabytes back seconds later is
+	// pure cost, so a pass this recent is skipped on every platform.
+	const at = Math.max(lastAuto, (await SyncStatus()).at ?? 0);
+	if (Date.now() - at < 60_000) return false;
+	return !ANDROID || Date.now() - lastAuto >= minutes * 60_000;
 }
 
 async function deliver(mode: Mode, force: boolean): Promise<boolean> {

@@ -555,16 +555,93 @@ func (a *App) snapshotsDue() bool {
 	return at == 0 || time.Since(time.UnixMilli(at)) >= refresh.Interval
 }
 
-// syncInBackground triggers a sync when auto-sync is enabled, without blocking
-// the caller.
+// syncInBackground asks for a pass when auto-sync is enabled, without blocking
+// the caller. Mutations arrive in bursts and every one of them reads the same
+// stores, so the ask only arms a timer and the pass runs once the burst settled.
 func (a *App) syncInBackground() {
 	if !a.SyncAuto() || runtime.GOOS == "android" {
 		return
 	}
+	a.syncSchedule()
+}
+
+// The burst of mutations is left to settle for syncDebounce, but a storm cannot
+// postpone the pass past syncMaxWait counted from its first mutation.
+var (
+	syncDebounce = 3 * time.Second
+	syncMaxWait  = 20 * time.Second
+	syncTick     = time.Minute
+)
+
+// syncSchedule arms the one timer, restarting it on every ask.
+func (a *App) syncSchedule() {
+	a.syncTimerMu.Lock()
+	defer a.syncTimerMu.Unlock()
+	if a.syncTimer == nil {
+		a.syncFirst = time.Now()
+	} else {
+		a.syncTimer.Stop()
+	}
+	wait := syncDebounce
+	if left := time.Until(a.syncFirst.Add(syncMaxWait)); left < wait {
+		wait = left
+	}
+	if wait < 0 {
+		wait = 0
+	}
+	// The timer gets a generation instead of the pointer, so the callback never
+	// reads the variable the arming call is still writing: wait can be zero, and
+	// the timer would fire before `a.syncTimer` holds it.
+	a.syncGen++
+	gen := a.syncGen
+	a.syncTimer = time.AfterFunc(wait, func() { a.syncFire(gen) })
+}
+
+// syncFire is the timer waking up. It only takes the burst it was armed for: a
+// timer armed while this one was waking up stays, and runs instead.
+func (a *App) syncFire(gen uint64) {
+	a.syncTimerMu.Lock()
+	if a.syncGen != gen {
+		a.syncTimerMu.Unlock()
+		return
+	}
+	a.syncTimer, a.syncFirst = nil, time.Time{}
+	a.syncTimerMu.Unlock()
+	a.syncQueue()
+}
+
+// syncQueue marks the pass and starts the loop that takes it.
+func (a *App) syncQueue() {
 	a.syncQueued.Store(true)
 	if a.syncRunning.CompareAndSwap(false, true) {
 		go a.syncLoop()
 	}
+}
+
+// syncTicker runs the interval the settings promise. Android keeps its own, in
+// the page: there the provider's file is staged by the native side.
+func (a *App) syncTicker() {
+	if runtime.GOOS == "android" || !a.syncTicking.CompareAndSwap(false, true) {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(syncTick)
+		defer ticker.Stop()
+		for range ticker.C {
+			if a.SyncAuto() && a.SyncFolder() != "" && a.syncDue() {
+				a.syncSchedule()
+			}
+		}
+	}()
+}
+
+// syncDue reports whether the interval has passed since the last pass, or work
+// is waiting for one. A location never reconciled counts as due.
+func (a *App) syncDue() bool {
+	if a.SyncPending() {
+		return true
+	}
+	return time.Since(time.UnixMilli(a.SyncStatus().At)) >= time.Duration(a.SyncInterval())*time.Minute
 }
 
 func (a *App) syncLoop() {

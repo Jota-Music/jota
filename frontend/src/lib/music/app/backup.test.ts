@@ -18,7 +18,12 @@ let news = false;
 let answers: boolean[] = [];
 // Whether the last pass read a copy older than our own write.
 let stale = false;
+// When the last pass ran, as the backend records it: it survives a reload.
+let stamp = 0;
 let writes = 0;
+// The interval the settings panel promises, in minutes: the launch test needs a
+// short one so the grace period is what decides.
+let interval = 15;
 let uri = "content://doc";
 let reloads = 0;
 // The picker answers a folder: the native side reports the document inside it
@@ -57,7 +62,7 @@ mock.module("@bindings/app", () => ({
 		return Promise.resolve(answers.length ? (answers.shift() ?? false) : news);
 	},
 	SyncFolder: () => Promise.resolve(uri),
-	SyncInterval: () => Promise.resolve(15),
+	SyncInterval: () => Promise.resolve(interval),
 	SyncOverwrite: () => Promise.resolve(),
 	SyncPlaylists: () => Promise.resolve(),
 	SyncProblem: (reason: string) => {
@@ -80,7 +85,7 @@ mock.module("@bindings/app", () => ({
 		});
 	},
 	SyncSave: () => Promise.resolve(),
-	SyncStatus: () => Promise.resolve({ stale }),
+	SyncStatus: () => Promise.resolve({ at: stamp, stale }),
 	SyncWritten: () => {
 		writes++;
 		return Promise.resolve();
@@ -139,6 +144,7 @@ beforeEach(() => {
 	news = false;
 	answers = [];
 	stale = false;
+	stamp = 0;
 	writes = 0;
 	reloads = 0;
 	created = false;
@@ -402,6 +408,30 @@ const clock = Date.now;
 // Start past any earlier automatic run, so the interval tests below see a fresh
 // window.
 let now = Date.now() + 86_400_000;
+
+// Opening the app is not a sync: the window takes focus while it is still
+// painting, and the backend ticker reconciles a minute later anyway.
+test("auto sync leaves the launch to the backend ticker", async () => {
+	const parked = now;
+	uri = "content://launch";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 1000, size: 9 };
+	stamp = 0;
+	calls.length = 0;
+
+	Date.now = () => clock() + 5_000;
+	await autosave("auto");
+	expect(calls).toEqual([]);
+
+	interval = 1;
+	Date.now = () => clock() + 61_000;
+	await autosave("auto");
+	interval = 15;
+	now = parked;
+	Date.now = clock;
+
+	expect(calls).toEqual([{ lastModified: 1000, trust: false }]);
+});
 // A run that synced nothing must not burn the interval, or a document chosen
 // later would sit untouched until the next window.
 test("auto sync with no folder does not start the interval", async () => {
@@ -416,6 +446,20 @@ test("auto sync with no folder does not start the interval", async () => {
 	Date.now = clock;
 
 	expect(calls).toEqual([{ lastModified: 1000, trust: false }]);
+});
+
+// A pass the backend already ran seconds ago is what the startup loop leaves
+// behind: opening the window must not read the document a second time.
+test("auto sync skips a pass that just ran", async () => {
+	Date.now = () => now;
+	uri = "content://startup";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 1000, size: 9 };
+	stamp = now - 1_000;
+	await autosave("auto");
+	Date.now = clock;
+
+	expect(calls).toEqual([]);
 });
 
 test("auto sync waits out the interval after a successful run", async () => {

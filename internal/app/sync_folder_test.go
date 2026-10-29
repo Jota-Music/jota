@@ -325,11 +325,16 @@ func (p *passes) Apply(backup.Settings) error { return nil }
 func (p *passes) Pending() bool               { return false }
 func (p *passes) Synced()                     {}
 
-// idle waits for the background loop to finish the pass it holds.
+// idle waits for the debounce timer and the background loop to settle.
 func idle(t *testing.T, a *App) {
 	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for a.syncRunning.Load() || a.syncQueued.Load() {
+	armed := func() bool {
+		a.syncTimerMu.Lock()
+		defer a.syncTimerMu.Unlock()
+		return a.syncTimer != nil
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for armed() || a.syncRunning.Load() || a.syncQueued.Load() {
 		if time.Now().After(deadline) {
 			t.Fatal("sync did not finish")
 		}
@@ -340,6 +345,9 @@ func idle(t *testing.T, a *App) {
 // A burst of changes asks for as many syncs as it makes, but one pass is enough
 // because they all read the same stores: the queue keeps a single pending pass.
 func TestSyncCoalescesBurst(t *testing.T) {
+	debounce, maxWait := syncDebounce, syncMaxWait
+	syncDebounce, syncMaxWait = 10*time.Millisecond, time.Second
+	t.Cleanup(func() { syncDebounce, syncMaxWait = debounce, maxWait })
 	a := syncApp(t)
 	if err := a.SetSyncFolder(t.TempDir()); err != nil {
 		t.Fatalf("set folder: %v", err)
