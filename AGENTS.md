@@ -259,6 +259,12 @@ value still reads back unchanged. The pass is the `session-pass` setting; a valu
 written before the sessions existed lives in `youtube-cookie-pass`, which is still
 read as a fallback. With no pass nothing is staged, an empty value is a tombstone
 and a blob that will not open with the local pass is skipped.
+- **Staging a session is idempotent.** `syncYouTubeCookies` and
+`syncSpotifySession` open the blob already staged and return when its plaintext is
+identical to what they were about to stage: re-encrypting the same cookies under a
+fresh salt would change the blob, mark the store dirty and send a pass for nothing.
+Only a blob this pass can open and that matches counts as proof; a blob it cannot
+open, or a tombstone, stages as before, so a pass set later still seals the session.
 - A partial session never overwrites a full one: `applyYouTubeCookies` compares
 `youtube.Full` on both sides and leaves the local cookies alone when the incoming
 blob cannot open the account's own lists. The local full session is re-staged at

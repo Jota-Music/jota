@@ -127,6 +127,13 @@ func (a *App) syncSpotifySession() {
 	if err != nil {
 		return
 	}
+	// Same gate as the YouTube cookies: an identical plaintext proves the
+	// staged session already reflects this login, so there is nothing to stage.
+	if stored := stagedSession("spotify"); stored != "" {
+		if pt, err := decryptWithPass(pass, stored); err == nil && pt == string(payload) {
+			return
+		}
+	}
 	enc, err := encryptWithPass(pass, string(payload))
 	if err != nil {
 		return

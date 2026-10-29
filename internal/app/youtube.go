@@ -223,6 +223,14 @@ func (a *App) syncYouTubeCookies() {
 	if raw == "" {
 		return
 	}
+	// Staging the same plaintext again would re-encrypt it under a fresh salt
+	// and mark the pass dirty for nothing. Only a blob this pass can open and
+	// that matches is proof of identity; anything else stages as before.
+	if stored := stagedSession("youtube"); stored != "" {
+		if pt, err := decryptWithPass(pass, stored); err == nil && pt == raw {
+			return
+		}
+	}
 	enc, err := encryptWithPass(pass, raw)
 	if err != nil {
 		return
