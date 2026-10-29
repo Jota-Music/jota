@@ -67,7 +67,7 @@ function Status({
 	if (live === "connecting") {
 		return (
 			<span title={t("sync.rooms.status.connecting")}>
-				<Loader size={size} class="animate-spin text-amber-400" />
+				<Loader size={24} class="animate-spin text-amber-400" />
 			</span>
 		);
 	}
@@ -93,7 +93,7 @@ function Status({
 	if (pending) {
 		return (
 			<span title={t("sync.rooms.status.checking")}>
-				<Loader size={size} class="animate-spin text-zinc-500" />
+				<PowerOff size={size} class="text-zinc-500" />
 			</span>
 		);
 	}
