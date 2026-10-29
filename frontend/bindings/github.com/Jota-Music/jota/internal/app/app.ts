@@ -55,6 +55,15 @@ export function ClearYouTubeCookies(): $CancellablePromise<void> {
 }
 
 /**
+ * ClipboardText reads the desktop clipboard off the UI thread. A platform with no
+ * asynchronous read reports an error, and the page falls back to the runtime's
+ * own clipboard, which does not block a GTK loop there.
+ */
+export function ClipboardText(): $CancellablePromise<string> {
+    return $Call.ByID(2194810365);
+}
+
+/**
  * CookiesBrowsers lists the browsers on this machine whose cookie jar holds a
  * YouTube session, so the desktop UI only offers a browser import it can
  * actually perform. Empty on platforms without a jar reader.

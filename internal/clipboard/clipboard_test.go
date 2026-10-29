@@ -1,0 +1,86 @@
+package clipboard
+
+import (
+	"errors"
+	"testing"
+	"time"
+)
+
+// The answer arrives on the platform's loop, after the call returned: this is
+// what keeps a slow clipboard owner from freezing the caller.
+func TestTextTakesTheLateAnswer(t *testing.T) {
+	restore := swap(func(deliver func(string)) {
+		go func() {
+			time.Sleep(20 * time.Millisecond)
+			deliver("https://example.test/track/1")
+		}()
+	})
+	defer restore()
+
+	got, err := Text()
+	if err != nil {
+		t.Fatalf("Text: %v", err)
+	}
+	if got != "https://example.test/track/1" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+// An owner that never answers must not hold the caller: an empty answer and a
+// timeout mean the same thing to the page.
+func TestTextGivesUpWithoutAnAnswer(t *testing.T) {
+	restore := swap(func(func(string)) {})
+	defer restore()
+
+	start := time.Now()
+	got, err := Text()
+	if err != nil {
+		t.Fatalf("Text: %v", err)
+	}
+	if got != "" {
+		t.Fatalf("got %q from a silent owner", got)
+	}
+	if elapsed := time.Since(start); elapsed > Timeout+200*time.Millisecond {
+		t.Fatalf("read outlived its budget: %s", elapsed)
+	}
+}
+
+// A stale answer must not resolve the next request.
+func TestTextIgnoresAStaleAnswer(t *testing.T) {
+	var first func(string)
+	restore := swap(func(deliver func(string)) {
+		if first == nil {
+			first = deliver
+			return
+		}
+		deliver("fresh")
+	})
+	defer restore()
+
+	if _, err := Text(); err != nil {
+		t.Fatalf("first: %v", err)
+	}
+	first("stale")
+	got, err := Text()
+	if err != nil {
+		t.Fatalf("second: %v", err)
+	}
+	if got != "fresh" {
+		t.Fatalf("stale answer won: %q", got)
+	}
+}
+
+func TestTextReportsUnsupported(t *testing.T) {
+	restore := swap(nil)
+	defer restore()
+
+	if _, err := Text(); !errors.Is(err, ErrUnsupported) {
+		t.Fatalf("want ErrUnsupported, got %v", err)
+	}
+}
+
+func swap(fn func(func(string))) func() {
+	old := request
+	request = fn
+	return func() { request = old }
+}
