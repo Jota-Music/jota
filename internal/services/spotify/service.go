@@ -106,6 +106,13 @@ func (s *SpotifyService) Connect(ctx context.Context) error {
 			log.Printf("spotify: connected as %s", sess.Username())
 			return nil
 		}
+		// A cancelled context means the caller gave up on this attempt, not that
+		// the stored session is bad: marking the account degraded there would
+		// leave it retrying a session that was never tried.
+		if errors.Is(err, context.Canceled) {
+			log.Printf("spotify: restore cancelled before it finished")
+			return ErrNotConnected
+		}
 		// Spotify is unreachable but we have an account, so the cached catalog
 		// is still usable. Serve it and let Watch retry in the background.
 		s.degraded = true

@@ -153,9 +153,11 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	// Restoring the session is a network round trip, and startup runs before any
 	// window exists: blocking here means the app never opens at all, which is
 	// exactly how it used to hang on a stalled network. Restore in the
-	// background, bounded; Watch retries a degraded session anyway.
+	// background, bounded; Watch retries a degraded session anyway. Its own
+	// context, not the startup one: Wails cancels that as soon as startup
+	// returns, which killed every restore with "context canceled".
 	go func() {
-		ctx, cancel := context.WithTimeout(ctx, spotify.SessionTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), spotify.SessionTimeout)
 		defer cancel()
 		if err := a.Spotify.Connect(ctx); err != nil {
 			log.Printf("spotify: not connected at startup: %v", err)
