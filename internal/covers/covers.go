@@ -24,6 +24,8 @@ const (
 	maxWidth      = 640
 	defaultWidth  = 300
 	maxSource     = 8 << 20
+	maxPixels     = 40 << 20
+	maxAspect     = 8
 	quality       = 82
 	fetchTimeout  = 10 * time.Second
 	maxConcurrent = 4
@@ -171,8 +173,33 @@ func (s *Server) fetch(ctx context.Context, target string) (image.Image, error) 
 		return nil, fmt.Errorf("cover: %s returned %d", target, resp.StatusCode)
 	}
 
-	img, _, err := image.Decode(io.LimitReader(resp.Body, maxSource))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxSource))
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(raw))
+	if err != nil {
+		return nil, err
+	}
+	if !fits(cfg.Width, cfg.Height) {
+		return nil, fmt.Errorf("cover: %s is %dx%d", target, cfg.Width, cfg.Height)
+	}
+
+	img, _, err := image.Decode(bytes.NewReader(raw))
 	return img, err
+}
+
+// fits rejects images whose decoded size or shape would blow up memory. A
+// small file can decode into gigabytes, so the header is checked before decode.
+func fits(width, height int) bool {
+	if width <= 0 || height <= 0 || width > maxPixels || height > maxPixels {
+		return false
+	}
+	if width*height > maxPixels {
+		return false
+	}
+	return width <= maxAspect*height && height <= maxAspect*width
 }
 
 func resize(img image.Image, width int) image.Image {

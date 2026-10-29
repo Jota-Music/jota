@@ -2,16 +2,45 @@ package covers
 
 import (
 	"bytes"
+	"context"
+	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"image"
 	"image/png"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 )
+
+func TestFits(t *testing.T) {
+	cases := []struct {
+		name   string
+		width  int
+		height int
+		ok     bool
+	}{
+		{"square", 640, 640, true},
+		{"wide", 3200, 640, true},
+		{"tall", 640, 3200, true},
+		{"too wide", 5121, 640, false},
+		{"zero width", 0, 640, false},
+		{"negative height", 640, -1, false},
+		{"over pixel budget", 8000, 6000, false},
+		{"side over budget", 20000, 20000, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := fits(tc.width, tc.height); got != tc.ok {
+				t.Fatalf("fits(%d, %d) = %v, want %v", tc.width, tc.height, got, tc.ok)
+			}
+		})
+	}
+}
 
 func TestAllowed(t *testing.T) {
 	cases := []struct {
@@ -168,6 +197,43 @@ func pngSource(tb testing.TB, size int) []byte {
 		tb.Fatal(err)
 	}
 	return buf.Bytes()
+}
+
+// pngBomb returns a one-pixel PNG whose IHDR claims a size x size canvas: a few
+// hundred bytes that would decode into hundreds of megabytes.
+func pngBomb(tb testing.TB, size uint32) []byte {
+	tb.Helper()
+	raw := pngSource(tb, 1)
+	binary.BigEndian.PutUint32(raw[16:], size)
+	binary.BigEndian.PutUint32(raw[20:], size)
+	binary.BigEndian.PutUint32(raw[29:], crc32.ChecksumIEEE(raw[12:29]))
+	return raw
+}
+
+func TestBombFallsBackToOriginal(t *testing.T) {
+	const target = "https://i.scdn.co/image/bomb"
+	tripper := &gateTripper{image: pngBomb(t, 20000)}
+	server := New()
+	server.client = &http.Client{Transport: tripper}
+
+	_, err := server.fetch(context.Background(), target)
+	if err == nil {
+		t.Fatal("expected an oversized header to be rejected")
+	}
+	if !strings.Contains(err.Error(), "20000x20000") {
+		t.Fatalf("error = %v, want the rejected size", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, path+"?u="+target+"&w=320", nil)
+	rec := httptest.NewRecorder()
+	server.Middleware(http.NotFoundHandler()).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusFound)
+	}
+	if got := rec.Header().Get("Location"); got != target {
+		t.Fatalf("location = %q, want %q", got, target)
+	}
 }
 
 func TestConcurrentRequestsShareRender(t *testing.T) {
