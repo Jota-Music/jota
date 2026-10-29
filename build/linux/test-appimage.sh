@@ -86,6 +86,51 @@ blackholed() {
 }
 check "blackholed network: window opens within budget" blackholed
 
+# Closing the window has to end the process. A blocking call on the GTK thread
+# (the clipboard poll was one, gtk_clipboard_wait_for_text, which froze the
+# window and once crashed in it) leaves a windowless process holding the store
+# lock, and every later launch then runs without persistence. This clicks the
+# app's own close button, which is the path a user takes.
+closes() {
+  local out
+  out=$("$runtime" run --rm -v "$app:/app.AppImage:ro" ubuntu:24.04 bash -lc '
+    set -e
+    apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libgtk-3-0 libwebkit2gtk-4.1-0 xvfb xdotool >/dev/null
+    mkdir -p /run/user/0 && chmod 700 /run/user/0
+    export XDG_RUNTIME_DIR=/run/user/0
+    Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 &
+    export DISPLAY=:99
+    sleep 1
+    /app.AppImage --appimage-extract-and-run >/dev/null 2>&1 &
+    pid=$!
+    for i in $(seq 600); do
+      grep -q "window ready" /root/.config/jota/jota.log 2>/dev/null && break
+      sleep 0.1
+    done
+    sleep 1
+    wid=$(xdotool search --name "^Jota$" | while read -r w; do
+      g=$(xdotool getwindowgeometry "$w" | awk "/Geometry:/{print \$2}")
+      [ "${g%x*}" -ge 500 ] && echo "$w"
+    done | tail -1)
+    if [ -z "$wid" ]; then echo "close: no window"; kill -9 $pid; exit 1; fi
+    width=$(xdotool getwindowgeometry "$wid" | awk "/Geometry:/{split(\$2,a,\"x\");print a[1]}")
+    xdotool mousemove --window "$wid" $((width - 20)) 20 click 1
+    for i in $(seq 200); do kill -0 $pid 2>/dev/null || break; sleep 0.05; done
+    if kill -0 $pid 2>/dev/null; then
+      echo "close: still alive after 10s"
+      kill -9 $pid
+      exit 1
+    fi
+    echo "close: exited after $((i * 50))ms"
+    grep -q "jota shutting down" /root/.config/jota/jota.log || { echo "close: exited without the shutdown path"; exit 1; }
+    echo "close: clean"
+  ' 2>&1)
+  echo "$out" | tail -3
+  echo "$out" | grep -q "close: clean"
+}
+check "closing the window ends the process" closes
+
 if [ "$failed" -eq 0 ]; then
   echo "all checks passed"
 else

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -68,5 +69,29 @@ func TestAcquireReplacesUnresponsiveInstance(t *testing.T) {
 	case <-waited:
 	case <-time.After(5 * time.Second):
 		t.Fatal("the unresponsive instance was never asked to die")
+	}
+}
+
+// A second launch arriving while this instance closes must not be handed off to
+// it: the window is going away, and focusing it leaves the user with nothing.
+// The refused handoff is what makes Acquire replace the dying process.
+func TestRetireRefusesHandoff(t *testing.T) {
+	t.Setenv("XDG_RUNTIME_DIR", t.TempDir())
+	var focused atomic.Int32
+	guard, err := Acquire(func() { focused.Add(1) })
+	if err != nil {
+		t.Fatalf("acquire: %v", err)
+	}
+	t.Cleanup(guard.Close)
+
+	if !handoff(guard.path) {
+		t.Fatal("a live instance refused the handoff")
+	}
+	guard.Retire()
+	if handoff(guard.path) {
+		t.Fatal("a retiring instance answered the handoff")
+	}
+	if got := focused.Load(); got != 1 {
+		t.Fatalf("focus calls: want 1, got %d", got)
 	}
 }

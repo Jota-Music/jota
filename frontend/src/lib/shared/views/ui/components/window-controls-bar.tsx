@@ -1,5 +1,5 @@
 import { useSignal } from "@preact/signals";
-import { Application, Events, System, Window } from "@wailsio/runtime";
+import { Events, System, Window } from "@wailsio/runtime";
 import { Copy, Minus, Pin, X } from "lucide-preact";
 import { createPortal } from "preact/compat";
 import { useEffect } from "preact/hooks";
@@ -79,8 +79,12 @@ export function WindowControlsBar() {
 		isMaximised.value = await Window.IsMaximised();
 	};
 
+	// Close the window, not the app: Application.Quit destroys the process
+	// without emitting WindowClosing, which skips the geometry flush, the exit
+	// watchdog and Badger's checkpoint, and tears WebKit down so abruptly that
+	// the next launch could crash while creating its webview.
 	const onQuit = async () => {
-		await Application.Quit();
+		await Window.Close();
 	};
 
 	return createPortal(

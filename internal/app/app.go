@@ -174,6 +174,9 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 }
 
 func (a *App) ServiceShutdown() error {
+	// The store is closed from the window-close hook instead: this path also runs
+	// when only the service shuts down, and closing Badger there would leave the
+	// rest of the session without persistence.
 	a.Discord.Close()
 	return nil
 }
@@ -208,6 +211,13 @@ func (a *App) InstallUpdate() error {
 	if relaunchAfterUpdate() {
 		go func() {
 			time.Sleep(500 * time.Millisecond)
+			// The window's close path, not App.Quit: it flushes the geometry and
+			// checkpoints the store before the process is replaced, and it is the
+			// only shutdown that tears WebKit down in order.
+			if window := application.Get().Window.Current(); window != nil {
+				window.Close()
+				return
+			}
 			application.Get().Quit()
 		}()
 	}

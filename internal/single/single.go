@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -45,6 +46,10 @@ type Guard struct {
 	ln    net.Listener
 	focus func()
 	once  sync.Once
+	// retiring is set when this instance starts closing. From then on it refuses
+	// the handoff, so a launch arriving mid-teardown replaces it instead of being
+	// focused at a process that is about to disappear.
+	retiring atomic.Bool
 }
 
 // Acquire takes the per-session lock. It returns ErrHandedOff when a running
@@ -77,6 +82,14 @@ func Acquire(focus func()) (*Guard, error) {
 	return g, nil
 }
 
+// Retire stops answering handoffs. The socket and the pid file stay, so a launch
+// arriving while this instance tears down kills it and takes over rather than
+// focusing a window that will not be there.
+func (g *Guard) Retire() {
+	g.retiring.Store(true)
+	_ = g.ln.Close()
+}
+
 // Close releases the socket and the pid file.
 func (g *Guard) Close() {
 	g.once.Do(func() {
@@ -104,6 +117,12 @@ func (g *Guard) answer(conn net.Conn) {
 	_ = conn.SetReadDeadline(time.Now().Add(dialTimeout))
 	message := make([]byte, len(focusMessage))
 	if _, err := io.ReadFull(conn, message); err != nil || string(message) != focusMessage {
+		return
+	}
+	// Refuse once this instance started closing: replying "ok" sends the caller
+	// away to wait for a window that is already going. A refused handoff makes
+	// Acquire replace this process instead.
+	if g.retiring.Load() {
 		return
 	}
 	_, _ = conn.Write([]byte(okReply))

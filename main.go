@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/Jota-Music/jota/internal/app"
@@ -53,6 +55,11 @@ const (
 	// dumps every goroutine. Nothing on the startup path should block, and a
 	// block is silent by definition: no window, no log line.
 	startupBudget = 20 * time.Second
+
+	// shutdownBudget is how long the process may linger after the window is gone.
+	// Badger's checkpoint is the slow part, and a session that outlives it keeps
+	// the store lock and the single-instance socket away from the next launch.
+	shutdownBudget = 3 * time.Second
 
 	// markerStarted and markerReady are the states recorded in the crash marker.
 	// A session that dies in "starting" never opened its window.
@@ -445,17 +452,19 @@ func main() {
 	// The single instance is decided before anything else starts, so a second
 	// launch costs a socket round trip and nothing more.
 	var windowPtr atomic.Pointer[application.WebviewWindow]
+	var closing atomic.Bool
 	focus := func() {
 		w := windowPtr.Load()
-		if w == nil {
+		if w == nil || closing.Load() {
 			return
 		}
 		w.Restore()
 		w.Show()
 		w.Focus()
 	}
+	var guard *single.Guard
 	if runtime.GOOS == "linux" {
-		guard, err := single.Acquire(focus)
+		g, err := single.Acquire(focus)
 		if errors.Is(err, single.ErrHandedOff) {
 			log.Printf("jota: already running, asked it to show its window")
 			return
@@ -463,7 +472,7 @@ func main() {
 		if err != nil {
 			log.Printf("single: no session lock, starting anyway: %v", err)
 		} else {
-			defer guard.Close()
+			guard = g
 		}
 	}
 
@@ -474,7 +483,22 @@ func main() {
 		log.Printf("startup: the previous launch died before its window, using the software renderer for this one")
 		_ = os.Setenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
 	}
-	defer releaseMarker()
+	cleanup := func() {
+		releaseMarker()
+		if guard != nil {
+			guard.Close()
+		}
+	}
+	defer cleanup()
+	exit := func(code int) {
+		cleanup()
+		// No Badger checkpoint on the way out: it waits for the write in flight and
+		// for the value-log GC, which is the whole of a slow close. Badger replays
+		// the value log on the next open, and that open already runs in the
+		// background after the window is up, so the cost lands where nobody waits
+		// for it instead of on the close button.
+		os.Exit(code)
+	}
 
 	a := app.New(currentVersion)
 
@@ -577,6 +601,20 @@ func main() {
 	window = wailsApp.Window.NewWithOptions(opts)
 	windowPtr.Store(window)
 
+	// Hooks run before the listeners and before Wails tears the window down, so
+	// the geometry is still readable here; by WindowClosing it may report 0x0.
+	window.RegisterHook(events.Common.WindowClosing, func(*application.WindowEvent) {
+		// Set before the flush: a second instance arriving from here on must not
+		// Show() a window Wails has already destroyed.
+		closing.Store(true)
+		flushWindowState()
+		// Stop answering handoffs: a launch arriving from here on must replace
+		// this process, not be focused at a window that is going away.
+		if guard != nil {
+			guard.Retire()
+		}
+	})
+
 	watchdog := watchStartup()
 
 	var restored atomic.Bool
@@ -615,7 +653,20 @@ func main() {
 	})
 	window.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
 		if quitting.CompareAndSwap(false, true) {
-			flushWindowState()
+			// Armed before Quit: Quit marshals to the GTK thread and waits for it,
+			// so a watchdog registered after it would never run in the one case it
+			// exists for. Wails can keep that loop alive after the last window is
+			// gone, and the process would then live on with no window while the
+			// single-instance guard hands every later launch to it. The geometry is
+			// already flushed by the hook, so a late exit loses nothing.
+			// Armed before Quit, and never stopped: Badger's checkpoint waits for the
+			// writes in flight, and a write that never finishes would leave the process
+			// alive with no window, holding the store lock and the single-instance
+			// socket that every later launch has to hand off to.
+			time.AfterFunc(shutdownBudget, func() {
+				log.Printf("shutdown: still running %s after the window closed, exiting", shutdownBudget)
+				exit(0)
+			})
 			wailsApp.Quit()
 		}
 	})
@@ -640,9 +691,42 @@ func main() {
 		application.Get().Event.Emit("window:always-on-top", getAlwaysOnTop())
 	})
 
+	// A terminal closing, a supervisor stopping the app or the single-instance
+	// guard replacing a peer signal the process instead of the window. Without a
+	// handler that death is the default action: no flush, no marker release, and a
+	// log that stops mid-sentence, which reads exactly like a crash.
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
+	go func() {
+		if sig := <-stop; sig != nil {
+			log.Printf("signal %s received, closing", sig)
+			closing.Store(true)
+			// Before the teardown starts, not during it: a launch that lands in
+			// between must take over instead of being handed a dying window.
+			if guard != nil {
+				guard.Retire()
+			}
+			flushWindowState()
+			// The window's close path ends WebKit in order, which is what keeps the
+			// next launch from building a webview on a half-dead one. The watchdog
+			// still ends the process if the loop never gets there: the caller asked
+			// for a process that is gone, not for a long teardown.
+			time.AfterFunc(time.Second, func() { exit(0) })
+			if w := windowPtr.Load(); w != nil {
+				w.Close()
+				return
+			}
+			exit(0)
+		}
+	}()
+
 	if err := wailsApp.Run(); err != nil {
-		log.Fatal(err)
+		log.Printf("wails: %v", err)
+		exit(1)
 	}
+	// The force-exit timer stays armed: Badger's checkpoint waits for the writes
+	// in flight, and a write that never finishes would leave the process alive with
+	// no window, holding the store lock and the single-instance socket.
 	flushWindowState()
 	log.Printf("jota shutting down")
 }
