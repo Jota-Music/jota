@@ -2,6 +2,7 @@ package clipboard
 
 import (
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -47,10 +48,13 @@ func TestTextGivesUpWithoutAnAnswer(t *testing.T) {
 
 // A stale answer must not resolve the next request.
 func TestTextIgnoresAStaleAnswer(t *testing.T) {
-	var first func(string)
+	// The delivery slot crosses goroutines, so it travels on a channel: the
+	// callback runs inside the request Text started.
+	delivers := make(chan func(string), 1)
+	var calls atomic.Int32
 	restore := swap(func(deliver func(string)) {
-		if first == nil {
-			first = deliver
+		if calls.Add(1) == 1 {
+			delivers <- deliver
 			return
 		}
 		deliver("fresh")
@@ -60,7 +64,8 @@ func TestTextIgnoresAStaleAnswer(t *testing.T) {
 	if _, err := Text(); err != nil {
 		t.Fatalf("first: %v", err)
 	}
-	first("stale")
+	stale := <-delivers
+	stale("stale")
 	got, err := Text()
 	if err != nil {
 		t.Fatalf("second: %v", err)
