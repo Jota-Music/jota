@@ -223,11 +223,11 @@ export function FollowingShelf({ account }: { account: string }) {
 			to={link}
 			viewKey="following_view"
 			isLoading={
-				!spotifyReady.value ||
-				followedLoading ||
-				friends.isLoading ||
-				following.isLoading ||
-				orderQuery.isLoading
+				items.length === 0 &&
+				(followedLoading ||
+					friends.isLoading ||
+					following.isLoading ||
+					orderQuery.isLoading)
 			}
 			emptyMessage={<FollowingHint />}
 			showLocal={false}

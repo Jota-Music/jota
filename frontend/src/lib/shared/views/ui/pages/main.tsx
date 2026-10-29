@@ -183,11 +183,12 @@ export function MainPage() {
 						}
 						actions={(id) => <PlaylistPlayButton id={id} />}
 						isLoading={
-							spotifyQuery.isLoading ||
-							youtubeQuery.isLoading ||
-							loadingSaved ||
-							customQuery.isLoading ||
-							orderQuery.isLoading
+							ordered.length === 0 &&
+							(spotifyQuery.isLoading ||
+								youtubeQuery.isLoading ||
+								loadingSaved ||
+								customQuery.isLoading ||
+								orderQuery.isLoading)
 						}
 						emptyMessage={<AllHint />}
 						onPlay={(id) => void playPlaylist(queryClient, id)}
