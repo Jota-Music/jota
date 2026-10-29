@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -46,7 +47,7 @@ func TestAcquireReplacesUnresponsiveInstance(t *testing.T) {
 	}
 	defer wedged.Close()
 
-	child := exec.Command("sleep", "60")
+	child := exec.Command(sleeper(t, dir), "60")
 	if err := child.Start(); err != nil {
 		t.Skipf("cannot start a stand-in process: %v", err)
 	}
@@ -70,6 +71,52 @@ func TestAcquireReplacesUnresponsiveInstance(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("the unresponsive instance was never asked to die")
 	}
+}
+
+// A pid file outlives its owner, and the pid it names can be reused: the guard
+// must not signal the stranger that inherited it.
+func TestAcquireLeavesStrangerAlive(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", dir)
+
+	child := exec.Command("sleep", "60")
+	if err := child.Start(); err != nil {
+		t.Skipf("cannot start a stand-in process: %v", err)
+	}
+	defer func() { _ = child.Process.Kill() }()
+
+	if err := os.WriteFile(filepath.Join(dir, "jota.sock.pid"), []byte(strconv.Itoa(child.Process.Pid)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	guard, err := Acquire(func() {})
+	if err != nil {
+		t.Fatalf("acquire: %v", err)
+	}
+	defer guard.Close()
+
+	if err := child.Process.Signal(syscall.Signal(0)); err != nil {
+		t.Fatalf("a stranger holding a reused pid was signalled: %v", err)
+	}
+}
+
+// sleeper copies sleep under the name jota: the guard only kills a pid that still
+// runs jota, so a stand-in called sleep is rightly left alone.
+func sleeper(t *testing.T, dir string) string {
+	t.Helper()
+	sleep, err := exec.LookPath("sleep")
+	if err != nil {
+		t.Skipf("no sleep binary to stand in with: %v", err)
+	}
+	data, err := os.ReadFile(sleep)
+	if err != nil {
+		t.Skipf("cannot read %s: %v", sleep, err)
+	}
+	path := filepath.Join(dir, "jota")
+	if err := os.WriteFile(path, data, 0o755); err != nil {
+		t.Skipf("cannot write the stand-in: %v", err)
+	}
+	return path
 }
 
 // A second launch arriving while this instance closes must not be handed off to

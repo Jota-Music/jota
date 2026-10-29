@@ -155,12 +155,9 @@ func handoff(path string) bool {
 // replace clears the socket of an owner that is still alive but never answered.
 // It is killed rather than ignored: it holds the store lock, so taking over while
 // it lives would leave this instance running without persistence.
-//
-// ponytail: pid reuse within one session is taken at face value; compare the
-// process start time against the pid file's mtime if that ever misfires.
 func replace(path string) {
 	pid := readPid(path + pidSuffix)
-	if pid <= 0 || pid == os.Getpid() || !alive(pid) {
+	if pid <= 0 || pid == os.Getpid() || !alive(pid) || !isJota(pid) {
 		return
 	}
 	p, err := os.FindProcess(pid)
@@ -175,6 +172,18 @@ func replace(path string) {
 	}
 	_ = p.Kill()
 	_ = gone(pid, killTimeout)
+}
+
+// isJota reports whether pid still runs jota. The pid file outlives a killed
+// owner only until the pid is reused, and signalling the stranger that inherited
+// it would kill an unrelated process.
+func isJota(pid int) bool {
+	data, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "comm"))
+	if err != nil {
+		return false
+	}
+	// comm is capped at 15 bytes, so a longer name arrives truncated.
+	return strings.HasPrefix(strings.TrimSpace(string(data)), "jota")
 }
 
 // gone reports whether pid disappeared within d.
