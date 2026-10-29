@@ -259,39 +259,34 @@ export default function PlaylistPlain({ id }: { id: string }) {
 		: data?.name || t("music.playlist.defaultName");
 
 	const query = search.value.trim().toLowerCase();
-	const { covers, filteredSongs, playable, tracks, canReorder } =
-		useMemo(() => {
-			const base =
-				query.length === 0
-					? songs
-					: songs.filter((song) => {
-							return (
-								song.name.toLowerCase().includes(query) ||
-								(song.artists ?? []).some((a) =>
-									a.name.toLowerCase().includes(query),
-								)
-							);
-						});
-			const sorted = sortSongs(base, order.value);
-			return {
-				covers: custom
-					? [...new Set(songs.map((song) => song.album?.covers?.[0]))]
-							.filter((value): value is string => !!value)
-							.slice(0, 4)
-					: [],
-				filteredSongs: sorted,
-				playable: sorted.filter((song) => !song.broken),
-				// The header's menu actions need every playable track, unfiltered by
-				// the search box, so the filter runs once here instead of on each of
-				// its renders.
-				tracks: songs.filter((song) => !song.broken),
-				canReorder:
-					custom &&
-					query.length === 0 &&
-					order.value === "added" &&
-					songs.length > 1,
-			};
-		}, [songs, custom, query, order.value]);
+	const { covers, filteredSongs, playable, canReorder } = useMemo(() => {
+		const base =
+			query.length === 0
+				? songs
+				: songs.filter((song) => {
+						return (
+							song.name.toLowerCase().includes(query) ||
+							(song.artists ?? []).some((a) =>
+								a.name.toLowerCase().includes(query),
+							)
+						);
+					});
+		const sorted = sortSongs(base, order.value);
+		return {
+			covers: custom
+				? [...new Set(songs.map((song) => song.album?.covers?.[0]))]
+						.filter((value): value is string => !!value)
+						.slice(0, 4)
+				: [],
+			filteredSongs: sorted,
+			playable: sorted.filter((song) => !song.broken),
+			canReorder:
+				custom &&
+				query.length === 0 &&
+				order.value === "added" &&
+				songs.length > 1,
+		};
+	}, [songs, custom, query, order.value]);
 
 	const hasBrokenSpotify = songs.some(
 		(song) => song.broken && song.id.startsWith("spotify:"),
@@ -350,7 +345,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				playable={playable}
 				link={ownerLink}
 				custom={custom}
-				tracks={tracks}
+				songs={songs}
 				reserve={isLoading}
 				onDeletePlaylist={() => (deletePlaylistConfirm.value = true)}
 				onRenamePlaylist={custom ? openRenamePlaylist : undefined}
@@ -565,7 +560,7 @@ function PlaylistHeader({
 	playable,
 	link,
 	custom,
-	tracks,
+	songs,
 	reserve,
 	onDeletePlaylist,
 	onRenamePlaylist,
@@ -578,7 +573,7 @@ function PlaylistHeader({
 	playable: Song[];
 	link?: { to: string; label: string };
 	custom: boolean;
-	tracks: Song[];
+	songs: Song[];
 	reserve?: boolean;
 	onDeletePlaylist: () => void;
 	onRenamePlaylist?: () => void;
@@ -591,6 +586,7 @@ function PlaylistHeader({
 	const menuActions: Action[] = [];
 	if (follow) menuActions.push(toggle(id));
 	menuActions.push(...shareLink(pageLink("playlist", id)));
+	const tracks = songs.filter((song) => !song.broken);
 	if (tracks.length > 0) {
 		menuActions.push(
 			{
