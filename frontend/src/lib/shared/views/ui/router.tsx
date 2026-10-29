@@ -24,7 +24,6 @@ import { cn } from "@/lib/shared/utils/tw";
 import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
-import SettingsPage from "@/lib/shared/views/ui/pages/settings";
 import { queryClient } from "@/lib/shared/views/ui/query-client";
 import { loadRelay } from "@/lib/sync/app/transport";
 import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
@@ -62,6 +61,12 @@ const pages = {
 		import("@/lib/shared/views/ui/pages/not-found").then((m) => ({
 			default: m.NotFoundPage,
 		})),
+	// Settings is the biggest page nobody opens on launch, so it stays out of
+	// the entry chunk; the idle warm below loads it before it is needed.
+	settings: () =>
+		import("@/lib/shared/views/ui/pages/settings").then((m) => ({
+			default: m.default,
+		})),
 };
 
 const PlaylistPage = lazy(pages.playlist);
@@ -72,6 +77,7 @@ const YouTubeSearchPage = lazy(pages.youtubeSearch);
 const SearchPage = lazy(pages.search);
 const UserPage = lazy(pages.user);
 const NotFoundPage = lazy(pages.notFound);
+const SettingsPage = lazy(pages.settings);
 
 // A background refresh pass revalidated cached catalog content; drop stale
 // queries so open views pick up changes on their next render. Unmounted queries
