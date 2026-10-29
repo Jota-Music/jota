@@ -163,3 +163,36 @@ func TestLoadWindowStateDoesNotOpenTheStore(t *testing.T) {
 		t.Fatalf("reading the geometry created the store: %v", err)
 	}
 }
+
+// A launch that dies before its window leaves the marker in "starting", and the
+// next launch reads it to swap in the software renderer. Creating the WebKit view
+// segfaults inside cgo on that failure, so there is nothing to catch in-process.
+func TestClaimMarkerReportsACrashedLaunch(t *testing.T) {
+	old := runningMarker
+	t.Cleanup(func() { runningMarker = old })
+	runningMarker = filepath.Join(t.TempDir(), "jota.running")
+
+	for _, state := range []string{markerStarted, markerReady} {
+		if err := os.WriteFile(runningMarker, []byte("123 "+state), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if got := claimMarker(); got != state {
+			t.Fatalf("marker %q reported %q", state, got)
+		}
+		// The claim is this launch's: a session that dies now is recorded as one
+		// that never showed a window.
+		if got := previousState(); got != markerStarted {
+			t.Fatalf("marker not claimed: %q", got)
+		}
+	}
+
+	if compatRenderer(markerReady) {
+		t.Fatal("a launch that reached its window must not change the renderer")
+	}
+	if !compatRenderer(markerStarted) {
+		t.Fatal("a launch that never showed a window must use the software renderer")
+	}
+	if compatRenderer("") {
+		t.Fatal("a clean exit must not change the renderer")
+	}
+}

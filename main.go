@@ -131,17 +131,29 @@ func setupLogging() func() {
 // claimMarker reports how the previous session left the marker, then records this
 // one. The state is the whole point: a session that died while "starting" is a
 // launch that never opened a window, which is the failure this app used to hide.
-func claimMarker() {
+func claimMarker() string {
 	if runningMarker == "" {
-		return
+		return ""
 	}
-	switch previousState() {
+	previous := previousState()
+	switch previous {
 	case markerReady:
 		log.Printf("previous session ended unexpectedly (crash or forced kill)")
 	case markerStarted:
 		log.Printf("previous session ended unexpectedly (crash or forced kill), window never appeared")
 	}
 	markRunning(markerStarted)
+	return previous
+}
+
+// compatRenderer reports whether this launch should trade accelerated compositing
+// for a webview that can be created at all. A launch that dies before its window
+// exists is a WebKit failure this process cannot catch: creating the view
+// segfaults inside cgo, so there is nothing to recover from in-process. The next
+// launch pays for it with the software path instead of dying the same way, and a
+// launch that opens its window leaves the marker clean, so this never sticks.
+func compatRenderer(previous string) bool {
+	return previous == markerStarted
 }
 
 // markRunning moves the marker to state.
@@ -455,7 +467,13 @@ func main() {
 		}
 	}
 
-	claimMarker()
+	// Before anything touches WebKit, and before the window exists: a launch that
+	// follows one which died without ever showing a window uses the software
+	// renderer, which is the difference between a crash loop and an app.
+	if compatRenderer(claimMarker()) {
+		log.Printf("startup: the previous launch died before its window, using the software renderer for this one")
+		_ = os.Setenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+	}
 	defer releaseMarker()
 
 	a := app.New(currentVersion)
