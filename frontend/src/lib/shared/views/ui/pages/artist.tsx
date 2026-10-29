@@ -24,7 +24,7 @@ import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { useFollows } from "@/lib/music/views/ui/user/follow";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
-import { Loading } from "@/lib/shared/views/ui/components/loading";
+import { Rows } from "@/lib/shared/views/ui/components/loading";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
 const view = signal<string>("tracks");
@@ -211,7 +211,7 @@ export function ArtistPage() {
 
 			{activeTab === "tracks" ? (
 				isLoading ? (
-					<Loading />
+					<Rows />
 				) : tracks.length === 0 ? (
 					<p class="text-sm text-zinc-500">{t("pages.artist.noSongs")}</p>
 				) : (

@@ -61,7 +61,7 @@ import {
 	type Action,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
-import { Loading } from "@/lib/shared/views/ui/components/loading";
+import { Rows } from "@/lib/shared/views/ui/components/loading";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
@@ -452,7 +452,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			)}
 
 			{isLoading ? (
-				<Loading />
+				<Rows />
 			) : (
 				<Virtualization
 					songs={filteredSongs}

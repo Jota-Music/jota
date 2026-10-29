@@ -27,7 +27,7 @@ import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
-import { Loading } from "@/lib/shared/views/ui/components/loading";
+import { Rows } from "@/lib/shared/views/ui/components/loading";
 
 type Tab = "playlists" | "videos";
 
@@ -195,7 +195,7 @@ export function UserPage() {
 				</div>
 
 				{videosQuery.isLoading ? (
-					<Loading />
+					<Rows />
 				) : filteredVideos.length === 0 ? (
 					<p class="text-sm text-zinc-500">{t("pages.user.noVideos")}</p>
 				) : (

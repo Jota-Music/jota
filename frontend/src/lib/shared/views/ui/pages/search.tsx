@@ -29,7 +29,7 @@ import {
 } from "@/lib/shared/views/ui/components/context-menu";
 import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
-import { Loading } from "@/lib/shared/views/ui/components/loading";
+import { Loading, Rows } from "@/lib/shared/views/ui/components/loading";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 type SearchType = "user" | "track" | "album" | "playlist" | "artist";
@@ -196,7 +196,7 @@ export function SearchPage() {
 				</header>
 
 				{isLoading ? (
-					<Loading />
+					<Rows />
 				) : songs.length === 0 ? (
 					<p class="text-sm text-zinc-500">{t("common.noResults")}</p>
 				) : (
