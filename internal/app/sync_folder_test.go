@@ -647,6 +647,53 @@ func TestSyncDocumentStagesFiles(t *testing.T) {
 	}
 }
 
+// The stamp a platform pass reconciles is the provider's, and the folder path
+// has none to offer: a pass over the folder must not leave behind the stamp of a
+// copy that pass never read, nor move the baseline it never wrote.
+func TestSyncDocumentRecordsReadStamp(t *testing.T) {
+	a := syncApp(t)
+	if _, err := a.Playlists.Create("Mix"); err != nil {
+		t.Fatalf("create playlist: %v", err)
+	}
+	folder := t.TempDir()
+	if err := a.SetSyncFolder(folder); err != nil {
+		t.Fatalf("set folder: %v", err)
+	}
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	written := a.SyncStatus().WriteAt
+	if written == 0 {
+		t.Fatal("a pass that wrote the document recorded no write")
+	}
+	own, err := os.ReadFile(filepath.Join(folder, backup.BackupFile))
+	if err != nil {
+		t.Fatalf("read document: %v", err)
+	}
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, syncIncoming), own, 0o600); err != nil {
+		t.Fatalf("stage copy: %v", err)
+	}
+	if _, err := a.syncDocumentAt(dir, 1234, true); err != nil {
+		t.Fatalf("document: %v", err)
+	}
+	if got := a.SyncStatus().ReadStamp; got != 1234 {
+		t.Fatalf("read stamp = %d, want the provider's 1234", got)
+	}
+
+	if err := a.SyncSave(); err != nil {
+		t.Fatalf("folder pass: %v", err)
+	}
+	status := a.SyncStatus()
+	if status.ReadStamp != 0 {
+		t.Fatalf("a folder pass kept the provider stamp %d it never read", status.ReadStamp)
+	}
+	if status.WriteAt != written {
+		t.Fatalf("a folder pass that changed nothing moved the baseline from %d to %d", written, status.WriteAt)
+	}
+}
+
 // A copy that will not parse is what a provider serves while another device is
 // still uploading it, or after a write that was cut short. The answer still
 // carries the local playlists instead of failing the file forever.

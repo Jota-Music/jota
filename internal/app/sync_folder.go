@@ -39,6 +39,9 @@ type SyncStatus struct {
 	// baseline the freshness check compares against.
 	WriteAt int64  `json:"writeAt"`
 	Hash    uint32 `json:"hash"`
+	// ReadStamp is the provider stamp of the copy the last pass read, not of what
+	// we wrote: it says which remote state this device has already reconciled.
+	ReadStamp int64 `json:"readStamp"`
 	// SnapshotsAt is when the playlists the sources own were last written into
 	// the document. Their download is the expensive part of a pass, so they are
 	// only resolved again once they are older than the refresh interval.
@@ -82,7 +85,9 @@ func stamp(document string) uint32 {
 // because Sync wrote it before answering. The platform path never knows: the page
 // commits the merged copy afterwards and confirms with SyncWritten, so a commit
 // that failed cannot leave a baseline that makes the next pass refuse to write.
-func (a *App) recordSync(stats backup.Stats, fresh, written bool) {
+// read is the provider stamp of the copy this pass read, 0 when the path has no
+// stamp to offer: the folder path relies on MTime/FileSize instead.
+func (a *App) recordSync(stats backup.Stats, fresh, written bool, read int64) {
 	stale := stats.Modified && !fresh
 	var uri string
 	_ = settings.GetObject(syncFolderKey, &uri)
@@ -95,6 +100,7 @@ func (a *App) recordSync(stats backup.Stats, fresh, written bool) {
 	status.Imported = stats.Changed()
 	status.Modified = stats.Modified
 	status.Stale = stale
+	status.ReadStamp = read
 	status.Problem = ""
 	if written && stats.Modified {
 		status.WriteAt = status.At
@@ -188,6 +194,12 @@ func (a *App) touchSync() {
 	if err := settings.SetObject(syncStatusKey, status); err != nil {
 		log.Printf("sync status: %v", err)
 	}
+}
+
+// SyncTouched is the page's settled pass: the provider copy is the one it already
+// merged, so the pass reconciled nothing but did run.
+func (a *App) SyncTouched() {
+	a.touchSync()
 }
 
 func (a *App) SyncFolder() string {
@@ -407,7 +419,7 @@ func (a *App) syncFolder(opts backup.Options, settle bool) error {
 		a.recordProblem(err)
 		return err
 	}
-	a.recordSync(stats, true, stats.Modified)
+	a.recordSync(stats, true, stats.Modified, 0)
 	// The file holds the union of both sides, so whatever this device wrote into it
 	// is in place and nothing is waiting to be saved.
 	Synced()
@@ -498,7 +510,7 @@ func (a *App) syncDocument(data string, lastModified int64, trust bool) (string,
 		a.recordProblem(err)
 		return "", false, err
 	}
-	a.recordSync(stats, fresh, false)
+	a.recordSync(stats, fresh, false, lastModified)
 	if !stats.Modified {
 		// The copy already carried everything this device holds: there is nothing to
 		// write, so nothing is waiting either.
@@ -537,6 +549,12 @@ func (a *App) SyncPending() bool {
 		return true
 	}
 	return a.Backup.Pending()
+}
+
+// SyncSnapshotsDue reports whether the document's snapshots have aged enough to
+// be downloaded again, so the page knows a pass is not a plain stat.
+func (a *App) SyncSnapshotsDue() bool {
+	return a.snapshotsDue()
 }
 
 // snapshots is the source resolution the sync passes to the service. It is lazy

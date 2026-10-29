@@ -33,6 +33,12 @@ export interface SyncStatus {
     "hash": number;
 
     /**
+     * ReadStamp is the provider stamp of the copy the last pass read, not of what
+     * we wrote: it says which remote state this device has already reconciled.
+     */
+    "readStamp": number;
+
+    /**
      * SnapshotsAt is when the playlists the sources own were last written into
      * the document. Their download is the expensive part of a pass, so they are
      * only resolved again once they are older than the refresh interval.

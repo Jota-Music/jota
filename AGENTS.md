@@ -335,6 +335,15 @@ only on a device.
   served and its `lastModified`. `SyncDocument(lastModified, trust)` applies it,
   leaves the merged document in `outgoing.json`, records what the pass read in
   `SyncStatus`, and answers whether there is something to write back.
+- **The Android pass skips the download only on a settled copy.** `settled`
+  (`frontend/src/lib/music/app/backup.ts`) compares the provider's stamp against
+  `SyncStatus.ReadStamp`, the stamp of the copy the last pass already merged: when
+  they match and nothing else is pending, statting the document is the whole pass
+  and `SyncTouched` records it. It is deliberately narrow — a manual save, a forced
+  overwrite, `SyncPending`, a due snapshot refresh, `Stale`, `Problem`, another
+  URI or a missing stamp all keep the full stage/merge/commit path, because each
+  of those is a reason to read the copy again. A settled pass reconciles nothing
+  and must not move the write baseline.
 - A copy that cannot be parsed is a truncated transfer or a write cut short, not a
   library. Both paths rebuild the document from this device's library instead of
   failing every later pass; a document of a version this build does not write is

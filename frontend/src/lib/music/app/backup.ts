@@ -5,11 +5,14 @@ import {
 	SyncFolder,
 	SyncInterval,
 	SyncOverwrite,
+	SyncPending,
 	SyncPlaylists,
 	SyncProblem,
 	SyncReload,
 	SyncSave,
+	SyncSnapshotsDue,
 	SyncStatus,
+	SyncTouched,
 	SyncWritten,
 } from "@bindings/app";
 import { t } from "@/lib/shared/i18n";
@@ -365,6 +368,28 @@ async function due(): Promise<boolean> {
 	return !ANDROID || Date.now() - lastAuto >= minutes * 60_000;
 }
 
+// A pass is settled when the provider still holds the very copy this device
+// already merged and nothing here is waiting to be written: statting the
+// document is then the whole pass, with no stage, download or commit. Anything
+// else (a manual save, a forced overwrite, local or remote movement, a failed
+// pass) keeps the full path, because each of those is a reason to read again.
+async function settled(
+	bridge: Bridge,
+	uri: string,
+	mode: Mode,
+	force: boolean,
+): Promise<boolean> {
+	if (mode === "manual" || force) return false;
+	if (await SyncPending()) return false;
+	if (await SyncSnapshotsDue()) return false;
+	const status = await SyncStatus();
+	if (status.uri !== uri) return false;
+	if (status.stale || status.problem) return false;
+	if (status.readStamp <= 0) return false;
+	const meta = await info(bridge, uri);
+	return meta?.lastModified === status.readStamp;
+}
+
 async function deliver(mode: Mode, force: boolean): Promise<boolean> {
 	const bridge = native();
 	if (!bridge) {
@@ -375,6 +400,11 @@ async function deliver(mode: Mode, force: boolean): Promise<boolean> {
 	}
 	const uri = await SyncFolder();
 	if (!uri) return false;
+	if (await settled(bridge, uri, mode, force)) {
+		await SyncTouched();
+		await panel();
+		return true;
+	}
 	const changed = await merge(bridge, uri, force, mode === "manual");
 	await panel();
 	if (changed) void queryClient.invalidateQueries();

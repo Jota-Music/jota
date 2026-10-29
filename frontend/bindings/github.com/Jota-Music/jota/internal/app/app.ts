@@ -586,12 +586,28 @@ export function SyncSend(payload: string): $CancellablePromise<void> {
     return $Call.ByID(111451869, payload);
 }
 
+/**
+ * SyncSnapshotsDue reports whether the document's snapshots have aged enough to
+ * be downloaded again, so the page knows a pass is not a plain stat.
+ */
+export function SyncSnapshotsDue(): $CancellablePromise<boolean> {
+    return $Call.ByID(1853228914);
+}
+
 export function SyncStatus(): $CancellablePromise<$models.SyncStatus> {
     return $Call.ByID(3855208621);
 }
 
 export function SyncStop(): $CancellablePromise<void> {
     return $Call.ByID(3298596019);
+}
+
+/**
+ * SyncTouched is the page's settled pass: the provider copy is the one it already
+ * merged, so the pass reconciled nothing but did run.
+ */
+export function SyncTouched(): $CancellablePromise<void> {
+    return $Call.ByID(2997694179);
 }
 
 /**

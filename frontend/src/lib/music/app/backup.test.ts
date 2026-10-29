@@ -18,6 +18,16 @@ let news = false;
 let answers: boolean[] = [];
 // Whether the last pass read a copy older than our own write.
 let stale = false;
+// Whether a pass failed: the panel must keep saying so until one succeeds.
+let problem = "";
+// Whether the backend holds records the document does not carry yet, and whether
+// the snapshots it carries have aged enough to be downloaded again.
+let pending = false;
+let snapshots = false;
+// How many settled passes the backend recorded, and which provider stamp this
+// device already merged.
+let touched = 0;
+let readStamp = 0;
 // When the last pass ran, as the backend records it: it survives a reload.
 let stamp = 0;
 let writes = 0;
@@ -65,6 +75,12 @@ mock.module("@bindings/app", () => ({
 	SyncInterval: () => Promise.resolve(interval),
 	SyncOverwrite: () => Promise.resolve(),
 	SyncPlaylists: () => Promise.resolve(),
+	SyncPending: () => Promise.resolve(pending),
+	SyncSnapshotsDue: () => Promise.resolve(snapshots),
+	SyncTouched: () => {
+		touched++;
+		return Promise.resolve();
+	},
 	SyncProblem: (reason: string) => {
 		problems.push(reason);
 		return Promise.resolve();
@@ -85,7 +101,14 @@ mock.module("@bindings/app", () => ({
 		});
 	},
 	SyncSave: () => Promise.resolve(),
-	SyncStatus: () => Promise.resolve({ at: stamp, stale }),
+	SyncStatus: () =>
+		Promise.resolve({
+			at: stamp,
+			uri,
+			stale,
+			problem,
+			readStamp,
+		}),
 	SyncWritten: () => {
 		writes++;
 		return Promise.resolve();
@@ -144,6 +167,11 @@ beforeEach(() => {
 	news = false;
 	answers = [];
 	stale = false;
+	problem = "";
+	pending = false;
+	snapshots = false;
+	touched = 0;
+	readStamp = 0;
 	stamp = 0;
 	writes = 0;
 	reloads = 0;
@@ -542,4 +570,117 @@ test("a reload waits for the pass in flight", async () => {
 	await Promise.all([autosave(), reload()]);
 
 	expect(order).toEqual(["commit", "reload"]);
+});
+
+// A pass is settled only when the provider still holds the very copy this device
+// already merged and nothing here is waiting to be written: the stat is then the
+// whole pass, with no download, merge or upload. The backend records that the
+// pass ran, so the panel's "last save" still moves.
+test("an unchanged stamp with nothing pending is a stat instead of a pass", async () => {
+	uri = "content://unchanged";
+	meta = { lastModified: 1000, size: 9 };
+	readStamp = 1000;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([]);
+	expect(calls).toEqual([]);
+	expect(touched).toBe(1);
+});
+
+// The provider served another copy, so the document is downloaded and merged.
+test("a moved stamp is downloaded", async () => {
+	uri = "content://moved";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 1001, size: 9 };
+	readStamp = 1000;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([uri]);
+	expect(calls).toEqual([{ lastModified: 1001, trust: false }]);
+});
+
+// This device holds records the document does not carry, so the pass must reach
+// the file even when the provider's copy did not move.
+test("local news is downloaded even when the stamp did not move", async () => {
+	uri = "content://news";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 1000, size: 9 };
+	readStamp = 1000;
+	pending = true;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([uri]);
+	expect(calls).toEqual([{ lastModified: 1000, trust: false }]);
+});
+
+// A save the user asked for is never answered with a stat.
+test("a manual save always downloads", async () => {
+	uri = "content://manual";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 1000, size: 9 };
+	readStamp = 1000;
+
+	await autosave("manual");
+
+	expect(stages).toEqual([uri]);
+	expect(calls).toEqual([{ lastModified: 1000, trust: true }]);
+});
+
+// The snapshots the document carries have aged, so the pass that refreshes them
+// has to read the file.
+test("due snapshots are downloaded", async () => {
+	uri = "content://snapshots";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 1000, size: 9 };
+	readStamp = 1000;
+	snapshots = true;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([uri]);
+	expect(calls).toEqual([{ lastModified: 1000, trust: false }]);
+});
+
+// A copy the backend refused or a pass that failed is a reason to read again: a
+// stat would lose the retry the stale flag and the problem exist for.
+test("a stale or failed pass is read again instead of settled", async () => {
+	uri = "content://stale";
+	meta = { lastModified: 1000, size: 9 };
+	readStamp = 1000;
+	stale = true;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([uri, uri]);
+	expect(calls).toEqual([
+		{ lastModified: 1000, trust: false },
+		{ lastModified: 1000, trust: true },
+	]);
+
+	stages.length = 0;
+	calls.length = 0;
+	stale = false;
+	problem = "disk full";
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([uri]);
+	expect(calls).toEqual([{ lastModified: 1000, trust: false }]);
+});
+
+// A provider that reports no stamp says nothing about which copy this device
+// already merged, so it can never be proven current.
+test("a document without a stamp is always downloaded", async () => {
+	uri = "content://nostamp";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 0, size: 9 };
+	readStamp = 0;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([uri]);
+	expect(calls).toEqual([{ lastModified: 0, trust: false }]);
 });
