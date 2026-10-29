@@ -276,7 +276,11 @@ stores the URL and the token together, so anyone who can read the backup can use
 it. The settings UI says so next to the autosave controls.
 - The playlists section carries the local playlists plus the playlists Spotify
 and YouTube own. Those source-owned snapshots are read from and written back to
-the file, but they are never restored as local playlists.
+the file, but they are never restored as local playlists. `snapshots`
+(`internal/playlists/section.go`) writes them in the order the caller resolved
+them, so the document's order is whatever the source answered; whether the APIs
+ever vary it is unproven, and it stays untouched until a real log shows a
+reorder worth normalising.
 - The document is indexed. A playlist lists its songs as `{"id": ...}` refs, and
 the top-level `songs`, `albums` and `artists` maps hold each entity once, keyed by
 id (`source:id` for artists), however many playlists reference it. Only what cannot
