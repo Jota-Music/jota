@@ -8,11 +8,13 @@ import (
 )
 
 // RefreshCatalog refetches every cached catalog entry in the background and
-// rewrites only the ones that changed. Channel-id mappings are stable, so they
-// are skipped; song entries outside the song:v2 prefix are audio source
-// mappings, not catalog content. The signed-in account's playlist list is
-// refreshed too, so a library that gained a playlist elsewhere catches up.
-func (s *Service) RefreshCatalog() error {
+// rewrites only the ones that changed, answering whether anything did. Channel-id
+// mappings are stable, so they are skipped; song entries outside the song:v2
+// prefix are audio source mappings, not catalog content. The signed-in account's
+// playlist list is refreshed too, so a library that gained a playlist elsewhere
+// catches up.
+func (s *Service) RefreshCatalog() (bool, error) {
+	changed := false
 	if err := playlistBucket.ForEach(func(key string, _ []byte) error {
 		switch {
 		case key == myPlaylistsKey:
@@ -21,45 +23,46 @@ func (s *Service) RefreshCatalog() error {
 			if sessionValue(cookies()) == "" {
 				return nil
 			}
-			kv.Refreshable(playlistBucket, key, fetchMyPlaylists)
+			changed = kv.Refreshable(playlistBucket, key, fetchMyPlaylists) || changed
 		case strings.HasPrefix(key, "channel:playlists:"):
 			id := strings.TrimPrefix(key, "channel:playlists:")
-			kv.Refreshable(playlistBucket, key, func() ([]music.PlaylistSummary, error) {
+			changed = kv.Refreshable(playlistBucket, key, func() ([]music.PlaylistSummary, error) {
 				return fetchChannelTab(id, channelPlaylistsParams, func(section itemSection, _ string) []music.PlaylistSummary {
 					return section.summaries()
 				})
-			})
+			}) || changed
 		case strings.HasPrefix(key, "channel:videos:"):
 			id := strings.TrimPrefix(key, "channel:videos:")
-			kv.Refreshable(playlistBucket, key, func() ([]music.Song, error) {
+			changed = kv.Refreshable(playlistBucket, key, func() ([]music.Song, error) {
 				return fetchChannelTab(id, channelVideosParams, func(section itemSection, name string) []music.Song {
 					return section.videos(id, name)
 				})
-			})
+			}) || changed
 		case strings.HasPrefix(key, "channel:info:"):
 			id := strings.TrimPrefix(key, "channel:info:")
-			kv.Refreshable(playlistBucket, key, func() (music.ChannelInfo, error) {
+			changed = kv.Refreshable(playlistBucket, key, func() (music.ChannelInfo, error) {
 				return channelInfo(id)
-			})
+			}) || changed
 		case strings.HasPrefix(key, "playlist:v3:"):
 			id := strings.TrimPrefix(key, "playlist:v3:")
-			kv.Refreshable(playlistBucket, key, func() (music.Playlist, error) {
+			changed = kv.Refreshable(playlistBucket, key, func() (music.Playlist, error) {
 				return fetchFullPlaylist(id)
-			})
+			}) || changed
 		}
 		return nil
 	}); err != nil {
-		return err
+		return changed, err
 	}
 
-	return youtubeSourceBucket.ForEach(func(key string, _ []byte) error {
+	err := youtubeSourceBucket.ForEach(func(key string, _ []byte) error {
 		if !strings.HasPrefix(key, "song:v2:") {
 			return nil
 		}
 		id := strings.TrimPrefix(key, "song:v2:")
-		kv.Refreshable(youtubeSourceBucket, key, func() (music.Song, error) {
+		changed = kv.Refreshable(youtubeSourceBucket, key, func() (music.Song, error) {
 			return fetchSong(id)
-		})
+		}) || changed
 		return nil
 	})
+	return changed, err
 }

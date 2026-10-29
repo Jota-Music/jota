@@ -10,7 +10,7 @@ import (
 
 type job struct {
 	name string
-	run  func() error
+	run  func() (bool, error)
 }
 
 // Interval is how often cached content is revalidated while the app is open.
@@ -25,14 +25,15 @@ var (
 	once sync.Once
 )
 
-func Register(name string, run func() error) {
+func Register(name string, run func() (bool, error)) {
 	mu.Lock()
 	defer mu.Unlock()
 	jobs = append(jobs, job{name: name, run: run})
 }
 
 // Start launches every registered job in the background. Notify runs after each
-// completed pass so callers can tell the UI cached content was revalidated.
+// pass that replaced cached content, so callers can tell the UI to refetch;
+// a pass that found everything unchanged says nothing.
 func Start(notify func()) {
 	once.Do(func() {
 		mu.Lock()
@@ -48,9 +49,10 @@ func loop(j job, notify func()) {
 	time.Sleep(settle)
 	for {
 		started := time.Now()
-		if err := j.run(); err != nil {
+		changed, err := j.run()
+		if err != nil {
 			log.Printf("refresh %s: %v", j.name, err)
-		} else if notify != nil {
+		} else if changed && notify != nil {
 			notify()
 		}
 		wait := Interval - time.Since(started)
