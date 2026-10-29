@@ -14,11 +14,13 @@ export function UserHeader({
 	identifier,
 	name: fallbackName,
 	imageUrl: fallbackImage,
+	pending,
 }: {
 	source: UserSource;
 	identifier: string;
 	name?: string;
 	imageUrl?: string;
+	pending?: boolean;
 }) {
 	const spotify = source === "spotify";
 
@@ -29,6 +31,7 @@ export function UserHeader({
 	});
 
 	const followKey = spotify ? identifier : `youtube:${identifier}`;
+	const loading = pending || profile.isLoading;
 
 	const name = profile.data?.displayName || fallbackName || identifier;
 	const imageUrl = profile.data?.imageUrl || fallbackImage;
@@ -37,6 +40,18 @@ export function UserHeader({
 	const showHandle = spotify
 		? name !== identifier
 		: identifier.startsWith("@") && name !== handle;
+
+	if (loading) {
+		return (
+			<header class="flex shrink-0 items-center gap-4">
+				<div class="shimmer size-16 shrink-0 rounded-full" />
+				<div class="flex min-w-0 flex-1 flex-col gap-2">
+					<div class="shimmer h-5 w-40 rounded" />
+					<div class="shimmer h-3.5 w-24 rounded" />
+				</div>
+			</header>
+		);
+	}
 
 	return (
 		<header class="flex shrink-0 items-center gap-4">

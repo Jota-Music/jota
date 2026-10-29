@@ -128,6 +128,7 @@ export function ArtistPage() {
 			<PageHeader
 				cover={data?.imageUrl}
 				title={data?.name ?? t("pages.artist.defaultName")}
+				pending={isLoading}
 				beforePlay={id ? <FollowButton id={`artist:${id}`} /> : undefined}
 				onPlay={
 					activeTab === "tracks" && tracks.length > 0

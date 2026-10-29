@@ -222,6 +222,7 @@ export function UserPage() {
 				identifier={id}
 				name={infoQuery.data?.name}
 				imageUrl={infoQuery.data?.avatar}
+				pending={youtube && infoQuery.isLoading}
 			/>
 
 			{youtube && (

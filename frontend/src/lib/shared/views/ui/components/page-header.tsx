@@ -25,6 +25,7 @@ export function PageHeader({
 	subtitle,
 	link,
 	linkReserve = false,
+	pending = false,
 	beforePlay,
 	onPlay,
 	playing,
@@ -37,6 +38,9 @@ export function PageHeader({
 	subtitle?: string;
 	link?: { to: string; label: string };
 	linkReserve?: boolean;
+	// pending keeps the header frame and swaps its text for bars, so the rows
+	// below do not jump when the response lands.
+	pending?: boolean;
 	// beforePlay sits left of the play button, inside the same cluster.
 	beforePlay?: ComponentChildren;
 	onPlay?: () => void;
@@ -72,7 +76,9 @@ export function PageHeader({
 
 	return (
 		<header class="flex shrink-0 items-center gap-4">
-			{covers?.length ? (
+			{pending ? (
+				<div class="shimmer h-16 w-16 shrink-0 rounded-md" aria-hidden />
+			) : covers?.length ? (
 				<div class="h-16 w-16 shrink-0 overflow-hidden rounded-md">
 					<Mosaic covers={covers} size={128} placeholder={<CoverFallback />} />
 				</div>
@@ -85,9 +91,36 @@ export function PageHeader({
 				/>
 			)}
 			<div class="min-w-0">
-				<h2 class="truncate text-xl font-semibold leading-tight">{title}</h2>
-				{subtitle && <p class="text-sm opacity-70 mt-1">{subtitle}</p>}
-				{link ? (
+				<h2 class="truncate text-xl font-semibold leading-tight">
+					{pending ? (
+						<span
+							class="shimmer inline-block h-[1em] w-40 rounded align-middle"
+							aria-hidden
+						/>
+					) : (
+						title
+					)}
+				</h2>
+				{(pending || subtitle) && (
+					<p class="text-sm opacity-70 mt-1">
+						{pending ? (
+							<span
+								class="shimmer inline-block h-3 w-24 rounded align-middle"
+								aria-hidden
+							/>
+						) : (
+							subtitle
+						)}
+					</p>
+				)}
+				{pending ? (
+					<span class="mt-1 block truncate text-sm">
+						<span
+							class="shimmer inline-block h-3 w-20 rounded align-middle"
+							aria-hidden
+						/>
+					</span>
+				) : link ? (
 					<LinkLine link={link} />
 				) : linkReserve ? (
 					<span class="mt-1 block truncate text-sm" aria-hidden>

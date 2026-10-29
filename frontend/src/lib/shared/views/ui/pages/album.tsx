@@ -52,6 +52,7 @@ export function AlbumPage() {
 				subtitle={subtitle}
 				link={link}
 				linkReserve
+				pending={isLoading}
 				onPlay={
 					tracks.length > 0
 						? () => void playList(tracks, id ?? null)

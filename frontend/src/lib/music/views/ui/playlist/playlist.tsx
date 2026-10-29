@@ -347,6 +347,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				custom={custom}
 				songs={songs}
 				reserve={isLoading}
+				pending={isLoading}
 				onDeletePlaylist={() => (deletePlaylistConfirm.value = true)}
 				onRenamePlaylist={custom ? openRenamePlaylist : undefined}
 			/>
@@ -562,6 +563,7 @@ function PlaylistHeader({
 	custom,
 	songs,
 	reserve,
+	pending,
 	onDeletePlaylist,
 	onRenamePlaylist,
 }: {
@@ -575,6 +577,7 @@ function PlaylistHeader({
 	custom: boolean;
 	songs: Song[];
 	reserve?: boolean;
+	pending?: boolean;
 	onDeletePlaylist: () => void;
 	onRenamePlaylist?: () => void;
 }) {
@@ -635,6 +638,7 @@ function PlaylistHeader({
 			subtitle={t("music.trackCount", { count: trackCount })}
 			link={link}
 			linkReserve
+			pending={pending}
 			beforePlay={
 				follow || custom
 					? follow && <SaveButton id={id} variant="toolbar" />
