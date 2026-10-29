@@ -24,7 +24,7 @@ import { cn } from "@/lib/shared/utils/tw";
 import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
-import { queryClient } from "@/lib/shared/views/ui/query-client";
+import { invalidate, queryClient } from "@/lib/shared/views/ui/query-client";
 import { loadRelay } from "@/lib/sync/app/transport";
 import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
 
@@ -114,7 +114,12 @@ Events.On("spotify:reconnected", async () => {
 			await RevalidateFollowing();
 		} catch {}
 	}
-	await queryClient.invalidateQueries();
+	// The sources this event revalidates are the only ones that moved: the rest
+	// of the cache is this app's own store and a reconnect does not touch it.
+	invalidate();
+	for (const key of ["user-playlists", "following", "friends"]) {
+		await queryClient.invalidateQueries({ queryKey: [key] });
+	}
 });
 
 // Hidden this long means the app is genuinely idle, not just unfocused, so its
@@ -174,7 +179,7 @@ function Router() {
 				return;
 			}
 			shed = setTimeout(() => {
-				void queryClient.invalidateQueries();
+				invalidate();
 			}, IDLE_SHED_MS);
 			const deadline = Date.now() + IDLE_RELOAD_MS;
 			reload = setInterval(async () => {

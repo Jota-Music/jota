@@ -17,7 +17,7 @@ import {
 } from "@bindings/app";
 import { t } from "@/lib/shared/i18n";
 import { logError, notify } from "@/lib/shared/views/stores/errors";
-import { queryClient } from "@/lib/shared/views/ui/query-client";
+import { invalidate, queryClient } from "@/lib/shared/views/ui/query-client";
 
 const ANDROID = /Android/i.test(navigator.userAgent);
 
@@ -309,7 +309,7 @@ async function reloadFromFile(): Promise<
 	}
 	const stats = await SyncReload();
 	await panel();
-	void queryClient.invalidateQueries();
+	invalidate();
 	return stats;
 }
 
@@ -407,7 +407,7 @@ async function deliver(mode: Mode, force: boolean): Promise<boolean> {
 	}
 	const changed = await merge(bridge, uri, force, mode === "manual");
 	await panel();
-	if (changed) void queryClient.invalidateQueries();
+	if (changed) invalidate();
 	return true;
 }
 

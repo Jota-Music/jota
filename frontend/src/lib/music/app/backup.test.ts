@@ -50,9 +50,6 @@ mock.module("@/lib/shared/views/stores/errors", () => ({
 	logError: () => {},
 	notify: (message: string) => notices.push(message),
 }));
-mock.module("@/lib/shared/views/ui/query-client", () => ({
-	queryClient: { invalidateQueries: () => Promise.resolve() },
-}));
 // The real exports stay: the mock is process-wide, and a partial one makes any
 // other test that imports a different binding fail to load.
 mock.module("@bindings/app", () => ({
