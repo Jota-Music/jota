@@ -20,7 +20,7 @@ import { FollowButton } from "@/lib/music/views/ui/follow";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
-import { Rows } from "@/lib/music/views/ui/track/rows";
+import { Rows } from "@/lib/music/views/ui/shimmer";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { useFollows } from "@/lib/music/views/ui/user/follow";
 import { t } from "@/lib/shared/i18n";

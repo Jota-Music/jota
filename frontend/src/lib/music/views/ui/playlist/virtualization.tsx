@@ -24,7 +24,7 @@ import {
 	selectionActive,
 	toggleSelection,
 } from "@/lib/music/views/stores/selection";
-import { ROW_PX } from "@/lib/music/views/ui/track/rows";
+import { ROW_PX } from "@/lib/music/views/ui/shimmer";
 import TrackActions, {
 	buildActions,
 } from "@/lib/music/views/ui/track/track-actions";

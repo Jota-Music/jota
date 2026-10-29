@@ -23,7 +23,7 @@ import {
 	useView,
 } from "@/lib/music/views/ui/shelf/hooks/use-view";
 import type { Item, Props, Variant } from "@/lib/music/views/ui/shelf/types";
-import { Row } from "@/lib/music/views/ui/track/rows";
+import { Row, Tiles } from "@/lib/music/views/ui/shimmer";
 import { t } from "@/lib/shared/i18n";
 import {
 	type Action,
@@ -40,6 +40,20 @@ export {
 } from "@/lib/music/views/ui/shelf/hint";
 export type { IconType, Item, Source } from "@/lib/music/views/ui/shelf/types";
 
+function Loading({ variant }: { variant: Variant }) {
+	return (
+		<div class="relative min-h-0 flex-1 overflow-hidden pb-3 pl-1 pr-[15px]">
+			{variant === "compact" ? (
+				Array.from({ length: 12 }, (_, index) => <Row key={index} />)
+			) : (
+				<div class="grid grid-cols-3 gap-0.5 md:gap-4">
+					<Tiles />
+				</div>
+			)}
+		</div>
+	);
+}
+
 // The shelf route names the entity, so every shelf gets a share entry without
 // each caller spelling one out. Routes that are not a shareable page (rooms, a
 // bare user) get nothing.
@@ -49,25 +63,6 @@ function shareTo(to: (id: string) => string, id: string): Action[] {
 		return shareLink(pageLink(page, id));
 	}
 	return [];
-}
-
-function Loading({ variant }: { variant: Variant }) {
-	return (
-		<div class="relative min-h-0 flex-1 overflow-hidden pb-3 pl-1 pr-[15px]">
-			{variant === "compact" ? (
-				Array.from({ length: 12 }, (_, index) => <Row key={index} />)
-			) : (
-				<div class="grid grid-cols-3 gap-0.5 md:gap-4">
-					{Array.from({ length: 12 }, (_, index) => (
-						<div key={index} class="flex flex-col gap-2 p-1.5">
-							<div class="shimmer aspect-square w-full rounded-md" />
-							<div class="shimmer h-5 w-3/4 rounded" />
-						</div>
-					))}
-				</div>
-			)}
-		</div>
-	);
 }
 
 export function Shelf({
@@ -202,18 +197,22 @@ export function Shelf({
 
 	return (
 		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
-			<Controls
-				filterable={filterable}
-				sourceFilter={sourceFilter}
-				setFilter={setFilter}
-				variant={variant}
-				setVariant={setVariant}
-				sortMode={canSort ? sortMode.value : undefined}
-				onSortMode={canSort ? toggleSortMode : undefined}
-				onCreate={items.length > 0 ? onCreate : undefined}
-				showLocal={showLocal}
-				disabled={isLoading}
-			/>
+			{/* The bar keeps its room while loading, so the shelf does not drop
+			below it once the items arrive. */}
+			{(filterable || isLoading) && (
+				<Controls
+					filterable={filterable}
+					sourceFilter={sourceFilter}
+					setFilter={setFilter}
+					variant={variant}
+					setVariant={setVariant}
+					sortMode={canSort ? sortMode.value : undefined}
+					onSortMode={canSort ? toggleSortMode : undefined}
+					onCreate={items.length > 0 ? onCreate : undefined}
+					showLocal={showLocal}
+				/>
+			)}
+
 			{isLoading ? (
 				<Loading variant={variant} />
 			) : items.length === 0 ? (

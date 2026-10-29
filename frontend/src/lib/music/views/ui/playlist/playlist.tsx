@@ -50,7 +50,7 @@ import { SaveButton } from "@/lib/music/views/ui/follow";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
-import { Rows } from "@/lib/music/views/ui/track/rows";
+import { Rows } from "@/lib/music/views/ui/shimmer";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";

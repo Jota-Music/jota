@@ -1,13 +1,6 @@
 import { useSignal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import {
-	CirclePlay,
-	ListVideo,
-	Loader,
-	Pause,
-	Play,
-	User,
-} from "lucide-preact";
+import { CirclePlay, ListVideo, Pause, Play, User } from "lucide-preact";
 import { useEffect, useRef } from "preact/hooks";
 import { Link, useRoute } from "wouter-preact";
 import {
@@ -30,6 +23,7 @@ import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { shareLink } from "@/lib/music/views/ui/share";
 import { Shelf } from "@/lib/music/views/ui/shelf";
+import { Rows, Tiles } from "@/lib/music/views/ui/shimmer";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
 import { t } from "@/lib/shared/i18n";
@@ -205,9 +199,8 @@ export function YouTubeSearchPage() {
 						class="h-full flex flex-col overflow-y-auto pr-[15px]"
 					>
 						{playlistsQuery.isLoading ? (
-							<div class="flex items-center gap-2 text-sm text-zinc-500">
-								<Loader size={14} class="animate-spin" />
-								{t("common.loading")}
+							<div class="grid grid-cols-2 gap-3 pt-1 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+								<Tiles count={8} />
 							</div>
 						) : playlistsQuery.isError ? (
 							<p class="text-red-400">{t("pages.youtube.failed")}</p>
@@ -226,9 +219,7 @@ export function YouTubeSearchPage() {
 					<Scrollbar target={listRef} />
 				</div>
 			) : videosQuery.isLoading ? (
-				<div class="flex items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-					<Loader size={24} class="animate-spin" />
-				</div>
+				<Rows />
 			) : videosQuery.isError ? (
 				<p class="text-red-400">{t("pages.youtube.failed")}</p>
 			) : songs.length === 0 ? (

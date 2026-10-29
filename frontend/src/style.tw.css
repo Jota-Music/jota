@@ -73,6 +73,8 @@ body {
 	overflow-anchor: none;
 }
 
+/* An image still on its way shimmers: it is a box the reader expects art in,
+   and a steady sweep reads as "on its way" without adding a spinner per tile. */
 .shimmer {
 	background-color: #18181b;
 	background-image: linear-gradient(
@@ -99,6 +101,13 @@ body {
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
 		scroll-behavior: auto !important;
+	}
+
+	/* A spinner is feedback that something is still working, not decoration:
+	   frozen, it reads as a stuck screen. It is the one animation kept alive. */
+	.animate-spin {
+		animation-duration: 1s !important;
+		animation-iteration-count: infinite !important;
 	}
 }
 

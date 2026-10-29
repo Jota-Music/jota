@@ -14,7 +14,7 @@ import { queueSource } from "@/lib/music/views/stores/queue";
 import { selectAll } from "@/lib/music/views/stores/selection";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
-import { Rows } from "@/lib/music/views/ui/track/rows";
+import { Rows } from "@/lib/music/views/ui/shimmer";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { t } from "@/lib/shared/i18n";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";

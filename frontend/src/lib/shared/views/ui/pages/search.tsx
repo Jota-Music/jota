@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { Loader, Pause, Play } from "lucide-preact";
+import { Pause, Play } from "lucide-preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { Link, useLocation, useParams } from "wouter-preact";
 import {
@@ -19,6 +19,7 @@ import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
+import { Rows, Tiles } from "@/lib/music/views/ui/shimmer";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
 import { cover } from "@/lib/shared/utils/cover";
@@ -193,9 +194,7 @@ export function SearchPage() {
 				</header>
 
 				{isLoading ? (
-					<div class="flex items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-						<Loader size={24} class="animate-spin" />
-					</div>
+					<Rows />
 				) : songs.length === 0 ? (
 					<p class="text-sm text-zinc-500">{t("common.noResults")}</p>
 				) : (
@@ -223,9 +222,8 @@ export function SearchPage() {
 					class="h-full flex flex-col gap-3 overflow-y-auto pr-[15px] pb-8"
 				>
 					{isLoading ? (
-						<div class="flex items-center gap-2 text-sm text-zinc-500">
-							<Loader size={14} class="animate-spin" />
-							{t("common.loading")}
+						<div class="grid grid-cols-3 gap-0.5 md:gap-4">
+							<Tiles />
 						</div>
 					) : results.length === 0 ? (
 						<p class="text-sm text-zinc-500">{t("pages.search.noPlaylists")}</p>

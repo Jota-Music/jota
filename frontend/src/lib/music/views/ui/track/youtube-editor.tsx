@@ -1,16 +1,7 @@
 import type { Video } from "@models/services/youtube/models";
 import { useSignal } from "@preact/signals";
 import { useQuery } from "@tanstack/preact-query";
-import {
-	Check,
-	Link2,
-	Loader,
-	Loader2,
-	Pause,
-	Play,
-	Search,
-	X,
-} from "lucide-preact";
+import { Check, Link2, Loader2, Pause, Play, Search, X } from "lucide-preact";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { getYouTubeId, updateYoutubeId } from "@/lib/music/app/get-audio";
 import { searchYouTube, youtubeVideoToSong } from "@/lib/music/app/search";
@@ -39,6 +30,7 @@ import {
 	editingSong,
 	editorMode,
 } from "@/lib/music/views/stores/youtube-editor";
+import { Row } from "@/lib/music/views/ui/shimmer";
 import TrackArt from "@/lib/music/views/ui/track/track-art";
 import VolumeControl from "@/lib/music/views/ui/volume";
 import { t } from "@/lib/shared/i18n";
@@ -355,9 +347,7 @@ export default function YoutubeEditor() {
 											{t("music.youtubeId.searchPrompt")}
 										</p>
 									) : videosQuery.isLoading ? (
-										<div class="flex h-full items-center justify-center text-zinc-400">
-											<Loader size={40} class="animate-spin" />
-										</div>
+										Array.from({ length: 4 }, (_, index) => <Row key={index} />)
 									) : videosQuery.isError ? (
 										<p class="text-sm text-red-400">
 											{t("music.youtubeId.searchFailed")}

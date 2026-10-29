@@ -4,7 +4,6 @@ import {
 	ArrowUpDown,
 	ListMusic,
 	ListVideo,
-	Loader,
 	RefreshCw,
 	Search,
 	X,
@@ -25,6 +24,7 @@ import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
+import { Rows } from "@/lib/music/views/ui/shimmer";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -195,9 +195,7 @@ export function UserPage() {
 				</div>
 
 				{videosQuery.isLoading ? (
-					<div class="flex items-center justify-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-						<Loader size={24} class="animate-spin" />
-					</div>
+					<Rows />
 				) : filteredVideos.length === 0 ? (
 					<p class="text-sm text-zinc-500">{t("pages.user.noVideos")}</p>
 				) : (
