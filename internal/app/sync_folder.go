@@ -414,12 +414,14 @@ func (a *App) syncFolder(opts backup.Options, settle bool) error {
 		a.touchSync()
 		return nil
 	}
+	started := time.Now()
 	stats, err := a.Backup.Sync(folder, opts)
 	if err != nil {
 		a.recordProblem(err)
 		return err
 	}
 	a.recordSync(stats, true, stats.Modified, 0)
+	logPass("folder", started, stats.Bytes, len(stats.Document), stats.Modified)
 	// The file holds the union of both sides, so whatever this device wrote into it
 	// is in place and nothing is waiting to be saved.
 	Synced()
@@ -464,6 +466,7 @@ func (a *App) SyncDocument(lastModified int64, trust bool) (bool, error) {
 // so the file path can be exercised where no stage dir exists (every platform
 // but Android).
 func (a *App) syncDocumentAt(dir string, lastModified int64, trust bool) (bool, error) {
+	started := time.Now()
 	incoming := filepath.Join(dir, syncIncoming)
 	data, err := os.ReadFile(incoming)
 	if err != nil {
@@ -476,13 +479,27 @@ func (a *App) syncDocumentAt(dir string, lastModified int64, trust bool) (bool, 
 	}
 	if !write {
 		_ = os.Remove(incoming)
+		logPass("document", started, len(data), 0, false)
 		return false, nil
 	}
 	if err := os.WriteFile(filepath.Join(dir, syncOutgoing), []byte(merged), 0o600); err != nil {
 		a.recordProblem(err)
 		return false, err
 	}
+	logPass("document", started, len(data), len(merged), true)
 	return true, nil
+}
+
+// logPass leaves one line per reconciled document: how long the merge took and
+// how much it moved. A pass that feels slow is then a number instead of a
+// feeling, and a pass that runs on every resume shows up as one line per resume.
+func logPass(where string, started time.Time, read, written int, modified bool) {
+	state := "kept"
+	if modified {
+		state = "wrote"
+	}
+	log.Printf("sync: %s in %s: read %dKB, %s %dKB",
+		where, time.Since(started).Round(time.Millisecond), read/1024, state, written/1024)
 }
 
 // syncDocument merges a backup document in memory and answers the document both
