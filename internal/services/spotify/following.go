@@ -31,12 +31,16 @@ func (s *SpotifyService) GetFollowing() ([]music.Follow, error) {
 	return kv.Cached(musicBucket, followingKey(username), s.follows)
 }
 
+// RevalidateFollowing refreshes the two lists the following shelf shows: the
+// profiles the account follows and its buddy list. Both are cached per account,
+// and the page asks for them the moment a session comes back.
 func (s *SpotifyService) RevalidateFollowing() {
 	username := s.Username()
 	if username == "" {
 		return
 	}
 	kv.Refreshable(musicBucket, followingKey(username), s.follows)
+	kv.Refreshable(musicBucket, friendsKey(username), s.friends)
 }
 
 func followingKey(username string) string {
