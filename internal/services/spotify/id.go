@@ -37,9 +37,19 @@ func contextTracks(ctx context.Context, sp *spclient.Spclient, resolved *connect
 	if err != nil {
 		return nil, err
 	}
+	return walk(ctx, cr, 0)
+}
 
+type pager interface {
+	Page(context.Context, int) ([]*connectpb.ContextTrack, error)
+	Type() librespot.SpotifyIdType
+}
+
+// walk reads context pages until io.EOF or maxPages (0 means unbounded). A
+// radio context never reports io.EOF, so the bound is the only way out of one.
+func walk(ctx context.Context, cr pager, maxPages int) ([]*connectpb.ContextTrack, error) {
 	var tracks []*connectpb.ContextTrack
-	for page := 0; ; page++ {
+	for page := 0; maxPages == 0 || page < maxPages; page++ {
 		pageTracks, err := cr.Page(ctx, page)
 		if err == io.EOF {
 			break
@@ -59,10 +69,9 @@ func contextTracks(ctx context.Context, sp *spclient.Spclient, resolved *connect
 	return tracks, nil
 }
 
-// radioMaxPages bounds how far a radio context is walked. Stations paginate
-// without end — every page yields tracks and names a next one, so there is no
-// io.EOF to stop on. A radio is a listening session, not a finite catalog: a
-// couple of pages is already a long session, so the loop stops there.
+// radioMaxPages bounds how far a radio context is walked. A radio is a
+// listening session, not a finite catalog: a couple of pages is already a long
+// session, so the loop stops there.
 const radioMaxPages = 2
 
 func resolveRadioTracks(ctx context.Context, sess *session.Session, uri string) (ctxTracks []*connectpb.ContextTrack, err error) {
@@ -83,25 +92,7 @@ func resolveRadioTracks(ctx context.Context, sess *session.Session, uri string) 
 	if err != nil {
 		return nil, err
 	}
-
-	for page := 0; page < radioMaxPages; page++ {
-		pageTracks, err := cr.Page(ctx, page)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		for _, ct := range pageTracks {
-			if ct.GetUri() == "" && len(ct.GetGid()) == 16 {
-				ct.Uri = librespot.SpotifyIdFromGid(cr.Type(), ct.GetGid()).Uri()
-			}
-			if ct.GetUri() != "" {
-				ctxTracks = append(ctxTracks, ct)
-			}
-		}
-	}
-	return ctxTracks, nil
+	return walk(ctx, cr, radioMaxPages)
 }
 
 func resolveContextURIs(ctx context.Context, sess *session.Session, uri string) ([]string, error) {

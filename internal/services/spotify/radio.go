@@ -14,15 +14,7 @@ import (
 // tracks as a synthetic playlist. Radio is dynamic by nature, so it is never
 // cached: every call asks the context servers for a fresh set of pages.
 func (s *SpotifyService) GetSongRadio(id string) (music.Playlist, error) {
-	var trackID string
-	switch {
-	case strings.HasPrefix(id, URIRadioPrefix):
-		trackID = strings.TrimPrefix(id, URIRadioPrefix)
-	case strings.HasPrefix(id, URIStationPrefix):
-		trackID = strings.TrimPrefix(id, URIStationPrefix)
-	default:
-		trackID = strings.TrimPrefix(normalizeID(id, "track"), URITrackPrefix)
-	}
+	trackID := seed(id)
 
 	sess := s.Session()
 	if sess == nil {
@@ -59,6 +51,14 @@ func (s *SpotifyService) GetSongRadio(id string) (music.Playlist, error) {
 	}
 
 	return music.Playlist{Name: name, Cover: cover, Songs: songs}, nil
+}
+
+// seed is the track id a radio is built around, whichever form the caller sent.
+// The radio page prefixes the song id it was given, and a Spotify song id is
+// already "spotify:<id>", so the inner form has to be normalized too.
+func seed(id string) string {
+	id = strings.TrimPrefix(strings.TrimPrefix(id, URIRadioPrefix), URIStationPrefix)
+	return strings.TrimPrefix(normalizeID(id, "track"), URITrackPrefix)
 }
 
 func (s *SpotifyService) radioTracks(ctx context.Context, sess *session.Session, uri string) ([]Track, error) {
