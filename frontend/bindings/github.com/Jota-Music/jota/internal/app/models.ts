@@ -39,6 +39,13 @@ export interface SyncStatus {
     "readStamp": number;
 
     /**
+     * ReadAt is when a copy was last read and merged. A settled pass moves At
+     * alone, so this is the only field that says how old the copy we hold is,
+     * which is what bounds a provider that reports no stamp.
+     */
+    "readAt": number;
+
+    /**
      * SnapshotsAt is when the playlists the sources own were last written into
      * the document. Their download is the expensive part of a pass, so they are
      * only resolved again once they are older than the refresh interval.

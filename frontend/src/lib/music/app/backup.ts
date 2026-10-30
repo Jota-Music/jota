@@ -384,13 +384,15 @@ async function settled(
 	const status = await SyncStatus();
 	if (status.uri !== uri) return false;
 	if (status.stale || status.problem) return false;
+	// A provider can answer the stat from its own cache: same stamp, same size,
+	// old bytes. Nothing in that answer proves the copy is the one we merged, so
+	// a copy is only trusted for the interval the settings promise. Past it the
+	// document is read again, and a change another device wrote lands instead of
+	// staying invisible behind a cached answer.
+	const minutes = await SyncInterval();
+	if (Date.now() - (status.readAt ?? 0) > minutes * 60_000) return false;
 	const meta = await info(bridge, uri);
 	if (!meta) return false;
-	// A provider that reports no timestamp cannot prove the copy did not move,
-	// and reading it on every resume is the whole library down the wire twice.
-	// The size it does report is the only evidence there is, so a document that
-	// kept its length is taken as the one already merged; the interval still
-	// reads it again.
 	if (meta.lastModified === 0)
 		return status.bytes > 0 && meta.size === status.bytes;
 	return status.readStamp > 0 && meta.lastModified === status.readStamp;
