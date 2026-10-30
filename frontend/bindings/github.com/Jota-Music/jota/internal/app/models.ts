@@ -77,3 +77,15 @@ export interface SyncStatus {
      */
     "problem"?: string;
 }
+
+/**
+ * YouTubeStatus is everything the panel and the shelf need about the stored
+ * session: signed in, whether it can open private resources, whether this
+ * platform can sign in from a browser, and who it belongs to.
+ */
+export interface YouTubeStatus {
+    "signedIn": boolean;
+    "full": boolean;
+    "browser": boolean;
+    "account": string;
+}

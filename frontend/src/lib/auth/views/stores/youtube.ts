@@ -5,13 +5,10 @@ import {
 	ImportYouTubeCookies,
 	SessionPass,
 	SetYouTubeCookies,
-	YouTubeAccount,
 	YouTubeBrowserAccounts,
 	YouTubeBrowserLogin,
-	YouTubeBrowserLoginSupported,
 	YouTubeCookiesFromBrowser,
-	YouTubeSessionFull,
-	YouTubeSignedIn,
+	YouTubeStatus,
 } from "@bindings/app";
 import { signal } from "@preact/signals";
 import { Events } from "@wailsio/runtime";
@@ -50,19 +47,19 @@ export function dismissYouTubeSignInSuggestion(): void {
 
 export async function syncYouTubeStatus(): Promise<void> {
 	try {
-		// Independent reads, so both crosses the bridge at once instead of
-		// stacking two round trips on every mount.
-		const [signedIn, full, supported, account] = await Promise.all([
-			YouTubeSignedIn().catch(() => false),
-			YouTubeSessionFull().catch(() => true),
-			YouTubeBrowserLoginSupported().catch(() => false),
-			YouTubeAccount().catch(() => ""),
-		]);
-		youtubeSignedIn.value = signedIn;
-		youtubeSessionFull.value = full;
-		youtubeBrowserLoginSupported.value = supported;
-		youtubeAccount.value = account ?? "";
+		// One reading instead of four: the panel and the shelf need all of them,
+		// and every binding was a crossing of the bridge before the first paint.
+		const status = await YouTubeStatus();
+		youtubeSignedIn.value = status.signedIn;
+		youtubeSessionFull.value = status.full;
+		youtubeBrowserLoginSupported.value = status.browser;
+		youtubeAccount.value = status.account ?? "";
 		if (youtubeSignedIn.value) youtubeSignInSuggested.value = false;
+	} catch {
+		youtubeSignedIn.value = false;
+		youtubeSessionFull.value = true;
+		youtubeBrowserLoginSupported.value = false;
+		youtubeAccount.value = "";
 	} finally {
 		youtubeReady.value = true;
 	}

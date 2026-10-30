@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"log"
+	"runtime"
 	"strings"
 	"time"
 
@@ -297,6 +298,27 @@ func (a *App) YouTubeAccount() string {
 
 func (a *App) YouTubeSignedIn() bool {
 	return youtube.HasAuth()
+}
+
+// YouTubeStatus is everything the panel and the shelf need about the stored
+// session: signed in, whether it can open private resources, whether this
+// platform can sign in from a browser, and who it belongs to.
+type YouTubeStatus struct {
+	SignedIn bool   `json:"signedIn"`
+	Full     bool   `json:"full"`
+	Browser  bool   `json:"browser"`
+	Account  string `json:"account"`
+}
+
+// YouTubeStatus answers the four readings in one crossing of the bridge. They
+// were four bindings, all of them asked before the first paint.
+func (a *App) YouTubeStatus() YouTubeStatus {
+	return YouTubeStatus{
+		SignedIn: youtube.HasAuth(),
+		Full:     youtube.SessionFull(),
+		Browser:  runtime.GOOS != "android",
+		Account:  youtube.Account(),
+	}
 }
 
 // YouTubeSessionFull reports whether the stored cookies can open private
