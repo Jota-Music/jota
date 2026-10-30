@@ -385,9 +385,16 @@ async function settled(
 	const status = await SyncStatus();
 	if (status.uri !== uri) return false;
 	if (status.stale || status.problem) return false;
-	if (status.readStamp <= 0) return false;
 	const meta = await info(bridge, uri);
-	return meta?.lastModified === status.readStamp;
+	if (!meta) return false;
+	// A provider that reports no timestamp cannot prove the copy did not move,
+	// and reading it on every resume is the whole library down the wire twice.
+	// The size it does report is the only evidence there is, so a document that
+	// kept its length is taken as the one already merged; the interval still
+	// reads it again.
+	if (meta.lastModified === 0)
+		return status.bytes > 0 && meta.size === status.bytes;
+	return status.readStamp > 0 && meta.lastModified === status.readStamp;
 }
 
 async function deliver(mode: Mode, force: boolean): Promise<boolean> {

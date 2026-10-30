@@ -28,6 +28,9 @@ let snapshots = false;
 // device already merged.
 let touched = 0;
 let readStamp = 0;
+// The size of the copy the last pass read, which is the only evidence a
+// provider that reports no timestamp leaves behind.
+let bytes = 0;
 // When the last pass ran, as the backend records it: it survives a reload.
 let stamp = 0;
 let writes = 0;
@@ -105,6 +108,7 @@ mock.module("@bindings/app", () => ({
 			stale,
 			problem,
 			readStamp,
+			bytes,
 		}),
 	SyncWritten: () => {
 		writes++;
@@ -169,6 +173,7 @@ beforeEach(() => {
 	snapshots = false;
 	touched = 0;
 	readStamp = 0;
+	bytes = 0;
 	stamp = 0;
 	writes = 0;
 	reloads = 0;
@@ -583,6 +588,34 @@ test("an unchanged stamp with nothing pending is a stat instead of a pass", asyn
 	expect(stages).toEqual([]);
 	expect(calls).toEqual([]);
 	expect(touched).toBe(1);
+});
+
+// A provider that reports no timestamp cannot prove the copy did not move, and
+// reading it on every resume is the whole library down the wire twice. The size
+// it does report is the only evidence there is.
+test("a copy without a stamp is a stat when its size did not move", async () => {
+	uri = "content://nostamp";
+	meta = { lastModified: 0, size: 9 };
+	bytes = 9;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([]);
+	expect(calls).toEqual([]);
+	expect(touched).toBe(1);
+});
+
+// The same provider, holding a copy of another length: the document is read.
+test("a copy without a stamp is read when its size moved", async () => {
+	uri = "content://nostamp-grew";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 0, size: 12 };
+	bytes = 9;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([uri]);
+	expect(calls).toEqual([{ lastModified: 0, trust: false }]);
 });
 
 // The provider served another copy, so the document is downloaded and merged.
