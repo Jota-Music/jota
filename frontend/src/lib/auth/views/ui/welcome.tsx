@@ -5,6 +5,7 @@ import {
 	spotifyConnected,
 	spotifyDegraded,
 	spotifyReady,
+	spotifyUser,
 } from "@/lib/auth/views/stores/session";
 import {
 	dismissWelcome,
@@ -21,14 +22,15 @@ export function Welcome() {
 	const mute = useSignal(false);
 
 	useSignalEffect(() => {
-		// A degraded account already has one; the connect modal would only be
-		// noise on top of the offline banner.
-		if (
-			spotifyReady.value &&
-			!spotifyConnected.value &&
-			!spotifyDegraded.value &&
-			!welcomeDismissed()
-		) {
+		// An account is not something to welcome, and a session that is still
+		// restoring already names its own: only an install with none asks. A
+		// welcome that opened while the restore ran closes as soon as the account
+		// is known, instead of sitting over a library that is already signed in.
+		if (spotifyConnected.value || spotifyDegraded.value || spotifyUser.value) {
+			welcomeOpen.value = false;
+			return;
+		}
+		if (spotifyReady.value && !welcomeDismissed()) {
 			welcomeOpen.value = true;
 		}
 	});
