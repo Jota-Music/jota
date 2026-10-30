@@ -628,6 +628,10 @@ var (
 	syncDebounce = 3 * time.Second
 	syncMaxWait  = 20 * time.Second
 	syncTick     = time.Minute
+	// syncWatch is how often the document is stat'ed for another device's write.
+	// ponytail: polling, not a filesystem watcher; a stat of one file every few
+	// seconds allocates nothing worth measuring and needs no dependency.
+	syncWatch = 10 * time.Second
 )
 
 // syncSchedule arms the one timer, restarting it on every ask.
@@ -675,18 +679,38 @@ func (a *App) syncQueue() {
 	}
 }
 
-// syncTicker runs the interval the settings promise. Android keeps its own, in
-// the page: there the provider's file is staged by the native side.
+// syncTicker runs the interval the settings promise, and watches the document so
+// another device's write lands in seconds instead of at the next interval.
+// Android keeps its own, in the page: there the provider's file is staged by the
+// native side.
 func (a *App) syncTicker() {
 	if runtime.GOOS == "android" || !a.syncTicking.CompareAndSwap(false, true) {
 		return
 	}
 	go func() {
-		ticker := time.NewTicker(syncTick)
-		defer ticker.Stop()
-		for range ticker.C {
-			if a.SyncAuto() && a.SyncFolder() != "" && a.syncDue() {
-				a.syncSchedule()
+		tick := time.NewTicker(syncTick)
+		defer tick.Stop()
+		watch := time.NewTicker(syncWatch)
+		defer watch.Stop()
+		for {
+			select {
+			case <-tick.C:
+				if a.SyncAuto() && a.SyncFolder() != "" && a.syncDue() {
+					a.syncSchedule()
+				}
+			case <-watch.C:
+				folder := a.SyncFolder()
+				// Work waiting for a pass has its own trigger, and a failing pass
+				// must not be retried at this rate: SyncPending covers both.
+				if folder == "" || !a.SyncAuto() || a.SyncPending() {
+					continue
+				}
+				// A settled folder is one stat, and the pass it asks for is the
+				// debounced one, so a write from another device is merged and
+				// announced to the page within seconds.
+				if !a.syncSettled(folder) {
+					a.syncSchedule()
+				}
 			}
 		}
 	}()
