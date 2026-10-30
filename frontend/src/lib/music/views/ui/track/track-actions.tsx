@@ -157,9 +157,7 @@ export function buildActions({
 		}
 		actions.push({
 			icon: Link2,
-			label: single.youtubeId
-				? t("music.youtubeId.edit")
-				: t("music.youtubeId.add"),
+			label: t("music.youtubeId.add"),
 			run: () => {
 				openEditor(single);
 				done();
