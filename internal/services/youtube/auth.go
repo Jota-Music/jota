@@ -211,6 +211,20 @@ func sidValue(raw string) string {
 	return ""
 }
 
+// SessionGaps names the cookies a set is missing to open the account's own
+// resources. A session that only signs requests is the difference between the
+// two devices that a user cannot see, so the caller logs what is missing instead
+// of leaving the rejection unexplained.
+func SessionGaps(raw string) []string {
+	missing := make([]string, 0, 4)
+	for _, name := range []string{"SAPISID", "__Secure-3PSID", "__Secure-1PSID", "SSID"} {
+		if cookieValue(raw, name) == "" {
+			missing = append(missing, name)
+		}
+	}
+	return missing
+}
+
 func cookieValue(raw, name string) string {
 	for part := range strings.SplitSeq(raw, ";") {
 		k, v, ok := strings.Cut(strings.TrimSpace(part), "=")

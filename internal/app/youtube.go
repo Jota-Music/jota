@@ -159,6 +159,11 @@ func applyYouTubeCookies(blob string) {
 	if err := youtube.SetCookies(pt); err != nil {
 		return
 	}
+	if gaps := youtube.SessionGaps(pt); len(gaps) > 0 {
+		log.Printf("youtube: synced session applied but partial, missing %s", strings.Join(gaps, ", "))
+	} else {
+		log.Printf("youtube: synced session applied")
+	}
 	if app := application.Get(); app != nil {
 		app.Event.Emit("youtube:session-updated")
 	}
