@@ -560,7 +560,28 @@ func (a *App) syncDocument(data string, lastModified int64, trust bool) (string,
 		// write, so nothing is waiting either.
 		Synced()
 	}
+	// A copy the provider served from its cache can be missing what this device
+	// holds even when the merge applied nothing: the metadata resolved here, for
+	// one. The write is refused because the copy is stale, so the page is told to
+	// read it once more and write the union instead of leaving this device's
+	// records out of the file for as long as the provider keeps the old copy.
+	if !fresh && merged != data {
+		a.markStale()
+	}
 	return merged, fresh && merged != data, nil
+}
+
+// markStale records that the copy the pass read is behind this device, so the
+// page retries the read and writes the union.
+func (a *App) markStale() {
+	var status SyncStatus
+	if err := settings.GetObject(syncStatusKey, &status); err != nil || status.Stale {
+		return
+	}
+	status.Stale = true
+	if err := settings.SetObject(syncStatusKey, status); err != nil {
+		log.Printf("sync status: %v", err)
+	}
 }
 
 // freshCopy is the rule the reading side applies to a copy a provider served.
