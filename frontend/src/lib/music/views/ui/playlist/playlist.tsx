@@ -234,12 +234,27 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 	const reorder = useMutation({
 		mutationFn: (refs: string[]) => reorderPlaylist(id, refs),
+		// The page holds every song already, so the order the user dropped is
+		// applied here: asking the bridge for the whole playlist again would make
+		// the list blink after every drag, and a big playlist is a big payload.
+		onMutate: (refs) => {
+			queryClient.setQueryData<Playlist>(["playlist", id], (current) => {
+				if (!current) return current;
+				const byId = new Map(current.songs.map((song) => [song.id, song]));
+				const songs = refs.flatMap((ref) => byId.get(ref) ?? []);
+				return { ...current, songs };
+			});
+		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["playlist", id] });
-			queryClient.invalidateQueries({ queryKey: ["playlists"] });
+			// The library mosaic follows the first tracks of the playlist.
+			void queryClient.invalidateQueries({ queryKey: ["playlists"] });
 			expireRemoval(id);
 		},
-		onError: (error) => addError(error, "playlist"),
+		onError: (error) => {
+			addError(error, "playlist");
+			// The store kept the order it had, so the page reads it back.
+			void queryClient.invalidateQueries({ queryKey: ["playlist", id] });
+		},
 	});
 
 	async function handleRefresh() {
