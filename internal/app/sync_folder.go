@@ -121,6 +121,35 @@ func (a *App) recordSync(stats backup.Stats, fresh, written bool, read int64) {
 	if err := settings.SetObject(syncStatusKey, status); err != nil {
 		log.Printf("sync status: %v", err)
 	}
+	emitSections(stats)
+}
+
+// emitSections tells the page which sections a pass applied, so it refreshes
+// exactly the queries the document feeds and leaves the rest of the cache alone.
+// A section that applied nothing is not named.
+func emitSections(stats backup.Stats) {
+	sections := make([]string, 0, 6)
+	for _, section := range []struct {
+		name    string
+		applied int
+	}{
+		{"playlists", stats.Playlists},
+		{"follows", stats.Follows},
+		{"saved", stats.Saved},
+		{"order", stats.Order},
+		{"settings", stats.Settings},
+		{"sessions", stats.Sessions},
+	} {
+		if section.applied > 0 {
+			sections = append(sections, section.name)
+		}
+	}
+	if len(sections) == 0 {
+		return
+	}
+	if app := application.Get(); app != nil {
+		app.Event.Emit("library:changed", sections)
+	}
 }
 
 // recordProblem keeps a failed pass in the status, so the panel can say why the
@@ -383,9 +412,7 @@ func (a *App) SyncReload() (backup.Stats, error) {
 	if dir != "" {
 		_ = os.Remove(path)
 	}
-	if app := application.Get(); app != nil {
-		app.Event.Emit("refresh:updated")
-	}
+	emitSections(stats)
 	return stats, nil
 }
 
@@ -425,11 +452,6 @@ func (a *App) syncFolder(opts backup.Options, settle bool) error {
 	// The file holds the union of both sides, so whatever this device wrote into it
 	// is in place and nothing is waiting to be saved.
 	Synced()
-	if stats.Modified {
-		if app := application.Get(); app != nil {
-			app.Event.Emit("refresh:updated")
-		}
-	}
 	return nil
 }
 

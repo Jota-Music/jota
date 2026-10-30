@@ -24,7 +24,11 @@ import { cn } from "@/lib/shared/utils/tw";
 import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
-import { invalidate, queryClient } from "@/lib/shared/views/ui/query-client";
+import {
+	invalidate,
+	queryClient,
+	type Section,
+} from "@/lib/shared/views/ui/query-client";
 import { loadRelay } from "@/lib/sync/app/transport";
 import { checkUpdate, loadVersion } from "@/lib/update/views/stores/update";
 
@@ -103,11 +107,16 @@ Events.On("youtube:session-updated", async () => {
 	void autosave("auto").catch(() => {});
 });
 
+// A pass applied these sections of the document to the store: the page asks
+// again only for what they feed, which is the whole of the UI's update.
+Events.On("library:changed", (event) => {
+	invalidate((event.data ?? []) as Section[]);
+});
+
 // The answers a source owes the page are worth asking again when its session
 // becomes usable: they either came back without one or were never asked. The
 // rest of the cache is this app's own store, which a session does not touch.
 async function refreshSources(): Promise<void> {
-	invalidate();
 	for (const key of ["user-playlists", "following", "friends"]) {
 		await queryClient.invalidateQueries({ queryKey: [key] });
 	}

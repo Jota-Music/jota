@@ -13,23 +13,32 @@ export const queryClient = new QueryClient({
 	},
 });
 
-// The roots a sync document pass can move: the playlists it stores, the friends
-// followed on this install, the saved shelf and its order, and the two settings
-// that travel. A pass cannot touch a search or a source's own lists, and marking
-// them stale would re-request them for nothing.
-const library = new Set([
-	"playlists",
-	"playlist",
-	"saved-playlists",
-	"followed-users",
-	"shelf-order",
-	"sync-auto",
-	"sync-import",
-	"sync-interval",
-]);
+// What each section of the sync document feeds. A section a pass did not apply
+// leaves its queries alone, so a pass that only moved the order does not
+// re-request the library. This map is the only list: a pass names sections, and
+// the mapping from sections to query keys lives here, next to the client.
+const sections = {
+	playlists: ["playlists", "playlist"],
+	follows: ["followed-users"],
+	saved: ["saved-playlists"],
+	order: ["shelf-order"],
+	settings: ["sync-auto", "sync-import", "sync-interval"],
+	sessions: [],
+} satisfies Record<string, readonly string[]>;
 
-export function invalidate(): void {
+export type Section = keyof typeof sections;
+
+const all = Object.keys(sections) as Section[];
+
+// Marks stale what the named sections feed, and nothing else: a search or a
+// source's own lists are not in the document, so re-requesting them is waste.
+export function invalidate(changed: readonly Section[] = all): void {
+	const roots = new Set<string>();
+	for (const section of changed) {
+		for (const root of sections[section] ?? []) roots.add(root);
+	}
+	if (roots.size === 0) return;
 	void queryClient.invalidateQueries({
-		predicate: (query) => library.has(String(query.queryKey[0])),
+		predicate: (query) => roots.has(String(query.queryKey[0])),
 	});
 }

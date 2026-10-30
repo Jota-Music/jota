@@ -17,7 +17,7 @@ import {
 } from "@bindings/app";
 import { t } from "@/lib/shared/i18n";
 import { logError, notify } from "@/lib/shared/views/stores/errors";
-import { invalidate, queryClient } from "@/lib/shared/views/ui/query-client";
+import { queryClient } from "@/lib/shared/views/ui/query-client";
 
 const ANDROID = /Android/i.test(navigator.userAgent);
 
@@ -309,7 +309,6 @@ async function reloadFromFile(): Promise<
 	}
 	const stats = await SyncReload();
 	await panel();
-	invalidate();
 	return stats;
 }
 
@@ -412,9 +411,10 @@ async function deliver(mode: Mode, force: boolean): Promise<boolean> {
 		await panel();
 		return true;
 	}
-	const changed = await merge(bridge, uri, force, mode === "manual");
+	// The pass reports the sections it applied (library:changed), so the page
+	// refreshes exactly those queries instead of guessing from a boolean.
+	await merge(bridge, uri, force, mode === "manual");
 	await panel();
-	if (changed) invalidate();
 	return true;
 }
 
