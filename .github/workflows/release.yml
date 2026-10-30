@@ -347,10 +347,15 @@ jobs:
               -o -name '*.exe' -o -name '*.dmg' -o -name '*.zip' \) -type f | sort
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
-      - name: Delete existing release if present
+      - name: Refuse to republish a version that is already out
+        # A version identifies a binary: two releases under one number leave the
+        # updater comparing equal versions, so whoever installed the first one is
+        # never told about the second. Publishing again has to mean bumping the
+        # patch; replacing a release on purpose starts by deleting it by hand.
         run: |
           if gh release view "$RELEASE_TAG" --json name -q .name >/dev/null 2>&1; then
-            gh release delete "$RELEASE_TAG" --yes
+            echo "::error::$RELEASE_TAG already has a release. Bump the patch, tag again, and let this build publish that one; delete the release by hand first only if replacing it is what you mean."
+            exit 1
           fi
         env:
           GH_TOKEN: ${{ github.token }}
