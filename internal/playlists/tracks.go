@@ -65,7 +65,8 @@ func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 }
 
 // rememberTracks persists resolved metadata so the playlist stays readable
-// offline and its backup remains self-contained.
+// offline and its backup remains self-contained. Storing it marks the playlist
+// as work to write, or the document would keep exporting bare ids.
 func (s *Service) rememberTracks(id string, tracks map[string]music.Song) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -86,6 +87,10 @@ func (s *Service) rememberTracks(id string, tracks map[string]music.Song) {
 		changed = true
 	}
 	if changed {
+		// The metadata has to travel: a playlist exported as bare ids makes the
+		// other device ask the source for every track it draws, and nothing else
+		// would ever write it out.
+		s.dirty = true
 		_ = s.save(fresh)
 	}
 }

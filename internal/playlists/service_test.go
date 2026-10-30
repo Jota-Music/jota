@@ -133,6 +133,36 @@ func TestStoredTracksSkipTheSource(t *testing.T) {
 	}
 }
 
+// Metadata learned here has to reach the document: a playlist whose references
+// were never resolved exports bare ids, and the other device then has to ask the
+// source for every one of them.
+func TestResolvedTracksTravelToTheDocument(t *testing.T) {
+	setup(t)
+
+	s := New(fakeResolver(nil, nil))
+	seed(t, s, []exportPlaylist{{
+		Id:    "local:bare",
+		Name:  "Bare",
+		Songs: []string{"a"},
+	}})
+
+	if _, err := s.GetFullPlaylist("local:bare"); err != nil {
+		t.Fatalf("full: %v", err)
+	}
+	if !s.Pending() {
+		t.Fatal("resolving a reference left the playlist clean, so its metadata cannot travel")
+	}
+
+	// A pass writes it and clears the mark; opening it again learns nothing new.
+	s.dirty = false
+	if _, err := s.GetFullPlaylist("local:bare"); err != nil {
+		t.Fatalf("full: %v", err)
+	}
+	if s.Pending() {
+		t.Fatal("a playlist whose metadata was already stored marked itself dirty again")
+	}
+}
+
 func TestListCoversDedupAndCap(t *testing.T) {
 	setup(t)
 

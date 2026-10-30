@@ -22,8 +22,8 @@ type Service struct {
 	resolve       func(id string) (music.Song, error)
 	trackCache    func(id string) (music.Song, bool)
 	setTrackCache func(id string, song music.Song)
-	// dirty marks playlists the user changed since the last sync, so the manual
-	// sync is offered only when it has something to write.
+	// dirty marks what a pass still has to write: a playlist the user changed, or
+	// metadata resolved here that the document does not carry yet.
 	dirty bool
 }
 
