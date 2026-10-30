@@ -1,9 +1,11 @@
 package spotify
 
 import (
+	"context"
 	"slices"
 	"testing"
 
+	librespot "github.com/devgianlu/go-librespot"
 	connectpb "github.com/devgianlu/go-librespot/proto/spotify/connectstate"
 
 	"github.com/Jota-Music/jota/internal/music"
@@ -103,4 +105,53 @@ func TestSearchResultArtistsAreBare(t *testing.T) {
 	if !slices.Equal(got.Artists, want) {
 		t.Fatalf("SearchResult.Artists = %+v, want %+v", got.Artists, want)
 	}
+}
+
+// The autoplay request is a station context built from the seed track, so every
+// form the UI or a playlist id hands over must land on the same track uri.
+func TestRadioRequestUsesTrackURI(t *testing.T) {
+	const trackID = "4uLU6hMCjMI75M1A2tKUQC"
+	for _, id := range []string{
+		"spotify:" + trackID,
+		URITrackPrefix + trackID,
+		URIRadioPrefix + trackID,
+		URIStationPrefix + trackID,
+		URIRadioPrefix + "spotify:" + trackID,
+		URIStationPrefix + "spotify:" + trackID,
+	} {
+		if got := seed(id); got != trackID {
+			t.Fatalf("seed(%q) = %q, want %q", id, got, trackID)
+		}
+		if got := URIStationPrefix + seed(id); got != "spotify:station:track:"+trackID {
+			t.Fatalf("station uri = %q", got)
+		}
+	}
+}
+
+// A radio context has no io.EOF: every page names a next one, so the walk must
+// stop on the page bound instead of running forever.
+func TestWalkStopsAtRadioMaxPages(t *testing.T) {
+	src := &endlessStation{}
+
+	got, err := walk(t.Context(), src, radioMaxPages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if src.read != radioMaxPages {
+		t.Fatalf("pages read = %d, want radioMaxPages (%d)", src.read, radioMaxPages)
+	}
+	if len(got) != radioMaxPages {
+		t.Fatalf("walk = %d tracks, want %d", len(got), radioMaxPages)
+	}
+}
+
+type endlessStation struct{ read int }
+
+func (e *endlessStation) Type() librespot.SpotifyIdType {
+	return librespot.SpotifyIdTypeTrack
+}
+
+func (e *endlessStation) Page(context.Context, int) ([]*connectpb.ContextTrack, error) {
+	e.read++
+	return []*connectpb.ContextTrack{{Uri: "spotify:track:4uLU6hMCjMI75M1A2tKUQC"}}, nil
 }
