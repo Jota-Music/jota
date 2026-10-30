@@ -9,5 +9,6 @@ export {
 export type {
     Relay,
     SpotifyStatus,
-    SyncStatus
+    SyncStatus,
+    YouTubeStatus
 } from "./models.js";

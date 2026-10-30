@@ -85,22 +85,18 @@ export function DiscordEnabled(): $CancellablePromise<boolean> {
 }
 
 /**
- * ExportBackup serializes the user's playlists, plus the ones the sources
- * own, and asks where to save the file. It returns the chosen path, or an empty
- * string when the dialog is dismissed. The dialog comes first so the network
- * work only starts once the user picked a destination, and the file carries the
- * same name as the sync document: saving it inside the sync folder updates that
- * document instead of creating a second file.
+ * ExportBackup stages the serialized playlists, plus the ones the sources
+ * own, inside the app files dir and hands the file to the system share chooser.
+ * Resolving the sources is network work while the user may leave the app.
  */
 export function ExportBackup(): $CancellablePromise<string> {
     return $Call.ByID(119988368);
 }
 
 /**
- * ExportYouTubeCookiesFile exports the stored YouTube session to a file chosen
- * by the user. The passphrase stored in settings decides whether the file is
- * encrypted. It returns the chosen path, or an empty string when the dialog
- * is dismissed.
+ * ExportYouTubeCookiesFile exports the stored YouTube session to the app storage
+ * and hands it to the system share chooser. The passphrase stored in settings
+ * decides whether the file is encrypted.
  */
 export function ExportYouTubeCookiesFile(): $CancellablePromise<string> {
     return $Call.ByID(3031681012);
@@ -338,9 +334,10 @@ export function RevalidateYouTubeChannel(channel: string): $CancellablePromise<v
 }
 
 /**
- * SaveLogs asks the user where to save a copy of the log, so a crash report can
- * be shared. It returns the chosen path, or an empty string when the dialog is
- * dismissed.
+ * SaveLogs has no counterpart on Android: a save dialog cannot hand back a
+ * filesystem path there. The log is staged inside the app files dir (exposed to
+ * the system by the "logs" FileProvider path) and handed to the share chooser
+ * as a file attachment instead.
  */
 export function SaveLogs(): $CancellablePromise<string> {
     return $Call.ByID(2876203262);
@@ -690,4 +687,12 @@ export function YouTubeSessionFull(): $CancellablePromise<boolean> {
 
 export function YouTubeSignedIn(): $CancellablePromise<boolean> {
     return $Call.ByID(513882258);
+}
+
+/**
+ * YouTubeStatus answers the four readings in one crossing of the bridge. They
+ * were four bindings, all of them asked before the first paint.
+ */
+export function YouTubeStatus(): $CancellablePromise<$models.YouTubeStatus> {
+    return $Call.ByID(1125672707);
 }
