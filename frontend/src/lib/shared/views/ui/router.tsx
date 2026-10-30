@@ -103,6 +103,22 @@ Events.On("youtube:session-updated", async () => {
 	void autosave("auto").catch(() => {});
 });
 
+// The answers a source owes the page are worth asking again when its session
+// becomes usable: they either came back without one or were never asked. The
+// rest of the cache is this app's own store, which a session does not touch.
+async function refreshSources(): Promise<void> {
+	invalidate();
+	for (const key of ["user-playlists", "following", "friends"]) {
+		await queryClient.invalidateQueries({ queryKey: [key] });
+	}
+}
+
+// The stored session finished restoring after the page had already asked.
+Events.On("spotify:connected", async () => {
+	await syncSpotifyStatus();
+	await refreshSources();
+});
+
 Events.On("spotify:reconnected", async () => {
 	// The session is live again, so flip `connected` too. Clearing only
 	// `degraded` would hide the banner while every gate stayed closed.
@@ -114,12 +130,7 @@ Events.On("spotify:reconnected", async () => {
 			await RevalidateFollowing();
 		} catch {}
 	}
-	// The sources this event revalidates are the only ones that moved: the rest
-	// of the cache is this app's own store and a reconnect does not touch it.
-	invalidate();
-	for (const key of ["user-playlists", "following", "friends"]) {
-		await queryClient.invalidateQueries({ queryKey: [key] });
-	}
+	await refreshSources();
 });
 
 // Hidden this long means the app is genuinely idle, not just unfocused, so its

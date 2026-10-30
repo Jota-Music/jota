@@ -50,7 +50,15 @@ export function MainPage() {
 	const spotifyQuery = useQuery({
 		queryKey: ["user-playlists", "spotify", spotifyHandle],
 		queryFn: () => getUserPlaylists("spotify", spotifyHandle),
-		enabled: spotifyConnected.value || spotifyDegraded.value,
+		// The account is named before its session is restored, and the lists it
+		// owns are cached under that name: asking now serves them while the
+		// restore runs instead of after it. A signed-out install has no name, so
+		// it asks for nothing.
+		enabled:
+			!!spotifyUser.value || spotifyConnected.value || spotifyDegraded.value,
+		// A source that cannot answer (no session, offline) must not hold the
+		// shelf through the default retry ladder: the events say when it can.
+		retry: false,
 	});
 
 	// The YouTube account's own playlists sit next to Spotify's, in the same
@@ -59,6 +67,7 @@ export function MainPage() {
 		queryKey: ["user-playlists", "youtube"],
 		queryFn: () => GetMyYouTubePlaylists(),
 		enabled: youtubeSignedIn.value,
+		retry: false,
 	});
 
 	const { saved, isLoading: loadingSaved } = useSaved();
@@ -183,12 +192,11 @@ export function MainPage() {
 						}
 						actions={(id) => <PlaylistPlayButton id={id} />}
 						isLoading={
-							ordered.length === 0 &&
-							(spotifyQuery.isLoading ||
-								youtubeQuery.isLoading ||
-								loadingSaved ||
-								customQuery.isLoading ||
-								orderQuery.isLoading)
+							spotifyQuery.isLoading ||
+							youtubeQuery.isLoading ||
+							loadingSaved ||
+							customQuery.isLoading ||
+							orderQuery.isLoading
 						}
 						emptyMessage={<AllHint />}
 						onPlay={(id) => void playPlaylist(queryClient, id)}

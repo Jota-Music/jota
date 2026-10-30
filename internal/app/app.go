@@ -163,6 +163,12 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 			return
 		}
 		log.Printf("spotify: connected as %s", a.Spotify.Username())
+		// The page asks for the account's lists before this lands, and a device
+		// without them cached has nothing to show until the session exists: the
+		// answers that came back without one are worth asking again.
+		if app := application.Get(); app != nil {
+			app.Event.Emit("spotify:connected")
+		}
 	}()
 	a.Spotify.Watch()
 	refresh.Start(func() {

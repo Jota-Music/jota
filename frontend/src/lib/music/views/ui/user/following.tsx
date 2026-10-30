@@ -52,13 +52,15 @@ export function FollowingShelf({ account }: { account: string }) {
 	const friends = useQuery({
 		queryKey: ["friends", account],
 		queryFn: getFriends,
-		enabled: !!account,
+		enabled: spotifyReady.value && !!account,
+		retry: false,
 	});
 
 	const following = useQuery({
 		queryKey: ["following", account],
 		queryFn: getFollowing,
-		enabled: !!account,
+		enabled: spotifyReady.value && !!account,
+		retry: false,
 	});
 
 	const orderQuery = useQuery({
@@ -223,11 +225,10 @@ export function FollowingShelf({ account }: { account: string }) {
 			to={link}
 			viewKey="following_view"
 			isLoading={
-				items.length === 0 &&
-				(followedLoading ||
-					friends.isLoading ||
-					following.isLoading ||
-					orderQuery.isLoading)
+				followedLoading ||
+				friends.isLoading ||
+				following.isLoading ||
+				orderQuery.isLoading
 			}
 			emptyMessage={<FollowingHint />}
 			showLocal={false}
