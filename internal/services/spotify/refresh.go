@@ -39,7 +39,17 @@ func (s *SpotifyService) RefreshCatalog() (bool, error) {
 				return s.userProfile(username)
 			}) || changed
 		case strings.HasPrefix(key, "following:v1:"):
+			// The entry belongs to the account that wrote it: a session for
+			// another account would answer with its own follows.
+			if strings.TrimPrefix(key, "following:v1:") != s.Username() {
+				return nil
+			}
 			changed = kv.Refreshable(musicBucket, key, s.follows) || changed
+		case strings.HasPrefix(key, "friends:v1:"):
+			if strings.TrimPrefix(key, "friends:v1:") != s.Username() {
+				return nil
+			}
+			changed = kv.Refreshable(musicBucket, key, s.friends) || changed
 		case strings.HasPrefix(key, "artist-discography:"):
 			uri := strings.TrimPrefix(key, "artist-discography:")
 			changed = kv.Refreshable(musicBucket, key, func() (music.ArtistDiscography, error) {
