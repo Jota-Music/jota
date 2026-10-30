@@ -56,6 +56,9 @@ type SpotifyService struct {
 	username string
 	degraded bool
 	watching bool
+	// connecting marks a restore in flight: the network part runs without the
+	// lock so a status read is never held behind it.
+	connecting bool
 
 	clientID  string
 	pendingMu sync.Mutex
@@ -80,47 +83,71 @@ func NewSpotifyService(clientID string) *SpotifyService {
 
 func (s *SpotifyService) Connect(ctx context.Context) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if s.sess != nil {
+		s.mu.Unlock()
 		return nil
 	}
-	if s.done {
+	// One restore at a time: startup, the watcher and the panel's retry all ask.
+	// The others are answered at once instead of queueing behind a restore that
+	// may spend the whole SessionTimeout, because everything that reads the
+	// status would queue with them.
+	if s.done || s.connecting {
+		s.mu.Unlock()
 		return ErrNotConnected
 	}
+	s.connecting = true
+	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		s.connecting = false
+		s.mu.Unlock()
+	}()
 
 	creds, err := loadCreds()
-	if err == nil {
-		data, decodeErr := hex.DecodeString(creds.Data)
-		if decodeErr != nil {
-			log.Printf("spotify: invalid stored credentials (not hex): %v", decodeErr)
-			_ = sessionBucket.Delete(credsKey)
-			return ErrNotConnected
-		}
-		s.username = creds.Username
-		log.Printf("spotify: stored credentials found for %s", creds.Username)
-		sess, err := s.newSession(ctx, session.StoredCredentials{Username: creds.Username, Data: data}, restoreAttempts)
-		if err == nil {
-			s.sess = sess
-			s.degraded = false
-			log.Printf("spotify: connected as %s", sess.Username())
-			return nil
-		}
-		// A cancelled context means the caller gave up on this attempt, not that
-		// the stored session is bad: marking the account degraded there would
-		// leave it retrying a session that was never tried.
-		if errors.Is(err, context.Canceled) {
-			log.Printf("spotify: restore cancelled before it finished")
-			return ErrNotConnected
-		}
-		// Spotify is unreachable but we have an account, so the cached catalog
-		// is still usable. Serve it and let Watch retry in the background.
-		s.degraded = true
-		log.Printf("spotify: failed to restore session: %v", err)
+	if err != nil {
+		log.Printf("spotify: no stored credentials (%v), serving disconnected; log in from the app", err)
+		return ErrNotConnected
+	}
+	data, decodeErr := hex.DecodeString(creds.Data)
+	if decodeErr != nil {
+		log.Printf("spotify: invalid stored credentials (not hex): %v", decodeErr)
+		_ = sessionBucket.Delete(credsKey)
 		return ErrNotConnected
 	}
 
-	log.Printf("spotify: no stored credentials (%v), serving disconnected; log in from the app", err)
+	// The account is known before the network is asked. A status read during the
+	// restore then names the account whose cache to serve, instead of waiting for
+	// the session and leaving the library without it until the restore lands.
+	s.mu.Lock()
+	s.username = creds.Username
+	s.mu.Unlock()
+	log.Printf("spotify: stored credentials found for %s", creds.Username)
+
+	sess, err := s.newSession(ctx, session.StoredCredentials{Username: creds.Username, Data: data}, restoreAttempts)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err == nil {
+		// An interactive login can land while this restore runs; the session it
+		// published is the one the user just asked for, so it wins.
+		if s.sess == nil {
+			s.sess = sess
+		}
+		s.degraded = false
+		log.Printf("spotify: connected as %s", sess.Username())
+		return nil
+	}
+	// A cancelled context means the caller gave up on this attempt, not that the
+	// stored session is bad: marking the account degraded there would leave it
+	// retrying a session that was never tried.
+	if errors.Is(err, context.Canceled) {
+		log.Printf("spotify: restore cancelled before it finished")
+		return ErrNotConnected
+	}
+	// Spotify is unreachable but we have an account, so the cached catalog is
+	// still usable. Serve it and let Watch retry in the background.
+	s.degraded = true
+	log.Printf("spotify: failed to restore session: %v", err)
 	return ErrNotConnected
 }
 
@@ -239,26 +266,28 @@ func (s *SpotifyService) isFinished() bool {
 
 func (s *SpotifyService) Disconnect() error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.sess != nil {
-		s.sess.Close()
-		s.sess = nil
-	}
+	sess := s.sess
+	s.sess = nil
 	s.username = ""
 	s.degraded = false
 	s.done = true
+	s.mu.Unlock()
+
+	// The account is already gone from the store and from the status; saying
+	// goodbye to the peer is a network round trip, so it happens behind the
+	// answer instead of holding the panel that asked for the disconnect.
+	closeBehind(sess)
 	return sessionBucket.Delete(credsKey)
 }
 
 func (s *SpotifyService) StartupLogin() (string, error) {
 	s.mu.Lock()
-	if s.sess != nil {
-		s.sess.Close()
-		s.sess = nil
-	}
+	sess := s.sess
+	s.sess = nil
 	s.done = false
 	s.degraded = false
 	s.mu.Unlock()
+	closeBehind(sess)
 
 	verifier := oauth2.GenerateVerifier()
 	// The state is only ever compared against itself on the loopback callback,
@@ -452,15 +481,28 @@ func (s *SpotifyService) AdoptSession(username string, data []byte) bool {
 		return false
 	}
 	s.mu.Lock()
-	if s.sess != nil {
-		s.sess.Close()
-		s.sess = nil
-	}
+	sess := s.sess
+	s.sess = nil
 	s.username = username
 	s.degraded = false
 	s.done = false
 	s.mu.Unlock()
+	closeBehind(sess)
 	return s.Reconnect()
+}
+
+// closeBehind drops a session nobody points at any more without making the
+// caller wait for the peer's goodbye, which is a network round trip that can
+// take seconds on a slow link.
+func closeBehind(sess *session.Session) {
+	if sess == nil {
+		return
+	}
+	go func() {
+		started := time.Now()
+		sess.Close()
+		log.Printf("spotify: session closed in %s", time.Since(started).Round(time.Millisecond))
+	}()
 }
 
 type browserLogger struct {
