@@ -4,6 +4,7 @@ package youtube
 
 import (
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -245,6 +246,13 @@ func jarCookies(b Browser) (string, error) {
 	})
 	if header == "" && locked {
 		return "", errKeyring
+	}
+	// A jar is usually mixed: the rows written before Chrome's app-bound
+	// encryption still open, the newer ones do not. Dropping those silently hands
+	// over a session that signs requests but cannot open the account's own
+	// resources, which is exactly the difference the user cannot see.
+	if header != "" && locked {
+		log.Printf("youtube: some cookies in %s could not be decrypted; the session imported from it is partial", b.Name)
 	}
 	return header, nil
 }
