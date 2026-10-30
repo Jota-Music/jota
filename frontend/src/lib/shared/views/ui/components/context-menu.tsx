@@ -43,7 +43,9 @@ export function openContextMenu(
 	if (actions.length === 0) return;
 	e.preventDefault();
 	request.value = {
-		actions,
+		actions: [...actions].sort(
+			(a, b) => Number(!!a.danger) - Number(!!b.danger),
+		),
 		x: e.clientX,
 		y: e.clientY,
 		header,
