@@ -160,24 +160,28 @@ const RELOAD_POLL_MS = 30 * 1000;
 
 function Router() {
 	useEffect(() => {
+		// The two readings that decide which sources the shelf asks for go first.
+		// Everything else in this file paints nothing on its own, so it waits for
+		// the first idle moment instead of crossing the bridge beside the data.
 		void syncSpotifyStatus();
 		void syncYouTubeStatus();
-		void loadVersion();
-		void checkUpdate();
-		void loadRelay();
 	}, []);
 
-	// Warm the route chunks once the first paint is done, so a navigation never
-	// waits on the network and never falls into the Suspense boundary.
+	// Warm the route chunks and ask the readings that paint nothing once the first
+	// frame is done, so a navigation never waits on the network and the shelf's
+	// data never queues behind them.
 	useEffect(() => {
-		const warm = () => {
+		const later = () => {
 			for (const load of Object.values(pages)) void load().catch(() => {});
+			void loadVersion();
+			void checkUpdate();
+			void loadRelay();
 		};
 		if (typeof requestIdleCallback === "function") {
-			const id = requestIdleCallback(warm, { timeout: 2000 });
+			const id = requestIdleCallback(later, { timeout: 500 });
 			return () => cancelIdleCallback(id);
 		}
-		const id = setTimeout(warm, 200);
+		const id = setTimeout(later, 200);
 		return () => clearTimeout(id);
 	}, []);
 
