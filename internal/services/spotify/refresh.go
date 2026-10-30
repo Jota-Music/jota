@@ -8,11 +8,14 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
-// RefreshCatalog refetches every cached catalog entry in the background and
-// rewrites only the ones that changed, answering whether anything did. Playlists
-// keep their cheap revision check; everything else compares a fingerprint of the
-// fetched content. Without a live session the pass is skipped wholesale, which is
-// what lets a degraded service keep serving a cache that only ages until Watch
+// RefreshCatalog refetches the cached catalog entries that can change in the
+// background and rewrites only the ones that changed, answering whether anything
+// did. Playlists keep their cheap revision check; everything else compares a
+// fingerprint of the fetched content. Per-track metadata is left alone: it is the
+// bulk of the cache (one entry per song) and a track's title, duration and cover
+// do not change, so revalidating them would be the whole library over the wire
+// for nothing. Without a live session the pass is skipped wholesale, which is what
+// lets a degraded service keep serving a cache that only ages until Watch
 // reconnects.
 func (s *SpotifyService) RefreshCatalog() (bool, error) {
 	if s.Session() == nil {
@@ -51,11 +54,6 @@ func (s *SpotifyService) RefreshCatalog() (bool, error) {
 			uri := strings.TrimPrefix(key, "album:")
 			changed = kv.Refreshable(musicBucket, key, func() ([]music.Song, error) {
 				return s.albumTracks(uri)
-			}) || changed
-		case strings.HasPrefix(key, "track:"):
-			uri := strings.TrimPrefix(key, "track:")
-			changed = kv.Refreshable(musicBucket, key, func() (music.Song, error) {
-				return s.song(uri)
 			}) || changed
 		}
 		return nil

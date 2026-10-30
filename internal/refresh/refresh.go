@@ -17,7 +17,9 @@ type job struct {
 const Interval = 4 * time.Hour
 
 // settle delays the first pass so startup and UI loads get the network first.
-const settle = 2 * time.Second
+// A refresh walks the whole cache, so starting it beside the first paint spends
+// the user's bandwidth on the one moment they are waiting for something.
+const settle = 5 * time.Minute
 
 var (
 	mu   sync.Mutex

@@ -7,15 +7,17 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
-// RefreshCatalog refetches every cached catalog entry in the background and
-// rewrites only the ones that changed, answering whether anything did. Channel-id
-// mappings are stable, so they are skipped; song entries outside the song:v2
-// prefix are audio source mappings, not catalog content. The signed-in account's
-// playlist list is refreshed too, so a library that gained a playlist elsewhere
-// catches up.
+// RefreshCatalog refetches the cached catalog entries that can change in the
+// background and rewrites only the ones that changed, answering whether anything
+// did. Channel-id mappings are stable, so they are skipped; song entries outside
+// the song:v2 prefix are audio source mappings, not catalog content. The signed-in
+// account's playlist list is refreshed too, so a library that gained a playlist
+// elsewhere catches up. Per-video metadata is left alone: it is the bulk of the
+// cache (one entry per song) and revalidating it would be the whole library over
+// the wire for a title that does not change.
 func (s *Service) RefreshCatalog() (bool, error) {
 	changed := false
-	if err := playlistBucket.ForEach(func(key string, _ []byte) error {
+	err := playlistBucket.ForEach(func(key string, _ []byte) error {
 		switch {
 		case key == myPlaylistsKey:
 			// A session the sign-in window handed over cannot sign a browse, so
@@ -49,19 +51,6 @@ func (s *Service) RefreshCatalog() (bool, error) {
 				return fetchFullPlaylist(id)
 			}) || changed
 		}
-		return nil
-	}); err != nil {
-		return changed, err
-	}
-
-	err := youtubeSourceBucket.ForEach(func(key string, _ []byte) error {
-		if !strings.HasPrefix(key, "song:v2:") {
-			return nil
-		}
-		id := strings.TrimPrefix(key, "song:v2:")
-		changed = kv.Refreshable(youtubeSourceBucket, key, func() (music.Song, error) {
-			return fetchSong(id)
-		}) || changed
 		return nil
 	})
 	return changed, err
