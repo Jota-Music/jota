@@ -24,6 +24,35 @@ export function percent(): number | null {
 
 let checking: Promise<void> | null = null;
 
+// The answer is kept for hours: the window regains focus constantly, the release
+// API is rate limited, and a known update is better shown from the last answer
+// than asked for again on every return.
+const CHECK_EVERY = 6 * 60 * 60 * 1000;
+const CACHE_KEY = "update-check";
+
+function remembered(): { at: number; info: Update } | null {
+	try {
+		const raw = localStorage.getItem(CACHE_KEY);
+		if (!raw) return null;
+		const parsed = JSON.parse(raw) as { at?: unknown; info?: unknown };
+		if (typeof parsed.at !== "number" || !parsed.info) return null;
+		return { at: parsed.at, info: parsed.info as Update };
+	} catch {
+		return null;
+	}
+}
+
+function remember(info: Update): void {
+	try {
+		localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), info }));
+	} catch {}
+}
+
+// The last answer paints before the first frame, so an update that was already
+// known is on screen without a check.
+const known = remembered();
+if (known) update.value = known.info;
+
 export function loadVersion(): Promise<void> {
 	if (version.value) return Promise.resolve();
 	return Version()
@@ -35,9 +64,11 @@ export function loadVersion(): Promise<void> {
 
 export function checkUpdate(): Promise<void> {
 	if (checking) return checking;
+	if (known && Date.now() - known.at < CHECK_EVERY) return Promise.resolve();
 	checking = CheckUpdate()
 		.then((info) => {
 			update.value = info;
+			remember(info);
 		})
 		.catch(() => {})
 		.finally(() => {

@@ -15,6 +15,24 @@ type Props = Omit<
 	fallback?: ComponentChildren;
 };
 
+// WebKit keeps a decoded image, so a cover painted on one page is there when the
+// element mounts on another: remembering it keeps the shimmer from flashing on
+// every return. ponytail: a plain FIFO cap, an LRU if the eviction ever matters.
+const painted = new Set<string>();
+const paintedCap = 200;
+
+function ready(src: unknown): boolean {
+	return typeof src === "string" && painted.has(src);
+}
+
+function remember(src: unknown): void {
+	if (typeof src !== "string" || painted.has(src)) return;
+	painted.add(src);
+	if (painted.size <= paintedCap) return;
+	const oldest = painted.values().next().value;
+	if (oldest !== undefined) painted.delete(oldest);
+}
+
 export function Image({
 	class: cls,
 	fallback,
@@ -30,11 +48,12 @@ export function Image({
 	...props
 }: Props) {
 	// ready and failed are tracked together so a new src can restart both.
-	const [load, setLoad] = useState({ src, ready: false, failed: false });
-	if (load.src !== src) setLoad({ src, ready: false, failed: false });
+	const [load, setLoad] = useState({ src, ready: ready(src), failed: false });
+	if (load.src !== src) setLoad({ src, ready: ready(src), failed: false });
 
 	const bound = (e: JSX.TargetedEvent<HTMLImageElement, Event>) => {
 		if (e.type === "load") {
+			remember(src);
 			setLoad((l) => ({ ...l, ready: true, failed: false }));
 			onLoad?.(e);
 		} else {
@@ -49,6 +68,7 @@ export function Image({
 	const settled = (el: HTMLImageElement | null) => {
 		if (!el?.complete) return;
 		if (el.naturalWidth > 0) {
+			remember(src);
 			setLoad((l) => (l.ready ? l : { ...l, ready: true, failed: false }));
 		} else {
 			setLoad((l) => (l.failed ? l : { ...l, failed: true }));
