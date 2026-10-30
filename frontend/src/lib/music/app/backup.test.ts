@@ -28,9 +28,10 @@ let snapshots = false;
 // device already merged.
 let touched = 0;
 let readStamp = 0;
-// The size of the copy the last pass read, which is the only evidence a
-// provider that reports no timestamp leaves behind.
+// The size of the copy the last pass read and when it read it: the only
+// evidence a provider that reports no timestamp leaves behind.
 let bytes = 0;
+let readAt = 0;
 // When the last pass ran, as the backend records it: it survives a reload.
 let stamp = 0;
 let writes = 0;
@@ -109,6 +110,7 @@ mock.module("@bindings/app", () => ({
 			problem,
 			readStamp,
 			bytes,
+			readAt,
 		}),
 	SyncWritten: () => {
 		writes++;
@@ -174,6 +176,7 @@ beforeEach(() => {
 	touched = 0;
 	readStamp = 0;
 	bytes = 0;
+	readAt = 0;
 	stamp = 0;
 	writes = 0;
 	reloads = 0;
@@ -582,12 +585,30 @@ test("an unchanged stamp with nothing pending is a stat instead of a pass", asyn
 	uri = "content://unchanged";
 	meta = { lastModified: 1000, size: 9 };
 	readStamp = 1000;
+	readAt = Date.now();
 
 	await autosave("lifecycle");
 
 	expect(stages).toEqual([]);
 	expect(calls).toEqual([]);
 	expect(touched).toBe(1);
+});
+
+// A provider can answer the stat from its own cache: the stamp it reports is the
+// one already merged, but the bytes behind it are not. The copy is trusted only
+// for the interval the settings promise, so a change cannot stay invisible
+// behind a cached answer.
+test("a matching stamp is read again once the interval has passed", async () => {
+	uri = "content://cached-stamp";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 1000, size: 9 };
+	readStamp = 1000;
+	readAt = Date.now() - 20 * 60_000;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([uri]);
+	expect(calls).toEqual([{ lastModified: 1000, trust: false }]);
 });
 
 // A provider that reports no timestamp cannot prove the copy did not move, and
@@ -597,12 +618,29 @@ test("a copy without a stamp is a stat when its size did not move", async () => 
 	uri = "content://nostamp";
 	meta = { lastModified: 0, size: 9 };
 	bytes = 9;
+	readAt = Date.now();
 
 	await autosave("lifecycle");
 
 	expect(stages).toEqual([]);
 	expect(calls).toEqual([]);
 	expect(touched).toBe(1);
+});
+
+// The same provider can serve a cached copy whose size is the one already
+// merged, so the size is trusted only while the copy is fresh: past the interval
+// the document is read again and a change from another device lands.
+test("a copy without a stamp is read again once the interval has passed", async () => {
+	uri = "content://nostamp-old";
+	files.set(uri, "remote-v1");
+	meta = { lastModified: 0, size: 9 };
+	bytes = 9;
+	readAt = Date.now() - 20 * 60_000;
+
+	await autosave("lifecycle");
+
+	expect(stages).toEqual([uri]);
+	expect(calls).toEqual([{ lastModified: 0, trust: false }]);
 });
 
 // The same provider, holding a copy of another length: the document is read.
