@@ -49,11 +49,15 @@ export function FollowingShelf({ account }: { account: string }) {
 	const queryClient = useQueryClient();
 	const { users: followed, isLoading: followedLoading, toggle } = useFollows();
 
+	// Same rule as the library's sources: a query that failed holds no data, so
+	// a remount would ask Spotify again on every route change. The session
+	// events are what say when it can answer.
 	const friends = useQuery({
 		queryKey: ["friends", account],
 		queryFn: getFriends,
 		enabled: spotifyReady.value && !!account,
 		retry: false,
+		retryOnMount: false,
 	});
 
 	const following = useQuery({
@@ -61,6 +65,7 @@ export function FollowingShelf({ account }: { account: string }) {
 		queryFn: getFollowing,
 		enabled: spotifyReady.value && !!account,
 		retry: false,
+		retryOnMount: false,
 	});
 
 	const orderQuery = useQuery({
@@ -225,10 +230,11 @@ export function FollowingShelf({ account }: { account: string }) {
 			to={link}
 			viewKey="following_view"
 			isLoading={
-				followedLoading ||
-				friends.isLoading ||
-				following.isLoading ||
-				orderQuery.isLoading
+				items.length === 0 &&
+				(followedLoading ||
+					friends.isLoading ||
+					following.isLoading ||
+					orderQuery.isLoading)
 			}
 			emptyMessage={<FollowingHint />}
 			showLocal={false}

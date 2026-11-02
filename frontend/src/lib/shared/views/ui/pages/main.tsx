@@ -57,8 +57,12 @@ export function MainPage() {
 		enabled:
 			!!spotifyUser.value || spotifyConnected.value || spotifyDegraded.value,
 		// A source that cannot answer (no session, offline) must not hold the
-		// shelf through the default retry ladder: the events say when it can.
+		// shelf through the default retry ladder, and a remount must not ask it
+		// again: a source that failed holds no data, so every route change would
+		// re-run the same request and blank the shelf while it answers. The
+		// session events are what say when it can answer.
 		retry: false,
+		retryOnMount: false,
 	});
 
 	// The YouTube account's own playlists sit next to Spotify's, in the same
@@ -68,6 +72,7 @@ export function MainPage() {
 		queryFn: () => GetMyYouTubePlaylists(),
 		enabled: youtubeSignedIn.value,
 		retry: false,
+		retryOnMount: false,
 	});
 
 	const { saved, isLoading: loadingSaved } = useSaved();
@@ -192,11 +197,12 @@ export function MainPage() {
 						}
 						actions={(id) => <PlaylistPlayButton id={id} />}
 						isLoading={
-							spotifyQuery.isLoading ||
-							youtubeQuery.isLoading ||
-							loadingSaved ||
-							customQuery.isLoading ||
-							orderQuery.isLoading
+							ordered.length === 0 &&
+							(spotifyQuery.isLoading ||
+								youtubeQuery.isLoading ||
+								loadingSaved ||
+								customQuery.isLoading ||
+								orderQuery.isLoading)
 						}
 						emptyMessage={<AllHint />}
 						onPlay={(id) => void playPlaylist(queryClient, id)}
