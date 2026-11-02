@@ -16,10 +16,9 @@ import {
 	SyncWritten,
 } from "@bindings/app";
 import { t } from "@/lib/shared/i18n";
+import { isAndroid } from "@/lib/shared/utils/platform";
 import { logError, notify } from "@/lib/shared/views/stores/errors";
 import { queryClient } from "@/lib/shared/views/ui/query-client";
-
-const ANDROID = /Android/i.test(navigator.userAgent);
 
 // The launch belongs to the backend's ticker (syncTick in Go, one minute): the
 // window gets focus while it is still painting, and reading the document there
@@ -49,11 +48,9 @@ type Bridge = {
 type Settle = (result: string | null, error: string | null) => void;
 
 function native(): Bridge | null {
-	if (!ANDROID) return null;
+	if (!isAndroid) return null;
 	return (window as unknown as { wails?: Bridge }).wails ?? null;
 }
-
-export const isAndroid = ANDROID;
 
 declare global {
 	interface Window {
@@ -336,7 +333,7 @@ export function autosave(mode: Mode = "manual", force = false): Promise<void> {
 // side knows the app actually moved and the page cannot miss it.
 export function startAutosave(): void {
 	window.addEventListener("focus", () => void autosave("auto").catch(() => {}));
-	if (!ANDROID) return;
+	if (!isAndroid) return;
 	setInterval(() => void autosave("auto").catch(() => {}), 60_000);
 	document.addEventListener(
 		"visibilitychange",
@@ -364,7 +361,7 @@ async function due(): Promise<boolean> {
 	// pure cost, so a pass this recent is skipped on every platform.
 	const at = Math.max(lastAuto, (await SyncStatus()).at ?? 0);
 	if (Date.now() - at < 60_000) return false;
-	return !ANDROID || Date.now() - lastAuto >= minutes * 60_000;
+	return !isAndroid || Date.now() - lastAuto >= minutes * 60_000;
 }
 
 // A pass is settled when the provider still holds the very copy this device
