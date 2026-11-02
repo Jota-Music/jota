@@ -635,14 +635,18 @@ func main() {
 		// service startup nor the first render should wait for that.
 		go func() {
 			opened := time.Now()
-			kv.Start()
+			err := kv.Start()
 			migrateWindowState()
-			// The page asks for its library while this opens, and an unopened
-			// store answers an empty one instead of failing. An open that took
-			// long enough to lose that race is announced so the page asks again;
-			// a fast one stays silent and costs no second pass.
+			// A read that arrives while the store opens waits for it and answers
+			// with the library, so a slow open costs the launch time but never a
+			// second pass. A store that could not be opened answered every read
+			// with an error instead, and that is the one case the page is told
+			// to read again.
 			if took := time.Since(opened); took > storeSlow {
-				log.Printf("store ready in %s, asking the page to read again", took.Round(time.Millisecond))
+				log.Printf("store ready in %s", took.Round(time.Millisecond))
+			}
+			if err != nil {
+				log.Printf("store unavailable, asking the page to read again")
 				application.Get().Event.Emit("store:ready")
 			}
 		}()

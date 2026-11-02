@@ -102,7 +102,12 @@ func startValueLogGC() {
 // directory lock: the window opens before that process is gone, and a session
 // running without persistence because of a sub-second overlap is not worth it.
 // It runs after the first paint, so a slow open here costs nobody.
-func Start() {
+//
+// It answers the error that left this session without persistence, and nil once
+// the store is open. A read that arrives first opens it itself, inside
+// EnsureStarted, so a store this call found open has already answered the page
+// with the real library: nobody has to be told to read it again.
+func Start() error {
 	deadline := time.Now().Add(lockWait)
 	for {
 		err := EnsureStarted()
@@ -110,7 +115,7 @@ func Start() {
 			if err != nil {
 				log.Printf("kv: store unavailable after %s, this session runs without persistence: %v", lockWait, err)
 			}
-			return
+			return err
 		}
 		// A failed open is remembered, so a retry has to clear it to ask again.
 		mu.Lock()
