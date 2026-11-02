@@ -28,12 +28,12 @@ import {
 	autosave,
 	chooseFolder,
 	createDocument,
-	isAndroid,
 	openDocument,
 	reload,
 	syncName,
 } from "@/lib/music/app/backup";
 import { t } from "@/lib/shared/i18n";
+import { isAndroid } from "@/lib/shared/utils/platform";
 import { cn } from "@/lib/shared/utils/tw";
 import { addError, notify } from "@/lib/shared/views/stores/errors";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";

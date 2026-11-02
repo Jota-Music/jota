@@ -20,6 +20,7 @@ import { autosave } from "@/lib/music/app/backup";
 import { revalidateUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { compactPlayer, Player } from "@/lib/music/views/ui/player";
+import { isAndroid } from "@/lib/shared/utils/platform";
 import { cn } from "@/lib/shared/utils/tw";
 import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
@@ -204,6 +205,11 @@ function Router() {
 			shed = setTimeout(() => {
 				invalidate();
 			}, IDLE_SHED_MS);
+			// Reloading a hidden WebView is how WebKit's own image caches are
+			// flushed. Android discards a frozen renderer by itself, and there
+			// RamMB always answers 0, so the deadline would reload the page for
+			// nothing and throw the library away.
+			if (isAndroid) return;
 			const deadline = Date.now() + IDLE_RELOAD_MS;
 			reload = setInterval(async () => {
 				if (isPlaying.value) return;
