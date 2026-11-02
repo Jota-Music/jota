@@ -30,6 +30,22 @@ export type Section = keyof typeof sections;
 
 const all = Object.keys(sections) as Section[];
 
+// What a background catalog refresh can rewrite, by the query root that reads
+// it. The library's own records are not in the catalog, so a pass over it never
+// makes the shelf read itself back.
+const catalog = [
+	"playlist",
+	"album-tracks",
+	"artist",
+	"artist-discography",
+	"user-playlists",
+	"user-videos",
+	"user-profile",
+	"channel-info",
+	"following",
+	"friends",
+];
+
 // Marks stale what the named sections feed, and nothing else: a search or a
 // source's own lists are not in the document, so re-requesting them is waste.
 export function invalidate(changed: readonly Section[] = all): void {
@@ -41,4 +57,12 @@ export function invalidate(changed: readonly Section[] = all): void {
 	void queryClient.invalidateQueries({
 		predicate: (query) => roots.has(String(query.queryKey[0])),
 	});
+}
+
+// A refresh pass revalidated cached catalog content, so only the views that read
+// that content are asked again.
+export function refresh(): void {
+	for (const root of catalog) {
+		void queryClient.invalidateQueries({ queryKey: [root] });
+	}
 }

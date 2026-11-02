@@ -27,6 +27,7 @@ import { MainPage } from "@/lib/shared/views/ui/pages/main";
 import {
 	invalidate,
 	queryClient,
+	refresh,
 	type Section,
 } from "@/lib/shared/views/ui/query-client";
 import { loadRelay } from "@/lib/sync/app/transport";
@@ -83,15 +84,13 @@ const UserPage = lazy(pages.user);
 const NotFoundPage = lazy(pages.notFound);
 const SettingsPage = lazy(pages.settings);
 
-// A store that opened late may have answered the first reads with an empty one:
-// every local store reports nothing instead of failing while Badger opens, so the
-// page asks again for everything it may have painted empty.
+// The store could not be opened, so every read it owns answered with an error
+// instead of the library: ask for all of it again.
 Events.On("store:ready", () => void queryClient.invalidateQueries());
 
-// A background refresh pass revalidated cached catalog content; drop stale
-// queries so open views pick up changes on their next render. Unmounted queries
-// are not refetched, so untouched views keep their cached snapshot.
-Events.On("refresh:updated", () => void queryClient.invalidateQueries());
+// A background refresh pass revalidated cached catalog content: only the views
+// that read that content are asked again.
+Events.On("refresh:updated", () => refresh());
 
 // Cache entries never expire, so invalidating alone would just refetch the same
 // stale bytes from the store. Revalidate over the live session first, then drop
