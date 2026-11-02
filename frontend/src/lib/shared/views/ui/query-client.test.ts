@@ -1,5 +1,9 @@
 import { beforeEach, expect, test } from "bun:test";
-import { invalidate, queryClient } from "@/lib/shared/views/ui/query-client";
+import {
+	invalidate,
+	queryClient,
+	refresh,
+} from "@/lib/shared/views/ui/query-client";
 
 beforeEach(() => {
 	queryClient.clear();
@@ -57,4 +61,25 @@ test("a session-only change marks nothing", () => {
 	invalidate(["sessions"]);
 
 	expect(stale(["playlists"])).toBe(false);
+});
+
+// A catalog pass revalidated what the sources serve; the library's own records
+// were not part of it, so the shelf keeps the snapshot it painted.
+test("a catalog refresh marks the catalog and nothing of the library", () => {
+	queryClient.setQueryData(["playlist", "spotify:1"], {});
+	queryClient.setQueryData(["user-playlists", "spotify", "me"], []);
+	queryClient.setQueryData(["playlists"], []);
+	queryClient.setQueryData(["saved-playlists"], []);
+	queryClient.setQueryData(["shelf-order", "library", "me"], []);
+	queryClient.setQueryData(["sync-status"], {});
+
+	refresh();
+
+	expect(stale(["playlist", "spotify:1"])).toBe(true);
+	expect(stale(["user-playlists", "spotify", "me"])).toBe(true);
+
+	expect(stale(["playlists"])).toBe(false);
+	expect(stale(["saved-playlists"])).toBe(false);
+	expect(stale(["shelf-order", "library", "me"])).toBe(false);
+	expect(stale(["sync-status"])).toBe(false);
 });
