@@ -38,7 +38,7 @@ export function TrackArt({
 				(loading ? (
 					<Loader
 						size={23}
-						class="absolute inset-0 z-10 m-auto animate-spin text-zinc-400 drop-shadow-md drop-shadow-black"
+						class="absolute inset-0 z-10 m-auto animate-spin text-(--dominant-color) drop-shadow-md drop-shadow-black"
 					/>
 				) : playing ? (
 					<Music
