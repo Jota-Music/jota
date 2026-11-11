@@ -324,19 +324,24 @@ function PlayerControlsRow({
 				onClick={() => void toggleSong()}
 				disabled={disabled}
 				iconClass="size-5"
-				class={disabled ? "bg-neutral-700" : "bg-(--dominant-color)"}
+				class={cn(
+					"max-md:hidden",
+					disabled ? "bg-neutral-700" : "bg-(--dominant-color)",
+				)}
 			/>
 
-			<VolumeControl />
+			<VolumeControl class="max-md:hidden" />
 
 			<QueueButton class="hover:bg-white/10" />
 
 			{song && (
-				<TrackActions
-					songs={[song]}
-					abovePlayer={abovePlayer}
-					onPlay={() => void toggleSong()}
-				/>
+				<div class="max-md:hidden">
+					<TrackActions
+						songs={[song]}
+						abovePlayer={abovePlayer}
+						onPlay={() => void toggleSong()}
+					/>
+				</div>
 			)}
 
 			<button
