@@ -75,6 +75,10 @@ interface FullPlayerProps {
 	nextSong: () => Promise<void>;
 	prevSong: () => Promise<void>;
 	abovePlayer?: boolean;
+	// On the phone the sheet sits over the compact bar, which already carries a
+	// seek line: the sheet keeps the controls and closes with the times, which
+	// then read as that line's labels.
+	narrow?: boolean;
 }
 
 const Disc = memo(function Disc({
@@ -187,7 +191,7 @@ function SeekBar({
 }
 
 function FullPlayerContent(props: FullPlayerProps) {
-	const { song, abovePlayer, isLoading, isPlaying, toggleSong } = props;
+	const { song, abovePlayer, isLoading, isPlaying, toggleSong, narrow } = props;
 
 	return (
 		<section class="w-full max-w-2xl mx-auto relative z-10 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-center text-(--dominant-color)">
@@ -208,21 +212,41 @@ function FullPlayerContent(props: FullPlayerProps) {
 
 				<SaveYoutubeId song={song} />
 
-				<div class="mt-3 flex gap-2 justify-between items-center">
-					<CurrentTime />
+				{narrow ? (
+					<>
+						<PlayerControlsRow
+							song={song}
+							abovePlayer={abovePlayer}
+							isLoading={isLoading}
+							isPlaying={isPlaying}
+							toggleSong={toggleSong}
+						/>
 
-					<SeekBar class="h-1.5 min-w-0 flex-1 opacity-80" />
+						<div class="flex items-center justify-between">
+							<CurrentTime />
 
-					<TotalTime />
-				</div>
+							<TotalTime />
+						</div>
+					</>
+				) : (
+					<>
+						<div class="mt-3 flex gap-2 justify-between items-center">
+							<CurrentTime />
 
-				<PlayerControlsRow
-					song={song}
-					abovePlayer={abovePlayer}
-					isLoading={isLoading}
-					isPlaying={isPlaying}
-					toggleSong={toggleSong}
-				/>
+							<SeekBar class="h-1.5 min-w-0 flex-1 opacity-80" />
+
+							<TotalTime />
+						</div>
+
+						<PlayerControlsRow
+							song={song}
+							abovePlayer={abovePlayer}
+							isLoading={isLoading}
+							isPlaying={isPlaying}
+							toggleSong={toggleSong}
+						/>
+					</>
+				)}
 			</div>
 		</section>
 	);
@@ -339,7 +363,7 @@ function NothingPlaying() {
 
 const noop = async () => {};
 
-function NothingPlayingContent() {
+function NothingPlayingContent({ narrow = false }: { narrow?: boolean }) {
 	return (
 		<section class="w-full max-w-2xl mx-auto relative z-10 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-center text-neutral-500">
 			<div class="relative flex max-h-max w-full md:w-max">
@@ -356,17 +380,34 @@ function NothingPlayingContent() {
 				<h1 class="text-neutral-400 text-xl font-semibold truncate">
 					{t("music.player.nothingPlaying")}
 				</h1>
-				<div class="mt-3 flex gap-2 justify-between items-center">
-					<CurrentTime />
-					<SeekBar class="h-1.5 min-w-0 flex-1 opacity-80" disabled />
-					<TotalTime />
-				</div>
-				<PlayerControlsRow
-					disabled
-					isLoading={false}
-					isPlaying={false}
-					toggleSong={noop}
-				/>
+				{narrow ? (
+					<>
+						<PlayerControlsRow
+							disabled
+							isLoading={false}
+							isPlaying={false}
+							toggleSong={noop}
+						/>
+						<div class="flex items-center justify-between">
+							<CurrentTime />
+							<TotalTime />
+						</div>
+					</>
+				) : (
+					<>
+						<div class="mt-3 flex gap-2 justify-between items-center">
+							<CurrentTime />
+							<SeekBar class="h-1.5 min-w-0 flex-1 opacity-80" disabled />
+							<TotalTime />
+						</div>
+						<PlayerControlsRow
+							disabled
+							isLoading={false}
+							isPlaying={false}
+							toggleSong={noop}
+						/>
+					</>
+				)}
 			</div>
 		</section>
 	);
@@ -658,9 +699,9 @@ export function PlayerBar() {
 						class="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4"
 					>
 						{hasSong ? (
-							<FullPlayerContent {...player} />
+							<FullPlayerContent {...player} narrow />
 						) : (
-							<NothingPlayingContent />
+							<NothingPlayingContent narrow />
 						)}
 					</div>
 					<Scrollbar target={modalListRef} gutter={24} />
