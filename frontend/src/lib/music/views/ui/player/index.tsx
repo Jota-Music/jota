@@ -1,5 +1,6 @@
 import { computed, signal, useSignal } from "@preact/signals";
 import {
+	ChevronDown,
 	ChevronUp,
 	Minimize2,
 	Repeat,
@@ -455,7 +456,7 @@ export function PlayerBar() {
 		if (compactPlayer.value && desktopViewport()) {
 			setCompactPlayer(false);
 		} else {
-			playerModalOpen.value = true;
+			playerModalOpen.value = !playerModalOpen.value;
 		}
 	};
 
@@ -465,12 +466,9 @@ export function PlayerBar() {
 				ref={barRef}
 				role="none"
 				class={cn(
-					"block fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-60 md:z-40 bg-stone-950 border-t border-white/10 transition-transform duration-300 ease-out",
+					"block fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-60 md:z-40 bg-stone-950 border-t border-white/10",
 					compactPlayer.value ? "md:block" : "md:hidden",
 				)}
-				style={`transform: translateY(${
-					playerModalOpen.value ? "calc(100% + 3.5rem)" : "0"
-				})`}
 				onContextMenu={onContextMenu}
 				onPointerDown={onBarPointerDown}
 				onPointerMove={onBarPointerMove}
@@ -631,7 +629,11 @@ export function PlayerBar() {
 								}}
 								class="shrink-0 p-1.5 rounded-full text-white/60 hover:text-white cursor-pointer transition-colors"
 							>
-								<ChevronUp class="size-5" />
+								{playerModalOpen.value ? (
+									<ChevronDown class="size-5" />
+								) : (
+									<ChevronUp class="size-5" />
+								)}
 							</button>
 						</div>
 					</div>
@@ -645,7 +647,6 @@ export function PlayerBar() {
 				}}
 				mobileOnly
 				closeLabel={t("music.player.close")}
-				abovePlayer={false}
 			>
 				<div
 					role="none"
@@ -657,7 +658,7 @@ export function PlayerBar() {
 						class="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-4"
 					>
 						{hasSong ? (
-							<FullPlayerContent {...player} abovePlayer={false} />
+							<FullPlayerContent {...player} />
 						) : (
 							<NothingPlayingContent />
 						)}
