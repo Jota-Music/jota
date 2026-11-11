@@ -13,6 +13,7 @@ import {
 import { compactPlayer, PlayerBar } from "@/lib/music/views/ui/player";
 import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
 import Queue from "@/lib/music/views/ui/queue";
+import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import YoutubeEditor from "@/lib/music/views/ui/track/youtube-editor";
 import { cn } from "@/lib/shared/utils/tw";
 import {
@@ -61,6 +62,7 @@ export function AppShell({
 					<Header />
 					<UpdateBanner />
 					<ClipboardBanner />
+					<SelectionBar />
 					<DegradedBanner />
 					<SignInPrompt />
 				</div>

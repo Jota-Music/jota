@@ -1,48 +1,42 @@
 import { Check, X } from "lucide-preact";
-import type { Song } from "@/lib/music/model";
 import {
 	clearSelection,
+	remover,
 	selectAll,
 	selectedSongs,
 } from "@/lib/music/views/stores/selection";
 import TrackActions from "@/lib/music/views/ui/track/track-actions";
 import { t } from "@/lib/shared/i18n";
 
-export default function SelectionBar({
-	removable,
-	onRemove,
-}: {
-	removable?: boolean;
-	onRemove?: (songs: Song[]) => void;
-}) {
+// The banner under the header, next to the update and clipboard ones: it
+// belongs to the shell, so every list that selects songs gets it.
+export default function SelectionBar() {
 	const selected = selectedSongs.value;
 	if (selected.length <= 1) return null;
 
 	return (
-		<div class="flex h-10 shrink-0 items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3">
-			<span class="flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-(--dominant-color) bg-(--dominant-color) text-(--binary-color)">
-				<Check size={13} strokeWidth={3} />
+		<div class="flex items-center gap-3 border-b border-zinc-800 bg-zinc-900/60 px-4 py-2 text-sm">
+			<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-(--dominant-color) text-(--binary-color)">
+				<Check size={14} strokeWidth={3} />
 			</span>
-			<span class="text-sm text-zinc-300">
+			<p class="min-w-0 flex-1 truncate text-zinc-400">
 				{t("music.custom.selected", { count: selected.length })}
-			</span>
-			<div class="ml-auto flex items-center gap-1">
-				<TrackActions
-					songs={selected}
-					onSelectAll={selectAll}
-					removable={removable}
-					onRemove={onRemove}
-				/>
-				<button
-					type="button"
-					title={t("music.custom.clear")}
-					aria-label={t("music.custom.clear")}
-					onClick={clearSelection}
-					class="flex size-8 cursor-pointer items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-800/80 hover:text-white"
-				>
-					<X size={16} />
-				</button>
-			</div>
+			</p>
+			<TrackActions
+				songs={selected}
+				onSelectAll={selectAll}
+				removable={!!remover.value}
+				onRemove={remover.value ?? undefined}
+			/>
+			<button
+				type="button"
+				title={t("music.custom.clear")}
+				aria-label={t("music.custom.clear")}
+				onClick={clearSelection}
+				class="shrink-0 cursor-pointer text-zinc-500 transition-colors hover:text-zinc-200"
+			>
+				<X size={14} />
+			</button>
 		</div>
 	);
 }

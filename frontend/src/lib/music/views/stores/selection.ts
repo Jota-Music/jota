@@ -2,6 +2,9 @@ import { computed, signal } from "@preact/signals";
 import type { Song } from "@/lib/music/model";
 
 export const selectedSongs = signal<Song[]>([]);
+// The bar that sits above every page removes the selection from the playlist
+// it came from, so the page that owns it says how.
+export const remover = signal<((songs: Song[]) => void) | null>(null);
 // Membership is asked once per visible row and once per action, so a linear
 // scan over the selection made selecting everything in a big playlist
 // quadratic. One set per selection change keeps every lookup flat.

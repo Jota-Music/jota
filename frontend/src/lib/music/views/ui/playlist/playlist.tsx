@@ -42,15 +42,14 @@ import { expireRemoval, stageRemoval } from "@/lib/music/views/stores/removal";
 import {
 	clearSelection,
 	openPicker,
+	remover,
 	selectAll,
 	selectedIds,
-	selectedSongs,
 } from "@/lib/music/views/stores/selection";
 import { SaveButton } from "@/lib/music/views/ui/follow";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
-import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
 import { translateError } from "@/lib/shared/i18n/errors";
@@ -181,6 +180,18 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	});
 
 	const removing = useSignal<Song[] | null>(null);
+
+	// The selection banner lives in the shell, above every page, so this page
+	// tells it how to remove the selected songs from this playlist.
+	useEffect(() => {
+		if (!custom) return;
+		remover.value = (songs) => {
+			removing.value = songs;
+		};
+		return () => {
+			remover.value = null;
+		};
+	}, [custom]);
 
 	const confirmRemove = () => {
 		if (!removing.value) return;
@@ -367,98 +378,83 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				onRenamePlaylist={custom ? openRenamePlaylist : undefined}
 			/>
 
-			{selectedSongs.value.length > 1 ? (
-				<SelectionBar
-					removable={custom}
-					onRemove={
-						custom
-							? (next) => {
-									removing.value = next;
-								}
-							: undefined
-					}
-				/>
-			) : (
-				<div
-					className={cn(
-						"grid gap-2",
-						custom ? "grid-cols-[1fr_auto]" : "grid-cols-[1fr_auto_auto]",
-					)}
-				>
-					{/* search */}
-					<div className="relative flex-1">
-						<Search
-							size={16}
-							className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-						/>
-						<input
-							type="text"
-							placeholder={t("music.playlist.searchPlaceholder")}
-							value={search.value}
-							onInput={(e) => {
-								search.value = getInputValue(e);
-							}}
-							className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-9 text-sm text-white outline-none focus:border-zinc-600"
-						/>
-						{search.value && (
-							<button
-								type="button"
-								onClick={() => {
-									search.value = "";
-								}}
-								className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
-								aria-label={t("music.playlist.clearSearch")}
-							>
-								<X size={14} />
-							</button>
-						)}
-					</div>
-
-					{/* order */}
-					<div className="relative w-full">
-						<ArrowUpDown
-							size={16}
-							className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-						/>
-						<select
-							value={order.value}
-							onInput={(e) => {
-								order.value = getSelectValue(e);
-							}}
-							aria-label={t("music.playlist.orderBy")}
-							className="h-10 w-max appearance-none rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
-						>
-							<option value="added">{t("music.playlist.order.added")}</option>
-							<option value="reverse">
-								{t("music.playlist.order.reverse")}
-							</option>
-							<option value="duration-asc">
-								{t("music.playlist.order.durationAsc")}
-							</option>
-							<option value="duration-desc">
-								{t("music.playlist.order.durationDesc")}
-							</option>
-						</select>
-					</div>
-
-					{/* refresh */}
-					{!custom && (
+			<div
+				className={cn(
+					"grid gap-2",
+					custom ? "grid-cols-[1fr_auto]" : "grid-cols-[1fr_auto_auto]",
+				)}
+			>
+				{/* search */}
+				<div className="relative flex-1">
+					<Search
+						size={16}
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+					/>
+					<input
+						type="text"
+						placeholder={t("music.playlist.searchPlaceholder")}
+						value={search.value}
+						onInput={(e) => {
+							search.value = getInputValue(e);
+						}}
+						className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-9 text-sm text-white outline-none focus:border-zinc-600"
+					/>
+					{search.value && (
 						<button
 							type="button"
-							title={t("music.playlist.refresh")}
-							aria-label={t("music.playlist.refresh")}
-							onClick={handleRefresh}
-							disabled={refreshing.value}
-							className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
+							onClick={() => {
+								search.value = "";
+							}}
+							className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
+							aria-label={t("music.playlist.clearSearch")}
 						>
-							<RefreshCw
-								size={16}
-								class={refreshing.value ? "animate-spin" : ""}
-							/>
+							<X size={14} />
 						</button>
 					)}
 				</div>
-			)}
+
+				{/* order */}
+				<div className="relative w-full">
+					<ArrowUpDown
+						size={16}
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+					/>
+					<select
+						value={order.value}
+						onInput={(e) => {
+							order.value = getSelectValue(e);
+						}}
+						aria-label={t("music.playlist.orderBy")}
+						className="h-10 w-max appearance-none rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
+					>
+						<option value="added">{t("music.playlist.order.added")}</option>
+						<option value="reverse">{t("music.playlist.order.reverse")}</option>
+						<option value="duration-asc">
+							{t("music.playlist.order.durationAsc")}
+						</option>
+						<option value="duration-desc">
+							{t("music.playlist.order.durationDesc")}
+						</option>
+					</select>
+				</div>
+
+				{/* refresh */}
+				{!custom && (
+					<button
+						type="button"
+						title={t("music.playlist.refresh")}
+						aria-label={t("music.playlist.refresh")}
+						onClick={handleRefresh}
+						disabled={refreshing.value}
+						className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
+					>
+						<RefreshCw
+							size={16}
+							class={refreshing.value ? "animate-spin" : ""}
+						/>
+					</button>
+				)}
+			</div>
 
 			{!isLoading && hasBrokenSpotify && !spotifyConnected.value && (
 				<div class="rounded-md border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">

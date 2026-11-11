@@ -23,7 +23,6 @@ import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { shareLink } from "@/lib/music/views/ui/share";
 import { Shelf } from "@/lib/music/views/ui/shelf";
-import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
 import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -173,8 +172,6 @@ export function YouTubeSearchPage() {
 					</div>
 				)}
 			</header>
-
-			<SelectionBar />
 
 			{!hasResults && !loading ? (
 				<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
