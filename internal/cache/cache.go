@@ -5,11 +5,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 // Limit caps a cache directory.
@@ -18,16 +21,62 @@ const Limit = 8000
 // PlaylistLimit is the ceiling of the playlist folder.
 const PlaylistLimit = 48
 
-// catalogDirs are the directories that grow with what the user opens.
-var catalogDirs = []string{"spotify/library", "spotify/playlists", "spotify/contexts", "spotify/users", "spotify/follows", "spotify/friends", "spotify/discography", "spotify/artists", "spotify/albums", "youtube/library", "youtube/channels", "youtube/playlists", "youtube/videos", "youtube/tracks", "youtube/ids"}
+// started is when the process began. A temporary file older than it belongs to
+// a write that a crash cut short, and nothing else would ever collect it.
+var started = time.Now()
 
-// Start holds the cache under its ceiling.
+// limits is the ceiling of each folder that grows with what the user opens. A
+// folder that is not here is never trimmed: the picks under youtube/links are
+// 11 bytes each, and counting 8000 of them would cost more than the space.
+// An entry that is a single file (the session, the account's own library) lives
+// next to the folders and has nothing to trim.
+var limits = map[string]int{
+	"spotify/albums":      Limit,
+	"spotify/artists":     Limit,
+	"spotify/contexts":    Limit,
+	"spotify/discography": Limit,
+	"spotify/follows":     Limit,
+	"spotify/friends":     Limit,
+	"spotify/library":     Limit,
+	"spotify/playlists":   PlaylistLimit,
+	"spotify/tracks":      Limit,
+	"spotify/users":       Limit,
+	"youtube/channels":    Limit,
+	"youtube/ids":         Limit,
+	"youtube/playlists":   PlaylistLimit,
+	"youtube/streams":     Limit,
+	"youtube/tracks":      Limit,
+	"youtube/videos":      Limit,
+}
+
+// Start holds the cache under its ceiling and clears what a crash left behind.
 func Start() {
-	for _, dir := range catalogDirs {
-		Trim(dir, Limit)
+	sweep()
+	for dir, limit := range limits {
+		Trim(dir, limit)
 	}
-	Trim("spotify/playlists", PlaylistLimit)
-	Trim("youtube/playlists", PlaylistLimit)
+}
+
+// sweep removes the temporary files a crash left behind. A write that died
+// between the temporary file and the rename leaves it, and nothing else would
+// ever collect it. A temporary file this run wrote is still in flight, so it
+// stays.
+func sweep() {
+	base, err := state.Dir()
+	if err != nil {
+		return
+	}
+	root := filepath.Join(base, "jota", "cache")
+	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(d.Name(), ".tmp") {
+			return nil
+		}
+		info, err := d.Info()
+		if err == nil && info.ModTime().Before(started) {
+			_ = os.Remove(path)
+		}
+		return nil
+	})
 }
 
 // entry is what a cached entity looks like on disk.
@@ -42,7 +91,17 @@ type entry[T any] struct {
 // cachePath is where an entity lives: the config folder, under jota/cache/,
 // under the name the caller chose.
 func cachePath(name string) (string, error) {
-	base, err := configDir()
+	return cacheLocation(name, ".json")
+}
+
+// RawPath is the on-disk location of a cache entry that owns its own shape and
+// does not want the cache's .json suffix.
+func RawPath(name string) (string, error) {
+	return cacheLocation(name, "")
+}
+
+func cacheLocation(name, suffix string) (string, error) {
+	base, err := state.Dir()
 	if err != nil {
 		return "", err
 	}
@@ -55,18 +114,8 @@ func cachePath(name string) (string, error) {
 			parts[i] = safePart(part)
 		}
 	}
-	return filepath.Join(append([]string{base, "jota", "cache"}, parts...)...) + ".json", nil
+	return filepath.Join(append([]string{base, "jota", "cache"}, parts...)...) + suffix, nil
 }
-
-func configDir() (string, error) {
-	if dir, err := os.UserConfigDir(); err == nil && dir != "" {
-		return dir, nil
-	}
-	return os.TempDir(), nil
-}
-
-// Fix cachePath to use dir() instead of stateDir()
-func init() {}
 
 // safePart turns one part of a name into a file name.
 func safePart(part string) string {
@@ -85,11 +134,6 @@ func safePart(part string) string {
 	}
 	sum := sha256.Sum256([]byte(part))
 	return safe + "-" + hex.EncodeToString(sum[:4])
-}
-
-// Path is where a cache entry lives (as a file path).
-func Path(name string) (string, error) {
-	return cachePath(name)
 }
 
 // Write replaces a cache file through a temporary one.
@@ -131,20 +175,28 @@ func ReadRaw(name string) ([]byte, bool) {
 }
 
 func Get[T any](name string) (T, bool) {
+	value, _, ok := GetWithMeta[T](name)
+	return value, ok
+}
+
+// GetWithMeta is Get plus the moment the entry was written. A caller that can
+// tell whether the value was proven recently (a stream's URL was just probed)
+// uses it to skip a check without an extra read: the envelope is already here.
+func GetWithMeta[T any](name string) (T, int64, bool) {
 	var zero T
 	data, ok := readEntry(name)
 	if !ok {
-		return zero, false
+		return zero, 0, false
 	}
 	var stored entry[T]
 	if err := json.Unmarshal(data, &stored); err != nil {
-		return zero, false
+		return zero, 0, false
 	}
 	if stored.Expire != 0 && stored.Expire <= time.Now().UnixMilli() {
 		_ = Forget(name)
-		return zero, false
+		return zero, 0, false
 	}
-	return stored.Value, true
+	return stored.Value, stored.Saved, true
 }
 
 func Put[T any](name string, value T, ttl ...time.Duration) error {
@@ -216,7 +268,7 @@ func Refreshable[T any](name string, fetch func() (T, error)) bool {
 // Walk visits every entity stored under a directory prefix. It reads only the
 // names from the directory listing, not the file contents, for speed.
 func Walk(dir string, fn func(name string) error) error {
-	base, err := configDir()
+	base, err := state.Dir()
 	if err != nil {
 		return err
 	}
@@ -252,9 +304,39 @@ func Walk(dir string, fn func(name string) error) error {
 	return nil
 }
 
+// Sweep drops the entries of a directory that are older than the given age.
+// It is how the entries with a short life are collected without reading them:
+// a file that old cannot be alive any more. It answers how many it dropped.
+func Sweep(dir string, olderThan time.Duration) int {
+	base, err := state.Dir()
+	if err != nil {
+		return 0
+	}
+	root := filepath.Join(base, "jota", "cache", dir)
+	items, err := os.ReadDir(root)
+	if err != nil {
+		return 0
+	}
+	cutoff := time.Now().Add(-olderThan)
+	dropped := 0
+	for _, item := range items {
+		if item.IsDir() || !strings.HasSuffix(item.Name(), ".json") {
+			continue
+		}
+		info, err := item.Info()
+		if err != nil || !info.ModTime().Before(cutoff) {
+			continue
+		}
+		if err := os.Remove(filepath.Join(root, item.Name())); err == nil {
+			dropped++
+		}
+	}
+	return dropped
+}
+
 // Trim keeps a cache directory under a ceiling.
 func Trim(dir string, limit int) {
-	base, err := configDir()
+	base, err := state.Dir()
 	if err != nil {
 		return
 	}
@@ -296,9 +378,3 @@ func Fingerprint(v any) string {
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
 }
-
-// Reset is a no-op for files (nothing to close).
-func Reset() {}
-
-// Close is a no-op for files.
-func Close() {}
