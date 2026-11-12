@@ -153,6 +153,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	// store read plus a re-encrypt, so keep the whole block off the startup path.
 	go func() {
 		importLegacy()
+		youtube.StartProxy()
 		if a.SessionPass() == "" {
 			return
 		}

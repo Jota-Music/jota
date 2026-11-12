@@ -54,14 +54,18 @@ func getExpireAndDurationFromURL(raw string) (*expireAndDuration, bool) {
 
 	q := u.Query()
 
+	var durFloat float64
 	durStr := q.Get("dur")
 	if durStr == "" {
-		return nil, false
-	}
-
-	durFloat, err := strconv.ParseFloat(durStr, 64)
-	if err != nil {
-		return nil, false
+		// Some very long videos omit "dur" from the signed URL. The player can
+		// still use the element's own duration, so do not fail the whole resolve.
+		durFloat = 0
+	} else {
+		var parseErr error
+		durFloat, parseErr = strconv.ParseFloat(durStr, 64)
+		if parseErr != nil {
+			return nil, false
+		}
 	}
 
 	expireStr := q.Get("expire")
@@ -413,6 +417,10 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 	}
 
 	keepAudio(youtubeId, audio, ttl)
+
+	// Return the proxy URL so WebKit gets a simple localhost URL that
+	// buffers and seeks properly.
+	audio.Url = ProxyURL(youtubeId, streamURL)
 
 	return &audio, nil
 }

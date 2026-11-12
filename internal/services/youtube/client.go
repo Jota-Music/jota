@@ -176,6 +176,15 @@ func allClients() []clientConfig {
 // order. A missing or unknown name leaves the default order alone.
 func clientOrder() []clientConfig {
 	clients := allClients()
+	if forced := os.Getenv("YOUTUBE_CLIENT"); forced != "" {
+		for i, c := range clients {
+			if c.Name != forced {
+				continue
+			}
+			ordered := append([]clientConfig{c}, clients[:i]...)
+			return append(ordered, clients[i+1:]...)
+		}
+	}
 	name := youtubeCache.client()
 	if name == "" || name == clients[0].Name {
 		return clients

@@ -43,16 +43,19 @@ func cachedAudio(videoID string) *music.Audio {
 	// Resolved a few minutes ago: audioURL already probed the URL and the
 	// signature has hours left. No need to pay a HEAD again.
 	if time.Since(time.UnixMilli(saved)) < probeGrace {
+		audio.Url = ProxyURL(videoID, audio.Url)
 		return &audio
 	}
 	// An entry this run resolved was probed minutes ago and its own expiry,
 	// which is what the cache drops the entry by, is still hours away.
 	if at, ok := fresh.Load(videoID); ok && time.Since(at.(time.Time)) < freshFor {
+		audio.Url = ProxyURL(videoID, audio.Url)
 		return &audio
 	}
 	if !audioCacheStillValid(&audio) {
 		return nil
 	}
+	audio.Url = ProxyURL(videoID, audio.Url)
 	return &audio
 }
 
