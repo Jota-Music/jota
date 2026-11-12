@@ -80,7 +80,9 @@ func (s *Store) load() error {
 	}
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &top); err != nil {
-		log.Printf("state: the document will not decode, it is kept as state.bad")
+		// The document is kept aside so the user can recover it by hand: it is
+		// the only copy of what the app knew.
+		log.Printf("state: the document will not decode, it is kept as %s", path+".bad")
 		_ = os.Rename(path, path+".bad")
 		return nil
 	}
@@ -106,15 +108,49 @@ func (s *Store) save() error {
 		return err
 	}
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, encoded, 0o600); err != nil {
+	if err := writeSync(tmp, encoded); err != nil {
+		_ = os.Remove(tmp)
 		return err
 	}
 	if err := os.Rename(tmp, path); err != nil {
 		_ = os.Remove(tmp)
 		return err
 	}
+	// The rename is only durable once the directory itself is flushed: without
+	// this the name can be lost while the file it pointed at stays.
+	_ = syncDir(filepath.Dir(path))
 	s.dirty = false
 	return nil
+}
+
+// writeSync writes data to a file and flushes it to the disk, so a crash
+// leaves the whole file and not a half of one.
+func writeSync(path string, data []byte) error {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+// syncDir flushes a directory entry. A platform that does not allow it (a
+// Windows directory, for one) answers with an error that costs nothing: the
+// file itself is already on the disk.
+func syncDir(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
 }
 
 func (s *Store) markDirty() {
@@ -127,6 +163,11 @@ func (s *Store) markDirty() {
 // Start keeps the document on disk via a writer thread.
 func Start() {
 	writerOnce.Do(func() {
+		// A write that died between the temporary file and the rename left it
+		// behind, and nothing else would ever collect it.
+		if path, err := current.path(); err == nil {
+			_ = os.Remove(path + ".tmp")
+		}
 		go func() {
 			for range current.wake {
 				time.Sleep(debounce)
@@ -180,23 +221,6 @@ func Write[T any](name string, value T) error {
 	}
 	current.mu.Lock()
 	current.sections[name] = raw
-	current.dirty = true
-	current.mu.Unlock()
-	current.markDirty()
-	return nil
-}
-
-// Delete removes a section.
-func Delete(name string) error {
-	if err := current.load(); err != nil {
-		return err
-	}
-	current.mu.Lock()
-	if _, ok := current.sections[name]; !ok {
-		current.mu.Unlock()
-		return nil
-	}
-	delete(current.sections, name)
 	current.dirty = true
 	current.mu.Unlock()
 	current.markDirty()
