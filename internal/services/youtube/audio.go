@@ -384,9 +384,9 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 		return nil, errors.New("no video ID provided")
 	}
 
-	cached, ok := youtubeCache.stream(youtubeId)
-	if ok {
-		return &cached, nil
+	cached := cachedAudio(youtubeId)
+	if cached != nil {
+		return cached, nil
 	}
 
 	streamURL, client, err := audioURL(youtubeId)
@@ -399,7 +399,8 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 		return nil, errors.New("bad stream response from YouTube")
 	}
 
-	if _, ok := ttlFromExpire(info.ExpireAt); !ok {
+	ttl, ok := ttlFromExpire(info.ExpireAt)
+	if !ok {
 		return nil, errors.New("stream URL expired before it could be cached")
 	}
 
@@ -411,30 +412,7 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 		ClientName: client.Name,
 	}
 
-	youtubeCache.keep(youtubeId, audio)
+	keepAudio(youtubeId, audio, ttl)
 
 	return &audio, nil
-}
-
-func cachedAudio(key string) *music.Audio {
-	cached, ok := youtubeCache.stream(key)
-	if !ok {
-		return nil
-	}
-	return &cached
-}
-
-func cachedAudioBySong(cacheKey string) *music.Audio {
-	return cachedAudio(songStreamKey(cacheKey))
-}
-
-func saveAudioBySong(cacheKey string, audio music.Audio) {
-	youtubeCache.keep(songStreamKey(cacheKey), audio)
-}
-
-// songStreamKey is where the stream resolved for a song is kept. A song and a
-// video are two keys for the same stream, and the song one is what a resolve
-// asks for first.
-func songStreamKey(cacheKey string) string {
-	return "spotify:" + cacheKey
 }

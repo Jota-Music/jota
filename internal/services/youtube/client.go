@@ -172,11 +172,6 @@ func allClients() []clientConfig {
 	return append(clients, webClient())
 }
 
-// clientKey is where the client that last produced a playable stream is
-// remembered, so a session resumes with it instead of falling through the whole
-// list per track.
-const clientKey = "youtube/client"
-
 // clientOrder puts the remembered client first, keeping the rest in allClients
 // order. A missing or unknown name leaves the default order alone.
 func clientOrder() []clientConfig {

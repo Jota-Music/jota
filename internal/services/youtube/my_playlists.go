@@ -14,7 +14,9 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
-// myPlaylistsKey is the cache entry of the signed-in account's playlists.
+// myPlaylistsKey is the cache entry of the signed-in account's playlists. It
+// is a file next to the folders, so the refresh that walks the youtube folder
+// finds it.
 const (
 	myPlaylistsKey         = "youtube/library"
 	myPlaylistsSnapshotKey = "youtube/page"

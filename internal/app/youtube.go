@@ -187,17 +187,6 @@ func clearYouTubeSession() {
 	}
 }
 
-// dropYouTubeSession forgets the session everywhere: the panel stops claiming it
-// is signed in and the tombstone removes it from the other devices. Only the user
-// clearing the session asks for that.
-func dropYouTubeSession() {
-	_ = youtube.ClearCookies()
-	tombstoneSession("youtube")
-	if app := application.Get(); app != nil {
-		app.Event.Emit("youtube:session-updated")
-	}
-}
-
 // verifyCookies is youtube.Verify. It is a variable so a test can answer a
 // session without the network round trip and without the clear a rejected one
 // triggers behind the caller's back.

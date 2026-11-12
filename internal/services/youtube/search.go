@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/music"
 	"net/url"
 	"regexp"
@@ -266,12 +265,15 @@ func (s *Service) candidates(cacheKey string, song music.Song) ([]Video, error) 
 	}
 
 	var (
-		pinned []Video
-		seen   = map[string]bool{}
+		ordered []Video
+		seen    = map[string]bool{}
 	)
-	if cached, ok := cache.Get[string]("youtube/sources/" + cacheKey); ok && cached != "" {
-		pinned = append(pinned, Video{ID: cached})
-		seen[cached] = true
+	// The link the user pinned by hand stays at the front: ranking must not
+	// demote it behind a fresh pick. Only the pin is an order; a pick that
+	// failed to play is tried first and then falls behind.
+	if linked := pinned(cacheKey); linked != "" {
+		ordered = append(ordered, Video{ID: linked})
+		seen[linked] = true
 	}
 	unique := make([]Video, 0, len(found))
 	for _, v := range found {
@@ -281,11 +283,11 @@ func (s *Service) candidates(cacheKey string, song music.Song) ([]Video, error) 
 		}
 	}
 
-	if len(pinned)+len(unique) == 0 {
+	if len(ordered)+len(unique) == 0 {
 		return nil, fmt.Errorf("no results for: %s", strings.Join(wanted, " / "))
 	}
 
-	return append(pinned, rank(unique, song)...), nil
+	return append(ordered, rank(unique, song)...), nil
 }
 
 // searchAll runs every query against YouTube concurrently and merges the

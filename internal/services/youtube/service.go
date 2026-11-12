@@ -46,7 +46,10 @@ func (s *Service) Find(song music.Song) (string, error) {
 	if song.YoutubeId != "" {
 		return song.YoutubeId, nil
 	}
-	if id := s.YoutubeId(song.Id); id != "" {
+	if id := pinned(song.Id); id != "" {
+		return id, nil
+	}
+	if id := remembered(song.Id); id != "" {
 		return id, nil
 	}
 
@@ -58,27 +61,34 @@ func (s *Service) Find(song music.Song) (string, error) {
 		return "", errors.New("no youtube video found")
 	}
 	id := videos[0].ID
-	if err := s.SetYoutubeId(song.Id, id); err != nil {
-		return "", err
-	}
+	remember(song.Id, id)
 	return id, nil
 }
 
 func (s *Service) searchAudio(song music.Song) (music.Audio, error) {
 	cacheKey := song.Id
-	if cached := cachedAudioBySong(cacheKey); cached != nil {
-		return *cached, nil
+
+	// The linked id is the video an earlier resolve settled on. The pin the
+	// user fixed by hand wins over the pick a search made; only the pin is an
+	// order, so a resolve never overwrites it. Its stream is cached under the
+	// video, so playing it first skips the search, the slowest step of a
+	// resolve; searching for alternatives is only worth it once it fails.
+	linked := pinned(cacheKey)
+	wasPin := linked != ""
+	if linked == "" {
+		linked = remembered(cacheKey)
+	}
+	if linked != "" {
+		if cached := cachedAudio(linked); cached != nil {
+			return *cached, nil
+		}
 	}
 
-	// The linked id is the video an earlier resolve settled on — the user's
-	// manual pick or the previous automatic one, and ranking must not demote it
-	// behind a fresh pick. Playing it first skips the search, the slowest step of
-	// a resolve; searching for alternatives is only worth it once it fails.
 	var lastErr error
 	tried := ""
-	if id := s.YoutubeId(cacheKey); id != "" {
-		tried = id
-		audio, err := s.play(cacheKey, id)
+	if linked != "" {
+		tried = linked
+		audio, err := s.play(cacheKey, linked)
 		if err == nil {
 			return *audio, nil
 		}
@@ -99,6 +109,11 @@ func (s *Service) searchAudio(song music.Song) (music.Audio, error) {
 			lastErr = err
 			continue
 		}
+		// A pinned video that died is useless: a fallback just played, so the
+		// network is fine and the pin, not the connection, was the problem.
+		if wasPin {
+			_ = forgetPin(cacheKey)
+		}
 		return *audio, nil
 	}
 
@@ -115,15 +130,18 @@ func (s *Service) play(cacheKey, videoID string) (*music.Audio, error) {
 		return nil, err
 	}
 	if cacheKey != "" {
-		_ = s.SetYoutubeId(cacheKey, videoID)
-		saveAudioBySong(cacheKey, *audio)
+		remember(cacheKey, videoID)
 	}
 	return audio, nil
 }
 
-// YoutubeId returns the YouTube video linked to a song, or "" when none.
+// YoutubeId returns the effective video for a song: the pin the user fixed, or
+// the pick an earlier search settled on.
 func (s *Service) YoutubeId(cacheKey string) string {
-	return readSession().Links[cacheKey]
+	if v := pinned(cacheKey); v != "" {
+		return v
+	}
+	return remembered(cacheKey)
 }
 
 func (s *Service) SetYoutubeId(cacheKey, youtubeId string) error {
@@ -135,25 +153,7 @@ func (s *Service) SetYoutubeId(cacheKey, youtubeId string) error {
 		}
 		youtubeId = id
 	}
-
-	stored := readSession()
-	if stored.Links == nil {
-		stored.Links = map[string]string{}
-	}
-
-	// Invalidate the cached audio so the new video is resolved on the next
-	// request: the old one still plays, but it is not what the user picked.
-	if old := stored.Links[cacheKey]; old != "" && old != youtubeId {
-		youtubeCache.forget(old)
-	}
-	youtubeCache.forget(songStreamKey(cacheKey))
-
-	if youtubeId == "" {
-		delete(stored.Links, cacheKey)
-	} else {
-		stored.Links[cacheKey] = youtubeId
-	}
-	return writeSession(stored)
+	return pin(cacheKey, youtubeId)
 }
 
 // audioQuery asks YouTube for the song by title, artist and album. The album

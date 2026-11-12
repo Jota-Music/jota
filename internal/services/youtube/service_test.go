@@ -81,11 +81,11 @@ func TestSearchAudioPlaysTheLinkedIdWithoutSearching(t *testing.T) {
 	const videoID = "linkedVideo1"
 
 	seedYoutubeId(songID, videoID)
-	youtubeCache.keep(videoID, music.Audio{
+	keepAudio(videoID, music.Audio{
 		Url:      playableServer(t),
 		VideoID:  videoID,
 		ExpireAt: time.Now().Add(time.Hour).Unix(),
-	})
+	}, time.Hour)
 
 	searches := countingSearch(t, searchResponse{})
 
@@ -114,9 +114,51 @@ func TestSearchAudioSearchesWithoutALinkedId(t *testing.T) {
 	}
 }
 
-func TestSearchAudioFallsBackToSearchWhenTheLinkedIdDies(t *testing.T) {
+func TestADeadPinIsDroppedWhenAFallbackPlays(t *testing.T) {
 	const songID = "test-dead-link"
-	const videoID = "deadVideo01"
+	const deadID = "deadVideo01"
+	const fallbackID = "fallback001"
+
+	seedYoutubeId(songID, deadID)
+
+	server := playableServer(t)
+	oldPlayer := playerStreamURLFn
+	playerStreamURLFn = func(_ clientConfig, videoID string) (string, error) {
+		if videoID == deadID {
+			return "", errors.New("nope")
+		}
+		return fmt.Sprintf("%s/?expire=%d&dur=180", server, time.Now().Add(time.Hour).Unix()), nil
+	}
+	t.Cleanup(func() { playerStreamURLFn = oldPlayer })
+
+	song := music.Song{Id: songID, Name: "Solo"}
+	stubSearch(t, map[string]searchResponse{
+		audioQuery(song): searchVideos(Video{ID: fallbackID, Title: "Solo", Author: "Solo - Topic", Duration: 180}),
+	})
+
+	audio, err := NewService().searchAudio(song)
+	if err != nil {
+		t.Fatalf("searchAudio: %v", err)
+	}
+	if audio.VideoID != fallbackID {
+		t.Fatalf("played %q, want the fallback %q", audio.VideoID, fallbackID)
+	}
+	// The pin is gone: the video died and a search found a replacement, so it
+	// stops costing a failed resolve on every play.
+	if got := pinned(songID); got != "" {
+		t.Fatalf("the dead pin survived: %q", got)
+	}
+	// What played is remembered as a pick, so unpinning falls back to it.
+	if got := remembered(songID); got != fallbackID {
+		t.Fatalf("pick = %q, want %q", got, fallbackID)
+	}
+}
+
+// A pin that fails with no working fallback is kept: the failure could be the
+// network, not the video, and dropping it would lose the user's choice.
+func TestADeadPinSurvivesWhenNothingPlays(t *testing.T) {
+	const songID = "test-dead-pin-kept"
+	const videoID = "deadVideo02"
 
 	seedYoutubeId(songID, videoID)
 
@@ -134,6 +176,12 @@ func TestSearchAudioFallsBackToSearchWhenTheLinkedIdDies(t *testing.T) {
 	}
 	if *searches != 1 {
 		t.Fatalf("searched %d times, want the fallback search", *searches)
+	}
+	if got := pinned(songID); got != videoID {
+		t.Fatalf("the pin was dropped without a working fallback: %q", got)
+	}
+	if got := remembered(songID); got != "" {
+		t.Fatalf("a pick was written without a working video: %q", got)
 	}
 }
 
@@ -195,6 +243,38 @@ func TestCandidatesMergesAlbumAndArtistQueries(t *testing.T) {
 	}
 	if len(videos) == 0 || videos[0].ID != "ohV8ZwFXQN4" {
 		t.Fatalf("first = %+v, want the official from the artist-first query", videos)
+	}
+}
+
+// The video the user picked by hand stays at the front of the candidates, so
+// the ranking cannot demote it behind a fresh pick.
+func TestCandidatesPinsTheLinkedVideo(t *testing.T) {
+	const songID = "test-pin-linked"
+	const videoID = "pinnedVideo01"
+
+	seedYoutubeId(songID, videoID)
+
+	song := music.Song{
+		Id:      songID,
+		Name:    "Rambo",
+		Artists: []music.Artist{{Name: "Orquesta Mondragón"}},
+	}
+
+	stubSearch(t, map[string]searchResponse{
+		audioQuery(song): searchVideos(
+			Video{ID: "otherVideo01", Title: "Rambo - cover", Author: "Someone", Duration: 180},
+		),
+		audioQueryArtistFirst(song): searchVideos(
+			Video{ID: "otherVideo02", Title: "Rambo", Author: "Orquesta Mondragón - Topic", Duration: 183},
+		),
+	})
+
+	videos, err := NewService().candidates(songID, song)
+	if err != nil {
+		t.Fatalf("candidates: %v", err)
+	}
+	if len(videos) == 0 || videos[0].ID != videoID {
+		t.Fatalf("first = %+v, want the linked %q", videos, videoID)
 	}
 }
 

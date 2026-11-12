@@ -28,9 +28,26 @@ import (
 type session struct {
 	Cookies string `json:"cookies,omitempty"`
 	Account string `json:"account,omitempty"`
-	// Links are the video each song plays. They are state, not cache: the link
-	// is a pick the user made, and it travels in the backup.
+	// Links are the videos the user pinned by hand: an order, kept in the
+	// state and carried in the backup. The videos a search settled on are not
+	// here, they have a file each.
 	Links map[string]string `json:"links,omitempty"`
+}
+
+// sessionMu serializes the read-modify-write of the session. The cookies, the
+// account name and the pins share one section, and each is written by a
+// different caller: without the lock, one that read before a network round trip
+// would write the whole struct back and drop what another one stored meanwhile.
+var sessionMu sync.Mutex
+
+// updateSession changes the session under the lock and writes it back.
+func updateSession(change func(*session)) error {
+	sessionMu.Lock()
+	defer sessionMu.Unlock()
+
+	stored := readSession()
+	change(&stored)
+	return writeSession(stored)
 }
 
 // readSession reads what the device keeps of the session.
@@ -89,9 +106,11 @@ func SetCookies(raw string) error {
 	if sidValue(normalized) == "" {
 		return errors.New("cookies missing SAPISID")
 	}
-	stored := readSession()
-	stored.Cookies = normalized
-	if err := writeSession(stored); err != nil {
+	// The name belongs to the cookies that answered it.
+	if err := updateSession(func(stored *session) {
+		stored.Cookies = normalized
+		stored.Account = ""
+	}); err != nil {
 		return err
 	}
 
@@ -99,9 +118,7 @@ func SetCookies(raw string) error {
 	authCookie = normalized
 	authLoaded = true
 	authMu.Unlock()
-	// The name belongs to the cookies that answered it.
-	stored.Account = ""
-	_ = writeSession(stored)
+
 	// The cached list belongs to the account that was signed in before.
 	_ = cache.Forget(myPlaylistsKey)
 	return nil
@@ -194,10 +211,10 @@ func ClearCookies() error {
 	authCookie = ""
 	authLoaded = true
 	authMu.Unlock()
-	stored := readSession()
-	stored.Account = ""
-	stored.Cookies = ""
-	return writeSession(stored)
+	return updateSession(func(stored *session) {
+		stored.Account = ""
+		stored.Cookies = ""
+	})
 }
 
 func HasAuth() bool {
@@ -329,9 +346,9 @@ func Account() string {
 	if err != nil || name == "" {
 		return ""
 	}
-	stored := readSession()
-	stored.Account = name
-	_ = writeSession(stored)
+	// The write re-reads under the lock: the name took a request to answer, and
+	// a pin stored meanwhile must not be dropped on the way back.
+	_ = updateSession(func(stored *session) { stored.Account = name })
 	return name
 }
 

@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/Jota-Music/jota/internal/cache"
-	"github.com/Jota-Music/jota/internal/music"
 )
 
-// sessionName is the file the YouTube cache lives in. With SQLite it is a key,
-// not a file, but the name is kept for compatibility.
+// sessionName is the file the tokens of the YouTube session live in. The
+// resolved streams are not here, they have a file each. With SQLite it was a
+// key, not a file, but the name is kept for compatibility.
 const sessionName = "youtube/session"
 
 // token is a value with a deadline.
@@ -19,18 +19,17 @@ type token struct {
 	At    int64  `json:"at"`
 }
 
-// saved is the snapshot. It is never a source of truth: an entry past its
-// expiry is dropped.
+// saved is the snapshot of the session: the tokens the innertube requests are
+// signed with. The resolved streams are not here, they live in a file each.
 type saved struct {
-	Streams map[string]music.Audio `json:"streams,omitempty"`
-	Visitor *token                 `json:"visitor,omitempty"`
-	Account string                 `json:"account,omitempty"`
-	Version *token                 `json:"version,omitempty"`
-	Client  string                 `json:"client,omitempty"`
+	Visitor *token `json:"visitor,omitempty"`
+	Account string `json:"account,omitempty"`
+	Version *token `json:"version,omitempty"`
+	Client  string `json:"client,omitempty"`
 }
 
-// sessionCache is the YouTube cache: held in memory, written whole when it
-// changes.
+// sessionCache is the session of the YouTube source: the tokens the requests
+// are signed with, held in memory and written whole when they change.
 type sessionCache struct {
 	mu     sync.Mutex
 	loaded bool
@@ -62,51 +61,6 @@ func (c *sessionCache) write() {
 		return
 	}
 	_ = cache.Write(sessionName, data)
-}
-
-func (c *sessionCache) stream(key string) (music.Audio, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.load()
-
-	audio, ok := c.saved.Streams[key]
-	if !ok {
-		return music.Audio{}, false
-	}
-	if !audioCacheStillValid(&audio) {
-		return music.Audio{}, false
-	}
-	return audio, true
-}
-
-func (c *sessionCache) keep(key string, audio music.Audio) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.load()
-
-	if c.saved.Streams == nil {
-		c.saved.Streams = map[string]music.Audio{}
-	}
-	now := time.Now().UTC().Unix()
-	for stored, entry := range c.saved.Streams {
-		if entry.ExpireAt <= now {
-			delete(c.saved.Streams, stored)
-		}
-	}
-	c.saved.Streams[key] = audio
-	c.write()
-}
-
-func (c *sessionCache) forget(key string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.load()
-
-	if _, ok := c.saved.Streams[key]; !ok {
-		return
-	}
-	delete(c.saved.Streams, key)
-	c.write()
 }
 
 func (c *sessionCache) visitor() string {

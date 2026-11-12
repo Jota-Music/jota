@@ -613,6 +613,12 @@ func main() {
 			opened := time.Now()
 			state.Start()
 			cache.Start()
+			// The streams whose URL died are collected here: the age of the file
+			// is enough to tell, and nobody reads them again.
+			youtube.PurgeStreams()
+			// The picks the old layout kept in the state move to the cache, so
+			// the state only holds pins. Idempotent, off the launch path.
+			youtube.MigrateLinks()
 			err := error(nil)
 			// A read that arrives while the store opens waits for it and answers
 			// with the library, so a slow open costs the launch time but never a

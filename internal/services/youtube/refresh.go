@@ -7,6 +7,11 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
+// refreshDirs are the directories the refresh walks. The account's own
+// playlist list is a single file next to the folders, so the parent is walked
+// too; the folders are walked by themselves because Walk does not descend.
+var refreshDirs = []string{"youtube", "youtube/channels", "youtube/playlists", "youtube/videos"}
+
 // RefreshCatalog refetches the cached catalog entries that can change in the
 // background and rewrites only the ones that changed, answering whether anything
 // did. Channel-id mappings are stable, so they are skipped; song entries outside
@@ -17,7 +22,7 @@ import (
 // the wire for a title that does not change.
 func (s *Service) RefreshCatalog() (bool, error) {
 	changed := false
-	for _, dir := range []string{"youtube/library", "youtube/channels", "youtube/playlists", "youtube/videos"} {
+	for _, dir := range refreshDirs {
 		err := cache.Walk(dir, func(name string) error {
 			changed = s.refreshEntity(name) || changed
 			return nil
@@ -41,11 +46,19 @@ func (s *Service) refreshEntity(name string) bool {
 		}
 		return cache.Refreshable(name, fetchMyPlaylists)
 	case strings.HasPrefix(name, "youtube/playlists/"):
+		// The folder holds two kinds of entity: the list of playlists a channel
+		// holds, and a playlist itself. A channel id starts with UC and a
+		// playlist id never does, so the id tells them apart.
 		id := strings.TrimPrefix(name, "youtube/playlists/")
-		return cache.Refreshable(name, func() ([]music.PlaylistSummary, error) {
-			return fetchChannelTab(id, channelPlaylistsParams, func(section itemSection, _ string) []music.PlaylistSummary {
-				return section.summaries()
+		if channelIDPattern.MatchString(id) {
+			return cache.Refreshable(name, func() ([]music.PlaylistSummary, error) {
+				return fetchChannelTab(id, channelPlaylistsParams, func(section itemSection, _ string) []music.PlaylistSummary {
+					return section.summaries()
+				})
 			})
+		}
+		return cache.Refreshable(name, func() (music.Playlist, error) {
+			return fetchFullPlaylist(id)
 		})
 	case strings.HasPrefix(name, "youtube/videos/"):
 		id := strings.TrimPrefix(name, "youtube/videos/")
@@ -58,11 +71,6 @@ func (s *Service) refreshEntity(name string) bool {
 		id := strings.TrimPrefix(name, "youtube/channels/")
 		return cache.Refreshable(name, func() (music.ChannelInfo, error) {
 			return channelInfo(id)
-		})
-	case strings.HasPrefix(name, "youtube/playlists/"):
-		id := strings.TrimPrefix(name, "youtube/playlists/")
-		return cache.Refreshable(name, func() (music.Playlist, error) {
-			return fetchFullPlaylist(id)
 		})
 	}
 	return false
