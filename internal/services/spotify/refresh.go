@@ -8,9 +8,9 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
-// catalogDirs are the directories the refresh walks. Each holds one kind of
+// refreshDirs are the directories the refresh walks. Each holds one kind of
 // cached entity, so the file names say what they are.
-var catalogDirs = []string{"spotify/library", "spotify/playlists", "spotify/contexts", "spotify/users", "spotify/follows", "spotify/friends", "spotify/discography", "spotify/artists", "spotify/albums"}
+var refreshDirs = []string{"spotify/library", "spotify/playlists", "spotify/contexts", "spotify/users", "spotify/follows", "spotify/friends", "spotify/discography", "spotify/artists", "spotify/albums"}
 
 // RefreshCatalog refetches the cached catalog entries that can change in the
 // background and rewrites only the ones that changed, answering whether anything
@@ -26,7 +26,7 @@ func (s *SpotifyService) RefreshCatalog() (bool, error) {
 		return false, nil
 	}
 	changed := false
-	for _, dir := range catalogDirs {
+	for _, dir := range refreshDirs {
 		err := cache.Walk(dir, func(name string) error {
 			changed = s.refreshEntity(name) || changed
 			return nil
@@ -45,8 +45,12 @@ func (s *SpotifyService) refreshEntity(name string) bool {
 	case strings.HasPrefix(name, "spotify/playlists/"):
 		return s.refreshPlaylist(strings.TrimPrefix(name, "spotify/playlists/"))
 	case strings.HasPrefix(name, "spotify/contexts/"):
-		return s.refreshPlainPlaylist(strings.TrimPrefix(name, "spotify/contexts/"))
+		return s.refreshContext(strings.TrimPrefix(name, "spotify/contexts/"))
 	case strings.HasPrefix(name, "spotify/library/"):
+		// The entry belongs to the account that wrote it.
+		if strings.TrimPrefix(name, "spotify/library/") != s.Username() {
+			return false
+		}
 		return cache.Refreshable(name, func() ([]music.PlaylistSummary, error) {
 			return s.userPlaylists(s.Username())
 		})
@@ -86,7 +90,7 @@ func (s *SpotifyService) refreshEntity(name string) bool {
 	return false
 }
 
-func (s *SpotifyService) refreshPlainPlaylist(playlistID string) bool {
+func (s *SpotifyService) refreshContext(playlistID string) bool {
 	return cache.Refreshable(contextName(playlistID), func() (music.Playlist, error) {
 		return s.fullPlaylist(playlistID)
 	})

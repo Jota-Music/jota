@@ -12,8 +12,9 @@ func playlistName(playlistID string) string { return "spotify/playlists/" + play
 // playlist but has no revision to compare.
 func contextName(playlistID string) string { return "spotify/contexts/" + playlistID }
 
-// libraryName is where the playlists an account owns are cached.
-func libraryName(user string) string { return "spotify/library/account" }
+// libraryName is where the playlists an account owns are cached. The user is
+// part of the name: two accounts on one device are two libraries.
+func libraryName(user string) string { return "spotify/library/" + user }
 
 // cachedPlaylist pairs a playlist with the Spotify revision it was fetched at,
 // so a background refresh can tell whether the playlist changed.

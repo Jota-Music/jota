@@ -63,7 +63,7 @@ type SpotifyService struct {
 	done bool
 
 	// username survives a failed restore so a degraded service still reads the
-	// cache written for this account instead of the "default" bucket.
+	// cache written for this account: the name of the entry carries it.
 	username string
 	degraded bool
 	watching bool

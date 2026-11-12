@@ -1,6 +1,9 @@
 package spotify
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestNeedsRevalidate(t *testing.T) {
 	cases := []struct {
@@ -22,5 +25,16 @@ func TestNeedsRevalidate(t *testing.T) {
 				t.Fatalf("needsRevalidate(%q, %q) = %v, want %v", tc.cached, tc.current, got, tc.expected)
 			}
 		})
+	}
+}
+
+// Two accounts on one device are two libraries: the name carries the account
+// so one does not answer for the other.
+func TestTheLibraryIsCachedPerAccount(t *testing.T) {
+	if libraryName("first") == libraryName("second") {
+		t.Fatalf("both accounts share the cache name %q", libraryName("first"))
+	}
+	if !strings.Contains(libraryName("first"), "first") {
+		t.Fatalf("the name does not carry the account: %q", libraryName("first"))
 	}
 }
