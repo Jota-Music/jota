@@ -134,17 +134,35 @@ func New(version string) *App {
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
 
+	// An upgrade may have left the store of the previous version behind. It is
+	// imported here, first, so the library the page asks for is already there;
+	// the read is off the startup path because the window is created before
+	// this returns. With no store it is one stat.
+	go importLegacy()
+
+	// Everything below reads sections the import writes, and reading a 17 MB
+	// store takes longer than a state read: each task waits for the import
+	// before it runs, so the first launch after an upgrade stages the session it
+	// brought and connects with the credentials it brought, instead of finding
+	// both empty until the next launch. The wait belongs here, with the order of
+	// the startup, and not inside the tasks: a feature does not need to know
+	// that a store was migrated.
+	//
 	// Stage the sessions already on this device, so a pass set after login (or
 	// a real session replacing an older staged one) reaches the next pass. It is a
 	// store read plus a re-encrypt, so keep the whole block off the startup path.
 	go func() {
+		importLegacy()
 		if a.SessionPass() == "" {
 			return
 		}
 		a.syncYouTubeCookies()
 		a.syncSpotifySession()
 	}()
-	go verifyYouTubeSession()
+	go func() {
+		importLegacy()
+		verifyYouTubeSession()
+	}()
 
 	a.syncTicker()
 
@@ -155,6 +173,8 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	// context, not the startup one: Wails cancels that as soon as startup
 	// returns, which killed every restore with "context canceled".
 	go func() {
+		// The credentials may be in the store this launch is importing.
+		importLegacy()
 		ctx, cancel := context.WithTimeout(context.Background(), spotify.SessionTimeout)
 		defer cancel()
 		if err := a.Spotify.Connect(ctx); err != nil {

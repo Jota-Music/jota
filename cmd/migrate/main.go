@@ -20,5 +20,5 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Println(summary)
-	fmt.Println("Done. You can now open Jota.")
+	fmt.Println("The old store has been imported and kept aside. You can now open Jota.")
 }
