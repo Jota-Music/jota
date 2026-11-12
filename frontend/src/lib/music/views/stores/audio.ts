@@ -128,7 +128,7 @@ function watchEnd(a: HTMLAudioElement) {
 		// Do not treat ordinary buffering as a dead stream: a very long track
 		// can take several seconds to fill its buffer after a seek, and firing
 		// recovery there only re-resolves a URL that is still alive.
-		if (stalled(still) && !isLoading.value) {
+		if (stalled(still) && (still >= 8000 || !isLoading.value)) {
 			still = 0;
 			last = time;
 			requestRecovery();
@@ -861,6 +861,7 @@ function bindEvents(a: HTMLAudioElement) {
 	// the loader stays until then instead of vanishing into a silent gap.
 	a.onplaying = () => {
 		if (audio !== a) return;
+		clearBufferTimer();
 		isLoading.value = false;
 	};
 
