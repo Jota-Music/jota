@@ -130,13 +130,66 @@ a crash empties is fetched again.
 no buckets: a feature owns a section and writes it whole, and the cache is
 addressed by the entity it holds.
 
-The embedded store this app used to keep is **not** imported automatically
-(`storage/kv`, left untouched on disk). On first launch after an upgrade the app
-detects it and offers to import it via `App.MigrateLegacyStore()` (exposed as a
-binding). The import is optional: the user can also make a backup from the old
-version and restore it. The legacy store is moved to `storage/kv.badger/` after
-a successful import so it is not imported twice. Badger remains a dependency
-only for this importer.
+The embedded store this app used to keep (`storage/kv`) is imported on the
+first launch after an upgrade: `importLegacyStore` runs from `ServiceStartup`,
+off the startup path, and emits `store:ready` so the page reads the library
+again. With no store left behind it is two stats, so every later launch pays
+nothing for it. `cmd/migrate` does the same thing by hand, for a device whose
+launch never gets there.
+
+**Badger is not a dependency.** `internal/legacy` reads the old store by its own
+format: the manifest (protobuf), the table index (flatbuffers) and the blocks
+(zstd), all parsed by hand. Only the zstd decoder (`klauspost/compress`) is
+pulled in. The values that lived in the value log are the cached ones, which the
+sources answer again, so they are not read. `internal/app/testdata/store` is a
+real Badger store, so the reader is checked without Badger in the tree.
+
+The reader refuses what it does not understand: a store of another format
+version or with a checksum that does not match is an error, never a half
+import. The import itself never overwrites what the device already holds: the
+state it has is newer than the store, so it wins where both have something and
+the store only fills the gaps (the playlists are merged by id and by name,
+because a local id is generated, the follows by id, the settings and the
+sessions are filled key by key). A record the device removed stays removed: the
+store still holds the copy the removal dropped, and restoring it would undo the
+removal for good, because the store is deleted after one import (`Deleted` for
+the playlists, `Removed` for the follows and the saved playlists, the newest
+wins).
+
+The links (the video each song plays, `youtube-source`) merge by song rather
+than only filling an empty section: a device that has played a few songs since
+the upgrade must still take the rest, and a link the device already holds is the
+newer pick. The old store held hundreds of them (632 on a real one), so the
+silent skip was invisible: `expect` counts every link the store holds, not the
+ones the import decided to carry.
+
+The import runs before the tasks that read it. `importLegacy` is a `sync.OnceFunc`
+and `syncYouTubeCookies`, `syncSpotifySession`, `verifyYouTubeSession` and the
+startup `Connect` call it first: they all read the very sections the import
+fills, and reading a 17 MB store takes longer than a state read, so without the
+wait an upgrade would stage no session and connect with no credentials until the
+next launch.
+
+A local playlist that reaches the library twice under two ids is collapsed by
+`collapse` when the import runs: the newest copy wins under the id the library
+already uses, and the copy that loses is tombstoned so the backup does not bring
+it back. The old store's index keeps copies the document already dropped, which
+is how the duplicate arrived in the first place. Only `local:` playlists are
+grouped: a source-owned playlist is its own record, and a local one that shares
+its name is not a copy of it.
+
+The old directory is moved aside once the import has been read back and found
+complete (`verify`), and removed `keepStore` (14 days) later by `pruneStore`. A
+count proves what came across, not that the values are right, and the store is
+the only copy of what the previous version knew: a mapping bug found a release
+later is fixed and imported again, because the import is repeatable and does not
+duplicate. A store that comes short, or that the reader refuses, is kept where
+it is so the next launch tries again. Nothing on the launch path touches any of
+it — the import is a goroutine started from `ServiceStartup`, so the window
+never waits for a 17 MB read.
+
+`window.json` is the app's own file: the import writes it only when it is not
+there, so a retried import cannot move a window the user already placed.
 
 Only `jota.backup.json` is shared with jondo. Its `state.json`, `playlists/` and
 `library.json` are that app's own device files and speak its own Song/Playlist
