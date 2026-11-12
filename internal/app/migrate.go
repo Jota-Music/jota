@@ -137,6 +137,8 @@ func pruneStore() {
 	if freed := removeTree(aside); freed > 0 {
 		log.Printf("migrate: the kept store is gone, %d MB given back", freed/(1<<20))
 	}
+	// The folder the store lived in is empty now, and nothing else uses it.
+	_ = os.Remove(filepath.Dir(aside))
 }
 
 // removeTree deletes a directory and answers how many bytes it held.
