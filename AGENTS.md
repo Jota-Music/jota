@@ -117,18 +117,40 @@ is one write whatever it touched and a read is a lookup in memory. It is
 replaced through `tmp` + `fsync` + `rename`, so a crash leaves the old document
 or the new one, never half. A section this build does not know is kept as it is,
 and a document that will not decode is moved aside as `state.json.bad` instead
-of being replaced by the next write.
+of being replaced by the next write: it is the only copy of what the app knew,
+so nothing collects it.
 
 **The cache** is what the sources answer again: one file per entity, under a
-name that says what it is (`playlists/5zYozysNnBKny8EhXzgVL7.json`,
-`tracks/spotify:track:xyz.json`, `audio/<videoId>.json`). An entry carries the
-fingerprint of the fetch that produced it, which is what tells a background
-refresh whether the source still matches. The cache is never flushed: an entry
-a crash empties is fetched again.
+name that says what it is (`spotify/playlists/5zYozysNnBKny8EhXzgVL7.json`,
+`youtube/tracks/dQw4w9WgXcQ.json`). An entry carries the fingerprint of the
+fetch that produced it, which is what tells a background refresh whether the
+source still matches. The cache is never flushed: an entry a crash empties is
+fetched again. Each directory has a ceiling (`cache.Limit`), and the oldest
+entries go first.
+
+A write lands through `tmp` + `rename`, so a reader never sees half an entry. A
+write that dies between the two leaves the temporary file behind;
+`cache.Start` sweeps the ones older than the process, and leaves the ones this
+run still owns.
 
 `internal/state` and `internal/cache` are the two halves. There are no keys and
 no buckets: a feature owns a section and writes it whole, and the cache is
-addressed by the entity it holds.
+addressed by the entity it holds. A channel's playlist list and a playlist
+itself share the `youtube/playlists/` folder: a channel id starts with `UC` and
+a playlist id never does, so neither overwrites the other.
+
+The resolved YouTube streams live in `youtube/streams/<videoId>.json`, one file
+each, and they carry the life their URL has left: an entry a crash empties is
+resolved again, and the ones whose URL died are collected by age
+(`youtube.PurgeStreams`), because no googlevideo URL lives longer than a day.
+The video a search settled on lives in `youtube/links/<songId>`, one file per
+song with no extension, holding the 11 bytes of the video id read directly: it
+is a pick, not a decision, so it is cache and can be re-derived. The pins the
+user fixed by hand are the only thing that stays in the `youtube` section of the
+state (`links`), and they are never overwritten by a resolve. They are dropped
+only when the pinned video is gone and a search found a replacement. The
+`youtube/session` file holds the tokens alone (visitor, version, client), so
+writing one does not rewrite the streams.
 
 The embedded store this app used to keep (`storage/kv`) is imported on the
 first launch after an upgrade: `importLegacyStore` runs from `ServiceStartup`,
@@ -138,11 +160,18 @@ nothing for it. `cmd/migrate` does the same thing by hand, for a device whose
 launch never gets there.
 
 **Badger is not a dependency.** `internal/legacy` reads the old store by its own
-format: the manifest (protobuf), the table index (flatbuffers) and the blocks
-(zstd), all parsed by hand. Only the zstd decoder (`klauspost/compress`) is
-pulled in. The values that lived in the value log are the cached ones, which the
-sources answer again, so they are not read. `internal/app/testdata/store` is a
-real Badger store, so the reader is checked without Badger in the tree.
+format: the manifest (protobuf), the table index (flatbuffers), the blocks
+(zstd) and the memtable log, all parsed by hand. Only the zstd decoder
+(`klauspost/compress`) is pulled in. The values that lived in the value log are
+the cached ones, which the sources answer again, so they are not read.
+`internal/app/testdata/store` is a real Badger store and
+`internal/app/testdata/wal` a real Badger memtable log, so the reader is
+checked without Badger in the tree.
+
+The memtable log is not an edge case: the old app never closed Badger, so the
+newest writes sit in `00001.mem` until the store is opened. A delete is
+written there as an entry with no value, so the log scan keeps going on an
+empty value and only stops on a key that is not there.
 
 The reader refuses what it does not understand: a store of another format
 version or with a checksum that does not match is an error, never a half
@@ -286,8 +315,9 @@ UI warns before storing it: Google can ban an account used this way.
 - **Startup checks the session.** `verifyYouTubeSession` runs in the background
   after `ServiceStartup` and drops a stored session YouTube answers with
   `ErrSession`, so the panel stops claiming it is signed in. The same verdict from
-  `GetMyYouTubePlaylists` drops it too, and `dropYouTubeSession` tombstones it so
-  the removal reaches the other devices instead of the next merge restoring it.
+  `GetMyYouTubePlaylists` drops it too. The drop is local: a session this device
+  cannot use may still work on another one, and only the user clearing it
+  deletes it everywhere (`tombstoneSession`).
 - **Playback asks anonymously first.** `playerRequest` sends the player call as a
 guest and only retries it signed when the answer is `LOGIN_REQUIRED` and cookies
 are stored, so the account is spent only where it is needed. `audioURL` then
@@ -325,8 +355,8 @@ newest copy. An explicit import (`Restore`) lets the file win outright and also
 undoes a local deletion. Removals still travel as tombstones — `deleted` in
 playlists, `removed` in follows and saved — because otherwise the next device
 that still holds the record would bring it back. Order has none: a shelf's list
-is saved whole, so the latest whole list wins. Settings reconcile per key, using
-the `-at` companion key to date each value.
+is saved whole, so the latest whole list wins. Settings reconcile per key, and
+the moment each value was written travels with it, so the newest copy wins.
 - Order travels as one entry per shelf, `{"scope": ..., "account": ..., "ids":
 [...], "at": ...}`, keyed by scope plus the owning account, so the library order
 of two accounts — and the rooms shelf, which has no account — never collide. A
@@ -339,7 +369,7 @@ fallback, so an upgrade does not silently reset them.
 - `sessions` carries the YouTube cookies and the Spotify credentials, one entry per
 source (`youtube`, `spotify`), as an encrypted blob that merges exactly like a
 setting: `internal/backup/settings.go` aliases `Sessions` to `Settings`, so
-`mergeSettings` is the one merge and the `-at` companion still dates it. Both are
+`mergeSettings` is the one merge and the moment it was written still dates it. Both are
 staged into `session:<source>` when they change (`syncYouTubeCookies`,
 `syncSpotifySession`) and applied on a pass (`applyYouTubeCookies`,
 `applySpotifySession`), which reconnects or re-signs the source on the spot.
