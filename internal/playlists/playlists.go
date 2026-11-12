@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 func (s *Service) List() ([]music.PlaylistSummary, error) {
@@ -21,7 +21,7 @@ func (s *Service) List() ([]music.PlaylistSummary, error) {
 	for _, id := range ids {
 		pl, err := s.load(id)
 		if err != nil {
-			if errors.Is(err, kv.ErrKeyNotFound) {
+			if errors.Is(err, ErrNotFound) {
 				continue
 			}
 			return nil, err
@@ -150,7 +150,12 @@ func (s *Service) Delete(id string) error {
 	if err := s.bury(id, time.Now().UnixMilli()); err != nil {
 		return err
 	}
-	return bucket.Delete(recordKey + id)
+	part, err := s.stored()
+	if err != nil {
+		return err
+	}
+	delete(part.Tracks, id)
+	return state.Write(state.Playlists, part)
 }
 
 // AddSongs resolves every reference before persisting anything, so a playlist

@@ -74,7 +74,7 @@ func TestSongIdIsPrefixed(t *testing.T) {
 	const uri = "spotify:track:4uLU6hMCjMI75M1A2tKUQC"
 	song := trackToSong(Track{URI: uri, Name: "Test"})
 
-	if song.Id != "spotify:4uLU6hMCjMI75M1A2tKUQC" {
+	if song.Id != "spotify:track:4uLU6hMCjMI75M1A2tKUQC" {
 		t.Fatalf("Song.Id = %q, want the prefixed id", song.Id)
 	}
 }
@@ -99,7 +99,7 @@ func TestSearchResultArtistsAreBare(t *testing.T) {
 	})
 
 	want := []music.Artist{
-		{Id: "spotify:4Z8W4fKeB5YxbusRsdQVPb", Name: "Radiohead"},
+		{Id: "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb", Name: "Radiohead"},
 		{Name: "Radiohead"},
 	}
 	if !slices.Equal(got.Artists, want) {

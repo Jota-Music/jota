@@ -1,11 +1,19 @@
 package spotify
 
 import (
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
-var musicBucket = kv.UseBucket("spotify-music")
+// playlistName is where a playlist is cached.
+func playlistName(playlistID string) string { return "spotify/playlists/" + playlistID }
+
+// contextName is where a user context is cached: a list that looks like a
+// playlist but has no revision to compare.
+func contextName(playlistID string) string { return "spotify/contexts/" + playlistID }
+
+// libraryName is where the playlists an account owns are cached.
+func libraryName(user string) string { return "spotify/library/account" }
 
 // cachedPlaylist pairs a playlist with the Spotify revision it was fetched at,
 // so a background refresh can tell whether the playlist changed.
@@ -15,21 +23,15 @@ type cachedPlaylist struct {
 }
 
 func loadCachedPlaylist(playlistID string) (cachedPlaylist, bool) {
-	if err := kv.EnsureStarted(); err != nil {
-		return cachedPlaylist{}, false
-	}
-	var cached cachedPlaylist
-	if err := musicBucket.GetObject("playlist:v3:"+playlistID, &cached); err != nil {
+	cached, ok := cache.Get[cachedPlaylist](playlistName(playlistID))
+	if !ok {
 		return cachedPlaylist{}, false
 	}
 	return cached, true
 }
 
 func storeCachedPlaylist(playlistID string, cached cachedPlaylist) {
-	if err := kv.EnsureStarted(); err != nil {
-		return
-	}
-	_ = musicBucket.SetObject("playlist:v3:"+playlistID, cached)
+	_ = cache.Put(playlistName(playlistID), cached)
 }
 
 // needsRevalidate reports whether the cached playlist is stale against the
@@ -43,10 +45,10 @@ func needsRevalidate(cachedRevision, currentRevision string) bool {
 }
 
 func revalidateFullPlaylist(playlistID string) error {
-	_ = musicBucket.Delete("playlist:v2:" + playlistID)
-	return musicBucket.Delete("playlist:v3:" + playlistID)
+	_ = cache.Forget(contextName(playlistID))
+	return cache.Forget(playlistName(playlistID))
 }
 
 func revalidateUserPlaylists(user string) error {
-	return musicBucket.Delete("playlists:v3:" + user)
+	return cache.Forget(libraryName(user))
 }

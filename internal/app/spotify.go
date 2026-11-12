@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"strings"
-	"time"
 
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/services/spotify"
@@ -138,10 +137,9 @@ func (a *App) syncSpotifySession() {
 	if err != nil {
 		return
 	}
-	if err := settings.SetObject("session:spotify", enc); err != nil {
+	if err := stageBlob("spotify", enc); err != nil {
 		return
 	}
-	_ = settings.SetObject("session:spotify"+settingAt, time.Now().UnixMilli())
 	sessionsSync.dirty.Store(true)
 	a.syncInBackground()
 }

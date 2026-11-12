@@ -80,12 +80,12 @@ func TestSearchAudioPlaysTheLinkedIdWithoutSearching(t *testing.T) {
 	const songID = "test-linked-audio"
 	const videoID = "linkedVideo1"
 
-	_ = youtubeSourceBucket.SetString(songID, videoID)
-	_ = audioBucket.SetObject(videoID, music.Audio{
+	seedYoutubeId(songID, videoID)
+	youtubeCache.keep(videoID, music.Audio{
 		Url:      playableServer(t),
 		VideoID:  videoID,
 		ExpireAt: time.Now().Add(time.Hour).Unix(),
-	}, time.Hour)
+	})
 
 	searches := countingSearch(t, searchResponse{})
 
@@ -118,7 +118,7 @@ func TestSearchAudioFallsBackToSearchWhenTheLinkedIdDies(t *testing.T) {
 	const songID = "test-dead-link"
 	const videoID = "deadVideo01"
 
-	_ = youtubeSourceBucket.SetString(songID, videoID)
+	seedYoutubeId(songID, videoID)
 
 	oldPlayer := playerStreamURLFn
 	playerStreamURLFn = func(clientConfig, string) (string, error) {
@@ -169,7 +169,7 @@ func stubSearch(t *testing.T, responses map[string]searchResponse) {
 // the song; merging the artist-first query is what surfaces the official upload.
 func TestCandidatesMergesAlbumAndArtistQueries(t *testing.T) {
 	const songID = "test-merge-queries"
-	_ = youtubeSourceBucket.Delete(songID)
+	_ = NewService().SetYoutubeId(songID, "")
 
 	song := music.Song{
 		Id:       songID,
@@ -201,7 +201,7 @@ func TestCandidatesMergesAlbumAndArtistQueries(t *testing.T) {
 // One query failing must not sink a resolve the other one can satisfy.
 func TestCandidatesKeepsResultsWhenOneQueryFails(t *testing.T) {
 	const songID = "test-merge-partial"
-	_ = youtubeSourceBucket.Delete(songID)
+	_ = NewService().SetYoutubeId(songID, "")
 
 	song := music.Song{
 		Id:      songID,

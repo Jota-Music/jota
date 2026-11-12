@@ -3,18 +3,15 @@ package rooms
 import (
 	"testing"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 func TestRoomLifecycle(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
+	state.Reset()
+	t.Cleanup(state.Reset)
 
 	s := NewStore()
 
@@ -81,11 +78,8 @@ func TestRoomSecretsPersist(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
+	state.Reset()
+	t.Cleanup(state.Reset)
 
 	s := NewStore()
 	if _, err := s.Save(Room{

@@ -3,7 +3,7 @@ package youtube
 import (
 	"strings"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -17,41 +17,53 @@ import (
 // the wire for a title that does not change.
 func (s *Service) RefreshCatalog() (bool, error) {
 	changed := false
-	err := playlistBucket.ForEach(func(key string, _ []byte) error {
-		switch {
-		case key == myPlaylistsKey:
-			// A session the sign-in window handed over cannot sign a browse, so
-			// refreshing it would only earn a 401.
-			if sessionValue(cookies()) == "" {
-				return nil
-			}
-			changed = kv.Refreshable(playlistBucket, key, fetchMyPlaylists) || changed
-		case strings.HasPrefix(key, "channel:playlists:"):
-			id := strings.TrimPrefix(key, "channel:playlists:")
-			changed = kv.Refreshable(playlistBucket, key, func() ([]music.PlaylistSummary, error) {
-				return fetchChannelTab(id, channelPlaylistsParams, func(section itemSection, _ string) []music.PlaylistSummary {
-					return section.summaries()
-				})
-			}) || changed
-		case strings.HasPrefix(key, "channel:videos:"):
-			id := strings.TrimPrefix(key, "channel:videos:")
-			changed = kv.Refreshable(playlistBucket, key, func() ([]music.Song, error) {
-				return fetchChannelTab(id, channelVideosParams, func(section itemSection, name string) []music.Song {
-					return section.videos(id, name)
-				})
-			}) || changed
-		case strings.HasPrefix(key, "channel:info:"):
-			id := strings.TrimPrefix(key, "channel:info:")
-			changed = kv.Refreshable(playlistBucket, key, func() (music.ChannelInfo, error) {
-				return channelInfo(id)
-			}) || changed
-		case strings.HasPrefix(key, "playlist:v3:"):
-			id := strings.TrimPrefix(key, "playlist:v3:")
-			changed = kv.Refreshable(playlistBucket, key, func() (music.Playlist, error) {
-				return fetchFullPlaylist(id)
-			}) || changed
+	for _, dir := range []string{"youtube/library", "youtube/channels", "youtube/playlists", "youtube/videos"} {
+		err := cache.Walk(dir, func(name string) error {
+			changed = s.refreshEntity(name) || changed
+			return nil
+		})
+		if err != nil {
+			return changed, err
 		}
-		return nil
-	})
-	return changed, err
+	}
+	return changed, nil
+}
+
+// refreshEntity revalidates one cached entity, rewriting it only when the
+// source answered something different.
+func (s *Service) refreshEntity(name string) bool {
+	switch {
+	case name == myPlaylistsKey:
+		// A session the sign-in window handed over cannot sign a browse, so
+		// refreshing it would only earn a 401.
+		if sessionValue(cookies()) == "" {
+			return false
+		}
+		return cache.Refreshable(name, fetchMyPlaylists)
+	case strings.HasPrefix(name, "youtube/playlists/"):
+		id := strings.TrimPrefix(name, "youtube/playlists/")
+		return cache.Refreshable(name, func() ([]music.PlaylistSummary, error) {
+			return fetchChannelTab(id, channelPlaylistsParams, func(section itemSection, _ string) []music.PlaylistSummary {
+				return section.summaries()
+			})
+		})
+	case strings.HasPrefix(name, "youtube/videos/"):
+		id := strings.TrimPrefix(name, "youtube/videos/")
+		return cache.Refreshable(name, func() ([]music.Song, error) {
+			return fetchChannelTab(id, channelVideosParams, func(section itemSection, name string) []music.Song {
+				return section.videos(id, name)
+			})
+		})
+	case strings.HasPrefix(name, "youtube/channels/"):
+		id := strings.TrimPrefix(name, "youtube/channels/")
+		return cache.Refreshable(name, func() (music.ChannelInfo, error) {
+			return channelInfo(id)
+		})
+	case strings.HasPrefix(name, "youtube/playlists/"):
+		id := strings.TrimPrefix(name, "youtube/playlists/")
+		return cache.Refreshable(name, func() (music.Playlist, error) {
+			return fetchFullPlaylist(id)
+		})
+	}
+	return false
 }

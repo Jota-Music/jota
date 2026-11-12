@@ -10,7 +10,7 @@ import (
 
 	"github.com/devgianlu/go-librespot/ap"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 // A stalled accesspoint is what used to make the app open without a window: the
@@ -116,11 +116,8 @@ func readDeviceId(t *testing.T, dir string) string {
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	t.Setenv("APPDATA", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("open kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
+	state.Close()
+	t.Cleanup(state.Close)
 	return deviceId()
 }
 

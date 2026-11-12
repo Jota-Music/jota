@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 func setup(t *testing.T) *Service {
@@ -12,11 +12,8 @@ func setup(t *testing.T) *Service {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
+	state.Reset()
+	t.Cleanup(state.Reset)
 	return New()
 }
 

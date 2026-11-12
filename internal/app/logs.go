@@ -5,14 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 // LogPath is the file the app mirrors its log and fatal crash output to, next to
 // the app's storage. stderr is lost when the app is launched from a desktop
 // entry or an AppImage, so this is the file a user shares when reporting a crash.
 func LogPath() string {
-	dir, _ := kv.Dir()
+	dir, _ := state.Dir()
 	return filepath.Join(dir, "jota", "jota.log")
 }
 

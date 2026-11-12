@@ -4,7 +4,7 @@ Self-hosted music streaming app — Go + Wails v3 backend, Preact frontend.
 
 ## Stack
 
-- Backend: Go + Wails v3 + BadgerDB (`internal/`)
+- Backend: Go + Wails v3 + a JSON document store (`internal/state`, `internal/cache`)
 - Frontend: Preact + Vite + Bun + TypeScript (`frontend/`)
 - Sources: Spotify (go-librespot) + YouTube (innertube)
 
@@ -80,21 +80,21 @@ the release above 3000 ms.
 
 Rules that keep it there:
 
-- Nothing on the launch path may touch Badger or the sync folder. The window
+- Nothing on the launch path may read the store or the sync folder. The window
   geometry lives in `window.json` next to the log for that reason
-  (`loadWindowState`), and the store opens in the background at
-  `WindowRuntimeReady`.
+  (`loadWindowState`), and the state document and the cache start in the
+  background at `WindowRuntimeReady`.
 - The sync document is never read at launch: the frontend throttles itself for
   `BOOT_GRACE_MS` and the backend's ticker only starts after `syncTick`.
 - A blocking call on the GTK thread is a frozen window, not a slow one. The
   clipboard poll is the known one (`gtk_clipboard_wait_for_text`); on desktop it
   only reads on focus.
 - Closing the window must end the process, and nothing slow may run there. The
-  store is closed only by tests, never on the way out: a Badger checkpoint waits
-  for the write in flight and the value-log GC (`shutdownBudget` = 3s exists for
-  exactly that), and the replay it avoids is paid on the next open, which happens
-  in the background. `build/linux/test-appimage.sh` clicks the close button and
-  fails the release if the process outlives it.
+  state document is written by a writer thread, so the exit flushes what is
+  pending (`state.Close()`): one write of a small file, nothing else. The cache
+  needs no close, every entry lands through a rename (`shutdownBudget` = 3s only
+  guards a loop that will not unwind). `build/linux/test-appimage.sh` clicks the
+  close button and fails the release if the process outlives it.
 - A launch that dies before its window exists is retried in the software
   renderer (`compatRenderer` in `main.go`, driven by the crash marker). Creating
   the WebKit view can segfault inside cgo — nothing to recover from in-process,
@@ -104,6 +104,44 @@ Rules that keep it there:
   clipboard is the known one: `gtk_clipboard_wait_for_text` waits on the
   compositor's selection bridge from an XWayland client, so `internal/clipboard`
   asks with `gtk_clipboard_request_text` instead and gives up after 400ms.
+
+## Store
+
+Two things, and they are not the same thing.
+
+**The state** is one document: `<config>/jota/state.json`. It holds a named
+section per feature (`playlists`, `follows`, `saved`, `order`, `rooms`,
+`settings`, `sessions`, `spotify`, `youtube`), each owned by the package that
+knows its shape. The document is written by a single writer thread, so a change
+is one write whatever it touched and a read is a lookup in memory. It is
+replaced through `tmp` + `fsync` + `rename`, so a crash leaves the old document
+or the new one, never half. A section this build does not know is kept as it is,
+and a document that will not decode is moved aside as `state.json.bad` instead
+of being replaced by the next write.
+
+**The cache** is what the sources answer again: one file per entity, under a
+name that says what it is (`playlists/5zYozysNnBKny8EhXzgVL7.json`,
+`tracks/spotify:track:xyz.json`, `audio/<videoId>.json`). An entry carries the
+fingerprint of the fetch that produced it, which is what tells a background
+refresh whether the source still matches. The cache is never flushed: an entry
+a crash empties is fetched again.
+
+`internal/state` and `internal/cache` are the two halves. There are no keys and
+no buckets: a feature owns a section and writes it whole, and the cache is
+addressed by the entity it holds.
+
+The embedded store this app used to keep is **not** imported automatically
+(`storage/kv`, left untouched on disk). On first launch after an upgrade the app
+detects it and offers to import it via `App.MigrateLegacyStore()` (exposed as a
+binding). The import is optional: the user can also make a backup from the old
+version and restore it. The legacy store is moved to `storage/kv.badger/` after
+a successful import so it is not imported twice. Badger remains a dependency
+only for this importer.
+
+Only `jota.backup.json` is shared with jondo. Its `state.json`, `playlists/` and
+`library.json` are that app's own device files and speak its own Song/Playlist
+shapes, so writing them here would only give jondo something it cannot read; the
+document is where both apps meet.
 
 ## Env
 
@@ -121,16 +159,16 @@ Rules that keep it there:
 
 - Backend: `internal/app` (Go↔JS bindings), `internal/music` (domain), local contexts
   (`internal/{playlists,follows,ordering,rooms,update}`), external service adapters
-  (`internal/services/{spotify,youtube,discord}`), `internal/{kv,env}`.
+  (`internal/services/{spotify,youtube,discord}`), `internal/{state,cache,env}`.
 - Frontend: features in `frontend/src/lib/{auth,music,sync,shared}`.
 
 ## Shutdown
 
 Closing goes through `Window.Close()`, never `Application.Quit()`: the latter calls
-`impl.destroy()` and skips `WindowClosing` entirely, so the geometry flush, the exit
-watchdog and Badger's checkpoint never run, and WebKit is torn down hard enough that
-the next launch can segfault inside `create_webview`. `Window.Close()` emits the event,
-`Run()` returns, and `main` flushes the geometry, checkpoints the store and exits.
+`impl.destroy()` and skips `WindowClosing` entirely, so the geometry flush and the
+exit watchdog never run, and WebKit is torn down hard enough that the next launch can
+segfault inside `create_webview`. `Window.Close()` emits the event, `Run()` returns,
+and `main` flushes the geometry and exits.
 SIGTERM/SIGINT/SIGHUP take the same cleanup (see the signal handler in `main.go`).
 
 ## YouTube sign-in

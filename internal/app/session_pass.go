@@ -9,13 +9,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Jota-Music/jota/internal/state"
+
 	"golang.org/x/crypto/pbkdf2"
 )
 
 // sessionPassKey is the settings key holding the shared passphrase used to
 // encrypt sessions (YouTube cookies, Spotify credentials) before they travel
 // through the sync document.
-const sessionPassKey = "session-pass"
 
 // sessionEncMagic marks a value encrypted with encryptWithPass.
 const sessionEncMagic = "JOTAENC1:"
@@ -30,10 +31,10 @@ func (a *App) SessionPass() string {
 // still read as a fallback so an upgrade does not lose the pass.
 func storedPass() string {
 	var pass string
-	if err := settings.GetObject(sessionPassKey, &pass); err == nil && pass != "" {
+	if pass = readSettings().SessionPass; pass != "" {
 		return pass
 	}
-	_ = settings.GetObject("youtube-cookie-pass", &pass)
+	pass = ""
 	return pass
 }
 
@@ -43,7 +44,9 @@ func storedPass() string {
 // those blobs were waiting for, and staging the local session over them before
 // applying them would throw the other device's session away.
 func (a *App) SetSessionPass(pass string) error {
-	if err := settings.SetObject(sessionPassKey, pass); err != nil {
+	current := readSettings()
+	current.SessionPass = pass
+	if err := state.Write(state.Settings, current); err != nil {
 		return err
 	}
 	if pass == "" {

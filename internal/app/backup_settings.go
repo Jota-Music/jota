@@ -28,32 +28,14 @@ type settingsStore struct {
 
 func (s *settingsStore) Section() (backup.Settings, error) {
 	out := backup.Settings{}
+	current := readSettings()
 	// sync
-	v := readSyncSettings()
-	syncVal := map[string]any{}
-	if v.Import != nil {
-		syncVal["import"] = *v.Import
-	}
-	if v.Interval != nil {
-		syncVal["interval"] = *v.Interval
-	}
-	if v.Auto != nil {
-		syncVal["auto"] = *v.Auto
-	}
-	if len(syncVal) > 0 {
-		raw, err := json.Marshal(syncVal)
-		if err == nil {
-			var at int64
-			_ = settings.GetObject("sync"+settingAt, &at)
-			out["sync"] = backup.Setting{Value: raw, At: at}
-		}
+	if raw, ok := syncValue(current.Sync); ok {
+		out["sync"] = backup.Setting{Value: raw, At: current.Sync.At}
 	}
 	// relay
-	var relay json.RawMessage
-	if err := settings.GetObject("relay", &relay); err == nil {
-		var at int64
-		_ = settings.GetObject("relay"+settingAt, &at)
-		out["relay"] = backup.Setting{Value: relay, At: at}
+	if raw, err := json.Marshal(current.Relay); err == nil && (current.Relay.URL != "" || current.Relay.Token != "") {
+		out["relay"] = backup.Setting{Value: raw, At: current.RelayAt}
 	}
 	if len(out) == 0 {
 		return nil, nil
@@ -63,19 +45,30 @@ func (s *settingsStore) Section() (backup.Settings, error) {
 
 func (s *settingsStore) Apply(part backup.Settings) error {
 	applied := false
+	current := readSettings()
 	for key, entry := range part {
 		if len(entry.Value) == 0 || !slices.Contains(carriedSettings, key) {
 			continue
 		}
-		if err := settings.SetObject(key, entry.Value); err != nil {
-			return err
-		}
-		if err := settings.SetObject(key+settingAt, entry.At); err != nil {
-			return err
+		switch key {
+		case "sync":
+			options := syncValueOf(entry.Value)
+			current.Sync.Import = options.Import
+			current.Sync.Auto = options.Auto
+			current.Sync.Interval = options.Interval
+			current.Sync.At = entry.At
+		case "relay":
+			var relay Relay
+			if err := json.Unmarshal(entry.Value, &relay); err != nil {
+				continue
+			}
+			current.Relay = relay
+			current.RelayAt = entry.At
 		}
 		applied = true
 	}
 	if applied {
+		writeSettings(current)
 		s.dirty.Store(true)
 	}
 	return nil
@@ -90,8 +83,19 @@ func (s *settingsStore) Synced() {
 	s.dirty.Store(false)
 }
 
-func touch(key string) {
-	_ = settings.SetObject(key+settingAt, time.Now().UnixMilli())
+// touchSync dates the carried sync settings.
+func touchSync() {
+	current := readSettings()
+	current.Sync.At = time.Now().UnixMilli()
+	writeSettings(current)
+	settingsSync.dirty.Store(true)
+}
+
+// touchRelay dates the carried relay settings.
+func touchRelay() {
+	current := readSettings()
+	current.RelayAt = time.Now().UnixMilli()
+	writeSettings(current)
 	settingsSync.dirty.Store(true)
 }
 

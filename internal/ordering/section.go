@@ -1,12 +1,10 @@
 package ordering
 
 import (
-	"encoding/json"
-	"errors"
 	"reflect"
 	"sort"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 // Record is one shelf's order: the ids in sequence, the shelf's scope and
@@ -37,19 +35,19 @@ func (s Section) Empty() bool {
 	return len(s) == 0
 }
 
-// shelf identifies one order: a scope alone when the shelf is app-wide, the
+// shelfKey identifies one order: a scope alone when the shelf is app-wide, the
 // scope plus the owning account otherwise.
-type shelf struct {
+type shelfKey struct {
 	scope   string
 	account string
 }
 
-func (e Entry) shelf() shelf {
-	return shelf{normalize(e.Scope), normalize(e.Account)}
+func (e Entry) shelf() shelfKey {
+	return shelfKey{normalize(e.Scope), normalize(e.Account)}
 }
 
-func (r Record) shelf() shelf {
-	return shelf{normalize(r.Scope), normalize(r.Account)}
+func (r Record) shelf() shelfKey {
+	return shelfKey{normalize(r.Scope), normalize(r.Account)}
 }
 
 // Merge modes, for the callers outside this package that decide between a
@@ -80,24 +78,17 @@ func (s *Service) Section() (Section, error) {
 
 // section reads every stored order. Callers must hold mu.
 func (s *Service) section() (Section, error) {
-	out := make(Section, 0)
-	err := bucket.ForEach(func(_ string, data []byte) error {
-		var rec Record
-		if err := json.Unmarshal(data, &rec); err != nil {
-			return nil
-		}
-		rec.Scope, rec.Account = normalize(rec.Scope), normalize(rec.Account)
-		if rec.Scope == "" {
-			return nil
-		}
-		out = append(out, Entry(clean(rec)))
-		return nil
-	})
-	if errors.Is(err, kv.ErrNotStarted) {
-		return nil, nil
-	}
+	part, err := state.Read[Section](state.Order)
 	if err != nil {
 		return nil, err
+	}
+	out := make(Section, 0, len(part))
+	for _, entry := range part {
+		entry.Scope, entry.Account = normalize(entry.Scope), normalize(entry.Account)
+		if entry.Scope == "" {
+			continue
+		}
+		out = append(out, Entry(clean(Record(entry))))
 	}
 	if len(out) == 0 {
 		return nil, nil
@@ -118,8 +109,8 @@ func sortSection(part Section) {
 }
 
 // index groups a section by shelf, so both sides reconcile on the same pair.
-func index(part Section) map[shelf]Record {
-	out := make(map[shelf]Record, len(part))
+func index(part Section) map[shelfKey]Record {
+	out := make(map[shelfKey]Record, len(part))
 	for _, entry := range part {
 		out[entry.shelf()] = Record(entry)
 	}
@@ -156,10 +147,12 @@ func (s *Service) MergeSection(part Section, mode mergeMode, apply bool) (Sectio
 		if cur, ok := held[entry.shelf()]; ok && reflect.DeepEqual(cur, rec) {
 			continue
 		}
-		if err := bucket.SetObject(key(entry.Scope, entry.Account), rec); err != nil {
+		applied++
+	}
+	if applied > 0 {
+		if err := state.Write(state.Order, out); err != nil {
 			return out, applied, err
 		}
-		applied++
 	}
 	// An explicit restore is a local change and has to be pushed.
 	if mode == mergeRestore && applied > 0 {

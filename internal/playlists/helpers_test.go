@@ -5,8 +5,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 func fakeResolver(covers map[string]string, fail map[string]bool) func(string) (music.Song, error) {
@@ -31,11 +31,8 @@ func setup(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
+	state.Reset()
+	t.Cleanup(state.Reset)
 }
 
 func seed(t *testing.T, s *Service, playlists []exportPlaylist) {

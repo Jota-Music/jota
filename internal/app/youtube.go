@@ -5,7 +5,6 @@ import (
 	"log"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/services/youtube"
@@ -241,10 +240,9 @@ func (a *App) syncYouTubeCookies() {
 	if err != nil {
 		return
 	}
-	if err := settings.SetObject("session:youtube", enc); err != nil {
+	if err := stageBlob("youtube", enc); err != nil {
 		return
 	}
-	_ = settings.SetObject("session:youtube"+settingAt, time.Now().UnixMilli())
 	sessionsSync.dirty.Store(true)
 	a.syncInBackground()
 }

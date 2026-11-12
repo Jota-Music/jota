@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 // foreignId derives a stable local id for a playlist whose id came from a file
@@ -107,7 +107,7 @@ func (s *Service) merge(remote Section, mode mergeMode, apply bool) (Section, in
 	for _, id := range ids {
 		pl, err := s.load(id)
 		if err != nil {
-			if errors.Is(err, kv.ErrKeyNotFound) {
+			if errors.Is(err, ErrNotFound) {
 				continue
 			}
 			return Section{}, 0, err
@@ -260,7 +260,7 @@ func (s *Service) applyMerge(out Section, graves map[string]int64, buried bool) 
 			}
 			continue
 		}
-		if !errors.Is(err, kv.ErrKeyNotFound) {
+		if !errors.Is(err, ErrNotFound) {
 			return applied, err
 		}
 		pl := Playlist{Id: id, Name: name, Songs: refs, Tracks: p.Tracks, ModifiedAt: p.ModifiedAt}
@@ -281,7 +281,12 @@ func (s *Service) applyMerge(out Section, graves map[string]int64, buried bool) 
 	}
 
 	if buried {
-		if err := bucket.SetObject(graveKey, graves); err != nil {
+		part, err := s.stored()
+		if err != nil {
+			return applied, err
+		}
+		part.Deleted = graves
+		if err := state.Write(state.Playlists, part); err != nil {
 			return applied, err
 		}
 	}

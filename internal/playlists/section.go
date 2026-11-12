@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -435,7 +434,7 @@ func (s *Service) ExportSection(external []Snapshot) (Section, error) {
 	for _, id := range ids {
 		pl, err := s.load(id)
 		if err != nil {
-			if errors.Is(err, kv.ErrKeyNotFound) {
+			if errors.Is(err, ErrNotFound) {
 				continue
 			}
 			return Section{}, err

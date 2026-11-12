@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -28,7 +28,7 @@ func (s *SpotifyService) GetFollowing() ([]music.Follow, error) {
 	if username == "" {
 		return nil, ErrNotConnected
 	}
-	return kv.Cached(musicBucket, followingKey(username), s.follows)
+	return cache.Cached(followingName(username), s.follows)
 }
 
 // RevalidateFollowing refreshes the two lists the following shelf shows: the
@@ -39,12 +39,12 @@ func (s *SpotifyService) RevalidateFollowing() {
 	if username == "" {
 		return
 	}
-	kv.Refreshable(musicBucket, followingKey(username), s.follows)
-	kv.Refreshable(musicBucket, friendsKey(username), s.friends)
+	cache.Refreshable(followingName(username), s.follows)
+	cache.Refreshable(friendsName(username), s.friends)
 }
 
-func followingKey(username string) string {
-	return "following:v1:" + username
+func followingName(username string) string {
+	return "spotify/follows/" + username
 }
 
 func (s *SpotifyService) follows() ([]music.Follow, error) {

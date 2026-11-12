@@ -12,6 +12,15 @@ const coverCount = 4
 // answers nothing must not walk a whole playlist over the network.
 const coverResolveCap = 16
 
+// Stored is what the device keeps of the local playlists: the ids in the order
+// the user arranged them, the playlists themselves and the tombstones of the
+// deleted ones, so a backup cannot bring one back.
+type Stored struct {
+	Index   []string            `json:"index,omitempty"`
+	Tracks  map[string]Playlist `json:"playlists,omitempty"`
+	Deleted map[string]int64    `json:"deleted,omitempty"`
+}
+
 // Playlist is a user-created playlist. It only stores references to the source
 // tracks (a bare Spotify id or "youtube:<videoId>") plus the metadata known for
 // them; a reference without stored metadata is resolved from its source.

@@ -21,10 +21,11 @@ import (
 	"time"
 
 	"github.com/Jota-Music/jota/internal/app"
+	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/covers"
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/services/youtube"
 	"github.com/Jota-Music/jota/internal/single"
+	"github.com/Jota-Music/jota/internal/state"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -41,8 +42,8 @@ type windowState struct {
 	AlwaysOnTop         bool
 }
 
-// windowPath is where the window geometry lives: a tiny file next to the log,
-// not a Badger key, so building the window never waits for the database. Set by
+// windowPath is where the window geometry lives: a tiny file next to the log, so
+// building the window reads one small file instead of asking the store. Set by
 // setupLogging, before the window is built.
 var windowPath string
 
@@ -57,13 +58,13 @@ const (
 	startupBudget = 20 * time.Second
 
 	// shutdownBudget is how long the process may linger after the window is gone.
-	// Badger's checkpoint is the slow part, and a session that outlives it keeps
-	// the store lock and the single-instance socket away from the next launch.
+	// Nothing is flushed on the way out (each write lands through a rename), so a
+	// session that outlives the window is a stuck loop rather than slow disk.
 	shutdownBudget = 3 * time.Second
 
-	// storeSlow is the Badger open time past which the page has very likely
-	// already asked for its library and been answered with an empty store: the
-	// reads answer nothing rather than failing, so the page has to ask again.
+	// storeSlow is the store start time past which the page has very likely
+	// already asked for its library and been answered with an empty one: the reads
+	// answer nothing rather than failing, so the page has to ask again.
 	storeSlow = time.Second
 
 	// markerStarted and markerReady are the states recorded in the crash marker.
@@ -215,31 +216,6 @@ func loadWindowState() windowState {
 	return st
 }
 
-// migrateWindowState copies the geometry older builds kept in Badger into the
-// file, once. It runs off the launch path on purpose: opening the database there
-// is exactly what moving the state out of it avoided, so this session keeps the
-// defaults it started with and the next one gets the geometry back.
-func migrateWindowState() {
-	if _, err := os.Stat(windowPath); err == nil {
-		return
-	}
-	var st windowState
-	if err := kv.EnsureStarted(); err != nil {
-		return
-	}
-	if err := kv.UseBucket("window").GetObject("state", &st); err != nil {
-		return
-	}
-
-	windowSaveMu.Lock()
-	defer windowSaveMu.Unlock()
-	// A window that already saved its own geometry is newer than the old key.
-	if _, err := os.Stat(windowPath); err == nil {
-		return
-	}
-	writeWindowStateFile(st)
-}
-
 // writeWindowStateFile publishes the geometry with temp + rename, so a kill
 // mid-write cannot leave a clipped one behind. Every caller holds windowSaveMu,
 // so the single temp name cannot be shared by two writers.
@@ -291,7 +267,7 @@ func clampWindowState(st *windowState, screens []*application.Screen) *applicati
 }
 
 // Moving or resizing the window floods WindowDidMove/Resize events at every
-// pointer move, and each state write churns the Badger value log. Throttle the
+// pointer move, and each state write is one file flushed to disk. Throttle the
 // writes to one per interval and keep the freshest pending state; the last one
 // is flushed at WindowClosing and again after the app exits.
 const windowSaveInterval = 400 * time.Millisecond
@@ -400,7 +376,7 @@ func enforceMinSize(w *application.WebviewWindow) {
 // startProfiling records a CPU profile for the whole run and a heap profile on
 // exit when JOTA_PROFILE_DIR is set. Opt-in, so the default build pays nothing,
 // and starting with the process is the only way to capture startup work such as
-// opening Badger or building the window.
+// reading the store or building the window.
 func startProfiling() func() {
 	dir := os.Getenv("JOTA_PROFILE_DIR")
 	if dir == "" {
@@ -489,6 +465,9 @@ func main() {
 		_ = os.Setenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
 	}
 	cleanup := func() {
+		// The document is written by a writer thread, so the change that is
+		// still pending has to be flushed before the process is gone.
+		state.Close()
 		releaseMarker()
 		if guard != nil {
 			guard.Close()
@@ -497,11 +476,8 @@ func main() {
 	defer cleanup()
 	exit := func(code int) {
 		cleanup()
-		// No Badger checkpoint on the way out: it waits for the write in flight and
-		// for the value-log GC, which is the whole of a slow close. Badger replays
-		// the value log on the next open, and that open already runs in the
-		// background after the window is up, so the cost lands where nobody waits
-		// for it instead of on the close button.
+		// Nothing is flushed here: every store write lands through a rename, so the
+		// geometry the close hook saved is already on disk.
 		os.Exit(code)
 	}
 
@@ -559,8 +535,8 @@ func main() {
 		SingleInstance: singleInstance,
 	})
 
-	state := loadWindowState()
-	windowSaveState = state
+	geometry := loadWindowState()
+	windowSaveState = geometry
 
 	opts := application.WebviewWindowOptions{
 		Title:            "Jota",
@@ -569,7 +545,7 @@ func main() {
 		MinWidth:         windowMinWidth,
 		MinHeight:        windowMinHeight,
 		Frameless:        true,
-		AlwaysOnTop:      state.AlwaysOnTop,
+		AlwaysOnTop:      geometry.AlwaysOnTop,
 		BackgroundType:   application.BackgroundTypeSolid,
 		BackgroundColour: application.NewRGBA(12, 10, 9, 255),
 		Mac: application.MacWindow{
@@ -585,9 +561,9 @@ func main() {
 		},
 		URL: "/",
 	}
-	if state.Width > 0 {
-		screen := clampWindowState(&state, application.Get().Screen.GetAll())
-		opts.Width, opts.Height = state.Width, state.Height
+	if geometry.Width > 0 {
+		screen := clampWindowState(&geometry, application.Get().Screen.GetAll())
+		opts.Width, opts.Height = geometry.Width, geometry.Height
 		// Wails centres a window whose InitialPosition is left unset and the ready
 		// event then moves it, which is the jump the user sees. Linux takes X/Y
 		// relative to a screen's work area, so the screen holding the saved point
@@ -595,10 +571,10 @@ func main() {
 		if runtime.GOOS == "linux" && screen != nil {
 			opts.Screen = screen
 			opts.InitialPosition = application.WindowXY
-			opts.X = state.X - screen.WorkArea.X
-			opts.Y = state.Y - screen.WorkArea.Y
+			opts.X = geometry.X - screen.WorkArea.X
+			opts.Y = geometry.Y - screen.WorkArea.Y
 		}
-		if state.Maximised {
+		if geometry.Maximised {
 			opts.StartState = application.WindowStateMaximised
 		}
 	}
@@ -631,12 +607,13 @@ func main() {
 		// across releases needs no profiler, and a regression shows up as a
 		// bigger number instead of a feeling.
 		log.Printf("window ready in %s", time.Since(startedAt).Round(time.Millisecond))
-		// In the background: opening Badger replays the value log, and neither the
-		// service startup nor the first render should wait for that.
+		// In the background: the service startup and the first render have no
+		// reason to wait for the store.
 		go func() {
 			opened := time.Now()
-			err := kv.Start()
-			migrateWindowState()
+			state.Start()
+			cache.Start()
+			err := error(nil)
 			// A read that arrives while the store opens waits for it and answers
 			// with the library, so a slow open costs the launch time but never a
 			// second pass. A store that could not be opened answered every read
@@ -677,9 +654,8 @@ func main() {
 			// gone, and the process would then live on with no window while the
 			// single-instance guard hands every later launch to it. The geometry is
 			// already flushed by the hook, so a late exit loses nothing.
-			// Armed before Quit, and never stopped: Badger's checkpoint waits for the
-			// writes in flight, and a write that never finishes would leave the process
-			// alive with no window, holding the store lock and the single-instance
+			// Armed before Quit, and never stopped: a loop that will not unwind would
+			// leave the process alive with no window, holding the single-instance
 			// socket that every later launch has to hand off to.
 			time.AfterFunc(shutdownBudget, func() {
 				log.Printf("shutdown: still running %s after the window closed, exiting", shutdownBudget)
@@ -742,9 +718,8 @@ func main() {
 		log.Printf("wails: %v", err)
 		exit(1)
 	}
-	// The force-exit timer stays armed: Badger's checkpoint waits for the writes
-	// in flight, and a write that never finishes would leave the process alive with
-	// no window, holding the store lock and the single-instance socket.
+	// The force-exit timer stays armed: a loop that will not unwind would leave the
+	// process alive with no window, holding the single-instance socket.
 	flushWindowState()
 	log.Printf("jota shutting down")
 }

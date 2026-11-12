@@ -2,10 +2,8 @@ package app
 
 import (
 	"encoding/json"
-	"log"
 	"strings"
 	"sync/atomic"
-	"time"
 
 	"github.com/Jota-Music/jota/internal/backup"
 )
@@ -20,19 +18,17 @@ type sessionsStore struct {
 func (s *sessionsStore) Section() (backup.Settings, error) {
 	out := backup.Settings{}
 	for _, key := range []string{"youtube", "spotify"} {
-		var blob string
-		if err := settings.GetObject("session:"+key, &blob); err != nil {
+		entry, ok := stagedBlob(key)
+		if !ok {
 			continue
 		}
-		value, err := json.Marshal(blob)
+		value, err := json.Marshal(entry.Value)
 		if err != nil {
 			continue
 		}
-		var at int64
-		_ = settings.GetObject("session:"+key+settingAt, &at)
 		// An empty value is a tombstone: it travels so a session removed here
 		// is also removed from the other devices instead of being restored.
-		out[key] = backup.Setting{Value: value, At: at}
+		out[key] = backup.Setting{Value: value, At: entry.At}
 	}
 	if len(out) == 0 {
 		return nil, nil
@@ -46,12 +42,12 @@ func (s *sessionsStore) Apply(part backup.Settings) error {
 		if err := json.Unmarshal(entry.Value, &blob); err != nil {
 			continue
 		}
-		if err := settings.SetObject("session:"+key, blob); err != nil {
-			return err
+		sessions := readSessions()
+		if sessions == nil {
+			sessions = map[string]sessionEntry{}
 		}
-		if err := settings.SetObject("session:"+key+settingAt, entry.At); err != nil {
-			return err
-		}
+		sessions[key] = sessionEntry{Value: blob, At: entry.At}
+		writeSessions(sessions)
 		if blob == "" {
 			continue
 		}
@@ -85,32 +81,27 @@ func sealedSession(blob string) bool {
 // is waiting for a pass, so the panel can say so instead of showing silence.
 func markSealed() {
 	sealed := sealedSession(stagedSession("youtube")) || sealedSession(stagedSession("spotify"))
-	var status SyncStatus
-	if err := settings.GetObject(syncStatusKey, &status); err != nil {
-		status = SyncStatus{}
-	}
+	status := readSettings().Sync.Status
 	if status.Sealed == sealed {
 		return
 	}
 	status.Sealed = sealed
-	if err := settings.SetObject(syncStatusKey, status); err != nil {
-		log.Printf("sync status: %v", err)
-	}
+	current := readSettings()
+	current.Sync.Status = status
+	writeSettings(current)
 }
 
 // stagedSession reads the blob a pass staged for one source, empty when the
 // source was tombstoned or never staged.
 func stagedSession(key string) string {
-	var blob string
-	_ = settings.GetObject("session:"+key, &blob)
-	return blob
+	entry, _ := stagedBlob(key)
+	return entry.Value
 }
 
 // tombstoneSession marks a session as removed with a write time, so the
 // deletion travels to the other devices instead of the next merge restoring it.
 func tombstoneSession(key string) {
-	_ = settings.SetObject("session:"+key, "")
-	_ = settings.SetObject("session:"+key+settingAt, time.Now().UnixMilli())
+	unstageBlob(key)
 	sessionsSync.dirty.Store(true)
 }
 

@@ -107,7 +107,7 @@ func TestBrowseParsing(t *testing.T) {
 	}
 
 	song := songs[0]
-	if song.Id != "youtube:fOT0BUpITw8" {
+	if song.Id != "youtube:track:fOT0BUpITw8" {
 		t.Fatalf("id = %q", song.Id)
 	}
 	if song.YoutubeId != "fOT0BUpITw8" {
@@ -203,7 +203,7 @@ func TestPlaylistSearchParsing(t *testing.T) {
 		t.Fatalf("playlists = %d, want 1", len(playlists))
 	}
 	p := playlists[0]
-	if p.Id != "youtube:PLabc123" {
+	if p.Id != "youtube:playlist:PLabc123" {
 		t.Fatalf("id = %q", p.Id)
 	}
 	if p.Name != "Corridos Mix" || p.Subtitle != "Revive Music" {
@@ -313,7 +313,7 @@ func TestWebShapeFindsTheList(t *testing.T) {
 		t.Fatal("the web shape was not found")
 	}
 	songs := extractSongs(list, "test")
-	if len(songs) != 1 || songs[0].Id != "youtube:privateVid1" {
+	if len(songs) != 1 || songs[0].Id != "youtube:track:privateVid1" {
 		t.Fatalf("songs = %+v, want the private one", songs)
 	}
 	if got := playlistNext([]byte(webBrowseFixture)); got != "page-two" {

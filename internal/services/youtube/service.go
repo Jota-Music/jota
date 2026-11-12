@@ -123,10 +123,7 @@ func (s *Service) play(cacheKey, videoID string) (*music.Audio, error) {
 
 // YoutubeId returns the YouTube video linked to a song, or "" when none.
 func (s *Service) YoutubeId(cacheKey string) string {
-	if v, err := youtubeSourceBucket.GetString(cacheKey); err == nil {
-		return v
-	}
-	return ""
+	return readSession().Links[cacheKey]
 }
 
 func (s *Service) SetYoutubeId(cacheKey, youtubeId string) error {
@@ -139,12 +136,24 @@ func (s *Service) SetYoutubeId(cacheKey, youtubeId string) error {
 		youtubeId = id
 	}
 
-	// Invalidate cached audio so the new video is resolved on the next request.
-	if old, err := youtubeSourceBucket.GetString(cacheKey); err == nil && old != "" && old != youtubeId {
-		_ = audioBucket.Delete(old)
+	stored := readSession()
+	if stored.Links == nil {
+		stored.Links = map[string]string{}
 	}
-	_ = audioBucket.Delete("spotify:" + cacheKey)
-	return youtubeSourceBucket.SetString(cacheKey, youtubeId)
+
+	// Invalidate the cached audio so the new video is resolved on the next
+	// request: the old one still plays, but it is not what the user picked.
+	if old := stored.Links[cacheKey]; old != "" && old != youtubeId {
+		youtubeCache.forget(old)
+	}
+	youtubeCache.forget(songStreamKey(cacheKey))
+
+	if youtubeId == "" {
+		delete(stored.Links, cacheKey)
+	} else {
+		stored.Links[cacheKey] = youtubeId
+	}
+	return writeSession(stored)
 }
 
 // audioQuery asks YouTube for the song by title, artist and album. The album

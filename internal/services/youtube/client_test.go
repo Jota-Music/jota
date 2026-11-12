@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
 	"time"
 )
 
@@ -131,7 +132,7 @@ func TestGetVisitorDataNegativeCache(t *testing.T) {
 	origVisitor, origLast, origBlocked := visitorData, lastFetch, blockedUntil
 	visitorData, lastFetch, blockedUntil = "", time.Time{}, time.Time{}
 	visitorDataMu.Unlock()
-	_ = visitorBucket.Delete(visitorKey)
+	youtubeCache.forgetVisitor()
 	defer func() {
 		apiKeyMu.Lock()
 		apiKey = origKey
@@ -139,7 +140,7 @@ func TestGetVisitorDataNegativeCache(t *testing.T) {
 		visitorDataMu.Lock()
 		visitorData, lastFetch, blockedUntil = origVisitor, origLast, origBlocked
 		visitorDataMu.Unlock()
-		_ = visitorBucket.Delete(visitorKey)
+		youtubeCache.forgetVisitor()
 	}()
 
 	var hits int32
@@ -185,7 +186,7 @@ func TestGetVisitorBacksOffAfterFailure(t *testing.T) {
 	origVisitor, origLast, origBlocked := visitorData, lastFetch, blockedUntil
 	visitorData, lastFetch, blockedUntil = "", time.Time{}, time.Time{}
 	visitorDataMu.Unlock()
-	_ = visitorBucket.Delete(visitorKey)
+	youtubeCache.forgetVisitor()
 	defer func() {
 		visitorDataMu.Lock()
 		visitorData, lastFetch, blockedUntil = origVisitor, origLast, origBlocked
@@ -221,12 +222,12 @@ func TestAdoptVisitorFromResponse(t *testing.T) {
 	origVisitor, origLast, origBlocked := visitorData, lastFetch, blockedUntil
 	visitorData, lastFetch, blockedUntil = "", time.Time{}, time.Now().Add(time.Minute)
 	visitorDataMu.Unlock()
-	_ = visitorBucket.Delete(visitorKey)
+	youtubeCache.forgetVisitor()
 	defer func() {
 		visitorDataMu.Lock()
 		visitorData, lastFetch, blockedUntil = origVisitor, origLast, origBlocked
 		visitorDataMu.Unlock()
-		_ = visitorBucket.Delete(visitorKey)
+		youtubeCache.forgetVisitor()
 	}()
 
 	adoptVisitor([]byte(`{"responseContext":{"visitorData":"token-123"}}`))
@@ -240,8 +241,8 @@ func TestAdoptVisitorFromResponse(t *testing.T) {
 	if !blocked.IsZero() {
 		t.Fatal("expected a successful response to clear the backoff")
 	}
-	if stored, err := visitorBucket.GetString(visitorKey); err != nil || stored != "token-123" {
-		t.Fatalf("persisted token = %q, %v; want token-123", stored, err)
+	if stored := youtubeCache.visitor(); stored != "token-123" {
+		t.Fatalf("persisted token = %q; want token-123", stored)
 	}
 }
 
@@ -253,17 +254,15 @@ func TestGetVisitorDataResumesPersistedToken(t *testing.T) {
 	origVisitor, origLast, origBlocked := visitorData, lastFetch, blockedUntil
 	visitorData, lastFetch, blockedUntil = "", time.Time{}, time.Time{}
 	visitorDataMu.Unlock()
-	_ = visitorBucket.Delete(visitorKey)
+	youtubeCache.forgetVisitor()
 	defer func() {
 		visitorDataMu.Lock()
 		visitorData, lastFetch, blockedUntil = origVisitor, origLast, origBlocked
 		visitorDataMu.Unlock()
-		_ = visitorBucket.Delete(visitorKey)
+		youtubeCache.forgetVisitor()
 	}()
 
-	if err := visitorBucket.SetString(visitorKey, "persisted-token", visitorTTL); err != nil {
-		t.Fatalf("seed bucket: %v", err)
-	}
+	youtubeCache.rememberVisitor("persisted-token")
 
 	var hits int32
 	visitorClient = &http.Client{
@@ -304,7 +303,7 @@ func TestAdoptVisitorDoesNotBlockOnRefresh(t *testing.T) {
 	origVisitor, origLast, origBlocked := visitorData, lastFetch, blockedUntil
 	visitorData, lastFetch, blockedUntil = "", time.Time{}, time.Time{}
 	visitorDataMu.Unlock()
-	_ = visitorBucket.Delete(visitorKey)
+	youtubeCache.forgetVisitor()
 	defer func() {
 		apiKeyMu.Lock()
 		apiKey = origKey
@@ -312,7 +311,7 @@ func TestAdoptVisitorDoesNotBlockOnRefresh(t *testing.T) {
 		visitorDataMu.Lock()
 		visitorData, lastFetch, blockedUntil = origVisitor, origLast, origBlocked
 		visitorDataMu.Unlock()
-		_ = visitorBucket.Delete(visitorKey)
+		youtubeCache.forgetVisitor()
 	}()
 
 	fetching := make(chan struct{})

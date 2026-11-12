@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 	"log"
 	"math"
@@ -17,8 +16,6 @@ import (
 	"sync"
 	"time"
 )
-
-var audioBucket = kv.UseBucket("youtube-audio")
 
 var probeClient = &http.Client{Timeout: 8 * time.Second}
 
@@ -359,7 +356,7 @@ func audioURL(videoID string) (string, clientConfig, error) {
 			if streamPlayable(c, raw) {
 				if c.Name != sticky {
 					log.Printf("youtube: %s switched to client %s", videoID, c.Name)
-					_ = clientBucket.SetString(clientKey, c.Name)
+					youtubeCache.rememberClient(c.Name)
 				}
 				return raw, c, nil
 			}
@@ -387,13 +384,9 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 		return nil, errors.New("no video ID provided")
 	}
 
-	var cached music.Audio
-	err := audioBucket.GetObject(youtubeId, &cached)
-	if err == nil && audioCacheStillValid(&cached) {
+	cached, ok := youtubeCache.stream(youtubeId)
+	if ok {
 		return &cached, nil
-	}
-	if err != nil && !errors.Is(err, kv.ErrKeyNotFound) {
-		return nil, fmt.Errorf("cache error: %w", err)
 	}
 
 	streamURL, client, err := audioURL(youtubeId)
@@ -406,8 +399,7 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 		return nil, errors.New("bad stream response from YouTube")
 	}
 
-	ttl, ok := ttlFromExpire(info.ExpireAt)
-	if !ok {
+	if _, ok := ttlFromExpire(info.ExpireAt); !ok {
 		return nil, errors.New("stream URL expired before it could be cached")
 	}
 
@@ -419,27 +411,30 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 		ClientName: client.Name,
 	}
 
-	if err := audioBucket.SetObject(youtubeId, audio, ttl); err != nil {
-		return nil, fmt.Errorf("cache write error: %w", err)
-	}
+	youtubeCache.keep(youtubeId, audio)
 
 	return &audio, nil
 }
 
 func cachedAudio(key string) *music.Audio {
-	var cached music.Audio
-	if err := audioBucket.GetObject(key, &cached); err == nil {
-		if audioCacheStillValid(&cached) {
-			return &cached
-		}
+	cached, ok := youtubeCache.stream(key)
+	if !ok {
+		return nil
 	}
-	return nil
+	return &cached
 }
 
 func cachedAudioBySong(cacheKey string) *music.Audio {
-	return cachedAudio("spotify:" + cacheKey)
+	return cachedAudio(songStreamKey(cacheKey))
 }
 
 func saveAudioBySong(cacheKey string, audio music.Audio) {
-	_ = audioBucket.SetObject("spotify:"+cacheKey, audio)
+	youtubeCache.keep(songStreamKey(cacheKey), audio)
+}
+
+// songStreamKey is where the stream resolved for a song is kept. A song and a
+// video are two keys for the same stream, and the song one is what a resolve
+// asks for first.
+func songStreamKey(cacheKey string) string {
+	return "spotify:" + cacheKey
 }

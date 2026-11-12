@@ -11,12 +11,12 @@ import (
 
 	"github.com/Jota-Music/jota/internal/backup"
 	"github.com/Jota-Music/jota/internal/follows"
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/ordering"
 	"github.com/Jota-Music/jota/internal/playlists"
 	"github.com/Jota-Music/jota/internal/services/discord/saved"
 	"github.com/Jota-Music/jota/internal/services/spotify"
 	"github.com/Jota-Music/jota/internal/services/youtube"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 func syncApp(t *testing.T) *App {
@@ -27,11 +27,8 @@ func syncApp(t *testing.T) *App {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
+	state.Reset()
+	t.Cleanup(state.Reset)
 	// The backup also carries the playlists of the sources, so the app needs them
 	// wired even when none of them is signed in.
 	lists, list, order, kept := playlists.New(nil), follows.New(), ordering.New(), saved.New()
@@ -215,11 +212,11 @@ func TestSyncRefreshesDueSnapshots(t *testing.T) {
 
 	counted := &passes{}
 	a.Backup.Settings = counted
-	status := a.SyncStatus()
+	current := readSettings()
+	status := current.Sync.Status
 	status.SnapshotsAt = 0
-	if err := settings.SetObject(syncStatusKey, status); err != nil {
-		t.Fatalf("status: %v", err)
-	}
+	current.Sync.Status = status
+	writeSettings(current)
 	if err := a.SyncPlaylists(); err != nil {
 		t.Fatalf("sync: %v", err)
 	}
@@ -352,9 +349,10 @@ func TestSyncCoalescesBurst(t *testing.T) {
 	if err := a.SetSyncFolder(t.TempDir()); err != nil {
 		t.Fatalf("set folder: %v", err)
 	}
-	if err := settings.SetObject("sync-auto", true); err != nil {
-		t.Fatalf("enable auto sync: %v", err)
-	}
+	current := readSettings()
+	enabled := true
+	current.Sync.Auto = &enabled
+	writeSettings(current)
 	if _, err := a.Playlists.Create("Mix"); err != nil {
 		t.Fatalf("create playlist: %v", err)
 	}

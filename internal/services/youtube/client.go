@@ -10,8 +10,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/Jota-Music/jota/internal/kv"
 )
 
 // defaultAPIKey is Google's public InnerTube key, the same one shipped in the
@@ -45,19 +43,9 @@ var (
 	visitorTokenRe    = regexp.MustCompile(`"visitorData":"([^"]+)"`)
 )
 
-// visitorBucket persists the last visitor token so a new session can resume it
+// visitorName is where the visitor token is persisted so a new session can resume it
 // instead of re-establishing one from the homepage, whose bot check is what
 // breaks resolution on a flagged IP.
-var visitorBucket = kv.UseBucket("youtube-visitor")
-
-const (
-	visitorKey = "data"
-	versionKey = "web-version"
-	// accountVisitorKey is the visitor id the signed-in session reported. It
-	// travels with the cookies and has no expiry of its own: it stops being
-	// valid when the session does.
-	accountVisitorKey = "account-visitor"
-)
 
 var visitorClient = &http.Client{Timeout: visitorFetchWait, CheckRedirect: visitorRedirect}
 
@@ -184,18 +172,17 @@ func allClients() []clientConfig {
 	return append(clients, webClient())
 }
 
-// clientBucket remembers the client that last produced a playable stream, so a
-// session resumes with it instead of falling through the whole list per track.
-var clientBucket = kv.UseBucket("youtube-client")
-
-const clientKey = "sticky"
+// clientKey is where the client that last produced a playable stream is
+// remembered, so a session resumes with it instead of falling through the whole
+// list per track.
+const clientKey = "youtube/client"
 
 // clientOrder puts the remembered client first, keeping the rest in allClients
 // order. A missing or unknown name leaves the default order alone.
 func clientOrder() []clientConfig {
 	clients := allClients()
-	name, err := clientBucket.GetString(clientKey)
-	if err != nil || name == "" || name == clients[0].Name {
+	name := youtubeCache.client()
+	if name == "" || name == clients[0].Name {
 		return clients
 	}
 	for i, c := range clients {
@@ -266,13 +253,13 @@ func AdoptSession(visitor, version string) {
 		accountVisitorMu.Lock()
 		accountVisitor = visitor
 		accountVisitorMu.Unlock()
-		_ = visitorBucket.SetString(accountVisitorKey, visitor)
+		youtubeCache.rememberAccountVisitor(visitor)
 	}
 	if version != "" {
 		webVersionMu.Lock()
 		webVersion = version
 		webVersionMu.Unlock()
-		_ = visitorBucket.SetString(versionKey, version, versionTTL)
+		youtubeCache.rememberVersion(version)
 	}
 }
 
@@ -284,8 +271,8 @@ func sessionVisitor() string {
 	if visitor != "" {
 		return visitor
 	}
-	stored, err := visitorBucket.GetString(accountVisitorKey)
-	if err != nil || stored == "" {
+	stored := youtubeCache.accountVisitor()
+	if stored == "" {
 		return ""
 	}
 	accountVisitorMu.Lock()
@@ -313,7 +300,7 @@ func invalidateVisitor() {
 	visitorData = ""
 	lastFetch = time.Time{}
 	visitorDataMu.Unlock()
-	_ = visitorBucket.Delete(visitorKey)
+	youtubeCache.forgetVisitor()
 }
 
 // adoptVisitor stores the visitor token carried by an innertube response, so a
@@ -329,7 +316,7 @@ func adoptVisitor(body []byte) {
 	visitorDataMu.Lock()
 	if visitorData != token {
 		visitorData = token
-		_ = visitorBucket.SetString(visitorKey, token, visitorPersistTTL)
+		youtubeCache.rememberVisitor(token)
 	}
 	lastFetch = time.Now()
 	blockedUntil = time.Time{}
@@ -379,10 +366,10 @@ func getVisitorData() (string, string, error) {
 
 	vd, token, version := storeHomepage(body)
 	if token != "" {
-		_ = visitorBucket.SetString(visitorKey, token, visitorPersistTTL)
+		youtubeCache.rememberVisitor(token)
 	}
 	if version != "" {
-		_ = visitorBucket.SetString(versionKey, version, versionTTL)
+		youtubeCache.rememberVersion(version)
 	}
 	return vd, currentAPIKey(), nil
 }
@@ -401,7 +388,7 @@ func cachedVisitor() (string, bool) {
 // resumeVisitor restores what a previous session persisted, so a cold start does
 // not have to touch the homepage at all.
 func resumeVisitor() (string, bool) {
-	if stored, err := visitorBucket.GetString(versionKey); err == nil && stored != "" {
+	if stored := youtubeCache.version(); stored != "" {
 		webVersionMu.Lock()
 		webVersion = stored
 		webVersionMu.Unlock()
@@ -414,8 +401,8 @@ func resumeVisitor() (string, bool) {
 		return "", false
 	}
 
-	stored, err := visitorBucket.GetString(visitorKey)
-	if err != nil || stored == "" {
+	stored := youtubeCache.visitor()
+	if stored == "" {
 		return "", false
 	}
 	visitorDataMu.Lock()

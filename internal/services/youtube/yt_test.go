@@ -7,12 +7,25 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
+func seedYoutubeId(song, id string) {
+	st := readSession()
+	if st.Links == nil {
+		st.Links = map[string]string{}
+	}
+	if id == "" {
+		delete(st.Links, song)
+	} else {
+		st.Links[song] = id
+	}
+	_ = writeSession(st)
+}
+
 func TestSetYoutubeIdInvalidatesAudioCache(t *testing.T) {
 	const song = "test-set-youtube-id"
 	future := time.Now().Add(time.Hour).Unix()
-	_ = audioBucket.SetObject("spotify:"+song, music.Audio{Url: "https://example.com/a", VideoID: "old_video01", ExpireAt: future}, time.Hour)
-	_ = audioBucket.SetObject("old_video01", music.Audio{Url: "https://example.com/a", VideoID: "old_video01", ExpireAt: future}, time.Hour)
-	_ = youtubeSourceBucket.SetString(song, "old_video01")
+	youtubeCache.keep("spotify:"+song, music.Audio{Url: "https://example.com/a", VideoID: "old_video01", ExpireAt: future})
+	youtubeCache.keep("old_video01", music.Audio{Url: "https://example.com/a", VideoID: "old_video01", ExpireAt: future})
+	seedYoutubeId(song, "old_video01")
 
 	svc := NewService()
 	if err := svc.SetYoutubeId(song, "new_video01"); err != nil {
@@ -36,7 +49,7 @@ func TestSetYoutubeIdStoresOnlyTheId(t *testing.T) {
 
 	for input, want := range cases {
 		const song = "test-set-youtube-id-url"
-		_ = youtubeSourceBucket.Delete(song)
+		seedYoutubeId(song, "")
 
 		if err := NewService().SetYoutubeId(song, input); err != nil {
 			t.Fatalf("SetYoutubeId(%q): %v", input, err)
@@ -55,7 +68,7 @@ func TestSetYoutubeIdRejectsInvalid(t *testing.T) {
 
 func TestYoutubeIdLookup(t *testing.T) {
 	const song = "test-youtube-id-lookup"
-	_ = youtubeSourceBucket.SetString(song, "video1")
+	seedYoutubeId(song, "video1")
 
 	svc := NewService()
 	if got := svc.YoutubeId(song); got != "video1" {
@@ -70,7 +83,7 @@ func TestYoutubeIdLookup(t *testing.T) {
 // with no stub responses would fail the search path.
 func TestFindUsesCachedId(t *testing.T) {
 	const song = "test-find-cached"
-	_ = youtubeSourceBucket.SetString(song, "cached_video1")
+	seedYoutubeId(song, "cached_video1")
 	stubSearch(t, map[string]searchResponse{})
 
 	id, err := NewService().Find(music.Song{Id: song, Name: "Rambo"})
@@ -84,7 +97,7 @@ func TestFindUsesCachedId(t *testing.T) {
 
 func TestFindSearchesAndRecordsId(t *testing.T) {
 	const song = "test-find-search"
-	_ = youtubeSourceBucket.Delete(song)
+	seedYoutubeId(song, "")
 
 	want := music.Song{
 		Id:       song,

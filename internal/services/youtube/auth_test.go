@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 func resetAuth(t *testing.T) {
@@ -17,13 +19,13 @@ func resetAuth(t *testing.T) {
 	origCookie, origLoaded := authCookie, authLoaded
 	authCookie, authLoaded = "", false
 	authMu.Unlock()
-	_ = authBucket.Delete(authKey)
+	state.Reset()
 
 	t.Cleanup(func() {
 		authMu.Lock()
 		authCookie, authLoaded = origCookie, origLoaded
 		authMu.Unlock()
-		_ = authBucket.Delete(authKey)
+		state.Reset()
 	})
 }
 
@@ -265,7 +267,7 @@ func TestSignedRequestUsesTheSessionVisitor(t *testing.T) {
 		accountVisitorMu.Lock()
 		accountVisitor = ""
 		accountVisitorMu.Unlock()
-		_ = visitorBucket.Delete(accountVisitorKey)
+		youtubeCache.forgetAccountVisitor()
 	})
 
 	if got := sessionVisitor(); got != "session-visitor" {

@@ -4,15 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/music"
 	"net/url"
 	"regexp"
 	"strings"
 	"sync"
 )
-
-var youtubeSourceBucket = kv.UseBucket("youtube-source")
 
 const searchEndpoint = "https://www.youtube.com/youtubei/v1/search"
 
@@ -271,7 +269,7 @@ func (s *Service) candidates(cacheKey string, song music.Song) ([]Video, error) 
 		pinned []Video
 		seen   = map[string]bool{}
 	)
-	if cached, err := youtubeSourceBucket.GetString(cacheKey); err == nil && cached != "" {
+	if cached, ok := cache.Get[string]("youtube/sources/" + cacheKey); ok && cached != "" {
 		pinned = append(pinned, Video{ID: cached})
 		seen[cached] = true
 	}

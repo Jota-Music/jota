@@ -4,7 +4,7 @@ go 1.26.1
 
 require (
 	github.com/devgianlu/go-librespot v0.9.0
-	github.com/dgraph-io/badger/v4 v4.9.1
+	github.com/dgraph-io/badger/v4 v4.9.6
 	github.com/wailsapp/wails/v3 v3.0.0-beta.16
 	golang.org/x/image v0.41.0
 	golang.org/x/oauth2 v0.35.0
@@ -33,7 +33,7 @@ require (
 	github.com/google/flatbuffers v25.2.10+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jfreymuth/pulse v0.1.2-0.20241102120944-4ffb35054b53 // indirect
-	github.com/klauspost/compress v1.18.7 // indirect
+	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.21 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect

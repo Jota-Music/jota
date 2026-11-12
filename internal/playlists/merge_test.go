@@ -6,8 +6,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/Jota-Music/jota/internal/kv"
 )
 
 // Every precedence rule of the merge lives in one table: how a foreign id maps
@@ -105,7 +103,7 @@ func TestMerge(t *testing.T) {
 			}
 
 			for _, id := range c.gone {
-				if _, err := s.load(id); !errors.Is(err, kv.ErrKeyNotFound) {
+				if _, err := s.load(id); !errors.Is(err, ErrNotFound) {
 					t.Fatalf("%s survived a tombstone: %v", id, err)
 				}
 			}
@@ -159,10 +157,10 @@ func TestMergeWithoutApplyLeavesStore(t *testing.T) {
 	if _, err := s.load(own.Id); err != nil {
 		t.Fatalf("store lost its playlist: %v", err)
 	}
-	if _, err := s.load(foreignId("phone-id")); !errors.Is(err, kv.ErrKeyNotFound) {
+	if _, err := s.load(foreignId("phone-id")); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("store gained the remote playlist: %v", err)
 	}
-	if _, err := s.load(foreignId("phone-gone")); !errors.Is(err, kv.ErrKeyNotFound) {
+	if _, err := s.load(foreignId("phone-gone")); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("store gained the deleted remote playlist: %v", err)
 	}
 }

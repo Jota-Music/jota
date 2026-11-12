@@ -18,9 +18,6 @@ import (
 )
 
 const (
-	syncFolderKey = "sync-folder"
-	syncStatusKey = "sync-status"
-
 	// The staged document: the native side copies the provider's file into
 	// incoming.json and writes outgoing.json back, so the bytes never cross the
 	// bridge as a string.
@@ -69,11 +66,7 @@ type SyncStatus struct {
 }
 
 func (a *App) SyncStatus() SyncStatus {
-	var status SyncStatus
-	if err := settings.GetObject(syncStatusKey, &status); err != nil {
-		return SyncStatus{}
-	}
-	return status
+	return readSettings().Sync.Status
 }
 
 // stamp fingerprints the document we wrote, so a provider that reports no
@@ -93,10 +86,9 @@ func stamp(document string) uint32 {
 // stamp to offer: the folder path relies on MTime/FileSize instead.
 func (a *App) recordSync(stats backup.Stats, fresh, written bool, read int64) {
 	stale := stats.Modified && !fresh
-	var uri string
-	_ = settings.GetObject(syncFolderKey, &uri)
-	var status SyncStatus
-	_ = settings.GetObject(syncStatusKey, &status)
+	current := readSettings()
+	uri := current.Sync.Folder
+	status := current.Sync.Status
 	status.At = time.Now().UnixMilli()
 	status.Uri = uri
 	status.ReadAt = status.At
@@ -123,9 +115,8 @@ func (a *App) recordSync(stats backup.Stats, fresh, written bool, read int64) {
 			status.FileSize = info.Size()
 		}
 	}
-	if err := settings.SetObject(syncStatusKey, status); err != nil {
-		log.Printf("sync status: %v", err)
-	}
+	current.Sync.Status = status
+	writeSettings(current)
 	emitSections(stats)
 }
 
@@ -163,13 +154,12 @@ func emitSections(stats backup.Stats) {
 // it, and a failure that repeats every interval must leave a trace.
 func (a *App) recordProblem(err error) {
 	log.Printf("sync: %v", err)
-	var status SyncStatus
-	_ = settings.GetObject(syncStatusKey, &status)
+	current := readSettings()
+	status := current.Sync.Status
 	status.At = time.Now().UnixMilli()
 	status.Problem = err.Error()
-	if setErr := settings.SetObject(syncStatusKey, status); setErr != nil {
-		log.Printf("sync status: %v", setErr)
-	}
+	current.Sync.Status = status
+	writeSettings(current)
 }
 
 // SyncProblem records a failure the page saw and Go did not: the document it
@@ -202,17 +192,16 @@ func (a *App) syncWrittenAt(dir string) error {
 		return err
 	}
 	_ = os.Remove(path)
-	var status SyncStatus
-	_ = settings.GetObject(syncStatusKey, &status)
+	current := readSettings()
+	status := current.Sync.Status
 	status.At = time.Now().UnixMilli()
 	status.Uri = a.SyncFolder()
 	status.WriteAt = status.At
 	status.Hash = stamp(string(data))
 	status.Stale = false
 	status.Problem = ""
-	if setErr := settings.SetObject(syncStatusKey, status); setErr != nil {
-		log.Printf("sync status: %v", setErr)
-	}
+	current.Sync.Status = status
+	writeSettings(current)
 	// The document now carries every section this device wrote, so nothing is
 	// waiting to be saved any more.
 	Synced()
@@ -222,12 +211,11 @@ func (a *App) syncWrittenAt(dir string) error {
 // touchSync moves At alone. A settled pass reconciled nothing, but it did run,
 // so the panel's "last save" is the moment of that pass and not the last write.
 func (a *App) touchSync() {
-	var status SyncStatus
-	_ = settings.GetObject(syncStatusKey, &status)
+	current := readSettings()
+	status := current.Sync.Status
 	status.At = time.Now().UnixMilli()
-	if err := settings.SetObject(syncStatusKey, status); err != nil {
-		log.Printf("sync status: %v", err)
-	}
+	current.Sync.Status = status
+	writeSettings(current)
 }
 
 // SyncTouched is the page's settled pass: the provider copy is the one it already
@@ -237,17 +225,16 @@ func (a *App) SyncTouched() {
 }
 
 func (a *App) SyncFolder() string {
-	var folder string
-	if err := settings.GetObject(syncFolderKey, &folder); err != nil {
-		return ""
-	}
-	return folder
+	return readSettings().Sync.Folder
 }
 
 func (a *App) SetSyncFolder(folder string) error {
 	folder = strings.TrimSpace(folder)
+	current := readSettings()
 	if folder == "" {
-		return settings.SetObject(syncFolderKey, "")
+		current.Sync.Folder = ""
+		writeSettings(current)
+		return nil
 	}
 	// Android keeps a content:// document URI here, not a filesystem path.
 	if runtime.GOOS != "android" {
@@ -255,7 +242,9 @@ func (a *App) SetSyncFolder(folder string) error {
 			return err
 		}
 	}
-	return settings.SetObject(syncFolderKey, folder)
+	current.Sync.Folder = folder
+	writeSettings(current)
+	return nil
 }
 
 func (a *App) ChooseSyncFolder() (string, error) {
@@ -284,47 +273,17 @@ func (a *App) SyncAuto() bool {
 }
 
 func (a *App) SetSyncAuto(enabled bool) error {
-	v := readSyncSettings()
-	v.Auto = &enabled
-	if err := settings.SetObject("sync", v); err != nil {
-		return err
-	}
-	touch("sync")
+	current := readSettings()
+	current.Sync.Auto = &enabled
+	writeSettings(current)
+	touchSync()
 	a.syncInBackground()
 	return nil
 }
 
-type syncSettings struct {
-	Import   *bool `json:"import,omitempty"`
-	Interval *int  `json:"interval,omitempty"`
-	Auto     *bool `json:"auto,omitempty"`
-}
-
-// readSyncSettings reads the compound key. An install upgraded from the split
-// keys still holds sync-import and sync-interval, so they are read as a
-// fallback until the next write moves them into the compound.
-func readSyncSettings() syncSettings {
-	var v syncSettings
-	_ = settings.GetObject("sync", &v)
-	if v.Import == nil {
-		var imported bool
-		if err := settings.GetObject("sync-import", &imported); err == nil {
-			v.Import = &imported
-		}
-	}
-	if v.Interval == nil {
-		var interval int
-		if err := settings.GetObject("sync-interval", &interval); err == nil {
-			v.Interval = &interval
-		}
-	}
-	if v.Auto == nil {
-		var auto bool
-		if err := settings.GetObject("sync-auto", &auto); err == nil {
-			v.Auto = &auto
-		}
-	}
-	return v
+// readSyncSettings reads the sync part of the settings the device keeps.
+func readSyncSettings() syncOptions {
+	return readSettings().Sync
 }
 
 // SyncImport decides whether a pass also applies the document to this library.
@@ -338,12 +297,10 @@ func (a *App) SyncImport() bool {
 }
 
 func (a *App) SetSyncImport(enabled bool) error {
-	v := readSyncSettings()
-	v.Import = &enabled
-	if err := settings.SetObject("sync", v); err != nil {
-		return err
-	}
-	touch("sync")
+	current := readSettings()
+	current.Sync.Import = &enabled
+	writeSettings(current)
+	touchSync()
 	a.syncInBackground()
 	return nil
 }
@@ -360,12 +317,10 @@ func (a *App) SetSyncInterval(minutes int) error {
 	if minutes < 1 {
 		minutes = 15
 	}
-	v := readSyncSettings()
-	v.Interval = &minutes
-	if err := settings.SetObject("sync", v); err != nil {
-		return err
-	}
-	touch("sync")
+	current := readSettings()
+	current.Sync.Interval = &minutes
+	writeSettings(current)
+	touchSync()
 	a.syncInBackground()
 	return nil
 }
@@ -574,14 +529,14 @@ func (a *App) syncDocument(data string, lastModified int64, trust bool) (string,
 // markStale records that the copy the pass read is behind this device, so the
 // page retries the read and writes the union.
 func (a *App) markStale() {
-	var status SyncStatus
-	if err := settings.GetObject(syncStatusKey, &status); err != nil || status.Stale {
+	status := readSettings().Sync.Status
+	if status.Stale {
 		return
 	}
 	status.Stale = true
-	if err := settings.SetObject(syncStatusKey, status); err != nil {
-		log.Printf("sync status: %v", err)
-	}
+	current := readSettings()
+	current.Sync.Status = status
+	writeSettings(current)
 }
 
 // freshCopy is the rule the reading side applies to a copy a provider served.

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/Jota-Music/jota/internal/backup"
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/services/spotify"
 	"github.com/Jota-Music/jota/internal/services/youtube"
 )
 
@@ -73,15 +73,14 @@ func TestSyncSessionsAreNotStagedWhenUnchanged(t *testing.T) {
 
 	staged := func(key string) (string, int64) {
 		t.Helper()
-		var blob string
-		if err := settings.GetObject("session:"+key, &blob); err != nil || blob == "" {
-			t.Fatalf("staged %s session missing: %v", key, err)
+		entry, ok := stagedBlob(key)
+		if !ok || entry.Value == "" {
+			t.Fatalf("staged %s session missing", key)
 		}
-		var at int64
-		if err := settings.GetObject("session:"+key+settingAt, &at); err != nil || at == 0 {
-			t.Fatalf("staged %s session has no write time: %v", key, err)
+		if entry.At == 0 {
+			t.Fatalf("staged %s session has no write time", key)
 		}
-		return blob, at
+		return entry.Value, entry.At
 	}
 	unchanged := func(key, blob string, at int64) {
 		t.Helper()
@@ -107,10 +106,7 @@ func TestSyncSessionsAreNotStagedWhenUnchanged(t *testing.T) {
 	a.syncYouTubeCookies()
 	unchanged("youtube", blob, at)
 
-	if err := kv.UseBucket("spotify-global").SetObject("global", map[string]string{
-		"username": "alice",
-		"data":     "abcdef",
-	}); err != nil {
+	if err := spotify.StoreCredentials("alice", []byte("abcdef")); err != nil {
 		t.Fatalf("store spotify session: %v", err)
 	}
 	a.syncSpotifySession()

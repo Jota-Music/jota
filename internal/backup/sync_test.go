@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/playlists"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 func setup(t *testing.T) {
@@ -22,11 +22,8 @@ func setup(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
+	state.Reset()
+	t.Cleanup(state.Reset)
 }
 
 // item is one playlist as a document writes it.

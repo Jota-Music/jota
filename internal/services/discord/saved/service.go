@@ -10,13 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
-)
-
-var (
-	bucket   = kv.UseBucket("saved-playlists")
-	indexKey = "index"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 type Service struct {
@@ -40,11 +35,7 @@ func (s *Service) Pending() bool {
 
 // index reads the saved list. Callers must hold mu.
 func (s *Service) index() (Section, error) {
-	var part Section
-	err := bucket.GetObject(indexKey, &part)
-	if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
-		return Section{}, nil
-	}
+	part, err := state.Read[Section](state.Saved)
 	if err != nil {
 		return Section{}, err
 	}
@@ -53,7 +44,7 @@ func (s *Service) index() (Section, error) {
 
 // write stores the saved list. Callers must hold mu.
 func (s *Service) write(part Section) error {
-	return bucket.SetObject(indexKey, part)
+	return state.Write(state.Saved, part)
 }
 
 func (s *Service) List() ([]music.PlaylistSummary, error) {

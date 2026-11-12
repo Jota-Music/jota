@@ -143,8 +143,8 @@ func TestWindowStateFileIgnoresGarbage(t *testing.T) {
 	}
 }
 
-// The window is built before any database exists: reading the geometry must not
-// open the store, which is what used to put Badger on the launch path.
+// The window is built before any store exists: reading the geometry must not
+// create one, which is what kept the launch path off the store.
 func TestLoadWindowStateDoesNotOpenTheStore(t *testing.T) {
 	oldPath, oldDir := windowPath, os.Getenv("XDG_CONFIG_HOME")
 	t.Cleanup(func() {

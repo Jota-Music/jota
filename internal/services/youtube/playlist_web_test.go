@@ -49,7 +49,7 @@ func TestWebPlaylistPage(t *testing.T) {
 		t.Fatalf("expected one song, got %d: %+v", len(songs), songs)
 	}
 	song := songs[0]
-	if song.Id != "youtube:bAlxY-bUv84" || song.YoutubeId != "bAlxY-bUv84" {
+	if song.Id != "youtube:track:bAlxY-bUv84" || song.YoutubeId != "bAlxY-bUv84" {
 		t.Fatalf("id = %q / %q", song.Id, song.YoutubeId)
 	}
 	if song.Name != "Bolero instrumental" {

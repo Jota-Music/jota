@@ -10,14 +10,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
 // myPlaylistsKey is the cache entry of the signed-in account's playlists.
 const (
-	myPlaylistsKey         = "me:playlists"
-	myPlaylistsSnapshotKey = "me:playlists:page"
+	myPlaylistsKey         = "youtube/library"
+	myPlaylistsSnapshotKey = "youtube/page"
 )
 
 // myPlaylistsFn is the account browse, swapped in tests so caching can be
@@ -59,7 +59,7 @@ func (s *Service) GetMyYouTubePlaylists() ([]music.PlaylistSummary, error) {
 		return nil, errSession
 	}
 
-	list, err := kv.Cached(playlistBucket, myPlaylistsKey, myPlaylistsFn)
+	list, err := cache.Cached(myPlaylistsKey, myPlaylistsFn)
 	if err == nil {
 		return list, nil
 	}
@@ -252,27 +252,24 @@ func ImportMyPlaylists(page []byte) (int, error) {
 	if len(list) == 0 {
 		return 0, nil
 	}
-	if err := playlistBucket.SetObject(myPlaylistsSnapshotKey, list); err != nil {
+	if err := cache.Put(myPlaylistsSnapshotKey, list); err != nil {
 		return 0, err
 	}
 	// The cached list belongs to the account that was signed in before.
-	_ = playlistBucket.Delete(myPlaylistsKey)
+	_ = cache.Forget(myPlaylistsKey)
 	return len(list), nil
 }
 
 // playlistSnapshot returns the playlists imported at sign-in, if any.
 func playlistSnapshot() []music.PlaylistSummary {
-	var list []music.PlaylistSummary
-	if err := playlistBucket.GetObject(myPlaylistsSnapshotKey, &list); err != nil {
-		return nil
-	}
+	list, _ := cache.Get[[]music.PlaylistSummary](myPlaylistsSnapshotKey)
 	return list
 }
 
 // RevalidateMyYouTubePlaylists drops the cached list of the signed-in account's
 // playlists.
 func (s *Service) RevalidateMyYouTubePlaylists() error {
-	return playlistBucket.Delete(myPlaylistsKey)
+	return cache.Forget(myPlaylistsKey)
 }
 
 // extractMyPlaylists walks an innertube browse response and collects every
@@ -333,7 +330,7 @@ func walkMyPlaylists(root any) []music.PlaylistSummary {
 					owner = lockupByline(val)
 				}
 				out = append(out, music.PlaylistSummary{
-					Id:       music.YouTubePrefix + id,
+					Id:       music.YouTubePrefix + "playlist:" + id,
 					Name:     title,
 					Cover:    cover,
 					Subtitle: owner,

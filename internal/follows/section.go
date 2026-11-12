@@ -3,6 +3,8 @@ package follows
 import (
 	"slices"
 	"strings"
+
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 // Entry is one followed user with the moment it was followed.
@@ -88,7 +90,7 @@ func (s *Service) MergeSection(part Section, mode mergeMode, apply bool) (Sectio
 
 	applied := diff(local, out)
 	if applied > 0 {
-		if err := bucket.SetObject(listKey, out); err != nil {
+		if err := state.Write(state.Follows, out); err != nil {
 			return out, applied, err
 		}
 	}

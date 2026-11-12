@@ -9,17 +9,16 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/music"
 )
-
-var playlistBucket = kv.UseBucket("youtube-playlists")
 
 const browseEndpoint = "https://www.youtube.com/youtubei/v1/browse"
 
 func normalizePlaylistId(id string) string {
 	id = strings.TrimSpace(id)
 	id = strings.TrimPrefix(id, music.YouTubePrefix)
+	id = strings.TrimPrefix(id, "playlist:")
 	id = strings.TrimPrefix(id, "VL")
 	return id
 }
@@ -165,7 +164,7 @@ func resolveChannelID(channel string) (string, error) {
 		return channel, nil
 	}
 
-	return kv.Cached(playlistBucket, "channel-id:"+channel, func() (string, error) {
+	return cache.Cached("youtube/ids/"+channel, func() (string, error) {
 		target := channel
 		if !strings.Contains(channel, "://") {
 			target = "https://www.youtube.com/" + channel
@@ -259,7 +258,7 @@ func (s *Service) GetChannelPlaylists(channel string) ([]music.PlaylistSummary, 
 	if err != nil {
 		return nil, err
 	}
-	return kv.Cached(playlistBucket, "channel:playlists:"+channelID, func() ([]music.PlaylistSummary, error) {
+	return cache.Cached("youtube/playlists/"+channelID, func() ([]music.PlaylistSummary, error) {
 		return fetchChannelTab(channelID, channelPlaylistsParams, func(s itemSection, _ string) []music.PlaylistSummary {
 			return s.summaries()
 		})
@@ -272,7 +271,7 @@ func (s *Service) GetChannelVideos(channel string) ([]music.Song, error) {
 	if err != nil {
 		return nil, err
 	}
-	return kv.Cached(playlistBucket, "channel:videos:"+channelID, func() ([]music.Song, error) {
+	return cache.Cached("youtube/videos/"+channelID, func() ([]music.Song, error) {
 		return fetchChannelTab(channelID, channelVideosParams, func(s itemSection, name string) []music.Song {
 			return s.videos(channelID, name)
 		})
@@ -284,9 +283,9 @@ func (s *Service) RevalidateChannel(channel string) error {
 	if err != nil {
 		return err
 	}
-	_ = playlistBucket.Delete("channel:playlists:" + channelID)
-	_ = playlistBucket.Delete("channel:videos:" + channelID)
-	return playlistBucket.Delete("channel:info:" + channelID)
+	_ = cache.Forget("youtube/playlists/" + channelID)
+	_ = cache.Forget("youtube/videos/" + channelID)
+	return cache.Forget("youtube/channels/" + channelID)
 }
 
 // GetChannelInfo returns a channel's display name and avatar.
@@ -295,7 +294,7 @@ func (s *Service) GetChannelInfo(channel string) (music.ChannelInfo, error) {
 	if err != nil {
 		return music.ChannelInfo{}, err
 	}
-	return kv.Cached(playlistBucket, "channel:info:"+channelID, func() (music.ChannelInfo, error) {
+	return cache.Cached("youtube/channels/"+channelID, func() (music.ChannelInfo, error) {
 		return channelInfo(channelID)
 	})
 }
@@ -349,13 +348,13 @@ func (s itemSection) videos(channelID, channelName string) []music.Song {
 			continue
 		}
 		out = append(out, music.Song{
-			Id:        music.YouTubePrefix + id,
+			Id:        music.YouTubePrefix + "track:" + id,
 			Url:       "https://www.youtube.com/watch?v=" + id,
 			Name:      v.Title.first(),
 			Duration:  v.duration(),
-			Share:     music.Share{Id: music.YouTubePrefix + id, Url: "https://www.youtube.com/watch?v=" + id},
+			Share:     music.Share{Id: music.YouTubePrefix + "track:" + id, Url: "https://www.youtube.com/watch?v=" + id},
 			Album:     music.Album{Title: "YouTube", Covers: []string{v.Thumbnail.url()}},
-			Artists:   []music.Artist{{Id: channelID, Name: channelName, Source: "youtube"}},
+			Artists:   []music.Artist{{Id: music.YouTubePrefix + "channel:" + channelID, Name: channelName, Source: "youtube"}},
 			YoutubeId: id,
 		})
 	}
@@ -505,7 +504,7 @@ func (s *Service) GetPlaylistSummary(id string) (music.PlaylistSummary, error) {
 	if err != nil {
 		return music.PlaylistSummary{}, err
 	}
-	summary.Id = music.YouTubePrefix + playlistID
+	summary.Id = music.YouTubePrefix + "playlist:" + playlistID
 	return summary, nil
 }
 
@@ -514,13 +513,13 @@ func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 	if playlistID == "" {
 		return music.Playlist{}, errors.New("invalid playlist id")
 	}
-	return kv.Cached(playlistBucket, "playlist:v3:"+playlistID, func() (music.Playlist, error) {
+	return cache.Cached("youtube/playlists/"+playlistID, func() (music.Playlist, error) {
 		return fetchFullPlaylist(playlistID)
 	})
 }
 
 func (s *Service) RevalidateFullPlaylist(id string) error {
-	return playlistBucket.Delete("playlist:v3:" + normalizePlaylistId(id))
+	return cache.Forget("youtube/playlists/" + normalizePlaylistId(id))
 }
 
 func (p compactPlaylistRenderer) summary() (music.PlaylistSummary, bool) {
@@ -528,7 +527,7 @@ func (p compactPlaylistRenderer) summary() (music.PlaylistSummary, bool) {
 		return music.PlaylistSummary{}, false
 	}
 	return music.PlaylistSummary{
-		Id:       music.YouTubePrefix + p.PlaylistId,
+		Id:       music.YouTubePrefix + "playlist:" + p.PlaylistId,
 		Name:     p.Title.first(),
 		Cover:    p.Thumbnail.url(),
 		Subtitle: p.ByLine.first(),
@@ -573,11 +572,11 @@ func videoToSong(v playlistVideoRenderer, playlist string) (music.Song, bool) {
 	duration, _ := v.LengthSeconds.Int64()
 
 	return music.Song{
-		Id:        music.YouTubePrefix + id,
+		Id:        music.YouTubePrefix + "track:" + id,
 		Url:       "https://www.youtube.com/watch?v=" + id,
 		Name:      title,
 		Duration:  int(duration),
-		Share:     music.Share{Id: music.YouTubePrefix + id, Url: "https://www.youtube.com/watch?v=" + id},
+		Share:     music.Share{Id: music.YouTubePrefix + "track:" + id, Url: "https://www.youtube.com/watch?v=" + id},
 		Album:     music.Album{Title: album, Covers: []string{v.Thumbnail.url()}},
 		Artists:   []music.Artist{{Id: v.ByLine.browseID(), Name: artist, Source: "youtube"}},
 		YoutubeId: id,

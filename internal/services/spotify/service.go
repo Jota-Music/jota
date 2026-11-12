@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 
 	librespot "github.com/devgianlu/go-librespot"
 	devicespb "github.com/devgianlu/go-librespot/proto/spotify/connectstate/devices"
@@ -21,10 +21,6 @@ import (
 )
 
 const (
-	credsKey     = "global"
-	deviceKey    = "device-id"
-	bucketName   = "spotify-global"
-	deviceBucket = "spotify-device"
 	loginTimeout = 5 * time.Minute
 
 	// restoreAttempts is how often Connect retries a stored session. Restoring
@@ -38,12 +34,27 @@ const (
 	SessionTimeout = 10 * time.Second
 )
 
-var sessionBucket = kv.UseBucket(bucketName)
-var devices = kv.UseBucket(deviceBucket)
-
 type storedCreds struct {
 	Username string `json:"username"`
 	Data     string `json:"data"`
+}
+
+// account is what the device keeps of the Spotify session: the credentials and
+// the id that identifies this install to Connect.
+type account struct {
+	Session *storedCreds `json:"session,omitempty"`
+	Device  string       `json:"device,omitempty"`
+}
+
+// readAccount reads what the device keeps of the session.
+func readAccount() account {
+	out, _ := state.Read[account](state.Spotify)
+	return out
+}
+
+// writeAccount stores what the device keeps of the session.
+func writeAccount(a account) error {
+	return state.Write(state.Spotify, a)
 }
 
 type SpotifyService struct {
@@ -111,7 +122,9 @@ func (s *SpotifyService) Connect(ctx context.Context) error {
 	data, decodeErr := hex.DecodeString(creds.Data)
 	if decodeErr != nil {
 		log.Printf("spotify: invalid stored credentials (not hex): %v", decodeErr)
-		_ = sessionBucket.Delete(credsKey)
+		current := readAccount()
+		current.Session = nil
+		_ = writeAccount(current)
 		return ErrNotConnected
 	}
 
@@ -277,7 +290,9 @@ func (s *SpotifyService) Disconnect() error {
 	// goodbye to the peer is a network round trip, so it happens behind the
 	// answer instead of holding the panel that asked for the disconnect.
 	closeBehind(sess)
-	return sessionBucket.Delete(credsKey)
+	current := readAccount()
+	current.Session = nil
+	return writeAccount(current)
 }
 
 func (s *SpotifyService) StartupLogin() (string, error) {
@@ -426,38 +441,46 @@ func (s *SpotifyService) CompleteLogin() error {
 // and stored, because a new id on every launch registers a new device on the
 // account and silently drops the saved playback state.
 func deviceId() string {
-	if id, err := devices.GetString(deviceKey); err == nil && len(id) == 40 {
-		return id
+	current := readAccount()
+	if len(current.Device) == 40 {
+		return current.Device
 	}
 	buf := make([]byte, 20)
 	if _, err := rand.Read(buf); err != nil {
 		log.Printf("spotify: cannot generate device id: %v", err)
 		return "0123456789abcdef0123456789abcdef01234567"
 	}
-	id := hex.EncodeToString(buf)
-	if err := devices.SetString(deviceKey, id); err != nil {
+	current.Device = hex.EncodeToString(buf)
+	if err := writeAccount(current); err != nil {
 		log.Printf("spotify: cannot store device id: %v", err)
 	}
-	return id
+	return current.Device
 }
 
 func loadCreds() (*storedCreds, error) {
-	var sc storedCreds
-	err := sessionBucket.GetObject(credsKey, &sc)
-	if err != nil {
-		return nil, err
+	sc := readAccount().Session
+	if sc == nil {
+		return nil, errors.New("no stored credentials")
 	}
 	if sc.Username == "" || sc.Data == "" {
 		return nil, errors.New("empty stored credentials")
 	}
-	return &sc, nil
+	return sc, nil
 }
 
 func saveCreds(username string, data []byte) error {
-	return sessionBucket.SetObject(credsKey, &storedCreds{
+	current := readAccount()
+	current.Session = &storedCreds{
 		Username: username,
 		Data:     hex.EncodeToString(data),
-	})
+	}
+	return writeAccount(current)
+}
+
+// StoreCredentials saves the credentials of a session without connecting, so a
+// session that arrived with a document is kept before it is used.
+func StoreCredentials(username string, data []byte) error {
+	return saveCreds(username, data)
 }
 
 // StoredSession returns the credentials saved for this install, so they can be

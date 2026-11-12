@@ -73,7 +73,7 @@ func TestMixParsesThePlaylistPanel(t *testing.T) {
 	}
 
 	first := playlist.Songs[0]
-	if first.Id != "youtube:dQw4w9WgXcQ" || first.YoutubeId != "dQw4w9WgXcQ" {
+	if first.Id != "youtube:track:dQw4w9WgXcQ" || first.YoutubeId != "dQw4w9WgXcQ" {
 		t.Fatalf("id = %q/%q", first.Id, first.YoutubeId)
 	}
 	if first.Duration != 3723 {

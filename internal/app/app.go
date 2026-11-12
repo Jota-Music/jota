@@ -135,9 +135,8 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	a.ctx = ctx
 
 	// Stage the sessions already on this device, so a pass set after login (or
-	// a real session replacing an older staged one) reaches the next pass. The
-	// pass lives in Badger, so reading it here would open the database before
-	// the window exists; keep the whole block off the startup path instead.
+	// a real session replacing an older staged one) reaches the next pass. It is a
+	// store read plus a re-encrypt, so keep the whole block off the startup path.
 	go func() {
 		if a.SessionPass() == "" {
 			return
@@ -181,9 +180,8 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 }
 
 func (a *App) ServiceShutdown() error {
-	// The store is closed from the window-close hook instead: this path also runs
-	// when only the service shuts down, and closing Badger there would leave the
-	// rest of the session without persistence.
+	// The store needs no close: every write lands through a rename, and this path
+	// also runs when only the service shuts down.
 	a.Discord.Close()
 	return nil
 }
@@ -251,11 +249,7 @@ func (a *App) RelayOverride() Relay {
 // origin all start from an empty one, and the relay is the first thing the user
 // has to type again.
 func (a *App) RelayConfig() Relay {
-	var saved Relay
-	if err := settings.GetObject("relay", &saved); err != nil {
-		return Relay{}
-	}
-	return saved
+	return readSettings().Relay
 }
 
 // SaveRelay persists the relay the settings form shows. A relay pinned by the
@@ -269,13 +263,13 @@ func (a *App) SaveRelay(url string, token string) error {
 	if url == "" {
 		return nil
 	}
-	if err := settings.SetObject("relay", Relay{
+	current := readSettings()
+	current.Relay = Relay{
 		URL:   url,
 		Token: strings.TrimSpace(token),
-	}); err != nil {
-		return err
 	}
-	touch("relay")
+	writeSettings(current)
+	touchRelay()
 	a.syncInBackground()
 	return nil
 }

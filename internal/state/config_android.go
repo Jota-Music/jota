@@ -1,6 +1,6 @@
 //go:build android
 
-package kv
+package state
 
 import (
 	"errors"

@@ -1,18 +1,12 @@
 package follows
 
 import (
-	"errors"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 )
-
-var bucket = kv.UseBucket("follows")
-
-// listKey is the only key: follows belong to this install, not to an account.
-const listKey = "list"
 
 // Service stores the users, Spotify artists and YouTube channels followed from
 // the app. There is one list per install.
@@ -37,11 +31,8 @@ func (s *Service) Pending() bool {
 
 // load reads the stored list. Callers must hold mu.
 func (s *Service) load() (Section, error) {
-	var list Section
-	if err := bucket.GetObject(listKey, &list); err != nil {
-		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
-			return Section{}, nil
-		}
+	list, err := state.Read[Section](state.Follows)
+	if err != nil {
 		return Section{}, err
 	}
 	return clean(list), nil
@@ -82,7 +73,7 @@ func (s *Service) Follow(user string) error {
 	}
 	delete(list.Removed, user)
 	list.Items = append(list.Items, Entry{Id: user, At: time.Now().UnixMilli()})
-	if err := bucket.SetObject(listKey, list); err != nil {
+	if err := state.Write(state.Follows, list); err != nil {
 		return err
 	}
 	s.dirty = true
@@ -116,7 +107,7 @@ func (s *Service) Unfollow(user string) error {
 	}
 	list.Removed[removed] = time.Now().UnixMilli()
 	list.Items = kept
-	if err := bucket.SetObject(listKey, list); err != nil {
+	if err := state.Write(state.Follows, list); err != nil {
 		return err
 	}
 	s.dirty = true

@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 func TestLiveAppPresence(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	kv.Start()
-	defer kv.Close()
+	state.Start()
+	defer state.Close()
 
 	a := New("test")
 	if err := a.SetDiscordEnabled(true); err != nil {

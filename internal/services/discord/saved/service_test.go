@@ -4,27 +4,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 func youtubePlaylist(id string) music.PlaylistSummary {
-	return music.PlaylistSummary{Id: music.YouTubePrefix + id, Name: id}
+	return music.PlaylistSummary{Id: music.YouTubePrefix + "playlist:" + id, Name: id}
 }
 
 func spotifyPlaylist(id string) music.PlaylistSummary {
-	return music.PlaylistSummary{Id: id, Name: id}
+	return music.PlaylistSummary{Id: music.SpotifyPrefix + "playlist:" + id, Name: id}
 }
 
 func TestSavedLifecycle(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
+	state.Reset()
+	t.Cleanup(state.Reset)
 
 	s := New()
 
@@ -57,18 +54,18 @@ func TestSavedLifecycle(t *testing.T) {
 	if len(list) != 2 {
 		t.Fatalf("list = %v, want the 2 saved playlists", list)
 	}
-	if list[0].Id != "youtube:PL1" || list[1].Id != "37i9dQ" {
+	if list[0].Id != "youtube:playlist:PL1" || list[1].Id != "spotify:playlist:37i9dQ" {
 		t.Fatalf("list = %v, want youtube then spotify", list)
 	}
 
-	if err := s.Remove("37i9dQ"); err != nil {
+	if err := s.Remove("spotify:playlist:37i9dQ"); err != nil {
 		t.Fatalf("remove: %v", err)
 	}
 	list, err = s.List()
 	if err != nil {
 		t.Fatalf("list after remove: %v", err)
 	}
-	if len(list) != 1 || list[0].Id != "youtube:PL1" {
+	if len(list) != 1 || list[0].Id != "youtube:playlist:PL1" {
 		t.Fatalf("after remove = %v, want only youtube:PL1", list)
 	}
 }
@@ -78,11 +75,8 @@ func setup(t *testing.T) *Service {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	kv.Close()
-	if err := kv.EnsureStarted(); err != nil {
-		t.Fatalf("kv: %v", err)
-	}
-	t.Cleanup(kv.Close)
+	state.Reset()
+	t.Cleanup(state.Reset)
 	return New()
 }
 
@@ -90,8 +84,8 @@ func setup(t *testing.T) *Service {
 // timestamp.
 func TestSectionReadsLegacyList(t *testing.T) {
 	s := setup(t)
-	legacy := []music.PlaylistSummary{{Id: "youtube:PL1", Name: "PL1", Cover: "c"}}
-	if err := bucket.SetObject(indexKey, legacy); err != nil {
+	legacy := []music.PlaylistSummary{{Id: "youtube:playlist:PL1", Name: "PL1", Cover: "c"}}
+	if err := state.Write(state.Saved, legacy); err != nil {
 		t.Fatalf("legacy save: %v", err)
 	}
 
@@ -99,7 +93,7 @@ func TestSectionReadsLegacyList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("section: %v", err)
 	}
-	if len(part.Items) != 1 || part.Items[0].Id != "youtube:PL1" || part.Items[0].At != 0 || part.Items[0].Cover != "c" {
+	if len(part.Items) != 1 || part.Items[0].Id != "youtube:playlist:PL1" || part.Items[0].At != 0 || part.Items[0].Cover != "c" {
 		t.Fatalf("legacy section = %v", part.Items)
 	}
 }
@@ -108,8 +102,8 @@ func TestSectionReadsLegacyList(t *testing.T) {
 // that carries timestamps, keeping the entries it already held.
 func TestAddRewritesLegacyList(t *testing.T) {
 	s := setup(t)
-	legacy := []music.PlaylistSummary{{Id: "youtube:PL1", Name: "PL1", Cover: "c"}}
-	if err := bucket.SetObject(indexKey, legacy); err != nil {
+	legacy := []music.PlaylistSummary{{Id: "youtube:playlist:PL1", Name: "PL1", Cover: "c"}}
+	if err := state.Write(state.Saved, legacy); err != nil {
 		t.Fatalf("legacy save: %v", err)
 	}
 
@@ -117,17 +111,17 @@ func TestAddRewritesLegacyList(t *testing.T) {
 		t.Fatalf("add: %v", err)
 	}
 
-	var stored Section
-	if err := bucket.GetObject(indexKey, &stored); err != nil {
-		t.Fatalf("legacy list was not rewritten: %v", err)
+	stored, err := state.Read[Section](state.Saved)
+	if err != nil {
+		t.Fatalf("read the stored section: %v", err)
 	}
 	if len(stored.Items) != 2 {
 		t.Fatalf("stored = %v, want both playlists", stored.Items)
 	}
-	if got := stored.Items[0]; got.Id != "youtube:PL1" || got.Cover != "c" || got.At != 0 {
+	if got := stored.Items[0]; got.Id != "youtube:playlist:PL1" || got.Cover != "c" || got.At != 0 {
 		t.Fatalf("legacy entry = %v, want it kept untouched", got)
 	}
-	if got := stored.Items[1]; got.Id != "youtube:PL2" || got.At == 0 {
+	if got := stored.Items[1]; got.Id != "youtube:playlist:PL2" || got.At == 0 {
 		t.Fatalf("new entry = %v, want a timestamp", got)
 	}
 }
@@ -137,16 +131,16 @@ func TestMergeSectionHonoursTombstones(t *testing.T) {
 	if err := s.Add(youtubePlaylist("PL1")); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	if err := s.Remove("youtube:PL1"); err != nil {
+	if err := s.Remove("youtube:playlist:PL1"); err != nil {
 		t.Fatalf("remove: %v", err)
 	}
 
-	remote := Section{Items: []Entry{{Id: "youtube:PL1", Name: "PL1", At: 1}, {Id: "youtube:PL2", Name: "PL2", At: 2}}}
+	remote := Section{Items: []Entry{{Id: "youtube:playlist:PL1", Name: "PL1", At: 1}, {Id: "youtube:playlist:PL2", Name: "PL2", At: 2}}}
 	if _, _, err := s.MergeSection(remote, Newer, true); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 	list, _ := s.List()
-	if len(list) != 1 || list[0].Id != "youtube:PL2" {
+	if len(list) != 1 || list[0].Id != "youtube:playlist:PL2" {
 		t.Fatalf("after merge = %v, want only PL2; a removal must not be undone", list)
 	}
 
@@ -163,20 +157,20 @@ func TestMergeSectionHonoursTombstones(t *testing.T) {
 // wins a background sync instead of waiting for an explicit restore.
 func TestMergeSectionNewerSaveBeatsTombstone(t *testing.T) {
 	s := setup(t)
-	if err := s.Add(spotifyPlaylist("spotify:p1")); err != nil {
+	if err := s.Add(spotifyPlaylist("p1")); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	if err := s.Remove("spotify:p1"); err != nil {
+	if err := s.Remove("spotify:playlist:p1"); err != nil {
 		t.Fatalf("remove: %v", err)
 	}
 
-	remote := Section{Items: []Entry{{Id: "spotify:p1", Name: "Kept", At: time.Now().Add(time.Hour).UnixMilli()}}}
+	remote := Section{Items: []Entry{{Id: "spotify:playlist:p1", Name: "Kept", At: time.Now().Add(time.Hour).UnixMilli()}}}
 	out, _, err := s.MergeSection(remote, Newer, true)
 	if err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 	list, _ := s.List()
-	if len(list) != 1 || list[0].Id != "spotify:p1" || list[0].Name != "Kept" {
+	if len(list) != 1 || list[0].Id != "spotify:playlist:p1" || list[0].Name != "Kept" {
 		t.Fatalf("after merge = %+v, want the newer entry", list)
 	}
 	if len(out.Removed) != 0 {
@@ -190,7 +184,7 @@ func TestMergeSectionWithoutApplyLeavesStore(t *testing.T) {
 		t.Fatalf("add: %v", err)
 	}
 
-	remote := Section{Items: []Entry{{Id: "youtube:PL2", Name: "PL2", At: 2}}}
+	remote := Section{Items: []Entry{{Id: "youtube:playlist:PL2", Name: "PL2", At: 2}}}
 	out, applied, err := s.MergeSection(remote, Newer, false)
 	if err != nil {
 		t.Fatalf("merge: %v", err)
@@ -199,7 +193,7 @@ func TestMergeSectionWithoutApplyLeavesStore(t *testing.T) {
 		t.Fatalf("applied = %d, union = %v, want 0 and both entries", applied, out.Items)
 	}
 	list, _ := s.List()
-	if len(list) != 1 || list[0].Id != "youtube:PL1" {
+	if len(list) != 1 || list[0].Id != "youtube:playlist:PL1" {
 		t.Fatalf("store = %v, want PL1 untouched", list)
 	}
 }

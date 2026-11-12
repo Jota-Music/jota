@@ -8,11 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/services/discord"
 )
-
-var settings = kv.UseBucket("settings")
 
 // Media mirrors the frontend media payload from media-session.ts.
 type Media struct {
@@ -44,7 +41,10 @@ func (a *App) SetDiscordEnabled(enabled bool) error {
 		a.discord = nil
 		a.discordMu.Unlock()
 	}
-	return settings.SetObject("discord", enabled)
+	current := readSettings()
+	current.Discord = enabled
+	writeSettings(current)
+	return nil
 }
 
 func (a *App) DiscordEnabled() bool {
@@ -52,7 +52,7 @@ func (a *App) DiscordEnabled() bool {
 		return false
 	}
 	var enabled bool
-	if err := settings.GetObject("discord", &enabled); err != nil {
+	if false {
 		return false
 	}
 	return enabled

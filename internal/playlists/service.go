@@ -6,16 +6,12 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
-var (
-	bucket    = kv.UseBucket("playlists")
-	indexKey  = "index"
-	recordKey = "p:"
-	graveKey  = "graves"
-)
+// ErrNotFound is what a caller gets when a playlist is not in the store.
+var ErrNotFound = errors.New("playlist not found")
 
 type Service struct {
 	mu            sync.Mutex
@@ -61,7 +57,7 @@ func newId() (string, error) {
 	if _, err := rand.Read(buf); err != nil {
 		return "", err
 	}
-	return music.LocalPrefix + hex.EncodeToString(buf), nil
+	return music.LocalPrefix + "playlist:" + hex.EncodeToString(buf), nil
 }
 
 // portable converts a stored playlist into its export shape. Metadata comes
@@ -93,51 +89,73 @@ func (s *Service) portable(pl Playlist) exportPlaylist {
 	}
 }
 
+// stored reads everything the device keeps of the local playlists.
+func (s *Service) stored() (Stored, error) {
+	return state.Read[Stored](state.Playlists)
+}
+
 func (s *Service) load(id string) (Playlist, error) {
-	var pl Playlist
-	if err := bucket.GetObject(recordKey+id, &pl); err != nil {
+	part, err := s.stored()
+	if err != nil {
 		return Playlist{}, err
+	}
+	pl, ok := part.Tracks[id]
+	if !ok {
+		return Playlist{}, ErrNotFound
 	}
 	return pl, nil
 }
 
 func (s *Service) save(pl Playlist) error {
-	return bucket.SetObject(recordKey+pl.Id, pl)
+	part, err := s.stored()
+	if err != nil {
+		return err
+	}
+	if part.Tracks == nil {
+		part.Tracks = map[string]Playlist{}
+	}
+	part.Tracks[pl.Id] = pl
+	return state.Write(state.Playlists, part)
 }
 
 func (s *Service) index() ([]string, error) {
-	var ids []string
-	if err := bucket.GetObject(indexKey, &ids); err != nil {
-		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
-			return nil, nil
-		}
+	part, err := s.stored()
+	if err != nil {
 		return nil, err
 	}
-	return ids, nil
+	return part.Index, nil
 }
 
 func (s *Service) setIndex(ids []string) error {
-	return bucket.SetObject(indexKey, ids)
+	part, err := s.stored()
+	if err != nil {
+		return err
+	}
+	part.Index = ids
+	return state.Write(state.Playlists, part)
 }
 
 // tombstones maps a deleted playlist id to the moment it was deleted, so the
 // backup file cannot bring it back.
 func (s *Service) tombstones() (map[string]int64, error) {
-	graves := map[string]int64{}
-	if err := bucket.GetObject(graveKey, &graves); err != nil {
-		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
-			return map[string]int64{}, nil
-		}
+	part, err := s.stored()
+	if err != nil {
 		return nil, err
 	}
-	return graves, nil
+	if part.Deleted == nil {
+		return map[string]int64{}, nil
+	}
+	return part.Deleted, nil
 }
 
 func (s *Service) bury(id string, at int64) error {
-	graves, err := s.tombstones()
+	part, err := s.stored()
 	if err != nil {
 		return err
 	}
-	graves[id] = at
-	return bucket.SetObject(graveKey, graves)
+	if part.Deleted == nil {
+		part.Deleted = map[string]int64{}
+	}
+	part.Deleted[id] = at
+	return state.Write(state.Playlists, part)
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
 )
 
 // GetFriends returns the usernames in the account's buddy list (the friend
@@ -17,11 +17,11 @@ func (s *SpotifyService) GetFriends() ([]string, error) {
 	if username == "" {
 		return nil, ErrNotConnected
 	}
-	return kv.Cached(musicBucket, friendsKey(username), s.friends)
+	return cache.Cached(friendsName(username), s.friends)
 }
 
-func friendsKey(username string) string {
-	return "friends:v1:" + username
+func friendsName(username string) string {
+	return "spotify/friends/" + username
 }
 
 func (s *SpotifyService) friends() ([]string, error) {

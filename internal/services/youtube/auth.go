@@ -15,19 +15,34 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
+	"github.com/Jota-Music/jota/internal/state"
 )
 
 // Signing in with a Google account is the reliable way past YouTube's bot
 // check. The app stores the account cookie string and signs innertube requests
 // with SAPISIDHASH, the same mechanism yt-dlp uses. Doing this can get the
 // account banned by Google, so the UI must warn the user before storing it.
-var authBucket = kv.UseBucket("youtube-auth")
+// session is what the device keeps of the YouTube session: the account
+// cookies and the name of the account they belong to.
+type session struct {
+	Cookies string `json:"cookies,omitempty"`
+	Account string `json:"account,omitempty"`
+	// Links are the video each song plays. They are state, not cache: the link
+	// is a pick the user made, and it travels in the backup.
+	Links map[string]string `json:"links,omitempty"`
+}
 
-const (
-	authKey    = "cookies"
-	accountKey = "account"
-)
+// readSession reads what the device keeps of the session.
+func readSession() session {
+	out, _ := state.Read[session](state.YouTube)
+	return out
+}
+
+// writeSession stores what the device keeps of the session.
+func writeSession(s session) error {
+	return state.Write(state.YouTube, s)
+}
 
 var (
 	authMu     sync.RWMutex
@@ -59,9 +74,7 @@ func cookies() string {
 	authMu.Lock()
 	defer authMu.Unlock()
 	authLoaded = true
-	if stored, err := authBucket.GetString(authKey); err == nil {
-		authCookie = stored
-	}
+	authCookie = readSession().Cookies
 	return authCookie
 }
 
@@ -76,7 +89,9 @@ func SetCookies(raw string) error {
 	if sidValue(normalized) == "" {
 		return errors.New("cookies missing SAPISID")
 	}
-	if err := authBucket.SetString(authKey, normalized); err != nil {
+	stored := readSession()
+	stored.Cookies = normalized
+	if err := writeSession(stored); err != nil {
 		return err
 	}
 
@@ -85,9 +100,10 @@ func SetCookies(raw string) error {
 	authLoaded = true
 	authMu.Unlock()
 	// The name belongs to the cookies that answered it.
-	_ = authBucket.Delete(accountKey)
+	stored.Account = ""
+	_ = writeSession(stored)
 	// The cached list belongs to the account that was signed in before.
-	_ = playlistBucket.Delete(myPlaylistsKey)
+	_ = cache.Forget(myPlaylistsKey)
 	return nil
 }
 
@@ -178,8 +194,10 @@ func ClearCookies() error {
 	authCookie = ""
 	authLoaded = true
 	authMu.Unlock()
-	_ = authBucket.Delete(accountKey)
-	return authBucket.Delete(authKey)
+	stored := readSession()
+	stored.Account = ""
+	stored.Cookies = ""
+	return writeSession(stored)
 }
 
 func HasAuth() bool {
@@ -304,14 +322,16 @@ func Account() string {
 	if sessionValue(cookie) == "" {
 		return ""
 	}
-	if cached, err := authBucket.GetString(accountKey); err == nil && cached != "" {
+	if cached := readSession().Account; cached != "" {
 		return cached
 	}
 	name, err := accountName(cookie)
 	if err != nil || name == "" {
 		return ""
 	}
-	_ = authBucket.SetString(accountKey, name)
+	stored := readSession()
+	stored.Account = name
+	_ = writeSession(stored)
 	return name
 }
 

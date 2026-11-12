@@ -7,7 +7,7 @@ import (
 
 	"github.com/devgianlu/go-librespot/session"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -30,7 +30,7 @@ func (s *SpotifyService) GetPlaylistSummary(playlistID string) (music.PlaylistSu
 		return music.PlaylistSummary{}, err
 	}
 	return music.PlaylistSummary{
-		Id:       music.SpotifyPrefix + strings.TrimPrefix(uri, URIPlaylistPrefix),
+		Id:       uri,
 		Name:     meta.name,
 		Cover:    meta.cover,
 		Owner:    meta.owner,
@@ -50,7 +50,7 @@ func (s *SpotifyService) GetFullPlaylist(playlistID string) (music.Playlist, err
 	// Liked Songs and other user contexts aren't playlists: no revision to
 	// compare, so they get a plain eternal cache entry.
 	if !strings.HasPrefix(uri, URIPlaylistPrefix) {
-		return kv.Cached(musicBucket, "playlist:v2:"+playlistID, func() (music.Playlist, error) {
+		return cache.Cached(contextName(playlistID), func() (music.Playlist, error) {
 			return s.fullPlaylist(playlistID)
 		})
 	}
@@ -118,7 +118,7 @@ func (s *SpotifyService) playlistTracks(ctx context.Context, sess *session.Sessi
 }
 
 func (s *SpotifyService) GetUserPlaylists(user string) ([]music.PlaylistSummary, error) {
-	return kv.Cached(musicBucket, "playlists:v3:"+user, func() ([]music.PlaylistSummary, error) {
+	return cache.Cached(libraryName(user), func() ([]music.PlaylistSummary, error) {
 		return s.userPlaylists(user)
 	})
 }
@@ -149,7 +149,7 @@ func (s *SpotifyService) userPlaylists(user string) ([]music.PlaylistSummary, er
 			continue
 		}
 		out = append(out, music.PlaylistSummary{
-			Id:    music.SpotifyPrefix + id,
+			Id:    music.SpotifyPrefix + "playlist:" + id,
 			Name:  p.Name,
 			Cover: p.CoverURL,
 			Owner: p.Owner,
@@ -182,7 +182,7 @@ func artistsFromTrack(t Track) []music.Artist {
 		}
 		artist := music.Artist{Name: a}
 		if i < len(t.ArtistURIs) {
-			artist.Id = music.SpotifyPrefix + strings.TrimPrefix(t.ArtistURIs[i], URIArtistPrefix)
+			artist.Id = t.ArtistURIs[i]
 		}
 		artists = append(artists, artist)
 	}
@@ -191,7 +191,7 @@ func artistsFromTrack(t Track) []music.Artist {
 
 func trackToSong(t Track) music.Song {
 	id := strings.TrimPrefix(t.URI, URITrackPrefix)
-	songID := music.SpotifyPrefix + id
+	songID := t.URI
 
 	artists := artistsFromTrack(t)
 
@@ -202,7 +202,7 @@ func trackToSong(t Track) music.Song {
 
 	albumID := ""
 	if strings.HasPrefix(t.AlbumURI, URIAlbumPrefix) {
-		albumID = music.SpotifyPrefix + strings.TrimPrefix(t.AlbumURI, URIAlbumPrefix)
+		albumID = t.AlbumURI
 	}
 
 	return music.Song{
@@ -227,7 +227,7 @@ func trackToSong(t Track) music.Song {
 
 func (s *SpotifyService) GetArtist(uri string) (music.ArtistInfo, error) {
 	normalizedURI := normalizeID(uri, "artist")
-	return kv.Cached(musicBucket, "artist:"+normalizedURI, func() (music.ArtistInfo, error) {
+	return cache.Cached("spotify/artists/"+normalizedURI, func() (music.ArtistInfo, error) {
 		return s.artist(normalizedURI)
 	})
 }
@@ -259,7 +259,7 @@ func (s *SpotifyService) artist(normalizedURI string) (music.ArtistInfo, error) 
 
 func (s *SpotifyService) GetArtistDiscography(uri string) (music.ArtistDiscography, error) {
 	normalizedURI := normalizeID(uri, "artist")
-	return kv.Cached(musicBucket, "artist-discography:"+normalizedURI, func() (music.ArtistDiscography, error) {
+	return cache.Cached("spotify/discography/"+normalizedURI, func() (music.ArtistDiscography, error) {
 		return s.artistDiscography(normalizedURI)
 	})
 }
@@ -283,7 +283,7 @@ func (s *SpotifyService) artistDiscography(normalizedURI string) (music.ArtistDi
 			continue
 		}
 		albums = append(albums, music.AlbumSummary{
-			Id:    music.SpotifyPrefix + id,
+			Id:    music.SpotifyPrefix + "album:" + id,
 			Name:  a.Name,
 			Year:  a.Year,
 			Cover: a.CoverURL,
@@ -300,7 +300,7 @@ func (s *SpotifyService) artistDiscography(normalizedURI string) (music.ArtistDi
 
 func (s *SpotifyService) GetAlbumTracks(uri string) ([]music.Song, error) {
 	normalizedURI := normalizeID(uri, "album")
-	return kv.Cached(musicBucket, "album:"+normalizedURI, func() ([]music.Song, error) {
+	return cache.Cached("spotify/albums/"+normalizedURI, func() ([]music.Song, error) {
 		return s.albumTracks(normalizedURI)
 	})
 }

@@ -94,11 +94,11 @@ func lockupSong(m map[string]any, playlist string) (music.Song, bool) {
 	}
 
 	return music.Song{
-		Id:        music.YouTubePrefix + id,
+		Id:        music.YouTubePrefix + "track:" + id,
 		Url:       "https://www.youtube.com/watch?v=" + id,
 		Name:      title,
 		Duration:  lockupDuration(m),
-		Share:     music.Share{Id: music.YouTubePrefix + id, Url: "https://www.youtube.com/watch?v=" + id},
+		Share:     music.Share{Id: music.YouTubePrefix + "track:" + id, Url: "https://www.youtube.com/watch?v=" + id},
 		Album:     music.Album{Title: album, Covers: []string{lockupCover(m)}},
 		Artists:   []music.Artist{{Id: artistID, Name: artist, Source: "youtube"}},
 		YoutubeId: id,

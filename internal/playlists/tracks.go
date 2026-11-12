@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -17,7 +16,7 @@ import (
 func (s *Service) GetFullPlaylist(id string) (music.Playlist, error) {
 	pl, err := s.load(id)
 	if err != nil {
-		if errors.Is(err, kv.ErrKeyNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			return music.Playlist{}, fmt.Errorf("playlist %q not found", id)
 		}
 		return music.Playlist{}, err

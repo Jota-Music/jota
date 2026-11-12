@@ -1,15 +1,12 @@
 package ordering
 
 import (
-	"errors"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 )
-
-var bucket = kv.UseBucket("ordering")
 
 // Library is the scope of the home library shelf. Its order predates scopes and
 // is still stored under the bare account key, so List falls back to it.
@@ -42,27 +39,6 @@ func normalize(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
 }
 
-// key groups orders by shelf. A shelf with no account, like the rooms shelf, is
-// app-wide, so its scope alone keys it.
-func key(scope, account string) string {
-	if account == "" {
-		return "scope:" + scope
-	}
-	return account + ":" + scope
-}
-
-// load reads one shelf's order. A key missing means an empty order.
-func load(key string) (Record, error) {
-	var rec Record
-	if err := bucket.GetObject(key, &rec); err != nil {
-		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
-			return Record{}, nil
-		}
-		return Record{}, err
-	}
-	return clean(rec), nil
-}
-
 func (s *Service) List(scope string, account string) (Order, error) {
 	scope = normalize(scope)
 	account = normalize(account)
@@ -70,11 +46,16 @@ func (s *Service) List(scope string, account string) (Order, error) {
 		return nil, nil
 	}
 
-	rec, err := load(key(scope, account))
+	part, err := state.Read[Section](state.Order)
 	if err != nil {
 		return nil, err
 	}
-	return rec.Ids, nil
+	for _, entry := range part {
+		if normalize(entry.Scope) == scope && normalize(entry.Account) == account {
+			return entry.Ids, nil
+		}
+	}
+	return nil, nil
 }
 
 func (s *Service) Save(scope string, account string, ids Order) error {
@@ -89,7 +70,26 @@ func (s *Service) Save(scope string, account string, ids Order) error {
 
 	rec := clean(Record{Scope: scope, Account: account, Ids: ids})
 	rec.At = time.Now().UnixMilli()
-	if err := bucket.SetObject(key(scope, account), rec); err != nil {
+
+	part, err := state.Read[Section](state.Order)
+	if err != nil {
+		return err
+	}
+	out := make(Section, 0, len(part)+1)
+	replaced := false
+	for _, entry := range part {
+		if normalize(entry.Scope) == scope && normalize(entry.Account) == account {
+			out = append(out, Entry(rec))
+			replaced = true
+			continue
+		}
+		out = append(out, entry)
+	}
+	if !replaced {
+		out = append(out, Entry(rec))
+	}
+	sortSection(out)
+	if err := state.Write(state.Order, out); err != nil {
 		return err
 	}
 	s.dirty = true

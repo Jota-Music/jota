@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Jota-Music/jota/internal/cache"
+
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -23,14 +25,14 @@ func TestExtractMyPlaylists(t *testing.T) {
 		{
 			name:  "lockupViewModel",
 			file:  "testdata/me-playlists-lockup.json",
-			id:    "youtube:PLBTanuC8SLeZUH4mYXFvRbDfxTMKvNLHJ",
+			id:    "youtube:playlist:PLBTanuC8SLeZUH4mYXFvRbDfxTMKvNLHJ",
 			title: "Lofi Hip Hop 2026 - Lofi Music 2026 Playlist - Lo fi Playlist",
 			owner: "Hitsify",
 		},
 		{
 			name:  "playlistRenderer",
 			file:  "testdata/me-playlists-renderer.json",
-			id:    "youtube:PLmxm7yELedw-19LktYIv1OtVgisjLXo90",
+			id:    "youtube:playlist:PLmxm7yELedw-19LktYIv1OtVgisjLXo90",
 			title: "Lofi House Mix by Kiffen Beats",
 			owner: "Zlone star",
 		},
@@ -74,8 +76,8 @@ func TestGetMyYouTubePlaylistsDoesNotCacheEmpty(t *testing.T) {
 	if err := SetCookies("SAPISID=sapisid123; __Secure-3PSID=sid3p"); err != nil {
 		t.Fatalf("SetCookies: %v", err)
 	}
-	_ = playlistBucket.Delete(myPlaylistsKey)
-	t.Cleanup(func() { _ = playlistBucket.Delete(myPlaylistsKey) })
+	_ = cache.Forget(myPlaylistsKey)
+	t.Cleanup(func() { _ = cache.Forget(myPlaylistsKey) })
 
 	calls := 0
 	old := myPlaylistsFn
@@ -206,7 +208,7 @@ func TestExtractMyPlaylistsFromPage(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("expected 1 playlist, got %d: %+v", len(got), got)
 	}
-	if got[0].Id != "youtube:PLpage1234567890ab" || got[0].Name != "Page Mix" || got[0].Subtitle != "Jota" {
+	if got[0].Id != "youtube:playlist:PLpage1234567890ab" || got[0].Name != "Page Mix" || got[0].Subtitle != "Jota" {
 		t.Fatalf("unexpected playlist: %+v", got[0])
 	}
 	if !strings.HasPrefix(got[0].Cover, "https://i.ytimg.com/") {
@@ -221,9 +223,9 @@ func TestGetMyYouTubePlaylistsUsesImportedPage(t *testing.T) {
 	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
 		t.Fatalf("SetCookies: %v", err)
 	}
-	_ = playlistBucket.Delete(myPlaylistsKey)
-	_ = playlistBucket.Delete(myPlaylistsSnapshotKey)
-	t.Cleanup(func() { _ = playlistBucket.Delete(myPlaylistsSnapshotKey) })
+	_ = cache.Forget(myPlaylistsKey)
+	_ = cache.Forget(myPlaylistsSnapshotKey)
+	t.Cleanup(func() { _ = cache.Forget(myPlaylistsSnapshotKey) })
 
 	if n, err := ImportMyPlaylists([]byte(myPlaylistsPage)); err != nil || n != 1 {
 		t.Fatalf("ImportMyPlaylists = %d, %v", n, err)
@@ -254,7 +256,7 @@ func TestGetMyYouTubePlaylistsReportsRejectedSession(t *testing.T) {
 	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
 		t.Fatalf("SetCookies: %v", err)
 	}
-	_ = playlistBucket.Delete(myPlaylistsSnapshotKey)
+	_ = cache.Forget(myPlaylistsSnapshotKey)
 
 	_, err := (&Service{}).GetMyYouTubePlaylists()
 	if !errors.Is(err, errSession) {
@@ -310,11 +312,11 @@ func TestGetMyYouTubePlaylistsReadsPage(t *testing.T) {
 		t.Fatalf("SetCookies: %v", err)
 	}
 	usePage(t, []byte(myPlaylistsPage))
-	_ = playlistBucket.Delete(myPlaylistsKey)
-	_ = playlistBucket.Delete(myPlaylistsSnapshotKey)
+	_ = cache.Forget(myPlaylistsKey)
+	_ = cache.Forget(myPlaylistsSnapshotKey)
 	t.Cleanup(func() {
-		_ = playlistBucket.Delete(myPlaylistsKey)
-		_ = playlistBucket.Delete(myPlaylistsSnapshotKey)
+		_ = cache.Forget(myPlaylistsKey)
+		_ = cache.Forget(myPlaylistsSnapshotKey)
 	})
 
 	got, err := (&Service{}).GetMyYouTubePlaylists()
@@ -331,12 +333,12 @@ func TestGetMyYouTubePlaylistsFallsBackToSnapshot(t *testing.T) {
 	if err := SetCookies("SID=abc; SAPISID=sapisid123; __Secure-3PSID=sid3p"); err != nil {
 		t.Fatalf("SetCookies: %v", err)
 	}
-	_ = playlistBucket.Delete(myPlaylistsKey)
-	t.Cleanup(func() { _ = playlistBucket.Delete(myPlaylistsKey) })
+	_ = cache.Forget(myPlaylistsKey)
+	t.Cleanup(func() { _ = cache.Forget(myPlaylistsKey) })
 	if n, err := ImportMyPlaylists([]byte(myPlaylistsPage)); err != nil || n != 1 {
 		t.Fatalf("ImportMyPlaylists = %d, %v", n, err)
 	}
-	t.Cleanup(func() { _ = playlistBucket.Delete(myPlaylistsSnapshotKey) })
+	t.Cleanup(func() { _ = cache.Forget(myPlaylistsSnapshotKey) })
 
 	old := myPlaylistsFn
 	myPlaylistsFn = func() ([]music.PlaylistSummary, error) {
@@ -355,11 +357,11 @@ func TestGetMyYouTubePlaylistsFallsBackToSnapshot(t *testing.T) {
 
 func TestGetMyYouTubePlaylistsServesSnapshotWithoutAuth(t *testing.T) {
 	resetAuth(t)
-	_ = playlistBucket.Delete(myPlaylistsKey)
+	_ = cache.Forget(myPlaylistsKey)
 	if n, err := ImportMyPlaylists([]byte(myPlaylistsPage)); err != nil || n != 1 {
 		t.Fatalf("ImportMyPlaylists = %d, %v", n, err)
 	}
-	t.Cleanup(func() { _ = playlistBucket.Delete(myPlaylistsSnapshotKey) })
+	t.Cleanup(func() { _ = cache.Forget(myPlaylistsSnapshotKey) })
 
 	got, err := (&Service{}).GetMyYouTubePlaylists()
 	if err != nil {
@@ -375,11 +377,11 @@ func TestSetCookiesDropsCachedPlaylists(t *testing.T) {
 	if err := SetCookies("SID=abc; SAPISID=sapisid123; __Secure-3PSID=sid3p"); err != nil {
 		t.Fatalf("SetCookies: %v", err)
 	}
-	_ = playlistBucket.Delete(myPlaylistsKey)
-	_ = playlistBucket.Delete(myPlaylistsSnapshotKey)
+	_ = cache.Forget(myPlaylistsKey)
+	_ = cache.Forget(myPlaylistsSnapshotKey)
 	t.Cleanup(func() {
-		_ = playlistBucket.Delete(myPlaylistsKey)
-		_ = playlistBucket.Delete(myPlaylistsSnapshotKey)
+		_ = cache.Forget(myPlaylistsKey)
+		_ = cache.Forget(myPlaylistsSnapshotKey)
 	})
 
 	calls := 0

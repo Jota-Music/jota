@@ -104,7 +104,7 @@ func TestChannelPlaylistsParsing(t *testing.T) {
 		t.Fatalf("playlists = %d, want 1", len(playlists))
 	}
 	p := playlists[0]
-	if p.Id != "youtube:PLabc123" || p.Name != "Lo-fi Beats" || p.Subtitle != "Chill Channel" {
+	if p.Id != "youtube:playlist:PLabc123" || p.Name != "Lo-fi Beats" || p.Subtitle != "Chill Channel" {
 		t.Fatalf("playlist = %+v", p)
 	}
 	if p.Cover != "https://i.ytimg.com/vi/x/hqdefault.jpg" {
@@ -122,7 +122,7 @@ func TestChannelPlaylistsContinuation(t *testing.T) {
 	if len(playlists) != 1 {
 		t.Fatalf("playlists = %d, want 1", len(playlists))
 	}
-	if playlists[0].Id != "youtube:PLdef456" || playlists[0].Name != "Second Mix" {
+	if playlists[0].Id != "youtube:playlist:PLdef456" || playlists[0].Name != "Second Mix" {
 		t.Fatalf("playlist = %+v", playlists[0])
 	}
 }
@@ -151,13 +151,13 @@ func TestChannelVideosParsing(t *testing.T) {
 		t.Fatalf("videos = %d, want 1", len(videos))
 	}
 	v := videos[0]
-	if v.Id != "youtube:cNYSOHWbkJU" || v.Name != "Earthquake by Mount Fuji" {
+	if v.Id != "youtube:track:cNYSOHWbkJU" || v.Name != "Earthquake by Mount Fuji" {
 		t.Fatalf("video = %+v", v)
 	}
 	if v.Duration != 1936 {
 		t.Fatalf("duration = %d, want 1936", v.Duration)
 	}
-	if len(v.Artists) != 1 || v.Artists[0].Id != "UC-lHJZR3Gqxm24_Vd_AJ5Yw" ||
+	if len(v.Artists) != 1 || v.Artists[0].Id != "youtube:channel:UC-lHJZR3Gqxm24_Vd_AJ5Yw" ||
 		v.Artists[0].Source != "youtube" || v.Artists[0].Name != "Chill Channel" {
 		t.Fatalf("artists = %+v", v.Artists)
 	}

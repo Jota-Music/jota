@@ -6,12 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/state"
 )
-
-var bucket = kv.UseBucket("rooms")
-
-const listKey = "saved"
 
 type Store struct {
 	mu sync.Mutex
@@ -28,11 +24,8 @@ func roomID(relayURL string, code string) string {
 }
 
 func (s *Store) List() ([]Room, error) {
-	var rooms []Room
-	if err := bucket.GetObject(listKey, &rooms); err != nil {
-		if errors.Is(err, kv.ErrKeyNotFound) || errors.Is(err, kv.ErrNotStarted) {
-			return nil, nil
-		}
+	rooms, err := state.Read[[]Room](state.Rooms)
+	if err != nil {
 		return nil, err
 	}
 	return rooms, nil
@@ -65,11 +58,11 @@ func (s *Store) Save(room Room) ([]Room, error) {
 	for i := range rooms {
 		if rooms[i].Id == room.Id {
 			rooms[i] = room
-			return rooms, bucket.SetObject(listKey, rooms)
+			return rooms, state.Write(state.Rooms, rooms)
 		}
 	}
 	rooms = append(rooms, room)
-	return rooms, bucket.SetObject(listKey, rooms)
+	return rooms, state.Write(state.Rooms, rooms)
 }
 
 func (s *Store) Remove(id string) ([]Room, error) {
@@ -86,5 +79,5 @@ func (s *Store) Remove(id string) ([]Room, error) {
 			out = append(out, r)
 		}
 	}
-	return out, bucket.SetObject(listKey, out)
+	return out, state.Write(state.Rooms, out)
 }

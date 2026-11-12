@@ -29,22 +29,20 @@ func resetPotCache(t *testing.T) {
 // what an earlier test resolved, restoring the previous value afterwards.
 func resetSticky(t *testing.T) {
 	t.Helper()
-	orig, err := clientBucket.GetString(clientKey)
-	_ = clientBucket.Delete(clientKey)
+	orig := youtubeCache.client()
+	youtubeCache.forgetClient()
 	t.Cleanup(func() {
-		if err == nil && orig != "" {
-			_ = clientBucket.SetString(clientKey, orig)
+		if orig != "" {
+			youtubeCache.rememberClient(orig)
 			return
 		}
-		_ = clientBucket.Delete(clientKey)
+		youtubeCache.forgetClient()
 	})
 }
 
 func TestClientOrderPutsStickyClientFirst(t *testing.T) {
 	resetSticky(t)
-	if err := clientBucket.SetString(clientKey, "IOS"); err != nil {
-		t.Fatalf("seed sticky client: %v", err)
-	}
+	youtubeCache.rememberClient("IOS")
 
 	want := []string{"IOS"}
 	for _, c := range allClients() {

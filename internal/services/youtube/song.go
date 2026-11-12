@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/Jota-Music/jota/internal/kv"
+	"github.com/Jota-Music/jota/internal/cache"
 	"github.com/Jota-Music/jota/internal/music"
 )
 
@@ -15,7 +15,7 @@ func (s *Service) GetSong(id string) (music.Song, error) {
 		return music.Song{}, errors.New("invalid youtube id")
 	}
 
-	return kv.Cached(youtubeSourceBucket, "song:v2:"+id, func() (music.Song, error) {
+	return cache.Cached("youtube/tracks/"+id, func() (music.Song, error) {
 		return fetchSong(id)
 	})
 }
@@ -40,13 +40,13 @@ func fetchSong(id string) (music.Song, error) {
 	// shortcut: a player answer without videoDetails.thumbnail leaves the cover
 	// empty; derive https://i.ytimg.com/vi/<id>/hqdefault.jpg when that shows up.
 	return music.Song{
-		Id:        music.YouTubePrefix + id,
+		Id:        music.YouTubePrefix + "track:" + id,
 		Url:       watchURL,
 		Name:      pr.VideoDetails.Title,
 		Duration:  int(duration),
-		Share:     music.Share{Id: music.YouTubePrefix + id, Url: watchURL},
+		Share:     music.Share{Id: music.YouTubePrefix + "track:" + id, Url: watchURL},
 		Album:     music.Album{Title: "YouTube", Covers: []string{pr.VideoDetails.Thumbnail.url()}},
-		Artists:   []music.Artist{{Id: pr.VideoDetails.ChannelID, Name: author, Source: "youtube"}},
+		Artists:   []music.Artist{{Id: music.YouTubePrefix + "channel:" + pr.VideoDetails.ChannelID, Name: author, Source: "youtube"}},
 		YoutubeId: id,
 	}, nil
 }
