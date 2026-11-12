@@ -9,10 +9,6 @@ import (
 	"github.com/Jota-Music/jota/internal/backup"
 )
 
-// settingAt is the companion key that remembers when a carried setting was
-// written.
-const settingAt = "-at"
-
 // carriedSettings are the settings a backup travels with: how to sync and the
 // relay. Sessions travel in their own section.
 var carriedSettings = []string{"sync", "relay"}
