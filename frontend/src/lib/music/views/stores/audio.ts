@@ -75,12 +75,22 @@ function endPlayback(a: HTMLAudioElement) {
 	if (audio !== a || endedElement === a) return;
 	endedElement = a;
 	stopEndWatch();
+	clearBufferTimer();
 	a.pause();
 	progress.value = 0;
 	isPlaying.value = false;
 	media.update(currentSong.value, false);
 	AudioCache.dropBuffers();
 	onTrackEndedCallback?.();
+}
+
+let bufferTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearBufferTimer() {
+	if (bufferTimer !== null) {
+		clearTimeout(bufferTimer);
+		bufferTimer = null;
+	}
 }
 
 // WebKit on macOS does not always fire `ended` for YouTube CDN streams, so end
@@ -115,7 +125,10 @@ function watchEnd(a: HTMLAudioElement) {
 			endPlayback(a);
 			return;
 		}
-		if (stalled(still)) {
+		// Do not treat ordinary buffering as a dead stream: a very long track
+		// can take several seconds to fill its buffer after a seek, and firing
+		// recovery there only re-resolves a URL that is still alive.
+		if (stalled(still) && !isLoading.value) {
 			still = 0;
 			last = time;
 			requestRecovery();
@@ -289,7 +302,7 @@ function waitForPlayable(
 }
 
 async function waitUntilBufferedEnough(el: HTMLAudioElement): Promise<void> {
-	if (await waitForPlayable(el)) return;
+	if (await waitForPlayable(el, 30000)) return;
 	throw new Error(
 		`audio load error (code ${el.error?.code ?? 0}, readyState ${el.readyState})`,
 	);
@@ -415,7 +428,8 @@ async function loadSongIntoPlayer(
 
 	let instance: HTMLAudioElement;
 	try {
-		instance = await AudioCache.getAudioElement(song);
+		const preload = "auto";
+		instance = await AudioCache.getAudioElement(song, preload);
 	} catch (err) {
 		if (token !== loadToken) return "aborted";
 		markStopped();
@@ -740,7 +754,7 @@ export function seek(time: number) {
 // playback from the old position while the seek is still in flight. Resolves on
 // the `seeked` event, right away when already there, and on a timeout so a
 // stream that never fires it cannot stall the caller.
-export function seekTo(time: number, timeoutMs = 2000): Promise<void> {
+export function seekTo(time: number, timeoutMs = 5000): Promise<void> {
 	const el = audio;
 	if (!el || !Number.isFinite(time)) return Promise.resolve();
 
@@ -804,6 +818,7 @@ export function stopPlayer() {
 	loadToken++;
 	stopEndWatch();
 	endedElement = null;
+	clearBufferTimer();
 	if (audio) {
 		audio.pause();
 		audio = null;
@@ -833,6 +848,7 @@ function bindEvents(a: HTMLAudioElement) {
 	a.onplay = () => {
 		if (audio !== a) return;
 		endQuietReload();
+		clearBufferTimer();
 		endedElement = null;
 		isPlaying.value = true;
 		pendingStart.value = false;
@@ -853,7 +869,12 @@ function bindEvents(a: HTMLAudioElement) {
 	// must show it just the same.
 	a.onwaiting = () => {
 		if (audio !== a) return;
-		isLoading.value = true;
+		// Delay the spinner so a seek that resolves in a few hundred ms does not
+		// flash it. A real stall still shows it after the grace window.
+		clearBufferTimer();
+		bufferTimer = setTimeout(() => {
+			if (audio === a) isLoading.value = true;
+		}, 200);
 	};
 
 	a.onpause = () => {
@@ -877,6 +898,7 @@ function bindEvents(a: HTMLAudioElement) {
 		if (a.seeking) return;
 		// Belt and braces: a frame advancing means the wait is over, even if a
 		// WebKit quirk swallowed the `playing` event.
+		clearBufferTimer();
 		isLoading.value = false;
 		if (!dragSeeking.value) progress.value = a.currentTime;
 		media.position(a, knownDuration);

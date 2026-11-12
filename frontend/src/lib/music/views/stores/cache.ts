@@ -155,7 +155,10 @@ export class AudioCache {
 
 	// The single element every track plays through, so its autoplay grant
 	// survives the whole session instead of being needed per song.
-	static async getAudioElement(song: Song): Promise<HTMLAudioElement> {
+	static async getAudioElement(
+		song: Song,
+		preload?: "auto" | "metadata" | "none",
+	): Promise<HTMLAudioElement> {
 		const cached = await AudioCache.get(song);
 
 		if (!AudioCache.player) {
@@ -167,6 +170,7 @@ export class AudioCache {
 
 		if (AudioCache.playerUrl !== cached.url || player.error || player.ended) {
 			AudioCache.playerUrl = cached.url;
+			if (preload) player.preload = preload;
 			player.src = cached.url;
 			player.load();
 		}
