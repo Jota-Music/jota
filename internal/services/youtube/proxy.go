@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 var proxyOnce sync.Once
@@ -25,13 +26,13 @@ func StartProxy() int {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
 			googleMu.Lock()
-			defer googleMu.Unlock()
 
 			id := strings.TrimPrefix(r.URL.Path, "/stream/")
 			proxyMu.Lock()
 			u, ok := proxyStreams[id]
 			proxyMu.Unlock()
 			if !ok {
+				googleMu.Unlock()
 				http.Error(w, "not found", 404)
 				return
 			}
@@ -47,8 +48,10 @@ func StartProxy() int {
 			probeReq, _ := http.NewRequest("GET", u, nil)
 			probeReq.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15")
 			probeReq.Header.Set("Range", "bytes=0-0")
-			probeResp, err := http.DefaultClient.Do(probeReq)
+			probeClient := &http.Client{Timeout: 10 * time.Second}
+			probeResp, err := probeClient.Do(probeReq)
 			if err != nil {
+				googleMu.Unlock()
 				http.Error(w, err.Error(), 502)
 				return
 			}
@@ -58,9 +61,12 @@ func StartProxy() int {
 				fmt.Sscanf(parts[1], "%d", &totalSize)
 			}
 			if totalSize == 0 {
+				googleMu.Unlock()
 				http.Error(w, "unknown size", 502)
 				return
 			}
+			// Release the global lock before streaming so seeks are not blocked.
+			googleMu.Unlock()
 
 			// If the client sent a Range, serve from that offset.
 			if rangeStart >= 0 {
@@ -68,6 +74,7 @@ func StartProxy() int {
 				w.Header().Set("Content-Type", "audio/mp4")
 				w.Header().Set("Accept-Ranges", "bytes")
 				w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", rangeStart, totalSize-1, totalSize))
+				w.Header().Set("Content-Length", fmt.Sprintf("%d", totalSize-rangeStart))
 				w.WriteHeader(206)
 
 				const chunkSize = 5 * 1024 * 1024

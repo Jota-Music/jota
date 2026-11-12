@@ -69,6 +69,9 @@ func keepAudio(videoID string, audio music.Audio, ttl time.Duration) {
 func forgetAudio(videoID string) {
 	fresh.Delete(videoID)
 	_ = cache.Forget(streamName(videoID))
+	proxyMu.Lock()
+	delete(proxyStreams, videoID)
+	proxyMu.Unlock()
 }
 
 // PurgeStreams drops the streams whose URL died with its signature. The age of
