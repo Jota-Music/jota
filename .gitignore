@@ -5,6 +5,7 @@ tmp/
 *.log
 *.vlog
 *.mem
+!internal/app/testdata/**/*.mem
 .env
 storage/
 .vite/

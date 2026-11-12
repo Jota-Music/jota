@@ -193,10 +193,13 @@ func parseChanges(buf []byte) []change {
 		switch wire {
 		case 0:
 			_, n := binary.Uvarint(buf)
+			if n <= 0 {
+				return out
+			}
 			buf = buf[n:]
 		case 2:
 			length, n := binary.Uvarint(buf)
-			if n <= 0 || int(length) > len(buf) {
+			if n <= 0 || uint64(len(buf)-n) < length {
 				return out
 			}
 			buf = buf[n:]
@@ -205,8 +208,14 @@ func parseChanges(buf []byte) []change {
 			}
 			buf = buf[length:]
 		case 5:
+			if len(buf) < 4 {
+				return out
+			}
 			buf = buf[4:]
 		case 1:
+			if len(buf) < 8 {
+				return out
+			}
 			buf = buf[8:]
 		default:
 			return out
@@ -230,13 +239,19 @@ func parseChange(buf []byte) change {
 			switch wire {
 			case 2:
 				length, n := binary.Uvarint(buf)
-				if n <= 0 || int(length) > len(buf) {
+				if n <= 0 || uint64(len(buf)-n) < length {
 					return c
 				}
 				buf = buf[n+int(length):]
 			case 5:
+				if len(buf) < 4 {
+					return c
+				}
 				buf = buf[4:]
 			case 1:
+				if len(buf) < 8 {
+					return c
+				}
 				buf = buf[8:]
 			default:
 				return c
@@ -274,11 +289,14 @@ func readTable(path string, compression uint32) ([]entry, error) {
 	// The table ends with the index, the checksum of the index and the two
 	// lengths that say where the index starts.
 	checksumLen := int(binary.BigEndian.Uint32(raw[len(raw)-4:]))
-	indexLen := int(binary.BigEndian.Uint32(raw[len(raw)-8-checksumLen:]))
-	start := len(raw) - 8 - checksumLen - indexLen
-	if start < 0 {
+	if checksumLen < 0 || checksumLen > len(raw)-8 {
 		return nil, errors.New("legacy: a table is damaged (the index does not fit)")
 	}
+	indexLen := int(binary.BigEndian.Uint32(raw[len(raw)-8-checksumLen:]))
+	if indexLen < 0 || indexLen > len(raw)-8-checksumLen {
+		return nil, errors.New("legacy: a table is damaged (the index does not fit)")
+	}
+	start := len(raw) - 8 - checksumLen - indexLen
 	index := raw[start : len(raw)-8-checksumLen]
 	if err := verifyChecksum(index, raw[len(raw)-4-checksumLen:len(raw)-4]); err != nil {
 		return nil, err
@@ -323,6 +341,9 @@ func parseBlock(data []byte, baseKey []byte) ([]entry, error) {
 	}
 	readPos := len(data) - 4
 	checksumLen := int(binary.BigEndian.Uint32(data[readPos:]))
+	if checksumLen < 0 || checksumLen > readPos {
+		return nil, errors.New("legacy: a block is damaged (its checksum does not fit)")
+	}
 	readPos -= checksumLen
 	if err := verifyChecksum(data[:readPos], data[readPos:readPos+checksumLen]); err != nil {
 		return nil, err
@@ -519,6 +540,9 @@ func (t fbTable) field(field int) int {
 
 // indirect resolves a relative offset stored at a place.
 func (t fbTable) indirect(pos int) int {
+	if pos < 0 || pos+4 > len(t.buf) {
+		return 0
+	}
 	return pos + int(binary.LittleEndian.Uint32(t.buf[pos:]))
 }
 
@@ -553,7 +577,7 @@ func readWAL(path string) ([]entry, error) {
 	var out []entry
 	pos := vlogHeaderSize
 	for pos < len(raw) {
-		if raw[pos] == 0 && raw[pos+1] == 0 {
+		if pos+1 >= len(raw) || (raw[pos] == 0 && raw[pos+1] == 0) {
 			break
 		}
 		start := pos
@@ -565,7 +589,11 @@ func readWAL(path string) ([]entry, error) {
 		pos += n
 		expires, n := binary.Uvarint(raw[pos:])
 		pos += n
-		if keyLen == 0 || valueLen == 0 || pos+int(keyLen)+int(valueLen)+4 > len(raw) {
+		// A delete carries no value, so an empty one is an entry and not the
+		// end of the log: the writes that follow it are still the newest ones.
+		rest := len(raw) - pos
+		if keyLen == 0 || keyLen > uint64(rest) || valueLen > uint64(rest) ||
+			keyLen+valueLen+4 > uint64(rest) {
 			break
 		}
 		key := raw[pos : pos+int(keyLen)]
