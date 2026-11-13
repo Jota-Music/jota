@@ -36,6 +36,9 @@ let audio: HTMLAudioElement | null = null;
 let loadedSongId: string | null = null;
 let knownDuration = 0;
 let loadToken = 0;
+// Timestamp of the last user seek, used to suppress spurious `ended` events that
+// WebKit fires shortly after a seek/range request on YouTube CDN streams.
+let lastSeekTime = 0;
 // Identifies the latest play() call. A superseded call (a newer one started)
 // must bail out without touching the shared element or reporting a failure.
 let playSeq = 0;
@@ -73,6 +76,20 @@ function stopEndWatch() {
 
 function endPlayback(a: HTMLAudioElement) {
 	if (audio !== a || endedElement === a) return;
+	// A spurious `ended` (WebKit quirk, often right after a seek/range request)
+	// must not advance the queue. A genuine end lands at (or very near) the
+	// duration, so anything well short of it is not a real end.
+	const dur = knownDurationOr(a.duration);
+	const sinceSeek = Date.now() - lastSeekTime;
+	// A spurious `ended` (WebKit quirk, often right after a seek) lands well
+	// short of the duration OR arrives shortly after a user seek. A genuine end
+	// lands at (or very near) the duration with no recent seek.
+	const spurious =
+		(Number.isFinite(dur) && dur > 0 && a.currentTime < dur - 5) ||
+		sinceSeek < 10000;
+	if (spurious) {
+		return;
+	}
 	endedElement = a;
 	stopEndWatch();
 	clearBufferTimer();
@@ -743,6 +760,7 @@ export async function resume(): Promise<boolean> {
 }
 
 export function seek(time: number) {
+	lastSeekTime = Date.now();
 	if (!Number.isFinite(time)) return;
 	if (audio) {
 		audio.currentTime = time;
@@ -1001,3 +1019,4 @@ function restorePlayback(): void {
 if (typeof window !== "undefined") {
 	restorePlayback();
 }
+

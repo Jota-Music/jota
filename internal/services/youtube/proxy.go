@@ -48,7 +48,7 @@ func StartProxy() int {
 			probeReq, _ := http.NewRequest("GET", u, nil)
 			probeReq.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15")
 			probeReq.Header.Set("Range", "bytes=0-0")
-			probeClient := &http.Client{Timeout: 10 * time.Second}
+			probeClient := &http.Client{Timeout: 5 * time.Second}
 			probeResp, err := probeClient.Do(probeReq)
 			if err != nil {
 				googleMu.Unlock()

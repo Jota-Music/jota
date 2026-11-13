@@ -33,3 +33,15 @@ test("no duration information never ends the song", () => {
 test("time zero never ends the song", () => {
 	expect(shouldEnd(0, 214, 214, 5000)).toBe(false);
 });
+
+test("a seek that lands short of the end does not end the track", () => {
+	expect(shouldEnd(100, 214, 214, 0)).toBe(false);
+});
+
+test("a seek landing exactly at the end ends the track", () => {
+	expect(shouldEnd(214, 214, 214, 0)).toBe(true);
+});
+
+test("a mid-track seek with a stall does not end the song", () => {
+	expect(shouldEnd(100, 214, 214, 1000)).toBe(false);
+});
