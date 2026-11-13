@@ -37,10 +37,15 @@ func StartProxy() int {
 				return
 			}
 
-			// Parse the client's range (if any).
+			// Parse the client's range (if any). Honor the end byte so the
+			// response's Content-Range/Content-Length match what WebKit expects.
 			var rangeStart int64 = -1
+			var rangeEnd int64 = -1
 			if rng := r.Header.Get("Range"); rng != "" {
-				fmt.Sscanf(rng, "bytes=%d", &rangeStart)
+				fmt.Sscanf(rng, "bytes=%d-%d", &rangeStart, &rangeEnd)
+				if rangeStart < 0 {
+					rangeStart = -1
+				}
 			}
 
 			// Determine total size from a small probe.
@@ -70,24 +75,30 @@ func StartProxy() int {
 
 			// If the client sent a Range, serve from that offset.
 			if rangeStart >= 0 {
-				// Stream from rangeStart to end in 1 MB chunks.
+				// Clamp the end to the total size.
+				if rangeEnd < 0 || rangeEnd >= totalSize {
+					rangeEnd = totalSize - 1
+				}
+				if rangeEnd < rangeStart {
+					rangeEnd = rangeStart
+				}
 				w.Header().Set("Content-Type", "audio/mp4")
 				w.Header().Set("Accept-Ranges", "bytes")
-				w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", rangeStart, totalSize-1, totalSize))
-				w.Header().Set("Content-Length", fmt.Sprintf("%d", totalSize-rangeStart))
+				w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", rangeStart, rangeEnd, totalSize))
+				w.Header().Set("Content-Length", fmt.Sprintf("%d", rangeEnd-rangeStart+1))
 				w.WriteHeader(206)
 
 				const chunkSize = 5 * 1024 * 1024
 				offset := rangeStart
-				for offset < totalSize {
+				for offset <= rangeEnd {
 					end := offset + chunkSize - 1
-					if end >= totalSize {
-						end = totalSize - 1
+					if end > rangeEnd {
+						end = rangeEnd
 					}
 					req, _ := http.NewRequest("GET", u, nil)
 					req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15")
 					req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
-					resp, err := http.DefaultClient.Do(req)
+					resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
 					if err != nil {
 						log.Printf("youtube: proxy chunk fetch err: %v", err)
 						break
@@ -121,7 +132,7 @@ func StartProxy() int {
 				req, _ := http.NewRequest("GET", u, nil)
 				req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15")
 				req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
-				resp, err := http.DefaultClient.Do(req)
+				resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
 				if err != nil {
 					log.Printf("youtube: proxy chunk fetch err: %v", err)
 					break
