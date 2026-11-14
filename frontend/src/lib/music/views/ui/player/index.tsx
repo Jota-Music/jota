@@ -344,7 +344,7 @@ function PlayerControlsRow({
 				type="button"
 				title={t("music.player.compact")}
 				onClick={() => setCompactPlayer(true)}
-				class="hidden md:block rounded-md p-1 transition hover:bg-white/10 cursor-pointer"
+				class="hidden md:block rounded-md p-1 transition text-white/60 hover:bg-white/10 hover:text-white cursor-pointer"
 			>
 				<Minimize2 class="size-5" />
 			</button>
