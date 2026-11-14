@@ -31,10 +31,10 @@ function SettingsPage() {
 	}, []);
 
 	return (
-		<div class="relative min-h-0 flex-1">
+		<div class="relative min-h-0 flex-1 overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
 			<div
 				ref={listRef}
-				class="h-full flex flex-col gap-4 overflow-y-auto py-5 md:gap-6 md:py-6"
+				class="h-full flex flex-col gap-4 overflow-y-auto px-4 py-5 md:gap-6 md:py-6"
 			>
 				<header class="space-y-1">
 					<h1 class="text-xl font-bold text-zinc-100">{t("settings.title")}</h1>
@@ -61,7 +61,7 @@ function SettingsPage() {
 					</button>
 				</footer>
 			</div>
-			<Scrollbar target={listRef} />
+			<Scrollbar target={listRef} gutter={16} />
 		</div>
 	);
 }
