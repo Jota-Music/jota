@@ -61,9 +61,24 @@ test("links a page to its source page", () => {
 	);
 });
 
+// The library's own records carry their type in the id, which is what the
+// route of a playlist or an album hands over.
+test("links a typed id from the library", () => {
+	expect(pageLink("playlist", "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M")).toBe(
+		"https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
+	);
+	expect(pageLink("album", "spotify:album:4aawyAB9vmqN3uQ7FjRGTy")).toBe(
+		"https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy",
+	);
+	expect(pageLink("artist", "spotify:artist:0OdUWJ0sBjDrqHygGUXeCF")).toBe(
+		"https://open.spotify.com/artist/0OdUWJ0sBjDrqHygGUXeCF",
+	);
+});
+
 // A local playlist lives in the store and Liked Songs is a context, so neither
 // has a page to hand out.
 test("local and likedsongs pages have no link", () => {
 	expect(pageLink("playlist", "local:7f3a")).toBeNull();
 	expect(pageLink("playlist", "spotify:user:me:collection")).toBeNull();
+	expect(pageLink("playlist", "spotify:playlist:local")).toBeNull();
 });

@@ -28,8 +28,10 @@ export function pageLink(
 	if (page === "playlist" && id.startsWith("youtube:")) {
 		return `https://www.youtube.com/playlist?list=${id.slice("youtube:".length)}`;
 	}
+	// The source's own records carry their type in the id
+	// (`spotify:playlist:<id>`), bare ids arrive from the search results.
 	const spotifyId = id.startsWith("spotify:")
-		? id.slice("spotify:".length)
+		? id.slice(id.lastIndexOf(":") + 1)
 		: id;
 	if (!SPOTIFY_ID.test(spotifyId)) return null;
 	return `https://open.spotify.com/${page}/${spotifyId}`;
