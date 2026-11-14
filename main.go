@@ -255,8 +255,11 @@ func clampWindowState(st *windowState, screens []*application.Screen) *applicati
 		st.Width, st.Height = 0, 0
 		return screen
 	}
-	st.Width = min(st.Width, wa.Width)
-	st.Height = min(st.Height, wa.Height)
+	// A size saved below the minimum is raised back to it: the window is created
+	// with this geometry, and the options that carry the minimum only stop it from
+	// shrinking further, they never grow an already smaller window.
+	st.Width = min(max(st.Width, windowMinWidth), wa.Width)
+	st.Height = min(max(st.Height, windowMinHeight), wa.Height)
 
 	// Size alone is not enough: a position saved on a monitor that is gone, or on
 	// a layout that shrank, restores the window off-screen with no way to drag it
