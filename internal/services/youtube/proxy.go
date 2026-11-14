@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -14,140 +15,37 @@ import (
 var proxyOnce sync.Once
 var proxyPort int
 var proxyMu sync.Mutex
-var googleMu sync.Mutex                // serialize requests to googlevideo to avoid rate limiting
-var proxyStreams = map[string]string{} // videoID -> googlevideo URL
+var proxyStreams = map[string]stream{} // videoID -> registered stream
 
-// StartProxy starts a local HTTP server that serves googlevideo streams under
-// simple URLs. WebKit handles http://localhost better than signed googlevideo
-// URLs: it buffers properly and range requests work without the client's
-// User-Agent gymnastics.
+// stream is what the proxy serves for a video: the signed googlevideo URL and
+// the content type of the format it holds.
+type stream struct {
+	url  string
+	mime string
+}
+
+// proxyClient relays a stream as it comes. It has no total timeout on purpose:
+// a body lasts as long as the track, and a deadline that cuts it mid-way looks
+// to the player like the end of the file.
+var proxyClient = &http.Client{
+	Transport: &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		ResponseHeaderTimeout: 15 * time.Second,
+		IdleConnTimeout:       90 * time.Second,
+		MaxIdleConnsPerHost:   4,
+	},
+}
+
+const proxyAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+
+// StartProxy starts a local HTTP server that relays googlevideo streams under
+// simple URLs. WebKit and Chromium handle http://127.0.0.1 better than signed
+// googlevideo URLs: no User-Agent gymnastics, no expiring signature, and range
+// requests travel as the player sends them.
 func StartProxy() int {
 	proxyOnce.Do(func() {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
-			googleMu.Lock()
-
-			id := strings.TrimPrefix(r.URL.Path, "/stream/")
-			proxyMu.Lock()
-			u, ok := proxyStreams[id]
-			proxyMu.Unlock()
-			if !ok {
-				googleMu.Unlock()
-				http.Error(w, "not found", 404)
-				return
-			}
-
-			// Parse the client's range (if any). Honor the end byte so the
-			// response's Content-Range/Content-Length match what WebKit expects.
-			var rangeStart int64 = -1
-			var rangeEnd int64 = -1
-			if rng := r.Header.Get("Range"); rng != "" {
-				fmt.Sscanf(rng, "bytes=%d-%d", &rangeStart, &rangeEnd)
-				if rangeStart < 0 {
-					rangeStart = -1
-				}
-			}
-
-			// Determine total size from a small probe.
-			totalSize := int64(0)
-			probeReq, _ := http.NewRequest("GET", u, nil)
-			probeReq.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15")
-			probeReq.Header.Set("Range", "bytes=0-0")
-			probeClient := &http.Client{Timeout: 5 * time.Second}
-			probeResp, err := probeClient.Do(probeReq)
-			if err != nil {
-				googleMu.Unlock()
-				http.Error(w, err.Error(), 502)
-				return
-			}
-			cr := probeResp.Header.Get("Content-Range")
-			probeResp.Body.Close()
-			if parts := strings.Split(cr, "/"); len(parts) == 2 {
-				fmt.Sscanf(parts[1], "%d", &totalSize)
-			}
-			if totalSize == 0 {
-				googleMu.Unlock()
-				http.Error(w, "unknown size", 502)
-				return
-			}
-			// Release the global lock before streaming so seeks are not blocked.
-			googleMu.Unlock()
-
-			// If the client sent a Range, serve from that offset.
-			if rangeStart >= 0 {
-				// Clamp the end to the total size.
-				if rangeEnd < 0 || rangeEnd >= totalSize {
-					rangeEnd = totalSize - 1
-				}
-				if rangeEnd < rangeStart {
-					rangeEnd = rangeStart
-				}
-				w.Header().Set("Content-Type", "audio/mp4")
-				w.Header().Set("Accept-Ranges", "bytes")
-				w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", rangeStart, rangeEnd, totalSize))
-				w.Header().Set("Content-Length", fmt.Sprintf("%d", rangeEnd-rangeStart+1))
-				w.WriteHeader(206)
-
-				const chunkSize = 5 * 1024 * 1024
-				offset := rangeStart
-				for offset <= rangeEnd {
-					end := offset + chunkSize - 1
-					if end > rangeEnd {
-						end = rangeEnd
-					}
-					req, _ := http.NewRequest("GET", u, nil)
-					req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15")
-					req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
-					resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
-					if err != nil {
-						log.Printf("youtube: proxy chunk fetch err: %v", err)
-						break
-					}
-					n, err := io.Copy(w, resp.Body)
-					resp.Body.Close()
-					if err != nil || n == 0 {
-						break
-					}
-					offset += n
-					if f, ok := w.(http.Flusher); ok {
-						f.Flush()
-					}
-				}
-				return
-			}
-
-			// No Range from client: stream the full file in 1 MB chunks as 200.
-			w.Header().Set("Content-Type", "audio/mp4")
-			w.Header().Set("Accept-Ranges", "bytes")
-			w.Header().Set("Content-Length", fmt.Sprintf("%d", totalSize))
-			w.WriteHeader(200)
-
-			const chunkSize = 5 * 1024 * 1024
-			offset := int64(0)
-			for offset < totalSize {
-				end := offset + chunkSize - 1
-				if end >= totalSize {
-					end = totalSize - 1
-				}
-				req, _ := http.NewRequest("GET", u, nil)
-				req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15")
-				req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, end))
-				resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
-				if err != nil {
-					log.Printf("youtube: proxy chunk fetch err: %v", err)
-					break
-				}
-				n, err := io.Copy(w, resp.Body)
-				resp.Body.Close()
-				if err != nil || n == 0 {
-					break
-				}
-				offset += n
-				if f, ok := w.(http.Flusher); ok {
-					f.Flush()
-				}
-			}
-		})
+		mux.HandleFunc("/stream/", relay)
 		srv := &http.Server{Handler: mux}
 		ln, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
@@ -161,11 +59,104 @@ func StartProxy() int {
 	return proxyPort
 }
 
+// relay answers one player request with the byte range googlevideo serves. The
+// stream is passed through untouched: the status, the byte offsets and the
+// headers are googlevideo's own, so a seek starts exactly where the player
+// asked and the player can never read the wrong slice of the file. Guessing
+// any of that here is what made a seek look like the end of the track.
+func relay(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/stream/")
+	proxyMu.Lock()
+	s, ok := proxyStreams[id]
+	proxyMu.Unlock()
+	if !ok {
+		http.Error(w, "not found", 404)
+		return
+	}
+
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, s.url, nil)
+	if err != nil {
+		http.Error(w, err.Error(), 502)
+		return
+	}
+	req.Header.Set("User-Agent", proxyAgent)
+	if rng := r.Header.Get("Range"); rng != "" {
+		req.Header.Set("Range", rng)
+	}
+
+	resp, err := proxyClient.Do(req)
+	if err != nil {
+		// A seek cancels the request it replaces; that is not a failure.
+		if r.Context().Err() != nil {
+			return
+		}
+		log.Printf("youtube: proxy %s err=%v", id, err)
+		http.Error(w, "upstream unavailable", 502)
+		return
+	}
+	defer resp.Body.Close()
+
+	for _, h := range []string{"Content-Type", "Content-Length", "Content-Range", "Last-Modified", "ETag"} {
+		if v := resp.Header.Get(h); v != "" {
+			w.Header().Set(h, v)
+		}
+	}
+	if w.Header().Get("Content-Type") == "" {
+		w.Header().Set("Content-Type", s.mime)
+	}
+	w.Header().Set("Accept-Ranges", "bytes")
+	w.WriteHeader(resp.StatusCode)
+
+	if _, err := io.Copy(w, resp.Body); err != nil && r.Context().Err() == nil {
+		log.Printf("youtube: proxy %s copy err=%v", id, err)
+	}
+}
+
 // ProxyURL registers a googlevideo URL and returns the local proxy URL for it.
 func ProxyURL(videoID, googlevideoURL string) string {
 	StartProxy()
 	proxyMu.Lock()
-	proxyStreams[videoID] = googlevideoURL
+	proxyStreams[videoID] = stream{
+		url:  unpinned(googlevideoURL),
+		mime: streamMime(googlevideoURL),
+	}
 	proxyMu.Unlock()
 	return fmt.Sprintf("http://127.0.0.1:%d/stream/%s", proxyPort, videoID)
+}
+
+// unpinned drops the `range` query param YouTube signs into some stream URLs.
+// It pins the answer to that slice of the file, so a range request for another
+// one is ignored and every seek lands on the wrong bytes.
+func unpinned(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || !strings.Contains(u.RawQuery, "range=") {
+		return raw
+	}
+	kept := make([]string, 0, 16)
+	for _, part := range strings.Split(u.RawQuery, "&") {
+		if !strings.HasPrefix(part, "range=") {
+			kept = append(kept, part)
+		}
+	}
+	u.RawQuery = strings.Join(kept, "&")
+	return u.String()
+}
+
+// streamMime is the type the stream really holds, taken from the URL YouTube
+// signed for it. Reporting audio/mp4 for an Opus stream makes the player open
+// the wrong demuxer.
+func streamMime(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "audio/mp4"
+	}
+	mime := u.Query().Get("mime")
+	if i := strings.IndexByte(mime, ';'); i > 0 {
+		mime = mime[:i]
+	}
+	mime = strings.TrimSpace(mime)
+	if !strings.HasPrefix(mime, "audio/") {
+		return "audio/mp4"
+	}
+	return mime
 }
