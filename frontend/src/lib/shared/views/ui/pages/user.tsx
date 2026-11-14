@@ -231,44 +231,47 @@ export function UserPage() {
 
 			{/* The tabs pick what the page shows, so they stand on their own above
 			    the body instead of riding in a panel: the videos are a list, not a
-			    shelf, and the playlists bring their own. */}
-			{youtube && (
-				<div class="flex shrink-0 items-center gap-2 px-3 md:px-0">
-					<Tabs
-						items={[
-							{
-								id: "videos",
-								icon: CirclePlay,
-								label: t("pages.youtube.videos"),
-							},
-							{
-								id: "playlists",
-								icon: ListVideo,
-								label: t("pages.youtube.playlists"),
-							},
-						]}
-						active={activeTab.value}
-						onSelect={(next) => {
-							activeTab.value = next;
-						}}
-					/>
-				</div>
-			)}
+			    shelf, and the playlists bring their own. They sit tight against the
+			    body, which keeps the loose gap from the header for itself. */}
+			<div class="flex min-h-0 flex-1 flex-col gap-2">
+				{youtube && (
+					<div class="flex shrink-0 items-center gap-2 px-3 md:px-0">
+						<Tabs
+							items={[
+								{
+									id: "videos",
+									icon: CirclePlay,
+									label: t("pages.youtube.videos"),
+								},
+								{
+									id: "playlists",
+									icon: ListVideo,
+									label: t("pages.youtube.playlists"),
+								},
+							]}
+							active={activeTab.value}
+							onSelect={(next) => {
+								activeTab.value = next;
+							}}
+						/>
+					</div>
+				)}
 
-			{watchingVideos ? (
-				videoBody
-			) : (
-				<Shelf
-					items={items}
-					to={(id) => `/playlist/${id}`}
-					leading={(id) => (followable(id) ? <SaveButton id={id} /> : null)}
-					actions={(id) => <PlaylistPlayButton id={id} />}
-					onPlay={(id) => void playPlaylist(queryClient, id)}
-					viewKey="user_view"
-					isLoading={playlistsQuery.isLoading}
-					emptyMessage={t("pages.user.noPlaylists")}
-				/>
-			)}
+				{watchingVideos ? (
+					videoBody
+				) : (
+					<Shelf
+						items={items}
+						to={(id) => `/playlist/${id}`}
+						leading={(id) => (followable(id) ? <SaveButton id={id} /> : null)}
+						actions={(id) => <PlaylistPlayButton id={id} />}
+						onPlay={(id) => void playPlaylist(queryClient, id)}
+						viewKey="user_view"
+						isLoading={playlistsQuery.isLoading}
+						emptyMessage={t("pages.user.noPlaylists")}
+					/>
+				)}
+			</div>
 		</div>
 	);
 }
