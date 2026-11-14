@@ -8,6 +8,7 @@ import { IdleSettings } from "@/lib/shared/views/ui/components/idle-settings";
 import { LanguageSettings } from "@/lib/shared/views/ui/components/language-settings";
 import { LogsSettings } from "@/lib/shared/views/ui/components/logs-settings";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
+import { VisualsSettings } from "@/lib/shared/views/ui/components/visuals-settings";
 import { RelaySettings } from "@/lib/sync/views/ui/relay";
 import { AboutSettings } from "@/lib/update/views/about-settings";
 
@@ -43,6 +44,7 @@ function SettingsPage() {
 
 				<AccountSettings />
 				<LanguageSettings />
+				<VisualsSettings />
 				<DiscordSettings />
 				<IdleSettings />
 				<RelaySettings />

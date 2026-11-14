@@ -74,6 +74,13 @@
 			"description": "Idioma de la interfaz.",
 			"label": "Idioma"
 		},
+		"visuals": {
+			"title": "Visual",
+			"background": {
+				"label": "Fondo ambiental",
+				"description": "Un brillo suave con el color de la portada en reproducción, detrás del contenido."
+			}
+		},
 		"discord": {
 			"title": "Discord",
 			"description": "Muestra lo que escuchas en tu estado de Discord.",

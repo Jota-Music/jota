@@ -74,6 +74,13 @@
 			"description": "Interface language.",
 			"label": "Language"
 		},
+		"visuals": {
+			"title": "Visuals",
+			"background": {
+				"label": "Ambient background",
+				"description": "A soft glow in the colour of the playing cover, behind the content."
+			}
+		},
 		"discord": {
 			"title": "Discord",
 			"description": "Show what you're listening to in your Discord status.",

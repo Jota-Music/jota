@@ -56,6 +56,15 @@ body {
 	--scrollbar-thumb-hover: #52525b;
 }
 
+/* Over the ambient glow a near-black bar disappears into the tint, so the thumb
+   turns translucent white there: it reads whatever colour is behind it instead
+   of blending into it. With the glow off the surface is flat, and the dark thumb
+   stays the quieter one. */
+[data-backdrop] {
+	--scrollbar-thumb: rgb(255 255 255 / 0.18);
+	--scrollbar-thumb-hover: rgb(255 255 255 / 0.38);
+}
+
 * {
 	scrollbar-width: none;
 }
@@ -118,6 +127,55 @@ body {
 	to {
 		opacity: 1;
 	}
+}
+
+/* Dust rising through the glow. Transform and opacity only, so each mote is
+   composited and the main thread is never woken for it: a canvas loop here
+   would keep the CPU busy for a decoration. The ends fade out, and the middle
+   holds one opacity, because a keyframed value would otherwise override the
+   element's own: the peak comes in as `--peak`, set per mote, so the field has
+   depth and the keyframes stay shared. */
+@keyframes mote {
+	0% {
+		opacity: 0;
+		transform: translate3d(0, 0, 0);
+	}
+	8% {
+		opacity: var(--peak, 0.4);
+	}
+	88% {
+		opacity: var(--peak, 0.4);
+	}
+	100% {
+		opacity: 0;
+		transform: translate3d(0, -60vh, 0);
+	}
+}
+
+@keyframes mote-sway {
+	0% {
+		opacity: 0;
+		transform: translate3d(0, 0, 0);
+	}
+	8% {
+		opacity: var(--peak, 0.4);
+	}
+	50% {
+		transform: translate3d(-16px, -30vh, 0);
+	}
+	88% {
+		opacity: var(--peak, 0.4);
+	}
+	100% {
+		opacity: 0;
+		transform: translate3d(20px, -60vh, 0);
+	}
+}
+
+/* Held for as long as a scroll is in flight (AppShell toggles it): the field
+   resumes where it stopped, so nothing jumps when the list settles. */
+.motes.still span {
+	animation-play-state: paused;
 }
 
 @keyframes notif-in {

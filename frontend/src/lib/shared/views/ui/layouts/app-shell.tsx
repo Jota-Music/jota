@@ -10,6 +10,7 @@ import {
 	clearSelection,
 	selectionActive,
 } from "@/lib/music/views/stores/selection";
+import { backdrop } from "@/lib/music/views/stores/visuals";
 import { PlayerBar } from "@/lib/music/views/ui/player";
 import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
 import Queue from "@/lib/music/views/ui/queue";
@@ -25,6 +26,31 @@ import { OverlayHost } from "@/lib/shared/views/ui/components/modal";
 import { NotificationBar } from "@/lib/shared/views/ui/notification-bar";
 import { SyncPanel } from "@/lib/sync/views/ui/session";
 import { UpdateBanner } from "@/lib/update/views/banner";
+
+// Fixed per launch, not per render: a mote that re-rolled its position every
+// time the shell painted would jump.
+//
+// `left` is stratified, one mote per column with a jitter, because independent
+// draws clump: at a few dozen points the eye reads the bare patches first. They
+// spawn low in the frame because the field rises, and one drawn near the top
+// leaves after a few pixels and sits off-screen for most of its cycle, which is
+// what made the field look sparse. The peak opacity varies per mote so the
+// field has depth instead of reading as one flat sheet. The delay is negative so
+// it is already full on the first frame instead of filling in over half a minute.
+const DUST = 64;
+const dust = Array.from({ length: DUST }, (_, id) => {
+	const duration = 18 + Math.random() * 16;
+	return {
+		id,
+		left: `${((id + Math.random()) / DUST) * 100}%`,
+		top: `${55 + Math.random() * 45}%`,
+		size: `${2 + Math.random() * 2.5}px`,
+		peak: `${0.15 + Math.random() * 0.3}`,
+		duration,
+		delay: -Math.random() * duration,
+		sway: Math.random() < 0.5,
+	};
+});
 
 export function AppShell({
 	children,
@@ -56,6 +82,29 @@ export function AppShell({
 		watch();
 	}, []);
 
+	const motes = useRef<HTMLDivElement>(null);
+
+	// A scroll frame that also re-blends the motes is a frame spent on the
+	// decoration instead of the list, so they hold still while the page moves.
+	useEffect(() => {
+		let idle = 0;
+		const onScroll = () => {
+			const node = motes.current;
+			if (!node) return;
+			node.classList.add("still");
+			clearTimeout(idle);
+			idle = window.setTimeout(() => node.classList.remove("still"), 120);
+		};
+		window.addEventListener("scroll", onScroll, {
+			capture: true,
+			passive: true,
+		});
+		return () => {
+			clearTimeout(idle);
+			window.removeEventListener("scroll", onScroll, true);
+		};
+	}, []);
+
 	return (
 		<OverlayHost.Provider value={overlayLayer}>
 			<div class="relative grid h-screen min-h-0 grid-rows-[max-content_1fr_max-content]">
@@ -67,7 +116,40 @@ export function AppShell({
 					<DegradedBanner />
 					<SignInPrompt />
 				</div>
-				<div class="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-4 md:px-0 max-w-dvw">
+				<div
+					data-backdrop={backdrop.value || undefined}
+					class="relative isolate flex min-h-0 flex-1 flex-col gap-4 overflow-hidden md:p-4 md:px-0 max-w-dvw"
+				>
+					{backdrop.value && (
+						<>
+							<div
+								aria-hidden="true"
+								class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_30%_0%,currentColor,transparent_60%),radial-gradient(circle_at_85%_100%,currentColor,transparent_60%)] text-(--dominant-color) opacity-[0.12] transition-colors duration-1000 ease-out"
+							/>
+
+							<div
+								ref={motes}
+								aria-hidden="true"
+								class="motes pointer-events-none absolute inset-0 -z-10 overflow-hidden text-(--dominant-color) transition-colors duration-1000 ease-out motion-reduce:hidden"
+							>
+								{dust.map((mote) => (
+									<span
+										key={mote.id}
+										class="absolute rounded-full bg-current [will-change:opacity,transform]"
+										style={{
+											left: mote.left,
+											top: mote.top,
+											width: mote.size,
+											height: mote.size,
+											"--peak": mote.peak,
+											animation: `${mote.sway ? "mote-sway" : "mote"} ${mote.duration}s linear ${mote.delay}s infinite`,
+										}}
+									/>
+								))}
+							</div>
+						</>
+					)}
+
 					<div
 						ref={overlayLayer}
 						class="pointer-events-none absolute inset-0 z-50 md:z-120"
