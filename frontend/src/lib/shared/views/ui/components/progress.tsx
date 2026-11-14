@@ -111,7 +111,7 @@ function Progress({
 			onTouchStart={start}
 			onWheel={onWheel}
 			class={cn(
-				"relative h-2 w-full select-none rounded-full bg-neutral-300 touch-none",
+				"relative h-2 w-full select-none rounded-full bg-neutral-800 touch-none",
 				disabled
 					? "cursor-default brightness-75 saturate-50"
 					: "cursor-pointer",

@@ -472,7 +472,7 @@ export default function YoutubeEditor() {
 								</span>
 
 								<Progress
-									class="h-1.5 min-w-0 flex-1 bg-zinc-800 text-(--dominant-color)"
+									class="h-1.5 min-w-0 flex-1 text-(--dominant-color)"
 									value={previewProgress.value}
 									max={previewDuration.value > 0 ? previewDuration.value : 1}
 									onChange={(value) => {
