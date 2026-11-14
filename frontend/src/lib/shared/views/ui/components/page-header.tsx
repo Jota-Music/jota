@@ -75,7 +75,7 @@ export function PageHeader({
 		) : null;
 
 	return (
-		<header class="flex shrink-0 items-center gap-4 px-3 pt-2 md:px-0 md:pt-0">
+		<header class="flex shrink-0 items-center gap-4 px-3 pt-3 md:px-0 md:pt-0">
 			{pending ? (
 				<div class="shimmer h-16 w-16 shrink-0 rounded-md" aria-hidden />
 			) : covers?.length ? (

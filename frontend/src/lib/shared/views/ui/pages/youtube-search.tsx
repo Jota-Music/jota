@@ -126,7 +126,7 @@ export function YouTubeSearchPage() {
 	// leaves nothing to switch between.
 	if (tabs.length === 0 && !loading) {
 		return (
-			<p class="px-3 pt-2 text-sm text-zinc-500 md:px-0 md:pt-0">
+			<p class="px-3 pt-3 text-sm text-zinc-500 md:px-0 md:pt-0">
 				{t("pages.youtube.noResults")}
 			</p>
 		);
