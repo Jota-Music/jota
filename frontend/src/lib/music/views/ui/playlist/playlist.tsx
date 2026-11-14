@@ -380,7 +380,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 
 			<div
 				className={cn(
-					"grid gap-2",
+					"grid gap-2 px-3 md:px-0",
 					custom ? "grid-cols-[1fr_auto]" : "grid-cols-[1fr_auto_auto]",
 				)}
 			>
@@ -457,7 +457,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 			</div>
 
 			{!isLoading && hasBrokenSpotify && !spotifyConnected.value && (
-				<div class="rounded-md border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+				<div class="mx-3 rounded-md border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200 md:mx-0">
 					{t("music.playlist.spotifyLoginNeeded")}
 				</div>
 			)}

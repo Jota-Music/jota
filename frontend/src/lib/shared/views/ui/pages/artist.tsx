@@ -160,7 +160,7 @@ export function ArtistPage() {
 				}
 			/>
 
-			<div class="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-6">
+			<div class="grid shrink-0 grid-cols-2 gap-2 px-3 sm:grid-cols-6 md:px-0">
 				{tabs.map((tab, i) =>
 					tab === "tracks" ? (
 						<button

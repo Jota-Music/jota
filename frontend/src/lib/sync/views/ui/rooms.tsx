@@ -341,7 +341,7 @@ export function RoomsShelf() {
 
 	return (
 		<>
-			<div class="flex shrink-0 items-center">
+			<div class="flex shrink-0 items-center px-3 pt-2 md:px-0 md:pt-0">
 				<button
 					type="button"
 					onClick={() => (store.showSync.value = true)}

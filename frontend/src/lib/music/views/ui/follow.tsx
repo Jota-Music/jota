@@ -12,7 +12,7 @@ const base = {
 	cover:
 		"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md bg-black/70 transition hover:bg-black/90 disabled:opacity-50",
 	toolbar:
-		"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 transition hover:text-white disabled:opacity-50",
+		"flex h-10 w-10 md:h-8 md:w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 transition hover:text-white disabled:opacity-50",
 } as const;
 
 type Variant = keyof typeof base;
@@ -47,7 +47,7 @@ function HeartButton({
 			}}
 			class={cn(base[variant], on ? following : idle)}
 		>
-			<Heart size={14} class={on ? "fill-current" : ""} />
+			<Heart class={cn("size-4 md:size-3.5", on && "fill-current")} />
 		</button>
 	);
 }

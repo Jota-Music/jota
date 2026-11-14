@@ -132,7 +132,11 @@ export function YouTubeSearchPage() {
 	// A category with no results drops out of the switcher, so an empty answer
 	// leaves nothing to switch between.
 	if (tabs.length === 0 && !loading) {
-		return <p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>;
+		return (
+			<p class="px-3 pt-2 text-sm text-zinc-500 md:px-0 md:pt-0">
+				{t("pages.youtube.noResults")}
+			</p>
+		);
 	}
 
 	// Videos are rows of their own; playlists and channels are items of the

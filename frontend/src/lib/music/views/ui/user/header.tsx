@@ -43,7 +43,7 @@ export function UserHeader({
 
 	if (loading) {
 		return (
-			<header class="flex shrink-0 items-center gap-4">
+			<header class="flex shrink-0 items-center gap-4 px-3 pt-2 md:px-0 md:pt-0">
 				<div class="shimmer size-16 shrink-0 rounded-full" />
 				<div class="flex min-w-0 flex-1 flex-col gap-2">
 					<div class="shimmer h-5 w-40 rounded" />
@@ -54,7 +54,7 @@ export function UserHeader({
 	}
 
 	return (
-		<header class="flex shrink-0 items-center gap-4">
+		<header class="flex shrink-0 items-center gap-4 px-3 pt-2 md:px-0 md:pt-0">
 			<Image
 				src={cover(imageUrl, 128)}
 				alt={name}
@@ -77,9 +77,9 @@ export function UserHeader({
 				<Link
 					href={`/search/youtube/${encodeURIComponent(name)}`}
 					title={t("pages.user.findOnYouTube")}
-					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 transition-colors hover:text-white"
+					class="flex h-10 w-10 md:h-8 md:w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 transition-colors hover:text-white"
 				>
-					<YoutubeIcon class="size-4" />
+					<YoutubeIcon class="size-5 md:size-4" />
 				</Link>
 			)}
 			<FollowButton id={followKey} />
