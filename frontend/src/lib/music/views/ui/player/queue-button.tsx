@@ -8,7 +8,13 @@ import { cn } from "@/lib/shared/utils/tw";
 
 const FEEDBACK_MS = 1000;
 
-export default function QueueButton({ class: className }: { class?: string }) {
+export default function QueueButton({
+	class: className,
+	iconClass = "size-6",
+}: {
+	class?: string;
+	iconClass?: string;
+}) {
 	const added = useSignal(false);
 	const initial = useRef(true);
 
@@ -40,16 +46,16 @@ export default function QueueButton({ class: className }: { class?: string }) {
 				showQueue.value = !showQueue.value;
 			}}
 			class={cn(
-				"rounded-md p-1.5 transition text-white/60 hover:text-white cursor-pointer",
+				"rounded-md p-1.5 transition text-neutral-400 hover:text-white cursor-pointer",
 				className,
 			)}
 		>
 			<span class="grid place-items-center">
 				<ListMusic
-					class={`col-start-1 row-start-1 size-5 fill-current transition-all duration-300 ease-out ${added.value ? "scale-50 opacity-0" : "scale-100 opacity-100"}`}
+					class={`col-start-1 row-start-1 ${iconClass} fill-current transition-all duration-300 ease-out ${added.value ? "scale-50 opacity-0" : "scale-100 opacity-100"}`}
 				/>
 				<Check
-					class={`col-start-1 row-start-1 size-5 stroke-current text-(--dominant-color) transition-all duration-300 ease-out ${added.value ? "scale-100 opacity-100" : "scale-50 opacity-0"}`}
+					class={`col-start-1 row-start-1 ${iconClass} stroke-current text-(--dominant-color) transition-all duration-300 ease-out ${added.value ? "scale-100 opacity-100" : "scale-50 opacity-0"}`}
 				/>
 			</span>
 		</button>

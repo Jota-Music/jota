@@ -378,7 +378,8 @@
 		},
 		"volume": {
 			"mute": "Mute",
-			"unmute": "Unmute"
+			"unmute": "Unmute",
+			"label": "Volume"
 		},
 		"following": {
 			"empty": "Nothing here yet. Follow a Spotify profile or a YouTube channel to see it in this list.",

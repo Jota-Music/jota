@@ -10,11 +10,18 @@ import {
 	SquareCheck,
 	SquarePlus,
 	Trash2,
+	Volume2,
+	VolumeX,
 } from "lucide-preact";
 import { useLocation } from "wouter-preact";
 import { playlistSource } from "@/lib/music/app/playlist-source";
 import type { Song } from "@/lib/music/model";
-import { currentSong, isPlaying } from "@/lib/music/views/stores/audio";
+import {
+	currentSong,
+	isPlaying,
+	muted,
+	toggleMute,
+} from "@/lib/music/views/stores/audio";
 import {
 	enqueueMany,
 	playList,
@@ -55,6 +62,9 @@ type Props = {
 	// Clearance below the viewport bottom for a fixed element anchored there
 	// (the compact player bar) when this button lives inside it.
 	bottom?: number;
+	// volume adds the mute switch the compact bar used to carry as its own
+	// control, for the platform where the bar has no room for it.
+	volume?: boolean;
 };
 
 export function buildActions({
@@ -69,6 +79,7 @@ export function buildActions({
 	onSelectAll,
 	onDone,
 	navigate,
+	volume,
 }: Props): { actions: Action[]; count: number } {
 	const batch =
 		selection && selectedSongs.value.length > 1 && songs.length === 1;
@@ -174,6 +185,16 @@ export function buildActions({
 			},
 		});
 	}
+	if (volume) {
+		actions.push({
+			icon: muted.value ? VolumeX : Volume2,
+			label: muted.value ? t("music.volume.unmute") : t("music.volume.mute"),
+			run: () => {
+				toggleMute();
+				done();
+			},
+		});
+	}
 	if (single) actions.push(...shareActions(single));
 	if (share) actions.push(...share);
 
@@ -186,11 +207,17 @@ export function useTrackMenu(
 	song: Song | undefined,
 	onPlay?: () => void,
 	bottom = 0,
+	volume = false,
 ) {
 	const [, navigate] = useLocation();
 	return (e: MouseEvent) => {
 		if (!song) return;
-		const { actions } = buildActions({ songs: [song], onPlay, navigate });
+		const { actions } = buildActions({
+			songs: [song],
+			onPlay,
+			navigate,
+			volume,
+		});
 		if (actions.length > 0) openContextMenu(actions, e, undefined, bottom);
 	};
 }
@@ -208,6 +235,7 @@ export default function TrackActions({
 	onDone,
 	reserve = false,
 	bottom = 0,
+	volume = false,
 }: Props) {
 	const [, navigate] = useLocation();
 
@@ -223,6 +251,7 @@ export default function TrackActions({
 		onSelectAll,
 		onDone,
 		navigate,
+		volume,
 	});
 
 	const empty = actions.length === 0;

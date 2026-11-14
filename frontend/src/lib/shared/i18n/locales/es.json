@@ -378,7 +378,8 @@
 		},
 		"volume": {
 			"mute": "Silenciar",
-			"unmute": "Activar sonido"
+			"unmute": "Activar sonido",
+			"label": "Volumen"
 		},
 		"following": {
 			"empty": "Aún no sigues a nadie. Sigue un perfil de Spotify o un canal de YouTube para verlos aquí.",

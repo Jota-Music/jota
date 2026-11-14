@@ -38,6 +38,7 @@ import VolumeControl from "@/lib/music/views/ui/volume";
 import { t } from "@/lib/shared/i18n";
 import { cover as coverImage } from "@/lib/shared/utils/cover";
 import { secondsToTime } from "@/lib/shared/utils/format";
+import { isAndroid } from "@/lib/shared/utils/platform";
 import { cn } from "@/lib/shared/utils/tw";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
@@ -285,10 +286,10 @@ function PlayerControlsRow({
 						"rounded-md p-1 transition cursor-pointer",
 						shuffle.value
 							? "text-(--dominant-color)"
-							: "text-white/60 hover:bg-white/10 hover:text-white",
+							: "text-neutral-400 hover:bg-white/10 hover:text-white",
 					)}
 				>
-					<Shuffle class="size-5 stroke-current" />
+					<Shuffle class="size-5.5 stroke-current" />
 				</button>
 
 				<button
@@ -307,13 +308,13 @@ function PlayerControlsRow({
 						"rounded-md p-1 transition cursor-pointer",
 						repeat.value !== "off"
 							? "text-(--dominant-color)"
-							: "text-white/60 hover:bg-white/10 hover:text-white",
+							: "text-neutral-400 hover:bg-white/10 hover:text-white",
 					)}
 				>
 					{repeat.value === "one" ? (
-						<Repeat1 class="size-5 stroke-current" />
+						<Repeat1 class="size-5.5 stroke-current" />
 					) : (
-						<Repeat class="size-5 stroke-current" />
+						<Repeat class="size-5.5 stroke-current" />
 					)}
 				</button>
 			</div>
@@ -323,16 +324,16 @@ function PlayerControlsRow({
 				playing={isPlaying}
 				onClick={() => void toggleSong()}
 				disabled={disabled}
-				iconClass="size-5"
+				iconClass="size-6"
 				class={cn(
 					"max-md:hidden",
 					disabled ? "bg-neutral-700" : "bg-(--dominant-color)",
 				)}
 			/>
 
-			<VolumeControl class="max-md:hidden" />
+			<VolumeControl class="max-md:flex-1" />
 
-			<QueueButton class="hover:bg-white/10" />
+			<QueueButton class="hover:bg-white/10" iconClass="size-5.5" />
 
 			{song && (
 				<div class="max-md:hidden">
@@ -344,9 +345,9 @@ function PlayerControlsRow({
 				type="button"
 				title={t("music.player.compact")}
 				onClick={() => setCompactPlayer(true)}
-				class="hidden md:block rounded-md p-1 transition text-white/60 hover:bg-white/10 hover:text-white cursor-pointer"
+				class="hidden md:block rounded-md p-1 transition text-neutral-400 hover:bg-white/10 hover:text-white cursor-pointer"
 			>
-				<Minimize2 class="size-5" />
+				<Minimize2 class="size-6" />
 			</button>
 		</div>
 	);
@@ -458,6 +459,7 @@ export function PlayerBar() {
 		player?.song,
 		() => void player?.toggleSong(),
 		barHeight.value,
+		true,
 	);
 
 	// Expanded player (mobile modal): the compact bar is slid out of view.
@@ -533,7 +535,7 @@ export function PlayerBar() {
 					/>
 				</div>
 
-				<div class="flex items-center gap-2 w-full px-4 py-3">
+				<div class="flex items-center gap-2 w-full px-4 py-3 max-[420px]:gap-1 max-[420px]:px-2">
 					<div
 						role="toolbar"
 						tabIndex={-1}
@@ -543,11 +545,11 @@ export function PlayerBar() {
 								onExpand();
 							}
 						}}
-						class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+						class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer max-[420px]:gap-2"
 					>
 						{hasSong ? (
 							<>
-								<div class="relative w-12 h-12 shrink-0">
+								<div class="relative w-12 h-12 shrink-0 max-[420px]:w-10 max-[420px]:h-10">
 									<Image
 										src={coverImage(player.cover, 128)}
 										alt={player.song.name}
@@ -576,7 +578,7 @@ export function PlayerBar() {
 						)}
 					</div>
 
-					<div class="flex items-center gap-2 md:gap-3 shrink-0">
+					<div class="flex items-center gap-1 md:gap-3 shrink-0">
 						<div class="flex items-center gap-0.5 max-md:hidden">
 							<button
 								type="button"
@@ -591,10 +593,10 @@ export function PlayerBar() {
 									"rounded-md p-1.5 transition cursor-pointer",
 									shuffle.value
 										? "text-(--dominant-color)"
-										: "text-white/60 hover:text-white",
+										: "text-neutral-400 hover:text-white",
 								)}
 							>
-								<Shuffle class="size-5 stroke-current" />
+								<Shuffle class="size-5.5 stroke-current" />
 							</button>
 						</div>
 
@@ -615,25 +617,30 @@ export function PlayerBar() {
 									"rounded-md p-1.5 transition cursor-pointer",
 									repeat.value !== "off"
 										? "text-(--dominant-color)"
-										: "text-white/60 hover:text-white",
+										: "text-neutral-400 hover:text-white",
 								)}
 							>
 								{repeat.value === "one" ? (
-									<Repeat1 class="size-5 stroke-current" />
+									<Repeat1 class="size-5.5 stroke-current" />
 								) : (
-									<Repeat class="size-5 stroke-current" />
+									<Repeat class="size-5.5 stroke-current" />
 								)}
 							</button>
 						</div>
 
-						<div class="flex items-center gap-1">
-							<VolumeControl class="mr-2 max-[500px]:hidden" />
+						<div class="flex items-center gap-1 max-[420px]:gap-0.5">
+							{/* Android has no room to spare here and its menu carries the
+							    switch instead; elsewhere the speaker stays in the row.
+							    The speaker glyph is narrower than the skip icons, so its
+							    box carries more air on the right: pulled in so the whole
+							    control row reads at one rhythm. */}
+							{!isAndroid && <VolumeControl class="-mr-2" tip />}
 
 							<button
 								type="button"
 								disabled={!hasSong || !canPrev.value}
 								onClick={() => void player?.prevSong()}
-								class="p-1.5 rounded-full transition disabled:cursor-not-allowed cursor-pointer text-white/80"
+								class="p-1.5 rounded-full transition disabled:cursor-not-allowed cursor-pointer text-neutral-300"
 							>
 								<SkipBack class="size-6 fill-current" />
 							</button>
@@ -650,13 +657,13 @@ export function PlayerBar() {
 								type="button"
 								disabled={!hasSong || !canNext.value}
 								onClick={() => void player?.nextSong()}
-								class="p-1.5 rounded-full transition disabled:cursor-not-allowed cursor-pointer text-white/80"
+								class="p-1.5 rounded-full transition disabled:cursor-not-allowed cursor-pointer text-neutral-300"
 							>
 								<SkipForward class="size-6 fill-current" />
 							</button>
 						</div>
 
-						<div class="flex items-center gap-0.5">
+						<div class="flex items-center gap-1 max-[420px]:gap-0.5">
 							<QueueButton class="max-md:hidden" />
 
 							{player && (
@@ -664,6 +671,7 @@ export function PlayerBar() {
 									songs={[player.song]}
 									onPlay={() => void player.toggleSong()}
 									bottom={barHeight.value}
+									volume
 								/>
 							)}
 
@@ -674,7 +682,7 @@ export function PlayerBar() {
 									e.stopPropagation();
 									onExpand();
 								}}
-								class="shrink-0 p-1.5 rounded-full text-white/60 hover:text-white cursor-pointer transition-colors"
+								class="shrink-0 p-1.5 rounded-full text-neutral-400 hover:text-white cursor-pointer transition-colors"
 							>
 								{playerModalOpen.value ? (
 									<ChevronDown class="size-5" />

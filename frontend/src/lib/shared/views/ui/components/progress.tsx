@@ -12,6 +12,9 @@ type ProgressProps = {
 	onCommit?: (value: number) => void;
 	class?: string;
 	disabled?: boolean;
+	// A vertical bar fills from the bottom, so it reads as a fader.
+	vertical?: boolean;
+	label?: string;
 };
 
 function Progress({
@@ -22,26 +25,32 @@ function Progress({
 	onCommit,
 	class: className,
 	disabled = false,
+	vertical = false,
+	label,
 }: ProgressProps) {
 	const trackRef = useRef<HTMLDivElement>(null);
 	const dragging = useSignal(false);
 	// Null until this drag has produced a position: a release with nothing to
 	// commit must not seek to a value the user never picked.
 	const lastValue = useRef<number | null>(null);
-	const propsRef = useRef({ onChange, onCommit, min, max });
-	propsRef.current = { onChange, onCommit, min, max };
+	const propsRef = useRef({ onChange, onCommit, min, max, vertical });
+	propsRef.current = { onChange, onCommit, min, max, vertical };
 
-	function preview(clientX: number) {
+	function preview(client: number) {
 		const track = trackRef.current;
 		if (!track) return;
-		const { min, max, onChange } = propsRef.current;
+		const { min, max, onChange, vertical } = propsRef.current;
 		const rect = track.getBoundingClientRect();
-		// A bar with no width cannot be read as a position: dividing by it gives
+		// A bar with no size cannot be read as a position: dividing by it gives
 		// Infinity, which clamps to the far end and seeks the track to its last
 		// frame. Nothing the user picked, so pick nothing.
-		if (!(rect.width > 0)) return;
-		const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-		const scaled = min + ratio * (max - min);
+		const size = vertical ? rect.height : rect.width;
+		if (!(size > 0)) return;
+		const ratio = vertical
+			? 1 - (client - rect.top) / size
+			: (client - rect.left) / size;
+		const clamped = Math.max(0, Math.min(1, ratio));
+		const scaled = min + clamped * (max - min);
 		lastValue.current = scaled;
 		onChange?.(scaled);
 	}
@@ -53,7 +62,7 @@ function Progress({
 		function move(e: MouseEvent | TouchEvent) {
 			if (!dragging.value) return;
 			if ("touches" in e) e.preventDefault();
-			preview(clientAxis(e, "x"));
+			preview(clientAxis(e, propsRef.current.vertical ? "y" : "x"));
 		}
 		function finish() {
 			if (!dragging.value) return;
@@ -81,7 +90,7 @@ function Progress({
 		if (disabled) return;
 		dragging.value = true;
 		lastValue.current = null;
-		preview(clientAxis(e, "x"));
+		preview(clientAxis(e, vertical ? "y" : "x"));
 	}
 
 	function onWheel(e: WheelEvent) {
@@ -111,7 +120,8 @@ function Progress({
 			onTouchStart={start}
 			onWheel={onWheel}
 			class={cn(
-				"relative h-2 w-full select-none rounded-full bg-neutral-800 touch-none",
+				"relative select-none rounded-full bg-neutral-800 touch-none",
+				vertical ? "h-24 w-2" : "h-2 w-full",
 				disabled
 					? "cursor-default brightness-75 saturate-50"
 					: "cursor-pointer",
@@ -120,26 +130,30 @@ function Progress({
 			role="slider"
 			tabIndex={disabled ? -1 : 0}
 			aria-disabled={disabled}
+			aria-orientation={vertical ? "vertical" : "horizontal"}
 			aria-valuenow={value}
 			aria-valuemin={min}
 			aria-valuemax={max}
-			aria-label={t("music.player.seek")}
+			aria-label={label ?? t("music.player.seek")}
 		>
 			<div
-				class="absolute left-0 top-0 h-full bg-current rounded-full"
-				style={{
-					width: `${percent}%`,
-				}}
+				class="absolute rounded-full bg-current"
+				style={
+					vertical
+						? { left: 0, bottom: 0, width: "100%", height: `${percent}%` }
+						: { left: 0, top: 0, height: "100%", width: `${percent}%` }
+				}
 			/>
 
 			<div
 				class={cn(
-					"absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-current transition-transform",
+					"absolute h-3 w-3 rounded-full bg-current transition-transform",
+					vertical
+						? "bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2"
+						: "top-1/2 -translate-x-1/2 -translate-y-1/2",
 					dragging.value ? "scale-110 cursor-grabbing" : "cursor-grab",
 				)}
-				style={{
-					left: `${percent}%`,
-				}}
+				style={vertical ? { bottom: `${percent}%` } : { left: `${percent}%` }}
 			/>
 		</div>
 	);
