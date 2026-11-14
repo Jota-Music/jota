@@ -48,7 +48,7 @@ export function AccountSettings() {
 				</h2>
 			</div>
 			{spotifyConnected.value || spotifyDegraded.value ? (
-				<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
+				<div class="flex items-center justify-between gap-3 rounded-xl p-3 ring-1 ring-zinc-800">
 					<div class="min-w-0">
 						<p class="text-xs text-zinc-500">
 							{spotifyDegraded.value
@@ -75,7 +75,7 @@ export function AccountSettings() {
 					</button>
 				</div>
 			) : (
-				<div class="rounded-xl bg-zinc-950 p-6 ring-1 ring-zinc-800">
+				<div class="rounded-xl p-6 ring-1 ring-zinc-800">
 					<SpotifyConnect />
 				</div>
 			)}
@@ -84,7 +84,7 @@ export function AccountSettings() {
 				<p class="text-xs text-zinc-500">{t("auth.account.youtubeHint")}</p>
 				{youtubeSignedIn.value ? (
 					<div class="space-y-2">
-						<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
+						<div class="flex items-center justify-between gap-3 rounded-xl p-3 ring-1 ring-zinc-800">
 							<div class="min-w-0">
 								{youtubeAccount.value && (
 									<p class="text-xs text-zinc-500">
@@ -134,7 +134,7 @@ export function AccountSettings() {
 						{error.value && <p class="text-xs text-red-400">{error.value}</p>}
 					</div>
 				) : (
-					<div class="rounded-xl bg-zinc-950 p-4 ring-1 ring-zinc-800">
+					<div class="rounded-xl p-4 ring-1 ring-zinc-800">
 						<YouTubeSignIn />
 					</div>
 				)}

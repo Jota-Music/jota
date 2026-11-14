@@ -41,7 +41,7 @@ export function AboutSettings() {
 				</h2>
 			</div>
 
-			<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
+			<div class="flex items-center justify-between gap-3 rounded-xl p-3 ring-1 ring-zinc-800">
 				<div class="min-w-0">
 					<p class="text-xs text-zinc-500">{t("update.about.version")}</p>
 					<p class="truncate text-sm text-zinc-100">

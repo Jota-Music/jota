@@ -16,7 +16,7 @@ export function Session() {
 			type="button"
 			onClick={() => (showSync.value = true)}
 			class={cn(
-				"flex w-full cursor-pointer items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-xs transition-colors hover:border-zinc-700",
+				"flex w-full cursor-pointer items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs transition-colors hover:border-zinc-700",
 				connected ? "text-green-400" : "text-amber-400",
 			)}
 		>

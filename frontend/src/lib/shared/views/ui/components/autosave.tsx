@@ -280,7 +280,7 @@ export function Autosave() {
 				{t("settings.autosave.secret")}
 			</p>
 
-			<div class="space-y-2 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+			<div class="space-y-2 rounded-xl border border-zinc-800 p-3">
 				<p class="text-xs font-semibold text-zinc-400">
 					{t("settings.autosave.session.title")}
 				</p>
@@ -307,7 +307,7 @@ export function Autosave() {
 				<FolderSync size={12} />
 				{folder ? t("settings.autosave.change") : t("settings.autosave.choose")}
 			</button>
-			<div class="space-y-2 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
+			<div class="space-y-2 rounded-xl p-3 ring-1 ring-zinc-800">
 				<p class="text-[11px] text-zinc-500">
 					{t("settings.autosave.location")}
 				</p>
@@ -410,7 +410,7 @@ export function Autosave() {
 				</div>
 			)}
 
-			<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
+			<div class="flex items-center justify-between gap-3 rounded-xl p-3 ring-1 ring-zinc-800">
 				<p class="text-xs text-zinc-500">{t("settings.autosave.auto")}</p>
 				{autoLoading ? (
 					<div class="shimmer h-6 w-11 shrink-0 rounded-full" />
@@ -424,7 +424,7 @@ export function Autosave() {
 				)}
 			</div>
 
-			<div class="grid grid-cols-[1fr_max-content] items-start gap-x-3 gap-y-1 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
+			<div class="grid grid-cols-[1fr_max-content] items-start gap-x-3 gap-y-1 rounded-xl p-3 ring-1 ring-zinc-800">
 				<p class="text-balance text-xs text-zinc-500">
 					{t("settings.autosave.import")}
 				</p>
@@ -443,7 +443,7 @@ export function Autosave() {
 				</p>
 			</div>
 
-			<div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-950 p-3 ring-1 ring-zinc-800">
+			<div class="flex items-center justify-between gap-3 rounded-xl p-3 ring-1 ring-zinc-800">
 				<p class="text-xs text-zinc-500">{t("settings.autosave.interval")}</p>
 				{intervalLoading ? (
 					<div class="shimmer h-6 w-16 rounded-lg" />

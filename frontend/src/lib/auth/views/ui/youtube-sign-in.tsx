@@ -193,7 +193,7 @@ export function YouTubeSignIn() {
 				</p>
 			)}
 
-			<details class="group rounded-xl border border-zinc-800 bg-zinc-950/60">
+			<details class="group rounded-xl border border-zinc-800">
 				<summary class="flex cursor-pointer list-none items-center gap-2 p-3 text-xs font-semibold text-zinc-400 transition-colors hover:text-zinc-200 [&::-webkit-details-marker]:hidden">
 					<ChevronRight class="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
 					{t("auth.youtube.cookiesManual")}
