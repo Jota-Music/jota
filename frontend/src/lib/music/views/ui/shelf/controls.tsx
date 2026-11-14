@@ -1,4 +1,11 @@
-import { GripVertical, LayoutGrid, Library, List, Plus } from "lucide-preact";
+import {
+	Asterisk,
+	GripVertical,
+	LayoutGrid,
+	Library,
+	List,
+	Plus,
+} from "lucide-preact";
 import type { ComponentChildren } from "preact";
 import type { SourceFilter, Variant } from "@/lib/music/views/ui/shelf/types";
 import { t } from "@/lib/shared/i18n";
@@ -46,19 +53,21 @@ export function Controls({
 			<div class="relative flex min-w-0 shrink items-center gap-2">
 				{toolbar}
 				{filterable && (
-					<div class="flex overflow-hidden rounded-md border border-zinc-800">
+					<div class="flex overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
 						<button
 							type="button"
 							onClick={() => setFilter("all")}
 							aria-label={t("music.shelf.all")}
+							title={t("music.shelf.all")}
 							class={cn(
-								"h-10 md:h-8 px-3 cursor-pointer flex items-center justify-center transition-colors text-xs font-medium",
+								"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
 								sourceFilter === "all"
 									? "bg-zinc-800 text-white"
 									: "text-zinc-500 hover:text-white",
 							)}
 						>
-							All
+							<Asterisk size={18} class="md:hidden" />
+							<Asterisk size={14} class="hidden md:block" />
 						</button>
 						<button
 							type="button"
@@ -112,7 +121,7 @@ export function Controls({
 						onClick={onCreate}
 						title={t("music.custom.create")}
 						aria-label={t("music.custom.create")}
-						class="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md border border-zinc-800 text-zinc-400 transition-colors hover:text-white md:size-8"
+						class="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 transition-colors hover:text-white md:size-8"
 					>
 						<Plus size={20} class="md:hidden" />
 						<Plus size={16} class="hidden md:block" />
@@ -122,7 +131,7 @@ export function Controls({
 
 			<div class="relative flex shrink-0 items-center justify-end gap-2">
 				{modes && (
-					<div class="flex overflow-hidden rounded-md border border-zinc-800">
+					<div class="flex overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
 						{onSortMode && (
 							<button
 								type="button"

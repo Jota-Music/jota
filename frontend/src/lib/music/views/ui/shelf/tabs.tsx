@@ -19,7 +19,7 @@ export function Tabs<T extends string>({
 	onSelect: (id: T) => void;
 }) {
 	return (
-		<div class="flex overflow-hidden rounded-md border border-zinc-800">
+		<div class="flex overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
 			{items.map(({ id, icon: Icon, label }, index) => (
 				<button
 					key={id}
