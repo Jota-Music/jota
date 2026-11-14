@@ -134,7 +134,7 @@ function PlaylistRow({
 				openContextMenu(actions, e);
 			}}
 			class={cn(
-				"group absolute left-0 flex h-full w-full select-none items-center justify-between gap-2 border-b border-zinc-900 px-3 transition",
+				"group absolute left-0 flex h-full w-full select-none items-center justify-between gap-2 border-b border-zinc-900 px-4 transition",
 				broken
 					? "cursor-not-allowed text-zinc-500"
 					: "hover:cursor-pointer hover:bg-zinc-800/60",
@@ -411,7 +411,7 @@ export function Virtualization({
 				)}
 			</div>
 
-			<Scrollbar target={ref} />
+			<Scrollbar target={ref} gutter={16} />
 
 			<button
 				type="button"

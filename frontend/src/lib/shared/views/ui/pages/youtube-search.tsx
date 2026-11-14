@@ -188,7 +188,7 @@ export function YouTubeSearchPage() {
 			{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
 			<section
 				ref={listRef}
-				class="h-full overflow-y-auto px-2"
+				class="h-full overflow-y-auto pl-2 pr-4"
 				onClick={(e) => {
 					const target = e.target as Element;
 					if (!target.closest("[data-row]")) clearSelection();
@@ -204,7 +204,7 @@ export function YouTubeSearchPage() {
 					/>
 				))}
 			</section>
-			<Scrollbar target={listRef} />
+			<Scrollbar target={listRef} gutter={16} />
 		</div>
 	);
 

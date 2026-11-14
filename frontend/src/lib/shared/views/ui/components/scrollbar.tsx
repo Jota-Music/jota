@@ -151,7 +151,7 @@ export function Scrollbar({
 		<div
 			ref={bar}
 			aria-hidden
-			class="absolute right-0 top-0 w-6 touch-none cursor-grab active:cursor-grabbing"
+			class="group absolute right-0 top-0 w-6 touch-none cursor-grab active:cursor-grabbing"
 			onPointerDown={onDown}
 			onPointerMove={onMove}
 			onPointerUp={onUp}
@@ -159,7 +159,7 @@ export function Scrollbar({
 			onLostPointerCapture={onUp}
 		>
 			<div
-				class="ml-auto h-full w-2 rounded-full bg-(--scrollbar-thumb) transition-colors pointer-fine:hover:bg-(--scrollbar-thumb-hover)"
+				class="ml-auto h-full w-2 rounded-full bg-(--scrollbar-thumb) transition-colors pointer-fine:hover:bg-(--scrollbar-thumb-hover) group-active:bg-(--scrollbar-thumb-hover)"
 				style={{ marginRight: `${(gutter - 8) / 2}px` }}
 			/>
 		</div>

@@ -239,7 +239,7 @@ export function Shelf({
 				<div class="relative min-h-0 flex-1">
 					<div
 						ref={listRef}
-						class="h-full overflow-y-auto px-2"
+						class="h-full overflow-y-auto pl-2 pr-4 pb-4 md:pb-0"
 						onClickCapture={captureClick}
 					>
 						{filteredItems.length === 0 ? (
@@ -269,7 +269,7 @@ export function Shelf({
 							/>
 						)}
 					</div>
-					<Scrollbar target={listRef} />
+					<Scrollbar target={listRef} gutter={16} />
 				</div>
 			)}
 		</div>

@@ -388,7 +388,7 @@ export default function YoutubeEditor() {
 														lastTap.current = { id: video.id, time: now };
 													}}
 													class={cn(
-														"flex h-16 w-full cursor-pointer touch-manipulation select-none items-center justify-between gap-2 border-b border-zinc-900 px-3 text-left transition",
+														"flex h-16 w-full cursor-pointer touch-manipulation select-none items-center justify-between gap-2 border-b border-zinc-900 px-3 pr-4 text-left transition",
 														active ? "bg-zinc-800/60" : "hover:bg-zinc-800/60",
 													)}
 												>
@@ -438,7 +438,7 @@ export default function YoutubeEditor() {
 										})
 									)}
 								</div>
-								<Scrollbar target={$results} />
+								<Scrollbar target={$results} gutter={16} />
 							</div>
 						</div>
 					</div>

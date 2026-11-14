@@ -336,7 +336,7 @@ function Queue() {
 				<ul
 					ref={ref}
 					class={cn(
-						"min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1",
+						"min-h-0 flex-1 overflow-y-auto pb-3 pl-2 pr-4 pt-1",
 						dragFrom.value != null && "[&_button]:pointer-events-none",
 					)}
 					aria-label={t("music.queue.aria")}
@@ -397,7 +397,7 @@ function Queue() {
 						</div>
 					)}
 				</ul>
-				<Scrollbar target={ref} />
+				<Scrollbar target={ref} gutter={16} />
 			</div>
 		</Modal>
 	);
