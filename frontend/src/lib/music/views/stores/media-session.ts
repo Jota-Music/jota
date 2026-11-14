@@ -24,6 +24,7 @@ let storedDuration = 0;
 let storedPosition = 0;
 let lastPush = 0;
 let lastPositionState = 0;
+let observedAt = 0;
 
 function session() {
 	if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
@@ -164,15 +165,26 @@ export function update(song: Song | null, isPlaying: boolean) {
 
 export function position(audio: HTMLAudioElement, durationOverride = 0) {
 	const duration = durationOverride > 0 ? durationOverride : audio.duration;
+	const now = Date.now();
+	const elapsed = observedAt > 0 ? (now - observedAt) / 1000 : 0;
+	const ahead = audio.currentTime - storedPosition;
+	// The system extrapolates the position from the last push at the playback
+	// rate, so playback needs no push. A position that the clock cannot explain
+	// is a seek (or a duration that just arrived), and waiting for the throttle
+	// leaves the notification bar on the old spot until it snaps.
+	const jumped =
+		ahead > elapsed + 1.5 ||
+		ahead < -1.5 ||
+		(Number.isFinite(duration) && Math.abs(duration - storedDuration) > 1);
 	const media = session();
 	if (
 		media &&
 		Number.isFinite(duration) &&
 		duration > 0 &&
 		Number.isFinite(audio.currentTime) &&
-		Date.now() - lastPositionState >= 1000
+		(jumped || now - lastPositionState >= 1000)
 	) {
-		lastPositionState = Date.now();
+		lastPositionState = now;
 		try {
 			media.setPositionState({
 				duration,
@@ -184,7 +196,29 @@ export function position(audio: HTMLAudioElement, durationOverride = 0) {
 
 	if (Number.isFinite(duration)) storedDuration = duration;
 	if (Number.isFinite(audio.currentTime)) storedPosition = audio.currentTime;
-	pushNative();
+	observedAt = now;
+	pushNative(jumped);
+}
+
+export function seek(seconds: number) {
+	if (!current || !Number.isFinite(seconds)) return;
+	// A seek crosses more than the throttle window in one tick, and the element
+	// only lands it a range request later: until then the system keeps
+	// extrapolating from the old spot and the bar snaps back. Show it now.
+	if (Math.abs(seconds - storedPosition) < 1) return;
+	storedPosition = seconds;
+	observedAt = Date.now();
+	const media = session();
+	if (media && storedDuration > 0) {
+		try {
+			media.setPositionState({
+				duration: storedDuration,
+				playbackRate: 1,
+				position: Math.min(seconds, storedDuration),
+			});
+		} catch {}
+	}
+	pushNative(true);
 }
 
 export function clear() {

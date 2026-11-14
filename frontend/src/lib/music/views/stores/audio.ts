@@ -765,6 +765,7 @@ export function seek(time: number) {
 	const target = audio ? clampSeconds(time, audio.duration) : Math.max(0, time);
 	if (audio) {
 		audio.currentTime = target;
+		media.seek(target);
 	}
 	progress.value = target;
 }
