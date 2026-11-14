@@ -153,7 +153,8 @@ export function Scrollbar({
 		<div
 			ref={bar}
 			aria-hidden
-			class="group absolute right-0 top-0 w-6 touch-none cursor-grab active:cursor-grabbing"
+			class="group absolute right-0 top-0 will-change-transform touch-none cursor-grab active:cursor-grabbing"
+			style={{ width: `${gutter}px` }}
 			onPointerDown={onDown}
 			onPointerMove={onMove}
 			onPointerUp={onUp}

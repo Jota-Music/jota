@@ -131,7 +131,7 @@ function PlaylistRow({
 				openContextMenu(actions, e);
 			}}
 			class={cn(
-				"group absolute left-0 flex h-full w-full select-none items-center justify-between gap-2 border-b border-zinc-900 px-4 transition",
+				"group absolute left-0 flex h-full w-full select-none items-center justify-between gap-2 border-b border-zinc-900 pl-4 pr-2 transition",
 				broken
 					? "cursor-not-allowed text-zinc-500"
 					: "hover:cursor-pointer hover:bg-zinc-800/60",
@@ -347,7 +347,7 @@ export function Virtualization({
 			<div
 				ref={ref}
 				className={cn(
-					"h-full overflow-y-auto border-t border-x-0 border-b-0 border-zinc-800 md:rounded-lg md:border",
+					"h-full overflow-y-auto border-t border-x-0 border-b-0 border-zinc-800 pr-4 md:rounded-lg md:border",
 					// The jump pill floats over the list's end: while it is up, leave room
 					// under the last row so it never sits on top of it.
 					(above || below) && "pb-14",
