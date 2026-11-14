@@ -22,6 +22,7 @@ type Request = {
 	// (the compact player bar): the y clamp keeps the menu above it instead of
 	// covering its controls.
 	bottom: number;
+	anchor: Element | null;
 };
 
 const GAP = 6;
@@ -40,6 +41,11 @@ export function openContextMenu(
 ) {
 	if (actions.length === 0) return;
 	e.preventDefault();
+	const anchor = (e.currentTarget as Element | null) ?? null;
+	if (e.type === "click" && anchor && request.value?.anchor === anchor) {
+		request.value = null;
+		return;
+	}
 	request.value = {
 		actions: [...actions].sort(
 			(a, b) => Number(!!a.danger) - Number(!!b.danger),
@@ -48,6 +54,7 @@ export function openContextMenu(
 		y: e.clientY,
 		header,
 		bottom,
+		anchor,
 	};
 }
 
@@ -118,7 +125,11 @@ function FloatingMenu() {
 		el.querySelector("button")?.focus();
 
 		const onDown = (e: PointerEvent) => {
-			if (!el.contains(e.target as Node)) closeContextMenu();
+			if (el.contains(e.target as Node)) return;
+			// The trigger toggles the menu on click: closing here would
+			// reopen it a moment later.
+			if (menu.anchor?.contains(e.target as Node)) return;
+			closeContextMenu();
 		};
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key === "Escape") closeContextMenu();
