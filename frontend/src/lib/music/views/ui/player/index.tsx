@@ -518,7 +518,7 @@ export function PlayerBar() {
 					)}
 				>
 					<SeekBar
-						class="h-0.75 w-full rounded-none border-0"
+						class="h-0.75 w-full rounded-none border-0 [&>div:first-child]:rounded-none"
 						disabled={!hasSong}
 					/>
 				</div>
