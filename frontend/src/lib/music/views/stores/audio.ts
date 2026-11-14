@@ -75,8 +75,20 @@ function stopEndWatch() {
 	}
 }
 
+// Whether an event from this element belongs to the track the player thinks it
+// holds. The silent autoplay prime reuses the shared element with its own clip,
+// and reading that clip as the loaded song plays silence and skips the track.
+function owns(a: HTMLAudioElement): boolean {
+	return (
+		audio === a &&
+		endedElement !== a &&
+		loadedSongId !== null &&
+		AudioCache.holds(loadedSongId)
+	);
+}
+
 function endPlayback(a: HTMLAudioElement) {
-	if (audio !== a || endedElement === a) return;
+	if (!owns(a)) return;
 	// A player that gives up mid-file (a range request it cut short) reports the
 	// end early: the position is well short of the duration, so the track is not
 	// over. Keep playing instead of ending it.
@@ -118,7 +130,7 @@ function watchEnd(a: HTMLAudioElement) {
 	let last = -1;
 	let still = 0;
 	endWatch = setInterval(() => {
-		if (audio !== a || a.ended) {
+		if (!owns(a) || a.ended) {
 			stopEndWatch();
 			return;
 		}
@@ -533,12 +545,7 @@ async function loadSongIntoPlayer(
 // Retry the element already loaded for this song, without rebuilding it or
 // re-resolving the stream. The cheapest recovery step.
 async function retryElement(song: Song): Promise<boolean> {
-	if (
-		!audio ||
-		loadedSongId !== song.id ||
-		audio.error ||
-		endedElement === audio
-	) {
+	if (!audio || !hasLoaded(song.id)) {
 		return false;
 	}
 	try {
@@ -578,15 +585,10 @@ export async function play(
 	// A consensus round already prepared this exact stream (the host waits for the
 	// room, the guest warms it): resume it instead of rebuilding the pipeline and
 	// re-buffering the same track.
-	if (
-		startSeconds == null &&
-		loadedSongId === song.id &&
-		audio &&
-		!audio.error &&
-		endedElement !== audio
-	) {
+	if (startSeconds == null && hasLoaded(song.id) && audio) {
+		const el = audio;
 		try {
-			await audio.play();
+			await el.play();
 			if (loadedSongId !== song.id) return "aborted";
 			isPlaying.value = true;
 			return success();
@@ -596,7 +598,7 @@ export async function play(
 				return blocked(song);
 			}
 			if (!isAbortError(err)) {
-				logError(err, `resume ${songLabel(song)} | ${mediaState(audio)}`);
+				logError(err, `resume ${songLabel(song)} | ${mediaState(el)}`);
 			}
 		}
 	}
@@ -699,7 +701,23 @@ function primeAutoplayOnGesture(): void {
 	const prime = () => {
 		window.removeEventListener("pointerdown", prime, true);
 		window.removeEventListener("keydown", prime, true);
+		// Already playing (a media key got there first): the grant is banked and
+		// swapping the stream here would cut the track.
+		if (audio && !audio.paused) return;
+		// The prime swaps its silent clip into the shared element, so the stream
+		// the paused track was warming goes back right after it: the grant stays
+		// banked on the element, and the seek bar keeps the real duration and a
+		// track to seek through.
+		const song = loadedSongId === null ? null : currentSong.value;
 		AudioCache.primeAutoplay();
+		if (song) {
+			// The prime leaves the element muted, and reloading the stream does not
+			// go through the playback path that would restore it.
+			void AudioCache.getAudioElement(song, "auto").then((el) => {
+				el.muted = muted.value;
+				el.volume = gain(volume.value);
+			});
+		}
 	};
 
 	window.addEventListener("pointerdown", prime, true);
@@ -726,7 +744,7 @@ export function getPlaybackSeconds(): number {
 }
 
 function hasLoadedAudio(): boolean {
-	return !!audio && !audio.error && endedElement !== audio;
+	return audio !== null && !audio.error && owns(audio);
 }
 
 // True when the element currently holds this exact song, so callers do not
@@ -738,20 +756,22 @@ export function hasLoaded(songId: string): boolean {
 // Recover playback after a failed stream: reload the current song from a
 // freshly resolved URL instead of reusing the dead element/URL.
 export async function resume(): Promise<boolean> {
-	if (audio && !audio.error && endedElement !== audio) {
+	const el = audio;
+	if (el && hasLoadedAudio()) {
 		try {
-			await audio.play();
+			await el.play();
 			return true;
 		} catch (err) {
 			if (isAbortError(err)) return false;
 			logError(
 				err,
-				`resume ${songLabel(currentSong.value)} | ${mediaState(audio)}`,
+				`resume ${songLabel(currentSong.value)} | ${mediaState(el)}`,
 			);
 		}
 	}
-	// The queue is restored on startup but the element is not, so fall back to the
-	// queued current track instead of leaving a fresh session's play control mute.
+	// The restored element may no longer hold the track (the silent autoplay
+	// prime swaps it), so fall back to the queued current track instead of
+	// leaving a fresh session's play control mute.
 	const song = currentSong.value ?? queue.value[currentIndex.value] ?? null;
 	if (!song) return false;
 	return (await play(song)) === "ok";
@@ -817,16 +837,18 @@ function setMuted(value: boolean) {
 export function pause(): boolean {
 	cancelRecovery();
 	endQuietReload();
-	if (audio && !audio.error && endedElement !== audio && !audio.paused) {
-		audio.pause();
+	const el = audio;
+	if (el && hasLoadedAudio() && !el.paused) {
+		el.pause();
 		return true;
 	}
 	return false;
 }
 
 export async function togglePlayPause(): Promise<boolean> {
-	if (audio && !audio.error && endedElement !== audio && !audio.paused) {
-		audio.pause();
+	const el = audio;
+	if (el && hasLoadedAudio() && !el.paused) {
+		el.pause();
 		return false;
 	}
 	return await resume();
@@ -857,7 +879,7 @@ export function stopPlayer() {
 
 function bindEvents(a: HTMLAudioElement) {
 	const syncDuration = () => {
-		if (audio !== a) return;
+		if (!owns(a)) return;
 		const d = knownDurationOr(a.duration);
 		audioDuration.value = Number.isFinite(d) && d > 0 ? d : 0;
 	};
@@ -866,7 +888,7 @@ function bindEvents(a: HTMLAudioElement) {
 	a.ondurationchange = syncDuration;
 
 	a.onplay = () => {
-		if (audio !== a) return;
+		if (!owns(a)) return;
 		endQuietReload();
 		clearBufferTimer();
 		endedElement = null;
@@ -880,7 +902,7 @@ function bindEvents(a: HTMLAudioElement) {
 	// stream reaches the speakers. Only `playing` means audio is actually out, so
 	// the loader stays until then instead of vanishing into a silent gap.
 	a.onplaying = () => {
-		if (audio !== a) return;
+		if (!owns(a)) return;
 		clearBufferTimer();
 		isLoading.value = false;
 	};
@@ -889,17 +911,17 @@ function bindEvents(a: HTMLAudioElement) {
 	// so the loader belongs on. A quiet recovery reloads behind the scenes and
 	// must show it just the same.
 	a.onwaiting = () => {
-		if (audio !== a) return;
+		if (!owns(a)) return;
 		// Delay the spinner so a seek that resolves in a few hundred ms does not
 		// flash it. A real stall still shows it after the grace window.
 		clearBufferTimer();
 		bufferTimer = setTimeout(() => {
-			if (audio === a) isLoading.value = true;
+			if (owns(a)) isLoading.value = true;
 		}, 200);
 	};
 
 	a.onpause = () => {
-		if (audio !== a) return;
+		if (!owns(a)) return;
 		// A reload pauses the element behind the scenes; keep the UI stable and let
 		// the following `play` decide the state.
 		if (quietReload) {
@@ -912,7 +934,7 @@ function bindEvents(a: HTMLAudioElement) {
 	};
 
 	a.ontimeupdate = () => {
-		if (audio !== a) return;
+		if (!owns(a)) return;
 		// While a seek is in flight the element still reports the old position;
 		// keep the bar on the target the user picked and the loader on until it
 		// lands, instead of clearing loading and snapping back.
@@ -930,7 +952,7 @@ function bindEvents(a: HTMLAudioElement) {
 	};
 
 	a.onerror = () => {
-		if (audio !== a) return;
+		if (!owns(a)) return;
 		const code = a.error?.code ?? 0;
 		const label = songLabel(currentSong.value);
 		a.onerror = null;
@@ -1007,15 +1029,16 @@ media.setup({
 function restorePlayback(): void {
 	const song = queue.value[currentIndex.value] ?? null;
 	if (!song) return;
-	// Restore only what the UI needs: the track and a clean zeroed state. No
-	// eager element load, which would collide with the autoplay prime on the
-	// shared element and end the track before it plays. The first play builds
-	// the element through the normal playback path instead.
+	// Restore the track and load it while paused: the seek bar has its duration
+	// before the first play, the loader reports the stream on its way, and the
+	// first play does not have to resolve anything. The shared element is what
+	// gets loaded, so a stale element must never pass for loaded (hasLoadedAudio).
 	currentSong.value = song;
 	progress.value = 0;
 	audioDuration.value = 0;
 	isPlaying.value = false;
 	media.update(song, false);
+	void prepareSong(song);
 }
 
 if (typeof window !== "undefined") {

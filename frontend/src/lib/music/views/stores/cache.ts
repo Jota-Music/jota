@@ -178,6 +178,14 @@ export class AudioCache {
 		return player;
 	}
 
+	// Whether the shared element still holds the stream resolved for this song.
+	// The silent autoplay prime swaps its src behind the player's back, and a
+	// load that trusts the stale element ends up playing that clip.
+	static holds(id: string): boolean {
+		const cached = AudioCache.cache.get(id);
+		return !!cached && cached.url === AudioCache.playerUrl;
+	}
+
 	// Keep the element; just make the next getAudioElement reload the stream.
 	static releaseElement(_id: string): void {
 		AudioCache.player?.pause();
