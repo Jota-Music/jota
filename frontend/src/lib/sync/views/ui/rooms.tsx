@@ -12,11 +12,12 @@ import {
 	LogOut,
 	PowerOff,
 	TriangleAlert,
+	Turntable,
 	Wifi,
 	WifiOff,
 } from "lucide-preact";
 import { useEffect } from "preact/hooks";
-import { type Item, RelayHint, Shelf } from "@/lib/music/views/ui/shelf";
+import { Hint, type Item, RelayHint, Shelf } from "@/lib/music/views/ui/shelf";
 import { getOrder, saveOrder } from "@/lib/shared/app/order";
 import { applyOrder, move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
@@ -141,6 +142,35 @@ function Status({
 
 function lockSize(size: number): number {
 	return Math.max(10, Math.round(size * 0.45));
+}
+
+// A relay is set, so a room can exist: the shelf is empty only because none has
+// been saved yet. The hint says how, instead of leaving the reader with a line
+// of grey text and a button above it whose purpose is not obvious.
+function RoomsHint() {
+	return (
+		<Hint
+			icon={<Turntable size={24} />}
+			class="text-sky-500"
+			title={t("sync.rooms.emptyHint.title")}
+			body={t("sync.rooms.emptyHint.body")}
+			steps={[
+				t("sync.rooms.emptyHint.step1"),
+				t("sync.rooms.emptyHint.step2"),
+				t("sync.rooms.emptyHint.step3"),
+			]}
+			action={
+				<button
+					type="button"
+					onClick={() => (store.showSync.value = true)}
+					class="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700"
+				>
+					<LogIn size={16} />
+					{t("sync.rooms.joinHost")}
+				</button>
+			}
+		/>
+	);
 }
 
 export function RoomsShelf() {
@@ -341,16 +371,21 @@ export function RoomsShelf() {
 
 	return (
 		<>
-			<div class="flex shrink-0 items-center px-3 pt-3 md:px-0 md:pt-0">
-				<button
-					type="button"
-					onClick={() => (store.showSync.value = true)}
-					class="flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer"
-				>
-					<LogIn size={16} />
-					{t("sync.rooms.joinHost")}
-				</button>
-			</div>
+			{/* The hint below carries this button while the shelf is empty: two of
+			    them a few lines apart read as a mistake. It stays while the list
+			    loads, so the header does not jump once the rows arrive. */}
+			{(ordered.length > 0 || rooms.isLoading) && (
+				<div class="flex shrink-0 items-center px-3 pt-4 md:px-0 md:pt-0">
+					<button
+						type="button"
+						onClick={() => (store.showSync.value = true)}
+						class="flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer"
+					>
+						<LogIn size={16} />
+						{t("sync.rooms.joinHost")}
+					</button>
+				</div>
+			)}
 			<Shelf
 				items={items}
 				to={() => "/"}
@@ -422,7 +457,7 @@ export function RoomsShelf() {
 					);
 				}}
 				isLoading={rooms.isLoading}
-				emptyMessage={relay === "" ? <RelayHint /> : t("sync.rooms.empty")}
+				emptyMessage={relay === "" ? <RelayHint /> : <RoomsHint />}
 				onRemove={onRemove}
 			/>
 		</>

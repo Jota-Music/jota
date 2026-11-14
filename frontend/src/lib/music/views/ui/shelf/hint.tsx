@@ -17,7 +17,7 @@ interface HintProps {
 	action?: ComponentChildren;
 }
 
-function Hint({
+export function Hint({
 	icon,
 	class: className,
 	title,

@@ -431,7 +431,6 @@
 	},
 	"sync": {
 		"rooms": {
-			"empty": "No saved rooms. Connect to a room and save it from the Rooms panel.",
 			"hint": {
 				"title": "No relay server yet",
 				"body": "Rooms are hosted by a relay, so you need one before you can join or host a room.",
@@ -451,6 +450,13 @@
 				"offline": "Offline",
 				"listening": "{count} listening",
 				"hostLeft": "The host left"
+			},
+			"emptyHint": {
+				"title": "No rooms saved yet",
+				"body": "A room is a shared queue several phones play together. Join someone else's room or open your own.",
+				"step1": "Tap Join or create room.",
+				"step2": "Paste a room code, or let yours be generated.",
+				"step3": "Connect, then save the room to keep it here."
 			}
 		},
 		"session": {

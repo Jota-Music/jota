@@ -431,7 +431,6 @@
 	},
 	"sync": {
 		"rooms": {
-			"empty": "No hay salas guardadas. Conéctate a una sala y guárdala desde el panel de Salas.",
 			"hint": {
 				"title": "Aún no hay servidor relay",
 				"body": "Las salas se alojan en un relay, así que necesitas uno antes de unirte o crear una sala.",
@@ -451,6 +450,13 @@
 				"offline": "Sin conexión",
 				"listening": "{count} escuchando",
 				"hostLeft": "El anfitrión se fue"
+			},
+			"emptyHint": {
+				"title": "Aún no hay salas guardadas",
+				"body": "Una sala es una cola compartida que varios móviles reproducen a la vez. Únete a la de alguien o abre la tuya.",
+				"step1": "Pulsa Unirse o crear sala.",
+				"step2": "Pega el código de una sala, o deja que se genere el tuyo.",
+				"step3": "Conéctate y guarda la sala para tenerla aquí a mano."
 			}
 		},
 		"session": {

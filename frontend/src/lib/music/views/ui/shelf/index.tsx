@@ -34,6 +34,7 @@ import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 export {
 	AllHint,
 	FollowingHint,
+	Hint,
 	LocalHint,
 	RelayHint,
 	YouTubeHint,
