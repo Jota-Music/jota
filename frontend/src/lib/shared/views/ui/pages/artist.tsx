@@ -127,7 +127,7 @@ export function ArtistPage() {
 	}
 
 	return (
-		<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6">
+		<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
 			<PageHeader
 				cover={data?.imageUrl}
 				title={data?.name ?? t("pages.artist.defaultName")}

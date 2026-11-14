@@ -45,7 +45,7 @@ export function AlbumPage() {
 		: undefined;
 
 	return (
-		<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6">
+		<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
 			<PageHeader
 				cover={cover}
 				title={albumName}
