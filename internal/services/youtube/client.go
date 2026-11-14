@@ -189,6 +189,17 @@ func clientOrder() []clientConfig {
 	if name == "" || name == clients[0].Name {
 		return clients
 	}
+	// The web/tv clients only earn their keep for members-only videos, where
+	// the account's cookies are what unlock them. Without cookies, or once the
+	// account is gone, remembering one of them would only send every normal
+	// track through the fallback, so drop the memory.
+	if name == webClientName || name == "TVHTML5" {
+		youtubeCache.forgetClient()
+		name = ""
+	}
+	if name == "" {
+		return clients
+	}
 	for i, c := range clients {
 		if c.Name != name {
 			continue

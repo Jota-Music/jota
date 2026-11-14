@@ -23,6 +23,15 @@ var probeClient = &http.Client{Timeout: 8 * time.Second}
 // check, or an age-restricted video. Neither resolves without account cookies.
 var ErrLoginRequired = errors.New("youtube: login required")
 
+// ErrMembersOnly means the video is for the channel's members. YouTube answers
+// it as UNPLAYABLE, so it only opens with the account's cookies.
+var ErrMembersOnly = errors.New("youtube: members-only video")
+
+// ErrNChallenge means the only URL YouTube handed out needs its own player to
+// translate the `n` query param. googlevideo answers 403 to the untranslated
+// one, and only the signed web/tv clients return such URLs.
+var ErrNChallenge = errors.New("youtube: stream needs the n challenge")
+
 // bestAudio picks the audio format with the fastest, most compatible start.
 // audio/mp4 (AAC) is preferred over audio/webm (Opus): WebKitGTK's GStreamer
 // backend streams MP4/AAC instantly but can stall on googlevideo's WebM/Opus,
@@ -246,24 +255,60 @@ func playerPayload(c clientConfig, videoID string) map[string]any {
 
 const playerEndpoint = "https://www.youtube.com/youtubei/v1/player"
 
-// loginRequired reports whether a player answer asks for a session: the bot
-// check or an age-restricted video.
-func loginRequired(data []byte) bool {
-	var status struct {
+func playability(data []byte) (status, reason string) {
+	var out struct {
 		PlayabilityStatus struct {
 			Status string `json:"status"`
+			Reason string `json:"reason"`
 		} `json:"playabilityStatus"`
 	}
-	return json.Unmarshal(data, &status) == nil && status.PlayabilityStatus.Status == "LOGIN_REQUIRED"
+	if json.Unmarshal(data, &out) != nil {
+		return "", ""
+	}
+	return out.PlayabilityStatus.Status, out.PlayabilityStatus.Reason
 }
 
-// playerRequest asks the player anonymously first. Only a failed request or a
-// LOGIN_REQUIRED answer with stored cookies is retried signed: signing is what
-// unlocks age-restricted videos, but it also risks the account, so it is never
-// the default.
+// nsigGated reports whether a stream URL carries the player's `n` challenge.
+// Only the signed web/tv clients sign their URLs with it, and googlevideo
+// refuses the untranslated value, so a URL that has one is not playable as it
+// comes.
+func nsigGated(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && u.Query().Get("n") != ""
+}
+func loginRequired(data []byte) bool {
+	status, _ := playability(data)
+	return status == "LOGIN_REQUIRED"
+}
+
+// membersOnly reports whether a player answer refused the video because it is
+// for the channel's members. YouTube answers that as UNPLAYABLE rather than
+// LOGIN_REQUIRED, so the reason is the only thing telling the two apart.
+func membersOnly(data []byte) bool {
+	status, reason := playability(data)
+	return status == "UNPLAYABLE" &&
+		(strings.Contains(reason, "members-only") || strings.Contains(reason, "Join this channel"))
+}
+
+// needsSession reports whether signing the request is what could unlock the
+// answer. A bot check or an age-restricted video is answered LOGIN_REQUIRED and
+// any client can sign it. Members-only content is answered UNPLAYABLE and only
+// the web client reads the account from the cookies: the device clients ignore
+// them, so signing there would spend the account on the same refusal.
+func needsSession(c clientConfig, data []byte) bool {
+	if loginRequired(data) {
+		return true
+	}
+	return c.Name == webClientName && membersOnly(data)
+}
+
+// playerRequest asks the player anonymously first. Only a failed request or an
+// answer that a session could unlock is retried signed: signing is what opens
+// age-restricted and members-only videos, but it also risks the account, so it
+// is never the default.
 func playerRequest(c clientConfig, url string, payload map[string]any) ([]byte, error) {
 	data, err := retryAnonymous(c, url, payload, 3)
-	if cookies() == "" || (err == nil && !loginRequired(data)) {
+	if cookies() == "" || (err == nil && !needsSession(c, data)) {
 		return data, err
 	}
 	signed, signedErr := retryRequest(c, url, payload, 3)
@@ -293,6 +338,10 @@ func playerStreamURL(c clientConfig, videoID string) (string, error) {
 		return "", ErrLoginRequired
 	}
 
+	if membersOnly(data) {
+		return "", ErrMembersOnly
+	}
+
 	if pr.PlayabilityStatus.Status != "OK" {
 		return "", fmt.Errorf("unavailable: %s", pr.PlayabilityStatus.Reason)
 	}
@@ -301,6 +350,9 @@ func playerStreamURL(c clientConfig, videoID string) (string, error) {
 	f, ok := bestAudio(formats)
 	if !ok {
 		return "", errors.New("no valid audio format found")
+	}
+	if nsigGated(f.URL) {
+		return "", ErrNChallenge
 	}
 
 	return f.URL, nil
@@ -346,6 +398,7 @@ func audioURL(videoID string) (string, clientConfig, error) {
 	order := clientOrder()
 	sticky := order[0].Name
 	var firstErr error
+	var sentinelErr error
 	refreshed := false
 
 	for {
@@ -357,13 +410,17 @@ func audioURL(videoID string) (string, clientConfig, error) {
 				if errors.Is(err, ErrLoginRequired) {
 					loginRequired = true
 				}
-				if firstErr == nil {
+				if errors.Is(err, ErrNChallenge) || errors.Is(err, ErrMembersOnly) {
+					if sentinelErr == nil {
+						sentinelErr = err
+					}
+				} else if firstErr == nil {
 					firstErr = err
 				}
 				continue
 			}
 			if streamPlayable(c, raw) {
-				if c.Name != sticky {
+				if c.Name != sticky && !nsigGated(raw) {
 					log.Printf("youtube: %s switched to client %s", videoID, c.Name)
 					youtubeCache.rememberClient(c.Name)
 				}
@@ -388,6 +445,9 @@ func audioURL(videoID string) (string, clientConfig, error) {
 		refreshed = true
 	}
 
+	if sentinelErr != nil {
+		return "", clientConfig{}, sentinelErr
+	}
 	if firstErr != nil {
 		return "", clientConfig{}, firstErr
 	}
@@ -406,7 +466,17 @@ func fetchAudio(youtubeId string) (*music.Audio, error) {
 
 	streamURL, client, err := audioURL(youtubeId)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, ErrNChallenge) && !errors.Is(err, ErrMembersOnly) {
+			return nil, err
+		}
+		// The account opens the video and YouTube still hands out a URL that
+		// cannot be played as it comes: yt-dlp is the one that solves the
+		// player's challenge for it.
+		cause := err
+		streamURL, client, err = externalAudio(youtubeId)
+		if err != nil {
+			return nil, fmt.Errorf("%w (%v)", cause, err)
+		}
 	}
 
 	info, ok := getExpireAndDurationFromURL(streamURL)

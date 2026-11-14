@@ -22,6 +22,9 @@ func (a *App) ResolveAudio(song music.Song) (music.Audio, error) {
 		if errors.Is(err, youtube.ErrLoginRequired) && !youtube.HasAuth() {
 			application.Get().Event.Emit("youtube:signin-required", song.Name)
 		}
+		if errors.Is(err, youtube.ErrMembersOnly) && !youtube.HasAuth() {
+			application.Get().Event.Emit("youtube:signin-required", song.Name)
+		}
 	}
 	return audio, err
 }

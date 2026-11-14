@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -512,6 +513,108 @@ func TestPlayerRequestSignsInAfterLoginRequired(t *testing.T) {
 	}
 }
 
+func TestPlayerRequestSignsInForMembersOnly(t *testing.T) {
+	resetAuth(t)
+	seedVisitor(t, "v-test")
+	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
+		t.Fatalf("seed cookies: %v", err)
+	}
+
+	var signed int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Cookie") == "" {
+			_, _ = io.WriteString(w, `{"playabilityStatus":{"status":"UNPLAYABLE","reason":"Join this channel to get access to members-only content like this video."}}`)
+			return
+		}
+		atomic.AddInt32(&signed, 1)
+		_, _ = io.WriteString(w, `{"playabilityStatus":{"status":"OK"}}`)
+	}))
+	defer server.Close()
+
+	data, err := playerRequest(webClient(), server.URL, map[string]any{"videoId": "vid12345678"})
+	if err != nil {
+		t.Fatalf("playerRequest: %v", err)
+	}
+	if status, _ := playability(data); status != "OK" {
+		t.Fatalf("expected the signed answer, got %s", data)
+	}
+	if got := atomic.LoadInt32(&signed); got != 1 {
+		t.Fatalf("signed requests = %d, want 1", got)
+	}
+}
+
+func TestPlayerRequestLeavesDeviceClientsAnonymousForMembersOnly(t *testing.T) {
+	resetAuth(t)
+	seedVisitor(t, "v-test")
+	if err := SetCookies("SID=abc; SAPISID=sapisid123"); err != nil {
+		t.Fatalf("seed cookies: %v", err)
+	}
+
+	var hits int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		if cookie := r.Header.Get("Cookie"); cookie != "" {
+			t.Errorf("device client carried cookies: %q", cookie)
+		}
+		_, _ = io.WriteString(w, `{"playabilityStatus":{"status":"UNPLAYABLE","reason":"Join this channel to get access to members-only content like this video."}}`)
+	}))
+	defer server.Close()
+
+	_, err := playerRequest(preferredClient, server.URL, map[string]any{"videoId": "vid12345678"})
+	if err != nil {
+		t.Fatalf("playerRequest: %v", err)
+	}
+	if got := atomic.LoadInt32(&hits); got != 1 {
+		t.Fatalf("requests = %d, want 1 (only the web client signs)", got)
+	}
+}
+
+func TestNsigGated(t *testing.T) {
+	cases := []struct {
+		url  string
+		want bool
+	}{
+		{"https://x/y?n=abc", true},
+		{"https://x/y?foo=1", false},
+		{"https://x/y", false},
+		{"not-a-url?n=1", true},
+	}
+	for _, c := range cases {
+		if got := nsigGated(c.url); got != c.want {
+			t.Errorf("nsigGated(%q)=%v want %v", c.url, got, c.want)
+		}
+	}
+}
+
+func TestAudioURLSurfacesMembersOnly(t *testing.T) {
+	resetSticky(t)
+	oldFn := playerStreamURLFn
+	defer func() { playerStreamURLFn = oldFn }()
+
+	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
+		return "", ErrMembersOnly
+	}
+
+	_, _, err := audioURL("dQw4w9WgXcQ")
+	if !errors.Is(err, ErrMembersOnly) {
+		t.Fatalf("expected ErrMembersOnly, got %v", err)
+	}
+}
+
+func TestAudioURLSurfacesNChallenge(t *testing.T) {
+	resetSticky(t)
+	oldFn := playerStreamURLFn
+	defer func() { playerStreamURLFn = oldFn }()
+
+	playerStreamURLFn = func(c clientConfig, videoID string) (string, error) {
+		return "", ErrNChallenge
+	}
+
+	_, _, err := audioURL("dQw4w9WgXcQ")
+	if !errors.Is(err, ErrNChallenge) {
+		t.Fatalf("expected ErrNChallenge, got %v", err)
+	}
+}
 func TestPlayerRequestStaysAnonymousWithoutCookies(t *testing.T) {
 	resetAuth(t)
 	seedVisitor(t, "v-test")

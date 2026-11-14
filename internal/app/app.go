@@ -294,4 +294,3 @@ func (a *App) SaveRelay(url string, token string) error {
 	a.syncInBackground()
 	return nil
 }
-
