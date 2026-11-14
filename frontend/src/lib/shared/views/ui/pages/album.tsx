@@ -51,7 +51,6 @@ export function AlbumPage() {
 				title={albumName}
 				subtitle={subtitle}
 				link={link}
-				linkReserve
 				pending={isLoading}
 				onPlay={
 					tracks.length > 0

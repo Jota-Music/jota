@@ -11,7 +11,7 @@ function LinkLine({ link }: { link: { to: string; label: string } }) {
 	return (
 		<Link
 			to={link.to}
-			class="mt-1 block truncate text-sm opacity-70 hover:opacity-100 hover:underline"
+			class="mt-px block truncate text-sm leading-tight opacity-70 hover:opacity-100 hover:underline"
 		>
 			{link.label}
 		</Link>
@@ -24,7 +24,6 @@ export function PageHeader({
 	title,
 	subtitle,
 	link,
-	linkReserve = false,
 	pending = false,
 	beforePlay,
 	onPlay,
@@ -37,7 +36,6 @@ export function PageHeader({
 	title: string;
 	subtitle?: string;
 	link?: { to: string; label: string };
-	linkReserve?: boolean;
 	// pending keeps the header frame and swaps its text for bars, so the rows
 	// below do not jump when the response lands.
 	pending?: boolean;
@@ -90,7 +88,10 @@ export function PageHeader({
 					fallback={<CoverFallback class="h-16 w-16 shrink-0 rounded-md" />}
 				/>
 			)}
-			<div class="min-w-0">
+			{/* Same three lines on every page: the title, the count and the link
+			    row always hold their box, so the text starts at the cover's top
+			    and no page shifts the rows below it. */}
+			<div class="flex h-16 min-w-0 flex-col overflow-hidden">
 				<h2 class="truncate text-xl font-semibold leading-tight">
 					{pending ? (
 						<span
@@ -101,20 +102,18 @@ export function PageHeader({
 						title
 					)}
 				</h2>
-				{(pending || subtitle) && (
-					<p class="text-sm opacity-70 mt-1">
-						{pending ? (
-							<span
-								class="shimmer inline-block h-3 w-24 rounded align-middle"
-								aria-hidden
-							/>
-						) : (
-							subtitle
-						)}
-					</p>
-				)}
+				<p class="mt-px truncate text-sm leading-tight opacity-70">
+					{pending ? (
+						<span
+							class="shimmer inline-block h-3 w-24 rounded align-middle"
+							aria-hidden
+						/>
+					) : (
+						subtitle || "\u00a0"
+					)}
+				</p>
 				{pending ? (
-					<span class="mt-1 block truncate text-sm">
+					<span class="mt-px block truncate text-sm leading-tight">
 						<span
 							class="shimmer inline-block h-3 w-20 rounded align-middle"
 							aria-hidden
@@ -122,11 +121,11 @@ export function PageHeader({
 					</span>
 				) : link ? (
 					<LinkLine link={link} />
-				) : linkReserve ? (
-					<span class="mt-1 block truncate text-sm" aria-hidden>
+				) : (
+					<span class="mt-px block truncate text-sm leading-tight" aria-hidden>
 						&nbsp;
 					</span>
-				) : null}
+				)}
 			</div>
 			{right}
 		</header>

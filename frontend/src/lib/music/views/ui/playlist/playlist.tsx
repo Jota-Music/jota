@@ -648,7 +648,6 @@ function PlaylistHeader({
 			title={name}
 			subtitle={t("music.trackCount", { count: trackCount })}
 			link={link}
-			linkReserve
 			pending={pending}
 			beforePlay={
 				follow || custom
