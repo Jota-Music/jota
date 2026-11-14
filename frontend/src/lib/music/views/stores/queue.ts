@@ -1,4 +1,5 @@
 import { computed, signal } from "@preact/signals";
+import { sameQueue } from "@/lib/music/app/queue";
 import { permute, random, seed } from "@/lib/music/app/shuffle";
 import type { RepeatMode, Song } from "@/lib/music/model";
 import { publish } from "@/lib/music/views/stores/remote";
@@ -9,6 +10,8 @@ const INDEX_STORAGE_KEY = "music-queue-index";
 const SHUFFLE_STORAGE_KEY = "music-shuffle";
 const REPEAT_STORAGE_KEY = "music-repeat";
 const QUEUE_SOURCE_STORAGE_KEY = "music-queue-source";
+const HEARD_STORAGE_KEY = "music-queue-heard";
+const HEARD_LIMIT = 100;
 
 function loadQueue(): Song[] {
 	const raw = read(QUEUE_STORAGE_KEY);
@@ -59,6 +62,23 @@ function loadQueueSource(): string | null {
 
 function saveQueueSource(v: string | null) {
 	write(QUEUE_SOURCE_STORAGE_KEY, v ?? "");
+}
+
+function loadHeard(): string[] {
+	const raw = read(HEARD_STORAGE_KEY);
+	if (!raw) return [];
+	try {
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed)
+			? parsed.filter((id): id is string => typeof id === "string")
+			: [];
+	} catch {
+		return [];
+	}
+}
+
+function saveHeard() {
+	write(HEARD_STORAGE_KEY, JSON.stringify(heard));
 }
 
 // The index may outlive the queue it points into: a room snapshot replaces the
@@ -126,6 +146,42 @@ export function replaceQueue(songs: Song[], anchorId?: string | null) {
 	persistQueue();
 }
 
+// The trail of tracks this queue actually played, newest last. A shuffled queue
+// holds songs before the current one that were never played, so going back reads
+// this instead of the array order.
+let heard: string[] = loadHeard();
+
+export function remember(song: Song) {
+	if (heard[heard.length - 1] === song.id) return;
+	heard.push(song.id);
+	if (heard.length > HEARD_LIMIT) heard.shift();
+	persistQueue();
+}
+
+// Index of the track played before the current one, or null when this queue has
+// nothing behind the playhead. Entries the queue no longer holds are dropped.
+export function unwind(songs: Song[]): number | null {
+	while (heard.length > 0) {
+		const id = heard.pop();
+		const at = songs.findIndex((song) => song.id === id);
+		if (at !== -1) return at;
+	}
+	return null;
+}
+
+export function clearHeard() {
+	heard = [];
+	persistQueue();
+}
+
+// A new list starts a new trail: what the previous queue played says nothing
+// about this one. Tapping another track in the list that is already playing
+// keeps it, so back still returns the song the user heard.
+export function startTrail(next: Song[]) {
+	if (sameQueue(queue.value, next)) return;
+	clearHeard();
+}
+
 // Writes are debounced: play/skip/reorder mutate the queue several times a
 // second, and each synchronous localStorage write freezes the main thread. The
 // last state wins after a quiet pause, flushed immediately on hide or close so
@@ -153,6 +209,7 @@ function flushQueue() {
 	saveQueue(queue.value);
 	saveIndex(currentIndex.value);
 	saveQueueSource(queueSource.value);
+	saveHeard();
 }
 
 export function toggleShuffle() {

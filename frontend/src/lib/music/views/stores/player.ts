@@ -29,8 +29,11 @@ import {
 	pingQueue,
 	queue,
 	queueSource,
+	remember,
 	repeat,
 	shuffle,
+	startTrail,
+	unwind,
 } from "@/lib/music/views/stores/queue";
 import { playGate, publish } from "@/lib/music/views/stores/remote";
 
@@ -65,7 +68,10 @@ function setQueueState(
 	nextIndex: number,
 	source: string | null | undefined = undefined,
 ) {
-	if (source !== undefined) queueSource.value = source;
+	if (source !== undefined) {
+		queueSource.value = source;
+		startTrail(nextQueue);
+	}
 
 	const song =
 		nextIndex >= 0 && nextIndex < nextQueue.length
@@ -104,12 +110,15 @@ function nextUntried(
 async function playAtIndex(
 	i: number,
 	tried = new Set<number>(),
+	trail = true,
 ): Promise<void> {
 	const q = queue.value;
 	if (i < 0 || i >= q.length) return;
 	interruptPreview();
 
 	const song = q[i];
+	const outgoing = q[currentIndex.value];
+	if (trail && outgoing && outgoing.id !== song.id) remember(outgoing);
 
 	currentIndex.value = i;
 	currentSong.value = song;
@@ -371,6 +380,19 @@ export async function nextSong() {
 export async function prevSong() {
 	const q = queue.value;
 	if (q.length === 0) return;
+
+	// A shuffled queue is not a history: the songs before the playhead may never
+	// have been played, so walking back one slot lands on a random one. Go back
+	// to the track the user actually heard, and restart the current one when
+	// there is none (the start of the shuffle, or a track just clicked into the
+	// list). Repeat one stays on the playhead, in both directions.
+	if (shuffle.value && repeat.value !== "one") {
+		const at = unwind(q);
+		if (at == null) return restart();
+		await playAtIndex(at, undefined, false);
+		return;
+	}
+
 	const prev = pick(q, currentIndex.value, repeat.value, -1);
 	if (prev == null) return;
 	await playAtIndex(prev);
