@@ -128,32 +128,38 @@ export function SearchPage() {
 		<div class="flex flex-col gap-4 min-h-0 flex-1 overflow-hidden">
 			{type === "user" && <UserHeader source="spotify" identifier={query} />}
 
-			<Shelf
-				items={items}
-				to={to}
-				viewKey="search_results_view"
-				title={query}
-				modes={!tracks}
-				isLoading={!tracks && isLoading}
-				emptyMessage={t(
-					playlists ? "pages.search.noPlaylists" : "common.noResults",
-				)}
-				onPlay={onPlay}
-				leading={playlists ? (id) => <SaveButton id={id} /> : undefined}
-				actions={playlists ? (id) => <PlaylistPlayButton id={id} /> : undefined}
-			>
-				{tracks ? (
-					isLoading ? (
+			{tracks ? (
+				// Rows are not cards: the list keeps its own panel and scroll, and the
+				// query rides in the header the shelf would otherwise carry.
+				<div class="flex min-h-0 flex-1 flex-col gap-2">
+					<h2 class="line-clamp-2 shrink-0 break-words text-xl font-semibold leading-tight">
+						{query}
+					</h2>
+					{isLoading ? (
 						<Rows />
 					) : songs.length === 0 ? (
-						<p class="px-4 py-6 text-sm text-zinc-500">
-							{t("common.noResults")}
-						</p>
+						<p class="text-sm text-zinc-500">{t("common.noResults")}</p>
 					) : (
-						<Virtualization songs={songs} plain />
-					)
-				) : undefined}
-			</Shelf>
+						<Virtualization songs={songs} />
+					)}
+				</div>
+			) : (
+				<Shelf
+					items={items}
+					to={to}
+					viewKey="search_results_view"
+					title={query}
+					isLoading={isLoading}
+					emptyMessage={t(
+						playlists ? "pages.search.noPlaylists" : "common.noResults",
+					)}
+					onPlay={onPlay}
+					leading={playlists ? (id) => <SaveButton id={id} /> : undefined}
+					actions={
+						playlists ? (id) => <PlaylistPlayButton id={id} /> : undefined
+					}
+				/>
+			)}
 		</div>
 	);
 }

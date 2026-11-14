@@ -2,7 +2,7 @@ import "@/lib/music/views/stores/audio";
 
 import { signal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { Loader } from "lucide-preact";
+import { Disc3, ListMusic, Loader } from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import { useParams } from "wouter-preact";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
@@ -160,81 +160,84 @@ export function ArtistPage() {
 				}
 			/>
 
-			<Shelf
-				items={
-					listable
-						? selectedAlbums.map(
-								(a): Item => ({
-									id: a.id,
-									name: a.name,
-									cover: a.cover,
-									subtitle: a.year ? String(a.year) : undefined,
-								}),
-							)
-						: []
-				}
-				to={(id) => `/album/${id}`}
-				onPlay={(id) => void playAlbum(queryClient, id)}
-				viewKey="artist_view"
-				modes={listable}
-				isLoading={listable && discoLoading}
-				emptyMessage={t("pages.artist.noGroup", {
-					group: groupLabel(activeTab).toLowerCase(),
-				})}
-				toolbar={
-					<div class="flex min-w-0 items-center gap-1 overflow-x-auto">
-						{tabs.map((tab) => {
-							const isTracks = tab === "tracks";
-							const active = activeTab === tab;
-							return (
-								<button
-									key={tab}
-									type="button"
-									disabled={!isTracks && !!disco && !counts[tab]}
-									onClick={() => {
-										view.value = tab;
-									}}
-									title={
-										isTracks ? t("pages.artist.topTracks") : groupLabel(tab)
-									}
-									class={cn(
-										"flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-3 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-										active
-											? "border-zinc-600 bg-zinc-900 text-white"
-											: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white",
-									)}
-								>
-									<span class="max-w-40 truncate">
-										{isTracks ? t("pages.artist.topTracks") : groupLabel(tab)}
-									</span>
-									{!isTracks && discoLoading && (
-										<Loader
-											size={12}
-											class="animate-spin text-zinc-500"
-											aria-label={t("pages.artist.loadingDiscography")}
-										/>
-									)}
-									{!isTracks && counts[tab] !== undefined && (
-										<span class="text-[10px] text-zinc-500">
-											({counts[tab]})
-										</span>
-									)}
-								</button>
-							);
-						})}
-					</div>
-				}
-			>
-				{listable ? undefined : isLoading ? (
-					<Rows />
-				) : tracks.length === 0 ? (
-					<p class="px-4 py-6 text-sm text-zinc-500">
-						{t("pages.artist.noSongs")}
-					</p>
-				) : (
-					<Virtualization songs={tracks} plain />
+			<div class="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-6">
+				{tabs.map((tab, i) =>
+					tab === "tracks" ? (
+						<button
+							key="tracks"
+							type="button"
+							onClick={() => {
+								view.value = "tracks";
+							}}
+							class={cn(
+								"col-span-full flex h-9 cursor-pointer items-center justify-start gap-2 rounded-md border px-3 text-sm transition-colors sm:col-span-3",
+								activeTab === "tracks"
+									? "border-zinc-600 bg-zinc-900 text-white"
+									: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white",
+							)}
+						>
+							<ListMusic size={14} />
+							{t("pages.artist.topTracks")}
+						</button>
+					) : (
+						<button
+							key={tab}
+							type="button"
+							disabled={!!disco && !counts[tab]}
+							onClick={() => {
+								view.value = tab;
+							}}
+							class={cn(
+								"flex h-9 cursor-pointer items-center justify-start gap-2 rounded-md border px-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+								i >= 2 ? "sm:col-span-2" : "sm:col-span-3",
+								activeTab === tab
+									? "border-zinc-600 bg-zinc-900 text-white"
+									: "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white",
+							)}
+						>
+							<Disc3 size={14} />
+							{groupLabel(tab)}
+							{discoLoading && (
+								<Loader
+									size={14}
+									class="animate-spin text-zinc-500"
+									aria-label={t("pages.artist.loadingDiscography")}
+								/>
+							)}
+							{counts[tab] !== undefined && (
+								<span class="text-xs text-zinc-500">({counts[tab]})</span>
+							)}
+						</button>
+					),
 				)}
-			</Shelf>
+			</div>
+
+			{listable ? (
+				// The shelf is where the cards are: an album grid picks its own layout.
+				<Shelf
+					items={selectedAlbums.map(
+						(a): Item => ({
+							id: a.id,
+							name: a.name,
+							cover: a.cover,
+							subtitle: a.year ? String(a.year) : undefined,
+						}),
+					)}
+					to={(id) => `/album/${id}`}
+					onPlay={(id) => void playAlbum(queryClient, id)}
+					viewKey="artist_view"
+					isLoading={discoLoading}
+					emptyMessage={t("pages.artist.noGroup", {
+						group: groupLabel(activeTab).toLowerCase(),
+					})}
+				/>
+			) : isLoading ? (
+				<Rows />
+			) : tracks.length === 0 ? (
+				<p class="text-sm text-zinc-500">{t("pages.artist.noSongs")}</p>
+			) : (
+				<Virtualization songs={tracks} />
+			)}
 		</div>
 	);
 }
