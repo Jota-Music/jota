@@ -367,7 +367,7 @@ export function Virtualization({
 					</div>
 				) : (
 					<div
-						className="relative w-full pb-3"
+						className="relative w-full"
 						style={{
 							height: `${totalSize}px`,
 						}}

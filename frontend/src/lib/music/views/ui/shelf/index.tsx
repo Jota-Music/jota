@@ -212,7 +212,9 @@ export function Shelf({
 			) : children ? (
 				// A body of the page's own brings its own scroll: a row list is
 				// not a set of items and does not share their container.
-				<div class="flex min-h-0 flex-1 flex-col">{children}</div>
+				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+					{children}
+				</div>
 			) : items.length === 0 ? (
 				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
 					{empty()}
@@ -234,7 +236,7 @@ export function Shelf({
 				<div class="relative min-h-0 flex-1">
 					<div
 						ref={listRef}
-						class="h-full overflow-y-auto pl-1 pr-[15px] pb-3"
+						class="h-full overflow-y-auto pl-1 pr-[15px]"
 						onClickCapture={captureClick}
 					>
 						{filteredItems.length === 0 ? (

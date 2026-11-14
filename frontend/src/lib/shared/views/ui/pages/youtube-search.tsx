@@ -188,7 +188,7 @@ export function YouTubeSearchPage() {
 			{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
 			<section
 				ref={listRef}
-				class="h-full overflow-y-auto pl-1 pr-[15px] pb-3"
+				class="h-full overflow-y-auto pl-1 pr-[15px]"
 				onClick={(e) => {
 					const target = e.target as Element;
 					if (!target.closest("[data-row]")) clearSelection();
