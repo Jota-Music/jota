@@ -25,7 +25,9 @@ function Progress({
 }: ProgressProps) {
 	const trackRef = useRef<HTMLDivElement>(null);
 	const dragging = useSignal(false);
-	const lastValue = useRef(0);
+	// Null until this drag has produced a position: a release with nothing to
+	// commit must not seek to a value the user never picked.
+	const lastValue = useRef<number | null>(null);
 	const propsRef = useRef({ onChange, onCommit, min, max });
 	propsRef.current = { onChange, onCommit, min, max };
 
@@ -34,6 +36,10 @@ function Progress({
 		if (!track) return;
 		const { min, max, onChange } = propsRef.current;
 		const rect = track.getBoundingClientRect();
+		// A bar with no width cannot be read as a position: dividing by it gives
+		// Infinity, which clamps to the far end and seeks the track to its last
+		// frame. Nothing the user picked, so pick nothing.
+		if (!(rect.width > 0)) return;
 		const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
 		const scaled = min + ratio * (max - min);
 		lastValue.current = scaled;
@@ -52,6 +58,7 @@ function Progress({
 		function finish() {
 			if (!dragging.value) return;
 			dragging.value = false;
+			if (lastValue.current === null) return;
 			propsRef.current.onCommit?.(lastValue.current);
 		}
 
@@ -73,6 +80,7 @@ function Progress({
 	function start(e: MouseEvent | TouchEvent) {
 		if (disabled) return;
 		dragging.value = true;
+		lastValue.current = null;
 		preview(clientAxis(e, "x"));
 	}
 

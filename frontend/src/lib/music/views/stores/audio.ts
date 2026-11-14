@@ -36,9 +36,6 @@ let audio: HTMLAudioElement | null = null;
 let loadedSongId: string | null = null;
 let knownDuration = 0;
 let loadToken = 0;
-// Timestamp of the last user seek, used to suppress spurious `ended` events that
-// WebKit fires shortly after a seek/range request on YouTube CDN streams.
-let lastSeekTime = 0;
 // Identifies the latest play() call. A superseded call (a newer one started)
 // must bail out without touching the shared element or reporting a failure.
 let playSeq = 0;
@@ -61,6 +58,10 @@ let recoveryAttempt = 0;
 
 let onTrackEndedCallback: (() => void) | null = null;
 let endedElement: HTMLAudioElement | null = null;
+// How many times this load was resumed from an end that came too early. A player
+// restarts an ended element from the top, so an unchecked retry replays the track
+// forever when the metadata duration is longer than the audio.
+let retries = 0;
 let endWatch: ReturnType<typeof setInterval> | null = null;
 
 export function setOnTrackEnded(fn: () => void) {
@@ -76,18 +77,18 @@ function stopEndWatch() {
 
 function endPlayback(a: HTMLAudioElement) {
 	if (audio !== a || endedElement === a) return;
-	// A spurious `ended` (WebKit quirk, often right after a seek/range request)
-	// must not advance the queue. A genuine end lands at (or very near) the
-	// duration, so anything well short of it is not a real end.
+	// A player that gives up mid-file (a range request it cut short) reports the
+	// end early: the position is well short of the duration, so the track is not
+	// over. Keep playing instead of ending it.
 	const dur = knownDurationOr(a.duration);
-	const sinceSeek = Date.now() - lastSeekTime;
-	// A spurious `ended` (WebKit quirk, often right after a seek) lands well
-	// short of the duration OR arrives shortly after a user seek. A genuine end
-	// lands at (or very near) the duration with no recent seek.
-	const spurious =
-		(Number.isFinite(dur) && dur > 0 && a.currentTime < dur - 5) ||
-		sinceSeek < 10000;
-	if (spurious) {
+	if (
+		Number.isFinite(dur) &&
+		dur > 0 &&
+		a.currentTime < dur - 2 &&
+		retries === 0
+	) {
+		retries++;
+		void a.play().catch(() => requestRecovery());
 		return;
 	}
 	endedElement = a;
@@ -354,7 +355,9 @@ function knownDurationOr(d: number): number {
 export function clampSeconds(seconds: number, duration: number): number {
 	if (!Number.isFinite(seconds) || seconds < 0) return 0;
 	if (Number.isFinite(duration) && duration > 0) {
-		const eps = 0.05;
+		// Stop half a second short of the end: landing on the last frame reads as
+		// a finished track, not as the position the user asked for.
+		const eps = 0.5;
 		return Math.min(seconds, Math.max(0, duration - eps));
 	}
 	return seconds;
@@ -410,6 +413,7 @@ async function loadSongIntoPlayer(
 	stopEndWatch();
 	const replaying = endedElement != null;
 	endedElement = null;
+	retries = 0;
 
 	if (replaying) {
 		AudioCache.releaseElement(song.id);
@@ -485,9 +489,7 @@ async function loadSongIntoPlayer(
 				logError(err, `buffer ${songLabel(song)} | ${mediaState(instance)}`);
 				return "failed";
 			}
-			const t = startAt();
-			instance.currentTime = t;
-			progress.value = t;
+			seek(startAt());
 		}
 		try {
 			await instance.play();
@@ -518,11 +520,7 @@ async function loadSongIntoPlayer(
 			}
 			return "failed";
 		}
-		if (wantsStart) {
-			const t = startAt();
-			instance.currentTime = t;
-			progress.value = t;
-		}
+		if (wantsStart) seek(startAt());
 	}
 
 	if (token !== loadToken) return "aborted";
@@ -760,12 +758,15 @@ export async function resume(): Promise<boolean> {
 }
 
 export function seek(time: number) {
-	lastSeekTime = Date.now();
 	if (!Number.isFinite(time)) return;
+	// Clamp against the element's own duration: the resolved metadata rounds up,
+	// and a target past the end parks the element at the very end, which the
+	// player reports as a finished track.
+	const target = audio ? clampSeconds(time, audio.duration) : Math.max(0, time);
 	if (audio) {
-		audio.currentTime = time;
+		audio.currentTime = target;
 	}
-	progress.value = time;
+	progress.value = target;
 }
 
 // Seek and wait for the element to actually land, so a caller never starts
@@ -776,7 +777,7 @@ export function seekTo(time: number, timeoutMs = 5000): Promise<void> {
 	const el = audio;
 	if (!el || !Number.isFinite(time)) return Promise.resolve();
 
-	const target = clampSeconds(time, knownDurationOr(el.duration));
+	const target = clampSeconds(time, el.duration);
 	if (Math.abs(el.currentTime - target) < 0.05) {
 		seek(target);
 		return Promise.resolve();
@@ -1019,4 +1020,3 @@ function restorePlayback(): void {
 if (typeof window !== "undefined") {
 	restorePlayback();
 }
-
