@@ -95,6 +95,8 @@ public class MediaPlaybackService extends Service {
     private String album = "";
     private long durationMs = 0;
     private long positionMs = 0;
+    private String shown = "";
+    private String shownMetadata = "";
 
     @Override
     public void onCreate() {
@@ -131,6 +133,12 @@ public class MediaPlaybackService extends Service {
 
                     @Override
                     public void onSeekTo(long pos) {
+                        // The system keeps extrapolating from the old position
+                        // until the app answers, and the page needs a range
+                        // request to land a seek: move the state here first so
+                        // the bar stays where the finger left it.
+                        positionMs = Math.max(0, pos);
+                        publishState();
                         forward("seek", pos);
                     }
                 });
@@ -164,7 +172,6 @@ public class MediaPlaybackService extends Service {
         }
         if (intent != null && intent.hasExtra("json")) {
             apply(intent.getStringExtra("json"));
-            publish();
             return START_STICKY;
         }
 
@@ -197,6 +204,42 @@ public class MediaPlaybackService extends Service {
 
     private void updateSession() {
         if (session == null) return;
+        publishMetadata();
+        publishState();
+
+        // Position alone rides on the state. Rebuilding the notification for it
+        // re-binds the seek bar under the finger, so only content does.
+        String content =
+                playing
+                        + "\n"
+                        + title
+                        + "\n"
+                        + artist
+                        + "\n"
+                        + album
+                        + "\n"
+                        + artworkUrl
+                        + "\n"
+                        + durationMs;
+        if (content.equals(shown)) return;
+        shown = content;
+        publish();
+    }
+
+    private void publishMetadata() {
+        if (session == null) return;
+        String key =
+                title
+                        + "\n"
+                        + artist
+                        + "\n"
+                        + album
+                        + "\n"
+                        + durationMs
+                        + "\n"
+                        + (artwork != null);
+        if (key.equals(shownMetadata)) return;
+        shownMetadata = key;
 
         MediaMetadata.Builder md =
                 new MediaMetadata.Builder()
@@ -208,6 +251,10 @@ public class MediaPlaybackService extends Service {
             md.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, artwork);
         }
         session.setMetadata(md.build());
+    }
+
+    private void publishState() {
+        if (session == null) return;
 
         long actions =
                 PlaybackState.ACTION_PLAY
@@ -254,7 +301,6 @@ public class MediaPlaybackService extends Service {
                                         artwork = result;
                                         artworkUrl = url;
                                         updateSession();
-                                        publish();
                                     });
                         })
                 .start();
@@ -285,6 +331,7 @@ public class MediaPlaybackService extends Service {
                 .setContentTitle(title.isEmpty() ? "Jota" : title)
                 .setContentText(artist)
                 .setShowWhen(false)
+                .setOnlyAlertOnce(true)
                 .setStyle(style)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOngoing(playing)
