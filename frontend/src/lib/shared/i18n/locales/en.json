@@ -185,9 +185,7 @@
 			"failed": "Failed to load playlists for @{user}",
 			"noPlaylists": "No playlists found.",
 			"noVideos": "No videos found.",
-			"findOnYouTube": "Search this name on YouTube",
-			"videosTab": "Videos",
-			"playlistsTab": "Playlists"
+			"findOnYouTube": "Search this name on YouTube"
 		},
 		"youtube": {
 			"videos": "Videos",

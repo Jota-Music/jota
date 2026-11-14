@@ -2,7 +2,7 @@ import { useSignal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import {
 	ArrowUpDown,
-	ListMusic,
+	CirclePlay,
 	ListVideo,
 	RefreshCw,
 	Search,
@@ -19,15 +19,15 @@ import {
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import type { PlaylistSummary, Song } from "@/lib/music/model";
 import { playPlaylist } from "@/lib/music/views/play";
+import { clearSelection } from "@/lib/music/views/stores/selection";
 import { SaveButton } from "@/lib/music/views/ui/follow";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
-import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
+import { type Item, Shelf, Tabs } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
-import { cn } from "@/lib/shared/utils/tw";
-import { Rows } from "@/lib/shared/views/ui/components/loading";
+import { Loading } from "@/lib/shared/views/ui/components/loading";
 
 type Tab = "playlists" | "videos";
 
@@ -63,7 +63,9 @@ export function UserPage() {
 
 	const queryClient = useQueryClient();
 	const { toggle } = useSaved();
-	const activeTab = useSignal<Tab>("playlists");
+	// A channel opens on its videos, which is also the tab that leads the
+	// switcher: the highlighted tab and the first one have to agree.
+	const activeTab = useSignal<Tab>("videos");
 	const videosSearch = useSignal("");
 	const videoOrder = useSignal<OrderType>("added");
 
@@ -102,7 +104,16 @@ export function UserPage() {
 		await queryClient.invalidateQueries({ queryKey: ["channel-info", id] });
 	}
 
-	if (playlistsQuery.isError || (youtube && videosQuery.isError)) {
+	const watchingVideos = youtube && activeTab.value === "videos";
+	// Only the tab on screen has to answer: a channel whose playlists failed
+	// still lists its videos, and the other way round.
+	const failed = watchingVideos ? videosQuery.isError : playlistsQuery.isError;
+
+	useEffect(() => {
+		clearSelection();
+	}, [activeTab.value]);
+
+	if (failed) {
 		return (
 			<div class="flex flex-col items-start gap-3 p-6 text-sm">
 				<p class="text-red-400">{t("pages.user.failed", { user: id })}</p>
@@ -135,88 +146,82 @@ export function UserPage() {
 			: videos.filter((video) => video.name.toLowerCase().includes(query));
 	const filteredVideos = sortVideos(base, videoOrder.value);
 
-	const content =
-		youtube && activeTab.value === "videos" ? (
-			<>
-				<div class="grid grid-cols-[1fr_auto] gap-2">
-					<div class="relative flex-1">
-						<Search
-							size={16}
-							class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-						/>
-						<input
-							type="text"
-							placeholder={t("music.playlist.searchPlaceholder")}
-							value={videosSearch.value}
-							onInput={(e) => {
-								videosSearch.value = (e.target as HTMLInputElement).value;
+	// The filters belong to the tab, not to the page: they only make sense over
+	// the videos and disappear with them.
+	const videoBody = (
+		<div class="flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2">
+			<div class="grid grid-cols-[1fr_auto] gap-2">
+				<div class="relative flex-1">
+					<Search
+						size={16}
+						class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+					/>
+					<input
+						type="text"
+						placeholder={t("music.playlist.searchPlaceholder")}
+						value={videosSearch.value}
+						onInput={(e) => {
+							videosSearch.value = (e.target as HTMLInputElement).value;
+						}}
+						class="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-9 text-sm text-white outline-none focus:border-zinc-600"
+					/>
+					{videosSearch.value && (
+						<button
+							type="button"
+							onClick={() => {
+								videosSearch.value = "";
 							}}
-							class="h-10 w-full rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-9 text-sm text-white outline-none focus:border-zinc-600"
-						/>
-						{videosSearch.value && (
-							<button
-								type="button"
-								onClick={() => {
-									videosSearch.value = "";
-								}}
-								class="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
-								aria-label={t("music.playlist.clearSearch")}
-							>
-								<X size={14} />
-							</button>
-						)}
-					</div>
-					<div class="relative w-full">
-						<ArrowUpDown
-							size={16}
-							class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-						/>
-						<select
-							value={videoOrder.value}
-							onInput={(e) => {
-								videoOrder.value = (e.target as HTMLSelectElement)
-									.value as OrderType;
-							}}
-							aria-label={t("music.playlist.orderBy")}
-							class="h-10 w-max appearance-none rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
+							class="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
+							aria-label={t("music.playlist.clearSearch")}
 						>
-							<option value="added">{t("music.playlist.order.added")}</option>
-							<option value="reverse">
-								{t("music.playlist.order.reverse")}
-							</option>
-							<option value="duration-asc">
-								{t("music.playlist.order.durationAsc")}
-							</option>
-							<option value="duration-desc">
-								{t("music.playlist.order.durationDesc")}
-							</option>
-						</select>
-					</div>
+							<X size={14} />
+						</button>
+					)}
 				</div>
+				<div class="relative">
+					<ArrowUpDown
+						size={16}
+						class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+					/>
+					<select
+						value={videoOrder.value}
+						onInput={(e) => {
+							videoOrder.value = (e.target as HTMLSelectElement)
+								.value as OrderType;
+						}}
+						aria-label={t("music.playlist.orderBy")}
+						class="h-10 w-max appearance-none rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
+					>
+						<option value="added">{t("music.playlist.order.added")}</option>
+						<option value="reverse">{t("music.playlist.order.reverse")}</option>
+						<option value="duration-asc">
+							{t("music.playlist.order.durationAsc")}
+						</option>
+						<option value="duration-desc">
+							{t("music.playlist.order.durationDesc")}
+						</option>
+					</select>
+				</div>
+			</div>
 
-				{videosQuery.isLoading ? (
-					<Rows />
-				) : filteredVideos.length === 0 ? (
-					<p class="text-sm text-zinc-500">{t("pages.user.noVideos")}</p>
-				) : (
-					<Virtualization songs={filteredVideos} />
-				)}
-			</>
-		) : (
-			<Shelf
-				items={items}
-				to={(id) => `/playlist/${id}`}
-				leading={(id) => (followable(id) ? <SaveButton id={id} /> : null)}
-				actions={(id) => <PlaylistPlayButton id={id} />}
-				onPlay={(id) => void playPlaylist(queryClient, id)}
-				viewKey="user_view"
-				isLoading={playlistsQuery.isLoading}
-				emptyMessage={t("pages.user.noPlaylists")}
-			/>
-		);
+			{videosQuery.isLoading ? (
+				<Loading />
+			) : filteredVideos.length === 0 ? (
+				<p class="flex flex-1 items-center justify-center text-sm text-zinc-500">
+					{t("pages.user.noVideos")}
+				</p>
+			) : (
+				<Virtualization
+					plain
+					songs={filteredVideos}
+					resetKey={`${videoOrder.value}|${query}`}
+				/>
+			)}
+		</div>
+	);
 
 	return (
-		<div class="flex flex-col gap-6 min-h-0 flex-1 overflow-hidden">
+		<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
 			<UserHeader
 				source={source}
 				identifier={id}
@@ -225,42 +230,41 @@ export function UserPage() {
 				pending={youtube && infoQuery.isLoading}
 			/>
 
-			{youtube && (
-				<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-					<button
-						type="button"
-						title={t("pages.user.videosTab")}
-						onClick={() => {
-							activeTab.value = "videos";
-						}}
-						class={cn(
-							"flex h-8 cursor-pointer items-center justify-center rounded-md transition-colors px-3",
-							activeTab.value === "videos"
-								? "bg-zinc-800 text-white"
-								: "text-zinc-500 hover:text-zinc-300",
-						)}
-					>
-						<ListVideo size={16} />
-					</button>
-					<button
-						type="button"
-						title={t("pages.user.playlistsTab")}
-						onClick={() => {
-							activeTab.value = "playlists";
-						}}
-						class={cn(
-							"flex h-8 cursor-pointer items-center justify-center rounded-md transition-colors px-3",
-							activeTab.value === "playlists"
-								? "bg-zinc-800 text-white"
-								: "text-zinc-500 hover:text-zinc-300",
-						)}
-					>
-						<ListMusic size={16} />
-					</button>
-				</div>
-			)}
-
-			{content}
+			<Shelf
+				items={watchingVideos ? [] : items}
+				to={(id) => `/playlist/${id}`}
+				leading={(id) => (followable(id) ? <SaveButton id={id} /> : null)}
+				actions={(id) => <PlaylistPlayButton id={id} />}
+				onPlay={(id) => void playPlaylist(queryClient, id)}
+				viewKey="user_view"
+				toolbar={
+					youtube ? (
+						<Tabs
+							items={[
+								{
+									id: "videos",
+									icon: CirclePlay,
+									label: t("pages.youtube.videos"),
+								},
+								{
+									id: "playlists",
+									icon: ListVideo,
+									label: t("pages.youtube.playlists"),
+								},
+							]}
+							active={activeTab.value}
+							onSelect={(next) => {
+								activeTab.value = next;
+							}}
+						/>
+					) : undefined
+				}
+				modes={!watchingVideos}
+				isLoading={!watchingVideos && playlistsQuery.isLoading}
+				emptyMessage={t("pages.user.noPlaylists")}
+			>
+				{watchingVideos ? videoBody : undefined}
+			</Shelf>
 		</div>
 	);
 }

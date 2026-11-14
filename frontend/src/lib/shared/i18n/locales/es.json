@@ -185,9 +185,7 @@
 			"failed": "Error al cargar las listas de @{user}",
 			"noPlaylists": "No se encontraron listas.",
 			"noVideos": "No se encontraron vídeos.",
-			"findOnYouTube": "Buscar este nombre en YouTube",
-			"videosTab": "Vídeos",
-			"playlistsTab": "Listas"
+			"findOnYouTube": "Buscar este nombre en YouTube"
 		},
 		"youtube": {
 			"videos": "Vídeos",
