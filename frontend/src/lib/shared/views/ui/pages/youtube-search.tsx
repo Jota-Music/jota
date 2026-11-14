@@ -1,7 +1,7 @@
 import { useSignal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { CirclePlay, ListVideo, User } from "lucide-preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect } from "preact/hooks";
 import { useRoute } from "wouter-preact";
 import {
 	searchYouTube,
@@ -12,16 +12,14 @@ import {
 import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
 import type { Song } from "@/lib/music/model";
 import { playPlaylist } from "@/lib/music/views/play";
-import { playFromQueueSelection } from "@/lib/music/views/stores/player";
 import { clearSelection } from "@/lib/music/views/stores/selection";
 import { SaveButton } from "@/lib/music/views/ui/follow";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
+import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { Shelf, type TabItem, Tabs } from "@/lib/music/views/ui/shelf";
-import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
 import { t } from "@/lib/shared/i18n";
 import { Rows } from "@/lib/shared/views/ui/components/loading";
-import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 type Tab = "videos" | "playlists" | "channels";
 
@@ -53,7 +51,6 @@ export function YouTubeSearchPage() {
 	const target = queryTarget(query);
 	const direct = isDirectQuery(query);
 	const picked = useSignal<{ query: string; tab: Tab } | null>(null);
-	const listRef = useRef<HTMLElement>(null);
 
 	const wantVideos = !!query && (!direct || target === "videos");
 	const wantPlaylists = !!query && (!direct || target === "playlists");
@@ -121,10 +118,6 @@ export function YouTubeSearchPage() {
 
 	const songs: Song[] = videos.map(youtubeVideoToSong);
 
-	function handleClick(song: Song) {
-		void playFromQueueSelection(songs, song);
-	}
-
 	const loading =
 		(wantVideos && videosQuery.isLoading) ||
 		(wantPlaylists && playlistsQuery.isLoading) ||
@@ -179,33 +172,15 @@ export function YouTubeSearchPage() {
 	const videoBody = videosQuery.isLoading ? (
 		<Rows />
 	) : videosQuery.isError ? (
-		<p class="text-red-400">{t("pages.youtube.failed")}</p>
+		<p class="flex flex-1 items-center justify-center px-3 text-red-400 md:px-0">
+			{t("pages.youtube.failed")}
+		</p>
 	) : songs.length === 0 ? (
-		<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
+		<p class="flex flex-1 items-center justify-center px-3 text-sm text-zinc-500 md:px-0">
+			{t("pages.youtube.noResults")}
+		</p>
 	) : (
-		<div class="relative min-h-0 flex-1">
-			{/* biome-ignore lint/a11y/noStaticElementInteractions: empty area clears the selection */}
-			{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
-			<section
-				ref={listRef}
-				class="h-full overflow-y-auto pl-2 pr-4"
-				onClick={(e) => {
-					const target = e.target as Element;
-					if (!target.closest("[data-row]")) clearSelection();
-				}}
-			>
-				{songs.map((song, index) => (
-					<YouTubeVideoRow
-						key={song.id}
-						song={song}
-						songs={songs}
-						index={index}
-						onClick={() => handleClick(song)}
-					/>
-				))}
-			</section>
-			<Scrollbar target={listRef} gutter={16} />
-		</div>
+		<Virtualization songs={songs} resetKey={query} />
 	);
 
 	return (
