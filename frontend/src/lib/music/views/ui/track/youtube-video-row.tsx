@@ -41,7 +41,7 @@ export function YouTubeVideoRow({
 			data-row={song.id}
 			role="none"
 			class={cn(
-				"flex w-full select-none items-center gap-3 border-b border-zinc-900 px-3 py-2 transition hover:bg-zinc-800/60",
+				"flex w-full select-none items-center gap-3 border-b border-zinc-900 px-4 py-2 transition hover:bg-zinc-800/60",
 				selected && "bg-zinc-800/60",
 			)}
 			onContextMenu={(e) => {

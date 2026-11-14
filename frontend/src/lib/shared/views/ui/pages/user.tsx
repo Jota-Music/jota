@@ -27,7 +27,7 @@ import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf, Tabs } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
-import { Loading } from "@/lib/shared/views/ui/components/loading";
+import { Rows } from "@/lib/shared/views/ui/components/loading";
 
 type Tab = "playlists" | "videos";
 
@@ -149,8 +149,8 @@ export function UserPage() {
 	// The filters belong to the tab, not to the page: they only make sense over
 	// the videos and disappear with them.
 	const videoBody = (
-		<div class="flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2">
-			<div class="grid grid-cols-[1fr_auto] gap-2">
+		<div class="flex min-h-0 flex-1 flex-col gap-4 pb-4 md:pb-0">
+			<div class="grid grid-cols-[1fr_auto] gap-2 px-3 md:px-0">
 				<div class="relative flex-1">
 					<Search
 						size={16}
@@ -205,14 +205,13 @@ export function UserPage() {
 			</div>
 
 			{videosQuery.isLoading ? (
-				<Loading />
+				<Rows />
 			) : filteredVideos.length === 0 ? (
-				<p class="flex flex-1 items-center justify-center text-sm text-zinc-500">
+				<p class="flex flex-1 items-center justify-center px-3 text-sm text-zinc-500 md:px-0">
 					{t("pages.user.noVideos")}
 				</p>
 			) : (
 				<Virtualization
-					plain
 					songs={filteredVideos}
 					resetKey={`${videoOrder.value}|${query}`}
 				/>
