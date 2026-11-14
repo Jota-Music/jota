@@ -154,7 +154,7 @@ function FloatingMenu() {
 		<div
 			ref={ref}
 			role="menu"
-			class="fixed z-300 w-56 rounded-lg border border-zinc-800 bg-zinc-950 py-1 shadow-xl"
+			class="fixed z-300 w-56 max-h-[calc(100dvh-0.75rem)] overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950 py-1 shadow-xl"
 			style={{ top: 0, left: 0 }}
 		>
 			{header(menu)}
@@ -169,7 +169,9 @@ function ActionSheet() {
 	return (
 		<Sheet open={!!menu} close={closeContextMenu} centered={false}>
 			{menu && header(menu)}
-			{menu?.actions.map(item)}
+			{/* A phone holds fewer actions than a playlist menu has: the list
+			    scrolls inside the sheet instead of running under the player bar. */}
+			<div class="min-h-0 overflow-y-auto">{menu?.actions.map(item)}</div>
 		</Sheet>
 	);
 }

@@ -133,8 +133,11 @@ export function Sheet({
 					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-b-0 border-zinc-800 bg-zinc-950 pb-3 shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out",
 					centered && "sm:pb-0 sm:rounded-2xl sm:border-b",
 					"max-sm:mb-0",
-					"max-h-[70dvh]",
-					host ? "sm:max-h-full" : "sm:max-h-[85dvh]",
+					// With a host the panel lives in the content box, so that box is
+					// the cap: 70dvh lets it grow past it and under the player bar,
+					// where the last actions cannot be reached. Without a host (a
+					// stray sheet at body level) the viewport is all there is.
+					host ? "max-h-full" : "max-h-[70dvh] sm:max-h-[85dvh]",
 					shown.value
 						? centered
 							? "translate-y-0 opacity-100 sm:scale-100"

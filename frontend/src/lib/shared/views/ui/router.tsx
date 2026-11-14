@@ -283,8 +283,10 @@ function Router() {
 						<Route component={NotFoundPage} />
 					</Switch>
 				</Suspense>
+				{/* Inside the shell: the touch sheet needs the overlay layer, or
+				    it lands under the player bar and the bottom nav. */}
+				<ContextMenu />
 			</AppShell>
-			<ContextMenu />
 		</QueryClientProvider>
 	);
 }
