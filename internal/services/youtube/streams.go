@@ -2,6 +2,7 @@ package youtube
 
 import (
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -40,23 +41,29 @@ func cachedAudio(videoID string) *music.Audio {
 	if !ok {
 		return nil
 	}
-	// Resolved a few minutes ago: audioURL already probed the URL and the
-	// signature has hours left. No need to pay a HEAD again.
-	if time.Since(time.UnixMilli(saved)) < probeGrace {
-		audio.Url = ProxyURL(videoID, audio.Url)
-		return &audio
+	// A stream resolved before the preferred container changed would keep
+	// playing the one this player cannot seek, so it is resolved again.
+	if preferWebM != strings.HasPrefix(streamMime(audio.Url), "audio/webm") {
+		return nil
 	}
-	// An entry this run resolved was probed minutes ago and its own expiry,
-	// which is what the cache drops the entry by, is still hours away.
-	if at, ok := fresh.Load(videoID); ok && time.Since(at.(time.Time)) < freshFor {
-		audio.Url = ProxyURL(videoID, audio.Url)
-		return &audio
-	}
-	if !audioCacheStillValid(&audio) {
+	switch {
+	case time.Since(time.UnixMilli(saved)) < probeGrace:
+		// Resolved a few minutes ago: audioURL already probed the URL and the
+		// signature has hours left. No need to pay a HEAD again.
+	case isFresh(videoID):
+		// An entry this run resolved was probed minutes ago and its own expiry,
+		// which is what the cache drops the entry by, is still hours away.
+	case !audioCacheStillValid(&audio):
 		return nil
 	}
 	audio.Url = ProxyURL(videoID, audio.Url)
 	return &audio
+}
+
+// isFresh reports whether this run resolved the stream a few minutes ago.
+func isFresh(videoID string) bool {
+	at, ok := fresh.Load(videoID)
+	return ok && time.Since(at.(time.Time)) < freshFor
 }
 
 // keepAudio stores the stream resolved for a video, for as long as its URL lives.

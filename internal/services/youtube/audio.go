@@ -26,7 +26,9 @@ var ErrLoginRequired = errors.New("youtube: login required")
 // bestAudio picks the audio format with the fastest, most compatible start.
 // audio/mp4 (AAC) is preferred over audio/webm (Opus): WebKitGTK's GStreamer
 // backend streams MP4/AAC instantly but can stall on googlevideo's WebM/Opus,
-// so "highest itag" alone would pick the slow one on desktop Linux.
+// so "highest itag" alone would pick the slow one on desktop Linux. The order
+// flips where the platform player cannot seek the fragmented MP4 (see
+// preferWebM), because a track that cannot be seeked is worse than a slow start.
 func bestAudio(formats []format) (format, bool) {
 	var pick format
 	bestTier := -1
@@ -38,6 +40,9 @@ func bestAudio(formats []format) (format, bool) {
 		tier := 0
 		if strings.HasPrefix(f.MimeType, "audio/mp4") {
 			tier = 1
+		}
+		if preferWebM && strings.HasPrefix(f.MimeType, "audio/webm") {
+			tier = 2
 		}
 		if tier > bestTier || (tier == bestTier && f.Itag > bestItag) {
 			bestTier, bestItag, pick = tier, f.Itag, f
@@ -361,6 +366,12 @@ func audioURL(videoID string) (string, clientConfig, error) {
 				if c.Name != sticky {
 					log.Printf("youtube: %s switched to client %s", videoID, c.Name)
 					youtubeCache.rememberClient(c.Name)
+				}
+				// The player seeks the fragmented MP4 badly where WebM is
+				// preferred, so a video without Opus is worth knowing about: it
+				// is the only way the seek can still land at the end of the track.
+				if mime := streamMime(raw); preferWebM && mime != "audio/webm" {
+					log.Printf("youtube: %s has no opus audio, playing %s (seek may fail)", videoID, mime)
 				}
 				return raw, c, nil
 			}

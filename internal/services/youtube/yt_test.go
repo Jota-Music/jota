@@ -80,6 +80,34 @@ func TestAStreamResolvedThisRunIsNotProbedAgain(t *testing.T) {
 	}
 }
 
+// A stream resolved for the other container would keep playing the one the
+// platform player cannot seek, so it is resolved again instead of reused.
+func TestACachedStreamOfTheOtherContainerIsResolvedAgain(t *testing.T) {
+	const video = "other_container"
+	future := time.Now().Add(time.Hour).Unix()
+	keepAudio(video, music.Audio{
+		Url:      "https://example.com/a?mime=audio%2Fmp4",
+		VideoID:  video,
+		ExpireAt: future,
+	}, time.Hour)
+
+	preferWebM = true
+	t.Cleanup(func() { preferWebM = false })
+
+	if got := cachedAudio(video); got != nil {
+		t.Fatalf("an MP4 stream was reused where WebM is required: %+v", got)
+	}
+
+	keepAudio(video, music.Audio{
+		Url:      "https://example.com/a?mime=audio%2Fwebm%3B%20codecs%3D%22opus%22",
+		VideoID:  video,
+		ExpireAt: future,
+	}, time.Hour)
+	if got := cachedAudio(video); got == nil {
+		t.Fatal("a WebM stream was dropped where WebM is required")
+	}
+}
+
 // The resolved stream lives in a file of its own, so a play rewrites one entry
 // and not the whole YouTube cache. The session file keeps the tokens alone.
 func TestTheStreamLivesInAFileOfItsOwn(t *testing.T) {

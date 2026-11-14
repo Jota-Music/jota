@@ -222,6 +222,24 @@ func TestBestAudioPrefersMP4(t *testing.T) {
 	}
 }
 
+func TestBestAudioPrefersWebMWhereMP4CannotSeek(t *testing.T) {
+	preferWebM = true
+	t.Cleanup(func() { preferWebM = false })
+
+	formats := []format{
+		{Itag: 140, MimeType: `audio/mp4; codecs="mp4a.40.2"`, URL: "mp4"},
+		{Itag: 251, MimeType: `audio/webm; codecs="opus"`, URL: "webm"},
+	}
+	got, ok := bestAudio(formats)
+	if !ok || got.Itag != 251 {
+		t.Fatalf("itag = %d (ok %v), want 251", got.Itag, ok)
+	}
+
+	if got, _ := bestAudio([]format{{Itag: 140, MimeType: "audio/mp4", URL: "mp4"}}); got.Itag != 140 {
+		t.Fatalf("itag = %d, want the MP4 fallback when no WebM exists", got.Itag)
+	}
+}
+
 func TestStreamPlayable(t *testing.T) {
 	okServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodHead {
