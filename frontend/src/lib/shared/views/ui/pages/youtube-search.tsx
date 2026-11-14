@@ -17,26 +17,13 @@ import { clearSelection } from "@/lib/music/views/stores/selection";
 import { SaveButton } from "@/lib/music/views/ui/follow";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
-import { Shelf } from "@/lib/music/views/ui/shelf";
+import { Shelf, type TabItem, Tabs } from "@/lib/music/views/ui/shelf";
 import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
 import { t } from "@/lib/shared/i18n";
-import { cn } from "@/lib/shared/utils/tw";
 import { Rows } from "@/lib/shared/views/ui/components/loading";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 type Tab = "videos" | "playlists" | "channels";
-
-const TAB_ICONS = {
-	videos: CirclePlay,
-	playlists: ListVideo,
-	channels: User,
-} as const;
-
-const TAB_TITLES = {
-	videos: "pages.youtube.videos",
-	playlists: "pages.youtube.playlists",
-	channels: "pages.youtube.channels",
-} as const;
 
 // A pasted YouTube link/ID decides which category it points to.
 function queryTarget(query: string): Tab {
@@ -118,6 +105,15 @@ export function YouTubeSearchPage() {
 	const activeTab: Tab = tabs.includes(pickedTab)
 		? pickedTab
 		: (tabs[0] ?? "videos");
+
+	// Every category keeps its own icon wherever it shows up, so a channel's
+	// videos read the same as a search's.
+	const allTabs: TabItem<Tab>[] = [
+		{ id: "videos", icon: CirclePlay, label: t("pages.youtube.videos") },
+		{ id: "playlists", icon: ListVideo, label: t("pages.youtube.playlists") },
+		{ id: "channels", icon: User, label: t("pages.youtube.channels") },
+	];
+	const tabItems = allTabs.filter((tab) => tabs.includes(tab.id));
 
 	useEffect(() => {
 		clearSelection();
@@ -218,29 +214,13 @@ export function YouTubeSearchPage() {
 			title={query}
 			toolbar={
 				tabs.length > 1 && (
-					<div class="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1">
-						{tabs.map((tab) => {
-							const Icon = TAB_ICONS[tab];
-							return (
-								<button
-									key={tab}
-									type="button"
-									title={t(TAB_TITLES[tab])}
-									onClick={() => {
-										picked.value = { query, tab };
-									}}
-									class={cn(
-										"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors",
-										activeTab === tab
-											? "bg-zinc-800 text-white"
-											: "text-zinc-500 hover:text-zinc-300",
-									)}
-								>
-									<Icon size={16} />
-								</button>
-							);
-						})}
-					</div>
+					<Tabs
+						items={tabItems}
+						active={activeTab}
+						onSelect={(tab) => {
+							picked.value = { query, tab };
+						}}
+					/>
 				)
 			}
 			modes={listable}

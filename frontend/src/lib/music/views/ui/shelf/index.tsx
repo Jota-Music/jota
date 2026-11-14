@@ -38,6 +38,8 @@ export {
 	RelayHint,
 	YouTubeHint,
 } from "@/lib/music/views/ui/shelf/hint";
+export type { TabItem } from "@/lib/music/views/ui/shelf/tabs";
+export { Tabs } from "@/lib/music/views/ui/shelf/tabs";
 export type { IconType, Item, Source } from "@/lib/music/views/ui/shelf/types";
 
 // The shelf route names the entity, so every shelf gets a share entry without
