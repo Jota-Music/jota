@@ -5,7 +5,16 @@ import { atWindowEdge } from "@/lib/shared/utils/pointer";
 const MIN_THUMB_PX = 40;
 const CORNER_PX = 2;
 
-type Metrics = { height: number; travel: number; max: number; inset: number };
+type Metrics = {
+	height: number;
+	travel: number;
+	max: number;
+	inset: number;
+	edge: number;
+	track: number;
+	scroll: number;
+	client: number;
+};
 
 // gutter is the right padding the scroller already reserves in CSS; the thumb
 // only needs to align to it, never to write layout itself.
@@ -18,7 +27,16 @@ export function Scrollbar({
 }) {
 	const bar = useRef<HTMLDivElement>(null);
 	const drag = useRef<{ y: number; top: number } | null>(null);
-	const metrics = useRef<Metrics>({ height: 0, travel: 0, max: 0, inset: 0 });
+	const metrics = useRef<Metrics>({
+		height: 0,
+		travel: 0,
+		max: 0,
+		inset: 0,
+		edge: 0,
+		track: 0,
+		scroll: 0,
+		client: 0,
+	});
 
 	useLayoutEffect(() => {
 		const node = bar.current;
@@ -49,6 +67,22 @@ export function Scrollbar({
 			const inset = el.clientTop > 0 ? CORNER_PX : 0;
 			const track = el.offsetHeight - inset * 2;
 			const { scrollHeight, clientHeight } = el;
+			// A windowed list mounts and unmounts rows inside a spacer of fixed
+			// height, so a burst of children often leaves this geometry untouched.
+			// Rewriting the same height and transform only invalidates the layer.
+			const same =
+				inset === m.edge &&
+				track === m.track &&
+				scrollHeight === m.scroll &&
+				clientHeight === m.client;
+			m.edge = inset;
+			m.track = track;
+			m.scroll = scrollHeight;
+			m.client = clientHeight;
+			if (same) {
+				place();
+				return;
+			}
 			if (clientHeight === 0 || scrollHeight <= clientHeight || track <= 0) {
 				m.height = 0;
 				m.travel = 0;

@@ -6,6 +6,25 @@ interface WindowItem {
 	size: number;
 }
 
+interface Band {
+	first: number;
+	visible: number;
+}
+
+// The band is what the list renders, so the same scroll offset yields the same
+// band: a scroll that stays inside it touches nothing.
+export function band(
+	top: number,
+	height: number,
+	rowHeight: number,
+	overscan: number,
+): Band {
+	return {
+		first: Math.max(0, Math.floor(top / rowHeight) - overscan),
+		visible: Math.ceil(height / rowHeight) + overscan * 2,
+	};
+}
+
 // Fixed-height list windowing: reports the rows intersecting the viewport plus
 // overscan. Only the rows it returns should be rendered, absolutely positioned
 // at `start`. The element tracked by the returned ref may mount late (e.g. a
@@ -17,8 +36,11 @@ export function useWindow<T extends HTMLElement>(
 ) {
 	const ref = useRef<T>(null);
 	const [element, setElement] = useState<T | null>(null);
-	const [scrollTop, setScrollTop] = useState(0);
-	const [viewport, setViewport] = useState(0);
+	// The window, not the offset: the rows sit absolutely inside a spacer of the
+	// full height, so scrolling inside the same band moves them natively and
+	// needs no render. Keeping the offset here would rerender the list for every
+	// frame of a scroll to produce the very same rows.
+	const [view, setView] = useState<Band>({ first: 0, visible: overscan * 2 });
 
 	useLayoutEffect(() => {
 		if (ref.current !== element) setElement(ref.current);
@@ -34,8 +56,12 @@ export function useWindow<T extends HTMLElement>(
 			// A hidden or not-yet-measured pane reports no height: windowing to the
 			// overscan alone would paint the top rows and leave the rest blank.
 			if (height === 0) return;
-			setScrollTop(el.scrollTop);
-			setViewport(height);
+			const next = band(el.scrollTop, height, rowHeight, overscan);
+			setView((previous) =>
+				previous.first === next.first && previous.visible === next.visible
+					? previous
+					: next,
+			);
 		};
 		// Scrolling and resizing are throttled to a frame, but the first read is
 		// not: a viewport of 0 would window the list to the overscan alone and
@@ -57,14 +83,12 @@ export function useWindow<T extends HTMLElement>(
 			sizes.disconnect();
 			el.removeEventListener("scroll", sync);
 		};
-	}, [element]);
+	}, [element, rowHeight, overscan]);
 
-	const first = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
-	const visible = Math.ceil(viewport / rowHeight) + overscan * 2;
-	const last = Math.min(count, first + visible);
+	const last = Math.min(count, view.first + view.visible);
 
 	const items: WindowItem[] = [];
-	for (let index = first; index < last; index++) {
+	for (let index = view.first; index < last; index++) {
 		items.push({ index, start: index * rowHeight, size: rowHeight });
 	}
 
