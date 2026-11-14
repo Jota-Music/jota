@@ -149,7 +149,7 @@ export function UserPage() {
 	// The filters belong to the tab, not to the page: they only make sense over
 	// the videos and disappear with them.
 	const videoBody = (
-		<div class="flex min-h-0 flex-1 flex-col gap-4 md:gap-2 md:px-2 md:pb-2">
+		<div class="flex min-h-0 flex-1 flex-col gap-4">
 			<div class="grid grid-cols-[1fr_auto] gap-2 px-3 md:px-0">
 				<div class="relative flex-1">
 					<Search
@@ -205,14 +205,13 @@ export function UserPage() {
 			</div>
 
 			{videosQuery.isLoading ? (
-				<Rows plain />
+				<Rows />
 			) : filteredVideos.length === 0 ? (
 				<p class="flex flex-1 items-center justify-center px-3 text-sm text-zinc-500 md:px-0">
 					{t("pages.user.noVideos")}
 				</p>
 			) : (
 				<Virtualization
-					plain
 					songs={filteredVideos}
 					resetKey={`${videoOrder.value}|${query}`}
 				/>
@@ -230,41 +229,46 @@ export function UserPage() {
 				pending={youtube && infoQuery.isLoading}
 			/>
 
-			<Shelf
-				items={watchingVideos ? [] : items}
-				to={(id) => `/playlist/${id}`}
-				leading={(id) => (followable(id) ? <SaveButton id={id} /> : null)}
-				actions={(id) => <PlaylistPlayButton id={id} />}
-				onPlay={(id) => void playPlaylist(queryClient, id)}
-				viewKey="user_view"
-				toolbar={
-					youtube ? (
-						<Tabs
-							items={[
-								{
-									id: "videos",
-									icon: CirclePlay,
-									label: t("pages.youtube.videos"),
-								},
-								{
-									id: "playlists",
-									icon: ListVideo,
-									label: t("pages.youtube.playlists"),
-								},
-							]}
-							active={activeTab.value}
-							onSelect={(next) => {
-								activeTab.value = next;
-							}}
-						/>
-					) : undefined
-				}
-				modes={!watchingVideos}
-				isLoading={!watchingVideos && playlistsQuery.isLoading}
-				emptyMessage={t("pages.user.noPlaylists")}
-			>
-				{watchingVideos ? videoBody : undefined}
-			</Shelf>
+			{/* The tabs pick what the page shows, so they stand on their own above
+			    the body instead of riding in a panel: the videos are a list, not a
+			    shelf, and the playlists bring their own. */}
+			{youtube && (
+				<div class="flex shrink-0 items-center gap-2 px-3 md:px-0">
+					<Tabs
+						items={[
+							{
+								id: "videos",
+								icon: CirclePlay,
+								label: t("pages.youtube.videos"),
+							},
+							{
+								id: "playlists",
+								icon: ListVideo,
+								label: t("pages.youtube.playlists"),
+							},
+						]}
+						active={activeTab.value}
+						onSelect={(next) => {
+							activeTab.value = next;
+						}}
+					/>
+				</div>
+			)}
+
+			{watchingVideos ? (
+				videoBody
+			) : (
+				<Shelf
+					items={items}
+					to={(id) => `/playlist/${id}`}
+					leading={(id) => (followable(id) ? <SaveButton id={id} /> : null)}
+					actions={(id) => <PlaylistPlayButton id={id} />}
+					onPlay={(id) => void playPlaylist(queryClient, id)}
+					viewKey="user_view"
+					isLoading={playlistsQuery.isLoading}
+					emptyMessage={t("pages.user.noPlaylists")}
+				/>
+			)}
 		</div>
 	);
 }

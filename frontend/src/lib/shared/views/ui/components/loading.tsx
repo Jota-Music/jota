@@ -1,5 +1,4 @@
 import { Loader } from "lucide-preact";
-import { cn } from "@/lib/shared/utils/tw";
 
 export function Loading() {
 	return (
@@ -14,15 +13,10 @@ export function Loading() {
 
 // The song list is drawn inside a frame that the tracks will fill, so the
 // placeholder draws the same frame and centres the spinner in it.
-export function Rows({ plain = false }: { plain?: boolean }) {
+export function Rows() {
 	return (
 		<div class="relative min-h-0 flex-1">
-			<div
-				class={cn(
-					"h-full overflow-y-auto border-t border-x-0 border-b-0 border-zinc-800",
-					!plain && "md:rounded-lg md:border",
-				)}
-			>
+			<div class="h-full overflow-y-auto border-t border-x-0 border-b-0 border-zinc-800 md:rounded-lg md:border">
 				<Loading />
 			</div>
 		</div>

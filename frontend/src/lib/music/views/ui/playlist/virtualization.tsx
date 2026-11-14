@@ -47,9 +47,6 @@ type Props = {
 	// sourceId identifies the playlist/album these songs belong to, so playback
 	// can be tied back to its card.
 	sourceId?: string;
-	// plain drops the desktop panel, for a page whose shelf already draws the box
-	// the rows live in. The mobile rule on top stays: the shelf has no edge there.
-	plain?: boolean;
 	// resetKey changes when the listing itself changes (a filter or an order), so
 	// the list goes back to the top instead of keeping an offset that now points
 	// at a different song.
@@ -225,7 +222,6 @@ const PlaylistRowMemo = memo(PlaylistRow);
 export function Virtualization({
 	songs,
 	sourceId,
-	plain,
 	resetKey,
 	onRemove,
 	onReorder,
@@ -351,8 +347,7 @@ export function Virtualization({
 			<div
 				ref={ref}
 				className={cn(
-					"h-full overflow-y-auto border-t border-x-0 border-b-0 border-zinc-800",
-					!plain && "md:rounded-lg md:border",
+					"h-full overflow-y-auto border-t border-x-0 border-b-0 border-zinc-800 md:rounded-lg md:border",
 					// The jump pill floats over the list's end: while it is up, leave room
 					// under the last row so it never sits on top of it.
 					(above || below) && "pb-14",
