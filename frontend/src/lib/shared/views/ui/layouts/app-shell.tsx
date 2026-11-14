@@ -59,7 +59,7 @@ export function AppShell({
 	return (
 		<OverlayHost.Provider value={overlayLayer}>
 			<div class="relative grid h-screen min-h-0 grid-rows-[max-content_1fr_max-content]">
-				<div class="flex flex-col bg-stone-950">
+				<div class="flex max-w-dvw flex-col bg-stone-950">
 					<Header />
 					<UpdateBanner />
 					<ClipboardBanner />
@@ -96,7 +96,7 @@ export function AppShell({
 					</main>
 				</div>
 
-				<div class="flex flex-col">
+				<div class="flex max-w-dvw flex-col">
 					<PlayerBar />
 					<MobileBottomNav />
 				</div>
