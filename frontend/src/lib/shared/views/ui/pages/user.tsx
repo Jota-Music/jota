@@ -216,7 +216,7 @@ export function UserPage() {
 		);
 
 	return (
-		<div class="flex flex-col gap-6 min-h-0 flex-1 pb-6">
+		<div class="flex flex-col gap-6 min-h-0 flex-1 overflow-hidden">
 			<UserHeader
 				source={source}
 				identifier={id}

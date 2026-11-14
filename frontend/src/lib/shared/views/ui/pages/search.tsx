@@ -125,7 +125,7 @@ export function SearchPage() {
 				: undefined;
 
 	return (
-		<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
+		<div class="flex flex-col gap-4 min-h-0 flex-1 overflow-hidden">
 			{type === "user" && <UserHeader source="spotify" identifier={query} />}
 
 			<Shelf

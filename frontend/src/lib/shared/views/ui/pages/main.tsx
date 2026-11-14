@@ -182,7 +182,7 @@ export function MainPage() {
 
 	return (
 		<>
-			<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
+			<div class="flex flex-col gap-4 min-h-0 flex-1 overflow-hidden">
 				{tab === "following" ? (
 					<FollowingShelf account={spotifyHandle} />
 				) : tab === "rooms" ? (
