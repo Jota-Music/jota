@@ -55,6 +55,10 @@ export function Shelf({
 	items,
 	to,
 	viewKey = defaultViewKey,
+	title,
+	toolbar,
+	modes = true,
+	children,
 	onSelect,
 	onPlay,
 	actions,
@@ -184,9 +188,13 @@ export function Shelf({
 	return (
 		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
 			{/* The bar keeps its room while loading, so the shelf does not drop
-			below it once the items arrive. */}
-			{(filterable || isLoading) && (
+			below it once the items arrive. A title needs it too: a search page
+			has no other place for the query. */}
+			{(filterable || isLoading || title || toolbar) && (
 				<Controls
+					title={title}
+					toolbar={toolbar}
+					modes={modes}
 					filterable={filterable}
 					sourceFilter={sourceFilter}
 					setFilter={setFilter}
@@ -201,6 +209,10 @@ export function Shelf({
 
 			{isLoading ? (
 				<Loading />
+			) : children ? (
+				// A body of the page's own brings its own scroll: a row list is
+				// not a set of items and does not share their container.
+				<div class="flex min-h-0 flex-1 flex-col">{children}</div>
 			) : items.length === 0 ? (
 				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
 					{empty()}

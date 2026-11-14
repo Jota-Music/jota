@@ -32,6 +32,19 @@ export interface Props {
 	// viewKey scopes the grid/compact choice to one shelf, so each can keep its
 	// own layout.
 	viewKey?: string;
+	// title names what the shelf is showing, centred in its bar. A search page
+	// has no header of its own, so the shelf carries the query.
+	title?: ComponentChildren;
+	// toolbar takes the left edge of the bar, ahead of the source filters, for
+	// the choices that belong to the page rather than to the shelf (a search's
+	// categories).
+	toolbar?: ComponentChildren;
+	// modes hides the grid/compact switch when the shelf does not choose the
+	// layout of what it holds.
+	modes?: boolean;
+	// children replace the item list with a body of its own, so a page whose
+	// tabs are not all item lists keeps one bar and one pane.
+	children?: ComponentChildren;
 	onSelect?: (id: string) => void;
 	// onPlay adds a "Play" action to each item's context menu when set.
 	onPlay?: (id: string) => void;

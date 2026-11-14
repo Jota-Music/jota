@@ -47,6 +47,9 @@ type Props = {
 	// sourceId identifies the playlist/album these songs belong to, so playback
 	// can be tied back to its card.
 	sourceId?: string;
+	// plain drops the row list's own panel, for a page whose shelf already draws
+	// the box the rows live in.
+	plain?: boolean;
 	// resetKey changes when the listing itself changes (a filter or an order), so
 	// the list goes back to the top instead of keeping an offset that now points
 	// at a different song.
@@ -222,6 +225,7 @@ const PlaylistRowMemo = memo(PlaylistRow);
 export function Virtualization({
 	songs,
 	sourceId,
+	plain,
 	resetKey,
 	onRemove,
 	onReorder,
@@ -346,7 +350,10 @@ export function Virtualization({
 			{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
 			<div
 				ref={ref}
-				className="h-full overflow-y-auto pr-3.75 rounded-lg border border-zinc-800 bg-zinc-950"
+				className={cn(
+					"h-full overflow-y-auto pr-3.75",
+					!plain && "rounded-lg border border-zinc-800 bg-zinc-950",
+				)}
 				onPointerDown={handlePointerDown}
 				onClickCapture={captureClick}
 				onClick={(e) => {

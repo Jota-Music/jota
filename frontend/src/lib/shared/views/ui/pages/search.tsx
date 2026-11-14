@@ -1,36 +1,22 @@
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { Pause, Play } from "lucide-preact";
-import { useLayoutEffect, useRef } from "preact/hooks";
-import { Link, useLocation, useParams } from "wouter-preact";
+import { useLayoutEffect } from "preact/hooks";
+import { useLocation, useParams } from "wouter-preact";
 import {
 	type SearchResult,
 	searchResultToSong,
 	searchSpotify,
 	stripUriPrefix,
 } from "@/lib/music/app/search";
-import { pageLink } from "@/lib/music/app/share";
 import { spotifyRef } from "@/lib/music/app/spotify-link";
 import { playAlbum, playPlaylist } from "@/lib/music/views/play";
-import { isPlaying } from "@/lib/music/views/stores/audio";
-import { queueSource } from "@/lib/music/views/stores/queue";
-import { hover } from "@/lib/music/views/ui/cover-hover";
 import { SaveButton } from "@/lib/music/views/ui/follow";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
-import { shareLink } from "@/lib/music/views/ui/share";
+import { type Item, Shelf } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
-import { cover } from "@/lib/shared/utils/cover";
-import { cn } from "@/lib/shared/utils/tw";
-import {
-	type Action,
-	openContextMenu,
-} from "@/lib/shared/views/ui/components/context-menu";
-import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
-import { Image } from "@/lib/shared/views/ui/components/image";
-import { Loading, Rows } from "@/lib/shared/views/ui/components/loading";
-import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
+import { Rows } from "@/lib/shared/views/ui/components/loading";
 
 type SearchType = "user" | "track" | "album" | "playlist" | "artist";
 
@@ -39,98 +25,6 @@ const DETAIL_ROUTES: Partial<Record<SearchType, (id: string) => string>> = {
 	album: (id) => `/album/${id}`,
 	playlist: (id) => `/playlist/${id}`,
 };
-
-function SearchResultItem({ item }: { item: SearchResult }) {
-	const queryClient = useQueryClient();
-	const { toggle } = useSaved();
-	const coverUrl = item.coverUrl ?? "";
-	const artists = (item.artists ?? []).map((a) => a.name).join(", ");
-	const isPlaylist = item.uri.startsWith("spotify:playlist:");
-	const isAlbum = item.uri.startsWith("spotify:album:");
-	const playlistId = stripUriPrefix(item.uri, "playlist");
-
-	function openMenu(e: MouseEvent) {
-		const actions: Action[] = [];
-		const id = isPlaylist ? playlistId : stripUriPrefix(item.uri, "album");
-		const playing = queueSource.value === id && isPlaying.value;
-		const play = {
-			icon: playing ? Pause : Play,
-			label: playing ? t("music.pause") : t("music.play"),
-		};
-		if (isPlaylist) {
-			actions.push({
-				...play,
-				run: () => void playPlaylist(queryClient, playlistId),
-			});
-			actions.push(toggle(playlistId));
-		} else if (isAlbum) {
-			actions.push({
-				...play,
-				run: () =>
-					void playAlbum(queryClient, stripUriPrefix(item.uri, "album")),
-			});
-		}
-		if (isPlaylist || isAlbum) {
-			actions.push(
-				...shareLink(pageLink(isPlaylist ? "playlist" : "album", id)),
-			);
-		}
-		if (actions.length > 0) openContextMenu(actions, e);
-	}
-
-	return (
-		<Link href={`/playlist/${playlistId}`} onContextMenu={openMenu}>
-			<div class="group cursor-pointer overflow-hidden rounded-md">
-				<div class="flex flex-col gap-2">
-					<div class="relative aspect-square w-full overflow-hidden rounded-md">
-						<Image
-							src={cover(coverUrl, 320)}
-							alt={item.name}
-							class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
-							fallback={<CoverFallback />}
-						/>
-						{isPlaylist && (
-							<>
-								<div class={cn(hover, "left-1 top-1")}>
-									<SaveButton id={playlistId} />
-								</div>
-								<div class={cn(hover, "right-1 top-1")}>
-									<PlaylistPlayButton id={playlistId} />
-								</div>
-							</>
-						)}
-					</div>
-
-					<h3 class="truncate text-sm font-medium text-zinc-300 transition-colors group-hover:text-white">
-						{item.name}
-					</h3>
-
-					{artists && <p class="truncate text-xs text-zinc-500">{artists}</p>}
-
-					{item.ownerName && (
-						<p class="truncate text-xs text-zinc-500">{item.ownerName}</p>
-					)}
-
-					{item.trackCount != null && (
-						<p class="truncate text-xs text-zinc-500">
-							{t("music.trackCount", { count: item.trackCount })}
-						</p>
-					)}
-				</div>
-			</div>
-		</Link>
-	);
-}
-
-function PlaylistGrid({ results }: { results: SearchResult[] }) {
-	return (
-		<div class="grid grid-cols-3 gap-0.5 md:gap-4">
-			{results.map((item) => (
-				<SearchResultItem key={item.uri} item={item} />
-			))}
-		</div>
-	);
-}
 
 export function SearchPage() {
 	const params = useParams<{ type: string; query: string }>();
@@ -146,13 +40,14 @@ export function SearchPage() {
 		: undefined;
 	const query = params.query ? decodeURIComponent(params.query) : "";
 	const [, setLocation] = useLocation();
+	const queryClient = useQueryClient();
+	const { toggle } = useSaved();
 
 	// Spotify only resolves artists, albums and playlists by reference, so a
 	// bare name is not something the detail page can open.
 	const detailRoute = type ? DETAIL_ROUTES[type] : undefined;
 	const ref = spotifyRef(type, query);
 	const redirectId = detailRoute && ref && ref.type === type ? ref.id : "";
-	const listRef = useRef<HTMLElement>(null);
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["spotify-search", type, query],
@@ -183,56 +78,82 @@ export function SearchPage() {
 	}
 
 	const results = (data as SearchResult[]) ?? [];
+	const tracks = type === "track";
+	// A profile search answers with that user's playlists.
+	const playlists = type === "playlist" || type === "user";
 
-	if (type === "track") {
-		const songs = results.map(searchResultToSong);
+	const songs = tracks ? results.map(searchResultToSong) : [];
 
-		return (
-			<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
-				<header class="shrink-0">
-					<h2 class="line-clamp-2 break-words text-xl font-semibold leading-tight">
-						{query}
-					</h2>
-				</header>
+	// The shelf names the search itself: a result page has no header of its own,
+	// so the query rides in the bar above the cards, with the categories that the
+	// header's search box picked before the results existed.
+	const items: Item[] = tracks
+		? []
+		: results.map((item) => {
+				const id = stripUriPrefix(item.uri, type ?? "");
+				const subtitle = [
+					(item.artists ?? []).map((artist) => artist.name).join(", "),
+					item.ownerName,
+					item.trackCount != null
+						? t("music.trackCount", { count: item.trackCount })
+						: "",
+				]
+					.filter(Boolean)
+					.join(" • ");
 
-				{isLoading ? (
-					<Rows />
-				) : songs.length === 0 ? (
-					<p class="text-sm text-zinc-500">{t("common.noResults")}</p>
-				) : (
-					<Virtualization songs={songs} />
-				)}
-			</div>
-		);
-	}
+				return {
+					id,
+					name: item.name,
+					cover: item.coverUrl,
+					subtitle: subtitle || undefined,
+					menu: playlists ? [toggle(id)] : [],
+				};
+			});
+
+	const to = (id: string) =>
+		type === "album"
+			? `/album/${id}`
+			: type === "artist"
+				? `/artist/${id}`
+				: `/playlist/${id}`;
+
+	const onPlay =
+		type === "album"
+			? (id: string) => void playAlbum(queryClient, id)
+			: playlists
+				? (id: string) => void playPlaylist(queryClient, id)
+				: undefined;
 
 	return (
-		<div class="flex flex-col gap-4 min-h-0 flex-1">
-			{type === "user" ? (
-				<UserHeader source="spotify" identifier={query} />
-			) : (
-				<header class="shrink-0">
-					<h2 class="line-clamp-2 break-words text-xl font-semibold leading-tight">
-						{t("pages.search.playlistsBy", { query })}
-					</h2>
-				</header>
-			)}
+		<div class="flex flex-col gap-4 min-h-0 flex-1 pb-6">
+			{type === "user" && <UserHeader source="spotify" identifier={query} />}
 
-			<div class="relative min-h-0 flex-1">
-				<section
-					ref={listRef}
-					class="h-full flex flex-col gap-3 overflow-y-auto pr-[15px] pb-8"
-				>
-					{isLoading ? (
-						<Loading />
-					) : results.length === 0 ? (
-						<p class="text-sm text-zinc-500">{t("pages.search.noPlaylists")}</p>
+			<Shelf
+				items={items}
+				to={to}
+				viewKey="search_results_view"
+				title={query}
+				modes={!tracks}
+				isLoading={!tracks && isLoading}
+				emptyMessage={t(
+					playlists ? "pages.search.noPlaylists" : "common.noResults",
+				)}
+				onPlay={onPlay}
+				leading={playlists ? (id) => <SaveButton id={id} /> : undefined}
+				actions={playlists ? (id) => <PlaylistPlayButton id={id} /> : undefined}
+			>
+				{tracks ? (
+					isLoading ? (
+						<Rows />
+					) : songs.length === 0 ? (
+						<p class="px-4 py-6 text-sm text-zinc-500">
+							{t("common.noResults")}
+						</p>
 					) : (
-						<PlaylistGrid results={results} />
-					)}
-				</section>
-				<Scrollbar target={listRef} />
-			</div>
+						<Virtualization songs={songs} plain />
+					)
+				) : undefined}
+			</Shelf>
 		</div>
 	);
 }

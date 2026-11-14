@@ -1,4 +1,5 @@
 import { GripVertical, LayoutGrid, Library, List, Plus } from "lucide-preact";
+import type { ComponentChildren } from "preact";
 import type { SourceFilter, Variant } from "@/lib/music/views/ui/shelf/types";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
@@ -6,6 +7,9 @@ import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
 
 interface ControlsProps {
+	title?: ComponentChildren;
+	toolbar?: ComponentChildren;
+	modes?: boolean;
 	filterable: boolean;
 	sourceFilter: SourceFilter;
 	setFilter: (next: SourceFilter) => void;
@@ -18,6 +22,9 @@ interface ControlsProps {
 }
 
 export function Controls({
+	title,
+	toolbar,
+	modes = true,
 	filterable,
 	sourceFilter,
 	setFilter,
@@ -29,8 +36,15 @@ export function Controls({
 	showLocal = true,
 }: ControlsProps) {
 	return (
-		<div class="flex shrink-0 items-center justify-end px-1 pt-1 pb-2 gap-2">
-			<div class="mr-auto flex items-center gap-2">
+		<div class="relative flex shrink-0 items-center justify-between gap-2 px-3 pt-2 pb-2">
+			{title && (
+				<span class="pointer-events-none absolute inset-x-28 top-1/2 -translate-y-1/2 truncate text-center text-base font-semibold text-white md:inset-x-32">
+					{title}
+				</span>
+			)}
+
+			<div class="relative flex min-w-0 shrink items-center gap-2">
+				{toolbar}
 				{filterable && (
 					<div class="flex overflow-hidden rounded-md border border-zinc-800">
 						<button
@@ -105,54 +119,59 @@ export function Controls({
 					</button>
 				)}
 			</div>
-			<div class="flex overflow-hidden rounded-md border border-zinc-800">
-				{onSortMode && (
-					<button
-						type="button"
-						onClick={onSortMode}
-						aria-pressed={sortMode}
-						title={t("music.shelf.sortMode")}
-						aria-label={t("music.shelf.sortMode")}
-						class={cn(
-							"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
-							sortMode
-								? "bg-zinc-800 text-white"
-								: "text-zinc-500 hover:text-white",
+
+			<div class="relative flex shrink-0 items-center justify-end gap-2">
+				{modes && (
+					<div class="flex overflow-hidden rounded-md border border-zinc-800">
+						{onSortMode && (
+							<button
+								type="button"
+								onClick={onSortMode}
+								aria-pressed={sortMode}
+								title={t("music.shelf.sortMode")}
+								aria-label={t("music.shelf.sortMode")}
+								class={cn(
+									"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
+									sortMode
+										? "bg-zinc-800 text-white"
+										: "text-zinc-500 hover:text-white",
+								)}
+							>
+								<GripVertical size={18} class="md:hidden" />
+								<GripVertical size={14} class="hidden md:block" />
+							</button>
 						)}
-					>
-						<GripVertical size={18} class="md:hidden" />
-						<GripVertical size={14} class="hidden md:block" />
-					</button>
+						<button
+							type="button"
+							onClick={() => setVariant("grid")}
+							aria-label={t("music.shelf.gridView")}
+							class={cn(
+								"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
+								onSortMode && "border-l border-zinc-800",
+								variant === "grid"
+									? "bg-zinc-800 text-white"
+									: "text-zinc-500 hover:text-white",
+							)}
+						>
+							<LayoutGrid size={18} class="md:hidden" />
+							<LayoutGrid size={14} class="hidden md:block" />
+						</button>
+						<button
+							type="button"
+							onClick={() => setVariant("compact")}
+							aria-label={t("music.shelf.compactView")}
+							class={cn(
+								"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
+								variant === "compact"
+									? "bg-zinc-800 text-white"
+									: "text-zinc-500 hover:text-white",
+							)}
+						>
+							<List size={18} class="md:hidden" />
+							<List size={14} class="hidden md:block" />
+						</button>
+					</div>
 				)}
-				<button
-					type="button"
-					onClick={() => setVariant("grid")}
-					aria-label={t("music.shelf.gridView")}
-					class={cn(
-						"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
-						onSortMode && "border-l border-zinc-800",
-						variant === "grid"
-							? "bg-zinc-800 text-white"
-							: "text-zinc-500 hover:text-white",
-					)}
-				>
-					<LayoutGrid size={18} class="md:hidden" />
-					<LayoutGrid size={14} class="hidden md:block" />
-				</button>
-				<button
-					type="button"
-					onClick={() => setVariant("compact")}
-					aria-label={t("music.shelf.compactView")}
-					class={cn(
-						"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
-						variant === "compact"
-							? "bg-zinc-800 text-white"
-							: "text-zinc-500 hover:text-white",
-					)}
-				>
-					<List size={18} class="md:hidden" />
-					<List size={14} class="hidden md:block" />
-				</button>
 			</div>
 		</div>
 	);

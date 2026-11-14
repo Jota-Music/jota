@@ -1,34 +1,27 @@
 import { useSignal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { CirclePlay, ListVideo, Pause, Play, User } from "lucide-preact";
+import { CirclePlay, ListVideo, User } from "lucide-preact";
 import { useEffect, useRef } from "preact/hooks";
-import { Link, useRoute } from "wouter-preact";
+import { useRoute } from "wouter-preact";
 import {
 	searchYouTube,
 	searchYouTubeChannels,
 	searchYouTubePlaylists,
 	youtubeVideoToSong,
 } from "@/lib/music/app/search";
-import { pageLink } from "@/lib/music/app/share";
 import { parseYoutubeLink } from "@/lib/music/app/youtube-link";
-import type { PlaylistSummary, Song } from "@/lib/music/model";
+import type { Song } from "@/lib/music/model";
 import { playPlaylist } from "@/lib/music/views/play";
-import { isPlaying } from "@/lib/music/views/stores/audio";
 import { playFromQueueSelection } from "@/lib/music/views/stores/player";
-import { queueSource } from "@/lib/music/views/stores/queue";
 import { clearSelection } from "@/lib/music/views/stores/selection";
-import { hover } from "@/lib/music/views/ui/cover-hover";
 import { SaveButton } from "@/lib/music/views/ui/follow";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { useSaved } from "@/lib/music/views/ui/playlist/saved";
-import { shareLink } from "@/lib/music/views/ui/share";
 import { Shelf } from "@/lib/music/views/ui/shelf";
 import { YouTubeVideoRow } from "@/lib/music/views/ui/track/youtube-video-row";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
-import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
-import { Loading, Rows } from "@/lib/shared/views/ui/components/loading";
-import PlaylistCover from "@/lib/shared/views/ui/components/playlist-cover";
+import { Rows } from "@/lib/shared/views/ui/components/loading";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 
 type Tab = "videos" | "playlists" | "channels";
@@ -67,6 +60,8 @@ export function YouTubeSearchPage() {
 	const [, params] = useRoute<{ query: string }>("/search/youtube/:query");
 
 	const query = params?.query ? decodeURIComponent(params.query) : "";
+	const queryClient = useQueryClient();
+	const { toggle } = useSaved();
 
 	const target = queryTarget(query);
 	const direct = isDirectQuery(query);
@@ -138,16 +133,92 @@ export function YouTubeSearchPage() {
 		(wantVideos && videosQuery.isLoading) ||
 		(wantPlaylists && playlistsQuery.isLoading) ||
 		(wantChannels && channelsQuery.isLoading);
-	const hasResults = tabs.length > 0;
+	// A category with no results drops out of the switcher, so an empty answer
+	// leaves nothing to switch between.
+	if (tabs.length === 0 && !loading) {
+		return <p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>;
+	}
+
+	// Videos are rows of their own; playlists and channels are items of the
+	// shelf, so only those two offer the grid/compact switch.
+	const listable = activeTab !== "videos";
+	const activeLoading =
+		activeTab === "channels"
+			? channelsQuery.isLoading
+			: playlistsQuery.isLoading;
+
+	const items =
+		activeTab === "channels"
+			? channels.map((channel) => ({
+					id: channel.id,
+					name: channel.name,
+					cover: channel.avatar,
+				}))
+			: playlists.map((playlist) => ({
+					id: playlist.id,
+					name: playlist.name,
+					cover: playlist.cover,
+					subtitle: playlist.subtitle,
+					menu: [toggle(playlist.id)],
+				}));
+
+	const emptyMessage = !listable
+		? t("pages.youtube.noResults")
+		: activeTab === "channels"
+			? t(
+					channelsQuery.isError
+						? "pages.youtube.failed"
+						: "pages.youtube.noChannels",
+				)
+			: t(
+					playlistsQuery.isError
+						? "pages.youtube.failed"
+						: "pages.youtube.noPlaylists",
+				);
+
+	const videoBody = videosQuery.isLoading ? (
+		<Rows />
+	) : videosQuery.isError ? (
+		<p class="text-red-400">{t("pages.youtube.failed")}</p>
+	) : songs.length === 0 ? (
+		<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
+	) : (
+		<div class="relative min-h-0 flex-1">
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: empty area clears the selection */}
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
+			<section
+				ref={listRef}
+				class="h-full overflow-y-auto pl-1 pr-[15px] pb-3"
+				onClick={(e) => {
+					const target = e.target as Element;
+					if (!target.closest("[data-row]")) clearSelection();
+				}}
+			>
+				{songs.map((song, index) => (
+					<YouTubeVideoRow
+						key={song.id}
+						song={song}
+						songs={songs}
+						index={index}
+						onClick={() => handleClick(song)}
+					/>
+				))}
+			</section>
+			<Scrollbar target={listRef} />
+		</div>
+	);
 
 	return (
-		<div class="flex flex-col gap-2 min-h-0 flex-1 pb-6">
-			<header class="flex shrink-0 flex-col gap-3">
-				<h2 class="line-clamp-2 break-words text-xl font-semibold leading-tight">
-					{query}
-				</h2>
-				{tabs.length > 1 && (
-					<div class="flex items-center gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+		<Shelf
+			items={listable ? items : []}
+			to={(id) =>
+				activeTab === "channels" ? `/youtube/user/${id}` : `/playlist/${id}`
+			}
+			viewKey="youtube_search_view"
+			title={query}
+			toolbar={
+				tabs.length > 1 && (
+					<div class="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950 p-1">
 						{tabs.map((tab) => {
 							const Icon = TAB_ICONS[tab];
 							return (
@@ -170,137 +241,26 @@ export function YouTubeSearchPage() {
 							);
 						})}
 					</div>
-				)}
-			</header>
-
-			{!hasResults && !loading ? (
-				<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
-			) : activeTab === "channels" ? (
-				<Shelf
-					items={channels.map((channel) => ({
-						id: channel.id,
-						name: channel.name,
-						cover: channel.avatar,
-					}))}
-					to={(id) => `/youtube/user/${id}`}
-					viewKey="youtube_search_channels"
-					isLoading={channelsQuery.isLoading}
-					emptyMessage={t(
-						channelsQuery.isError
-							? "pages.youtube.failed"
-							: "pages.youtube.noChannels",
-					)}
-				/>
-			) : activeTab === "playlists" ? (
-				<div class="relative min-h-0 flex-1">
-					<section
-						ref={listRef}
-						class="h-full flex flex-col overflow-y-auto pr-[15px]"
-					>
-						{playlistsQuery.isLoading ? (
-							<Loading />
-						) : playlistsQuery.isError ? (
-							<p class="text-red-400">{t("pages.youtube.failed")}</p>
-						) : playlists.length === 0 ? (
-							<p class="text-sm text-zinc-500">
-								{t("pages.youtube.noPlaylists")}
-							</p>
-						) : (
-							<div class="grid grid-cols-2 gap-3 pt-1 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
-								{playlists.map((playlist) => (
-									<PlaylistCard key={playlist.id} playlist={playlist} />
-								))}
-							</div>
-						)}
-					</section>
-					<Scrollbar target={listRef} />
-				</div>
-			) : videosQuery.isLoading ? (
-				<Rows />
-			) : videosQuery.isError ? (
-				<p class="text-red-400">{t("pages.youtube.failed")}</p>
-			) : songs.length === 0 ? (
-				<p class="text-sm text-zinc-500">{t("pages.youtube.noResults")}</p>
-			) : (
-				<div class="relative min-h-0 flex-1">
-					{/* biome-ignore lint/a11y/noStaticElementInteractions: empty area clears the selection */}
-					{/* biome-ignore lint/a11y/useKeyWithClickEvents: empty area clears the selection */}
-					<section
-						ref={listRef}
-						class="h-full flex flex-col overflow-y-auto pr-[15px] rounded-lg border border-zinc-800 bg-zinc-950"
-						onClick={(e) => {
-							const target = e.target as Element;
-							if (!target.closest("[data-row]")) clearSelection();
-						}}
-					>
-						{songs.map((song, index) => (
-							<YouTubeVideoRow
-								key={song.id}
-								song={song}
-								songs={songs}
-								index={index}
-								onClick={() => handleClick(song)}
-							/>
-						))}
-					</section>
-					<Scrollbar target={listRef} />
-				</div>
-			)}
-		</div>
-	);
-}
-
-function PlaylistCard({ playlist }: { playlist: PlaylistSummary }) {
-	const queryClient = useQueryClient();
-	const { toggle } = useSaved();
-	const playing = queueSource.value === playlist.id && isPlaying.value;
-	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: right-click opens the playlist actions
-		<div
-			class="group flex flex-col gap-2"
-			onContextMenu={(e) => {
-				openContextMenu(
-					[
-						{
-							icon: playing ? Pause : Play,
-							label: playing ? t("music.pause") : t("music.play"),
-							run: () => void playPlaylist(queryClient, playlist.id),
-						},
-						toggle(playlist.id),
-						...shareLink(pageLink("playlist", playlist.id)),
-					],
-					e,
-				);
-			}}
+				)
+			}
+			modes={listable}
+			isLoading={listable && activeLoading}
+			emptyMessage={emptyMessage}
+			onPlay={
+				activeTab === "playlists"
+					? (id) => void playPlaylist(queryClient, id)
+					: undefined
+			}
+			leading={
+				activeTab === "playlists" ? (id) => <SaveButton id={id} /> : undefined
+			}
+			actions={
+				activeTab === "playlists"
+					? (id) => <PlaylistPlayButton id={id} />
+					: undefined
+			}
 		>
-			<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
-				<Link href={`/playlist/${playlist.id}`}>
-					<PlaylistCover
-						src={playlist.cover}
-						alt={playlist.name}
-						size={320}
-						imgClass="h-full w-full object-cover transition-opacity group-hover:opacity-80"
-					/>
-				</Link>
-
-				<div class={cn(hover, "left-2 top-2")}>
-					<SaveButton id={playlist.id} />
-				</div>
-				<div class={cn(hover, "right-2 top-2")}>
-					<PlaylistPlayButton id={playlist.id} />
-				</div>
-			</div>
-
-			<Link href={`/playlist/${playlist.id}`}>
-				<div class="flex flex-col">
-					<h3 class="truncate text-sm font-medium text-zinc-300 transition-colors group-hover:text-white">
-						{playlist.name}
-					</h3>
-					{playlist.subtitle && (
-						<p class="truncate text-xs text-zinc-500">{playlist.subtitle}</p>
-					)}
-				</div>
-			</Link>
-		</div>
+			{listable ? undefined : videoBody}
+		</Shelf>
 	);
 }
