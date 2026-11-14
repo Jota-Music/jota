@@ -193,7 +193,12 @@ function FullPlayerContent(props: FullPlayerProps) {
 	const { song, isLoading, isPlaying, toggleSong, narrow } = props;
 
 	return (
-		<section class="w-full max-w-2xl mx-auto relative z-10 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-center text-(--dominant-color)">
+		<section
+			class={cn(
+				"w-full max-w-2xl mx-auto relative z-10 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-center text-(--dominant-color) before:pointer-events-none before:absolute before:-inset-12 before:-z-10 before:rounded-[3rem] before:bg-[radial-gradient(closest-side,rgba(12,10,9,0.94),rgba(12,10,9,0))] before:content-['']",
+				narrow && "before:hidden",
+			)}
+		>
 			<div class="relative flex max-h-max w-full md:w-max">
 				<Disc {...props} />
 			</div>
@@ -361,7 +366,12 @@ const noop = async () => {};
 
 function NothingPlayingContent({ narrow = false }: { narrow?: boolean }) {
 	return (
-		<section class="w-full max-w-2xl mx-auto relative z-10 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-center text-neutral-500">
+		<section
+			class={cn(
+				"w-full max-w-2xl mx-auto relative z-10 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-center text-neutral-500 before:pointer-events-none before:absolute before:-inset-12 before:-z-10 before:rounded-[3rem] before:bg-[radial-gradient(closest-side,rgba(12,10,9,0.94),rgba(12,10,9,0))] before:content-['']",
+				narrow && "before:hidden",
+			)}
+		>
 			<div class="relative flex max-h-max w-full md:w-max">
 				<Disc
 					disabled
