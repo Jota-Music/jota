@@ -1,5 +1,6 @@
 import type { RefObject } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
+import { atWindowEdge } from "@/lib/shared/utils/pointer";
 
 const MIN_THUMB_PX = 40;
 const CORNER_PX = 2;
@@ -124,6 +125,7 @@ export function Scrollbar({
 	const onDown = (e: PointerEvent) => {
 		const el = target.current;
 		if (!el) return;
+		if (atWindowEdge(e)) return;
 		drag.current = { y: e.clientY, top: el.scrollTop };
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 		e.preventDefault();

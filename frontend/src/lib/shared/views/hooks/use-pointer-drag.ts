@@ -1,5 +1,6 @@
 import type { RefObject } from "preact";
 import { useEffect, useRef } from "preact/hooks";
+import { atWindowEdge } from "@/lib/shared/utils/pointer";
 import { useAutoscroll } from "@/lib/shared/views/hooks/use-autoscroll";
 
 const DRAG_START_PX = 4;
@@ -146,6 +147,9 @@ export function usePointerDrag({
 	}, []);
 
 	const start = (e: PointerEvent) => {
+		// A press on the window's own edge belongs to the resizer, not to a drag:
+		// taking it would reorder or scroll the list under a resizing window.
+		if (atWindowEdge(e)) return false;
 		if (e.pointerType === "mouse") {
 			if (e.button !== 0) return false;
 		} else if (!touch) {
