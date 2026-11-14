@@ -191,8 +191,9 @@ export function Shelf({
 		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
 			{/* The bar keeps its room while loading, so the shelf does not drop
 			below it once the items arrive. A title needs it too: a search page
-			has no other place for the query. */}
-			{(filterable || isLoading || title || toolbar) && (
+			has no other place for the query, and the layout switch needs it
+			even when the shelf has no sources to filter. */}
+			{(filterable || isLoading || title || toolbar || modes) && (
 				<Controls
 					title={title}
 					toolbar={toolbar}
