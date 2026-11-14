@@ -82,29 +82,6 @@ export function AppShell({
 		watch();
 	}, []);
 
-	const motes = useRef<HTMLDivElement>(null);
-
-	// A scroll frame that also re-blends the motes is a frame spent on the
-	// decoration instead of the list, so they hold still while the page moves.
-	useEffect(() => {
-		let idle = 0;
-		const onScroll = () => {
-			const node = motes.current;
-			if (!node) return;
-			node.classList.add("still");
-			clearTimeout(idle);
-			idle = window.setTimeout(() => node.classList.remove("still"), 120);
-		};
-		window.addEventListener("scroll", onScroll, {
-			capture: true,
-			passive: true,
-		});
-		return () => {
-			clearTimeout(idle);
-			window.removeEventListener("scroll", onScroll, true);
-		};
-	}, []);
-
 	return (
 		<OverlayHost.Provider value={overlayLayer}>
 			<div class="relative grid h-screen min-h-0 grid-rows-[max-content_1fr_max-content]">
@@ -128,9 +105,8 @@ export function AppShell({
 							/>
 
 							<div
-								ref={motes}
 								aria-hidden="true"
-								class="motes pointer-events-none absolute inset-0 -z-10 overflow-hidden text-(--dominant-color) transition-colors duration-1000 ease-out motion-reduce:hidden"
+								class="motes pointer-events-none absolute inset-0 -z-10 overflow-hidden text-(--dominant-color) transition-colors duration-1000 ease-out"
 							>
 								{dust.map((mote) => (
 									<span
@@ -142,6 +118,7 @@ export function AppShell({
 											width: mote.size,
 											height: mote.size,
 											"--peak": mote.peak,
+											"--dur": `${mote.duration}s`,
 											animation: `${mote.sway ? "mote-sway" : "mote"} ${mote.duration}s linear ${mote.delay}s infinite`,
 										}}
 									/>

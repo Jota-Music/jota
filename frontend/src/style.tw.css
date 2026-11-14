@@ -118,6 +118,14 @@ body {
 		animation-duration: 1s !important;
 		animation-iteration-count: infinite !important;
 	}
+
+	/* The field is the app's own decoration and the switch is what turns it
+	   off: it keeps its own pace here instead of landing on the frozen frame
+	   the rules above force, which would leave every mote faded out. */
+	.motes span {
+		animation-duration: var(--dur, 20s) !important;
+		animation-iteration-count: infinite !important;
+	}
 }
 
 @keyframes page-in {
@@ -170,12 +178,6 @@ body {
 		opacity: 0;
 		transform: translate3d(20px, -60vh, 0);
 	}
-}
-
-/* Held for as long as a scroll is in flight (AppShell toggles it): the field
-   resumes where it stopped, so nothing jumps when the list settles. */
-.motes.still span {
-	animation-play-state: paused;
 }
 
 @keyframes notif-in {
