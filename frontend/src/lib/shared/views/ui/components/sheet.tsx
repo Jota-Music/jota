@@ -17,9 +17,6 @@ interface SheetProps {
 	close: () => void;
 	labelledBy?: string;
 	closeLabel?: string;
-	// abovePlayer anchors the sheet above the collapsed player bar so the bar
-	// stays visible; false lets the sheet cover it (full player).
-	abovePlayer?: boolean;
 	mobileOnly?: boolean;
 	// centered turns the sheet into a centered dialog from sm up. A touch
 	// action sheet stays anchored to the bottom at every width, since a coarse
@@ -59,7 +56,6 @@ export function Sheet({
 	close,
 	labelledBy,
 	closeLabel = t("common.close"),
-	abovePlayer = true,
 	mobileOnly = false,
 	centered = true,
 	children,
@@ -121,9 +117,7 @@ export function Sheet({
 				type="button"
 				class={cn(
 					"absolute inset-x-0 top-0 bg-black/70 transition-opacity duration-300 sm:inset-0",
-					abovePlayer
-						? "bottom-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))]"
-						: "bottom-0",
+					"bottom-0",
 					shown.value ? "opacity-100" : "opacity-0",
 				)}
 				aria-label={closeLabel}
@@ -138,9 +132,7 @@ export function Sheet({
 				class={cn(
 					"relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-b-0 border-zinc-800 bg-zinc-950 pb-3 shadow-2xl transition-[translate,scale,opacity] duration-300 ease-out",
 					centered && "sm:pb-0 sm:rounded-2xl sm:border-b",
-					abovePlayer
-						? "max-sm:mb-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))] max-sm:max-h-[min(70dvh,calc(100dvh-9.25rem-env(safe-area-inset-bottom)))]"
-						: "max-sm:mb-[calc(3.5rem+env(safe-area-inset-bottom))]",
+					"max-sm:mb-0",
 					"max-h-[70dvh]",
 					host ? "sm:max-h-full" : "sm:max-h-[85dvh]",
 					shown.value

@@ -18,7 +18,6 @@ type Request = {
 	x: number;
 	y: number;
 	header?: string;
-	abovePlayer: boolean;
 	// Clearance below the viewport bottom for a fixed element anchored there
 	// (the compact player bar): the y clamp keeps the menu above it instead of
 	// covering its controls.
@@ -37,7 +36,6 @@ export function openContextMenu(
 	actions: Action[],
 	e: MouseEvent,
 	header?: string,
-	abovePlayer = true,
 	bottom = 0,
 ) {
 	if (actions.length === 0) return;
@@ -49,7 +47,6 @@ export function openContextMenu(
 		x: e.clientX,
 		y: e.clientY,
 		header,
-		abovePlayer,
 		bottom,
 	};
 }
@@ -159,12 +156,7 @@ function FloatingMenu() {
 function ActionSheet() {
 	const menu = request.value;
 	return (
-		<Sheet
-			open={!!menu}
-			close={closeContextMenu}
-			centered={false}
-			abovePlayer={menu?.abovePlayer ?? true}
-		>
+		<Sheet open={!!menu} close={closeContextMenu} centered={false}>
 			{menu && header(menu)}
 			{menu?.actions.map(item)}
 		</Sheet>

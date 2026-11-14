@@ -74,7 +74,6 @@ interface FullPlayerProps {
 	toggleSong: () => Promise<void>;
 	nextSong: () => Promise<void>;
 	prevSong: () => Promise<void>;
-	abovePlayer?: boolean;
 	// On the phone the sheet sits over the compact bar, which already carries a
 	// seek line: the sheet keeps the controls and closes with the times, which
 	// then read as that line's labels.
@@ -191,7 +190,7 @@ function SeekBar({
 }
 
 function FullPlayerContent(props: FullPlayerProps) {
-	const { song, abovePlayer, isLoading, isPlaying, toggleSong, narrow } = props;
+	const { song, isLoading, isPlaying, toggleSong, narrow } = props;
 
 	return (
 		<section class="w-full max-w-2xl mx-auto relative z-10 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-center text-(--dominant-color)">
@@ -216,7 +215,6 @@ function FullPlayerContent(props: FullPlayerProps) {
 					<>
 						<PlayerControlsRow
 							song={song}
-							abovePlayer={abovePlayer}
 							isLoading={isLoading}
 							isPlaying={isPlaying}
 							toggleSong={toggleSong}
@@ -240,7 +238,6 @@ function FullPlayerContent(props: FullPlayerProps) {
 
 						<PlayerControlsRow
 							song={song}
-							abovePlayer={abovePlayer}
 							isLoading={isLoading}
 							isPlaying={isPlaying}
 							toggleSong={toggleSong}
@@ -255,7 +252,6 @@ function FullPlayerContent(props: FullPlayerProps) {
 type ControlsRowProps = {
 	disabled?: boolean;
 	song?: Song;
-	abovePlayer?: boolean;
 	isLoading: boolean;
 	isPlaying: boolean;
 	toggleSong: () => Promise<void>;
@@ -264,7 +260,6 @@ type ControlsRowProps = {
 function PlayerControlsRow({
 	disabled = false,
 	song,
-	abovePlayer = true,
 	isLoading,
 	isPlaying,
 	toggleSong,
@@ -336,11 +331,7 @@ function PlayerControlsRow({
 
 			{song && (
 				<div class="max-md:hidden">
-					<TrackActions
-						songs={[song]}
-						abovePlayer={abovePlayer}
-						onPlay={() => void toggleSong()}
-					/>
+					<TrackActions songs={[song]} onPlay={() => void toggleSong()} />
 				</div>
 			)}
 
@@ -512,7 +503,7 @@ export function PlayerBar() {
 				ref={barRef}
 				role="none"
 				class={cn(
-					"block fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-60 md:z-40 bg-stone-950 border-t border-white/10",
+					"block w-full z-60 md:z-40 bg-stone-950 border-t border-white/10",
 					compactPlayer.value ? "md:block" : "md:hidden",
 				)}
 				onContextMenu={onContextMenu}

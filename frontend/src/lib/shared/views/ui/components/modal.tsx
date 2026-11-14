@@ -36,9 +36,6 @@ interface ModalProps {
 	labelledBy?: string;
 	closeLabel?: string;
 	mobileOnly?: boolean;
-	// abovePlayer anchors the mobile sheet above the collapsed player bar so
-	// the bar stays visible; false lets the sheet cover it (full player).
-	abovePlayer?: boolean;
 	children: ComponentChildren;
 }
 
@@ -48,7 +45,6 @@ export function Modal({
 	labelledBy,
 	closeLabel = t("common.close"),
 	mobileOnly = false,
-	abovePlayer = true,
 	children,
 }: ModalProps) {
 	return (
@@ -58,7 +54,6 @@ export function Modal({
 			labelledBy={labelledBy}
 			closeLabel={closeLabel}
 			mobileOnly={mobileOnly}
-			abovePlayer={abovePlayer}
 		>
 			{children}
 		</Sheet>

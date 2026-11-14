@@ -495,7 +495,7 @@ export function MobileBottomNav() {
 	return (
 		<nav
 			aria-label={t("nav.main")}
-			class="fixed inset-x-0 bottom-0 z-60 bg-stone-950 pb-[env(safe-area-inset-bottom)] md:hidden"
+			class="w-full z-60 bg-stone-950 pb-[env(safe-area-inset-bottom)] md:hidden"
 		>
 			<div class="flex h-14 items-stretch justify-around">
 				{items.map(({ href, active, icon: Icon, label }) => (

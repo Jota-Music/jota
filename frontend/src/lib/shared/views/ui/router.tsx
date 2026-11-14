@@ -21,7 +21,7 @@ import { revalidateUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { compactPlayer, Player } from "@/lib/music/views/ui/player";
 import { isAndroid } from "@/lib/shared/utils/platform";
-import { cn } from "@/lib/shared/utils/tw";
+
 import { ContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { AppShell } from "@/lib/shared/views/ui/layouts/app-shell";
 import { MainPage } from "@/lib/shared/views/ui/pages/main";
@@ -231,14 +231,11 @@ function Router() {
 		<QueryClientProvider client={queryClient}>
 			<AppShell
 				player={
-					<div
-						class={cn(
-							"shrink-0 w-full max-w-2xl md:mx-auto relative",
-							!compactPlayer.value && "md:mt-6 md:pb-6",
-						)}
-					>
-						<Player />
-					</div>
+					compactPlayer.value ? undefined : (
+						<div class="hidden shrink-0 w-full max-w-2xl md:mx-auto relative md:block">
+							<Player />
+						</div>
+					)
 				}
 			>
 				<Suspense

@@ -10,7 +10,7 @@ import {
 	clearSelection,
 	selectionActive,
 } from "@/lib/music/views/stores/selection";
-import { compactPlayer, PlayerBar } from "@/lib/music/views/ui/player";
+import { PlayerBar } from "@/lib/music/views/ui/player";
 import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
 import Queue from "@/lib/music/views/ui/queue";
 import SelectionBar from "@/lib/music/views/ui/track/selection-bar";
@@ -21,6 +21,7 @@ import {
 	MobileBottomNav,
 } from "@/lib/shared/views/ui/components/header";
 import { OverlayHost } from "@/lib/shared/views/ui/components/modal";
+
 import { NotificationBar } from "@/lib/shared/views/ui/notification-bar";
 import { SyncPanel } from "@/lib/sync/views/ui/session";
 import { UpdateBanner } from "@/lib/update/views/banner";
@@ -57,7 +58,7 @@ export function AppShell({
 
 	return (
 		<OverlayHost.Provider value={overlayLayer}>
-			<div class="relative h-screen min-h-0 flex flex-col">
+			<div class="relative grid h-screen min-h-0 grid-rows-[max-content_1fr_max-content]">
 				<div class="flex flex-col bg-stone-950">
 					<Header />
 					<UpdateBanner />
@@ -66,7 +67,7 @@ export function AppShell({
 					<DegradedBanner />
 					<SignInPrompt />
 				</div>
-				<div class="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+				<div class="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden py-6">
 					<div
 						ref={overlayLayer}
 						class="pointer-events-none absolute inset-0 z-50 md:z-120"
@@ -76,10 +77,7 @@ export function AppShell({
 
 					<main
 						class={cn(
-							"flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-4 md:px-0 mx-auto pb-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))]",
-							compactPlayer.value
-								? "md:pb-[calc(var(--player-compact)+1.5rem)]"
-								: "md:pb-0",
+							"flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-4 md:px-0 mx-auto",
 							mainClass,
 						)}
 					>
@@ -96,16 +94,18 @@ export function AppShell({
 							{children}
 						</div>
 					</main>
-
-					<PlayerBar />
-					<Queue />
-					<PlaylistPicker />
-					<YoutubeEditor />
-					<SyncPanel />
-					<Welcome />
 				</div>
 
-				<MobileBottomNav />
+				<div class="flex flex-col">
+					<PlayerBar />
+					<MobileBottomNav />
+				</div>
+
+				<Queue />
+				<PlaylistPicker />
+				<YoutubeEditor />
+				<SyncPanel />
+				<Welcome />
 				<NotificationBar />
 			</div>
 		</OverlayHost.Provider>

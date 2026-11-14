@@ -52,7 +52,6 @@ type Props = {
 	// reserve keeps the button in place while the list is still loading, so the
 	// header it sits in does not shift when the tracks land.
 	reserve?: boolean;
-	abovePlayer?: boolean;
 	// Clearance below the viewport bottom for a fixed element anchored there
 	// (the compact player bar) when this button lives inside it.
 	bottom?: number;
@@ -192,8 +191,7 @@ export function useTrackMenu(
 	return (e: MouseEvent) => {
 		if (!song) return;
 		const { actions } = buildActions({ songs: [song], onPlay, navigate });
-		if (actions.length > 0)
-			openContextMenu(actions, e, undefined, true, bottom);
+		if (actions.length > 0) openContextMenu(actions, e, undefined, bottom);
 	};
 }
 
@@ -209,7 +207,6 @@ export default function TrackActions({
 	onSelectAll,
 	onDone,
 	reserve = false,
-	abovePlayer = true,
 	bottom = 0,
 }: Props) {
 	const [, navigate] = useLocation();
@@ -238,7 +235,6 @@ export default function TrackActions({
 			actions,
 			e,
 			count > 0 ? t("music.custom.selected", { count }) : undefined,
-			abovePlayer,
 			bottom,
 		);
 	};
