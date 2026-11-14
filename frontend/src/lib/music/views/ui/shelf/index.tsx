@@ -236,7 +236,7 @@ export function Shelf({
 				<div class="relative min-h-0 flex-1">
 					<div
 						ref={listRef}
-						class="h-full overflow-y-auto pl-1 pr-[15px]"
+						class="h-full overflow-y-auto px-2"
 						onClickCapture={captureClick}
 					>
 						{filteredItems.length === 0 ? (

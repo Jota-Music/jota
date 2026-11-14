@@ -340,7 +340,7 @@ export default function YoutubeEditor() {
 							>
 								<div
 									ref={$results}
-									class="absolute inset-0 overflow-y-auto overscroll-contain rounded-lg border border-zinc-800 bg-zinc-950 pr-[15px]"
+									class="absolute inset-0 overflow-y-auto overscroll-contain rounded-lg border border-zinc-800 bg-zinc-950"
 								>
 									{query.value.length === 0 ? (
 										<p class="py-6 text-sm text-zinc-500">

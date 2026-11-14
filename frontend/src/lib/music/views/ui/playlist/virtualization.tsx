@@ -351,7 +351,7 @@ export function Virtualization({
 			<div
 				ref={ref}
 				className={cn(
-					"h-full overflow-y-auto pr-3.75",
+					"h-full overflow-y-auto",
 					!plain && "rounded-lg border border-zinc-800 bg-zinc-950",
 				)}
 				onPointerDown={handlePointerDown}
