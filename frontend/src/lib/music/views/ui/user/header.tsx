@@ -43,7 +43,7 @@ export function UserHeader({
 
 	if (loading) {
 		return (
-			<header class="flex shrink-0 items-center gap-4 px-3 pt-3 md:px-0 md:pt-0">
+			<header class="flex shrink-0 items-center gap-4 px-3 pt-4 md:px-0 md:pt-0">
 				<div class="shimmer size-16 shrink-0 rounded-full" />
 				<div class="flex min-w-0 flex-1 flex-col gap-2">
 					<div class="shimmer h-5 w-40 rounded" />
@@ -54,7 +54,7 @@ export function UserHeader({
 	}
 
 	return (
-		<header class="flex shrink-0 items-center gap-4 px-3 pt-3 md:px-0 md:pt-0">
+		<header class="flex shrink-0 items-center gap-4 px-3 pt-4 md:px-0 md:pt-0">
 			<Image
 				src={cover(imageUrl, 128)}
 				alt={name}
