@@ -16,7 +16,7 @@ export function Loading() {
 export function Rows() {
 	return (
 		<div class="relative min-h-0 flex-1">
-			<div class="h-full overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/70">
+			<div class="h-full overflow-y-auto rounded-none border-t border-x-0 border-b-0 border-zinc-800 md:rounded-lg md:border">
 				<Loading />
 			</div>
 		</div>

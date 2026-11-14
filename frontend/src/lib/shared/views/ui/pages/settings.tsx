@@ -32,7 +32,7 @@ function SettingsPage() {
 	}, []);
 
 	return (
-		<div class="relative min-h-0 flex-1 overflow-hidden rounded-md border border-zinc-800 bg-zinc-950">
+		<div class="relative min-h-0 flex-1 overflow-hidden rounded-none border-t border-x-0 border-b-0 border-zinc-800 md:rounded-md md:border">
 			<div
 				ref={listRef}
 				class="h-full flex flex-col gap-4 overflow-y-auto px-4 py-5 md:gap-6 md:py-6"

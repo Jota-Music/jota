@@ -352,7 +352,8 @@ export function Virtualization({
 				ref={ref}
 				className={cn(
 					"h-full overflow-y-auto",
-					!plain && "rounded-lg border border-zinc-800 bg-zinc-950/85",
+					!plain &&
+						"rounded-none border-t border-x-0 border-b-0 border-zinc-800 md:rounded-lg md:border",
 					// The jump pill floats over the list's end: while it is up, leave room
 					// under the last row so it never sits on top of it.
 					(above || below) && "pb-14",

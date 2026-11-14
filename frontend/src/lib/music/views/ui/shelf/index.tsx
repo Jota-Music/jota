@@ -188,7 +188,7 @@ export function Shelf({
 		);
 
 	return (
-		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950/85">
+		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md md:border border-zinc-800">
 			{/* The bar keeps its room while loading, so the shelf does not drop
 			below it once the items arrive. A title needs it too: a search page
 			has no other place for the query, and the layout switch needs it
@@ -219,7 +219,7 @@ export function Shelf({
 					{children}
 				</div>
 			) : items.length === 0 ? (
-				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500">
+				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500 pb-6">
 					{empty()}
 					{onCreate && sourceFilter === "local" && (
 						<button
