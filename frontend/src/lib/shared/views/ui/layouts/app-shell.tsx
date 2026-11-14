@@ -111,7 +111,7 @@ export function AppShell({
 								{dust.map((mote) => (
 									<span
 										key={mote.id}
-										class="absolute rounded-full bg-current [will-change:opacity,transform]"
+										class="absolute rounded-full bg-current will-change-[opacity,transform]"
 										style={{
 											left: mote.left,
 											top: mote.top,
