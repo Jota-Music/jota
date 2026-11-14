@@ -67,7 +67,7 @@ export function AppShell({
 					<DegradedBanner />
 					<SignInPrompt />
 				</div>
-				<div class="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden py-6">
+				<div class="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-4 md:px-0 max-w-dvw">
 					<div
 						ref={overlayLayer}
 						class="pointer-events-none absolute inset-0 z-50 md:z-120"
@@ -77,7 +77,7 @@ export function AppShell({
 
 					<main
 						class={cn(
-							"flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl px-4 md:px-0 mx-auto",
+							"flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden w-full max-w-2xl mx-auto",
 							mainClass,
 						)}
 					>
