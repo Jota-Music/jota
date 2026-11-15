@@ -44,6 +44,7 @@ export function useFollows() {
 		return {
 			icon: Heart,
 			label: on ? t("music.unfollow") : t("music.follow"),
+			on,
 			run: () => (on ? unfollow : follow).mutate(id),
 		};
 	};

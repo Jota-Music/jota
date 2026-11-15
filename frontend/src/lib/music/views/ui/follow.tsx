@@ -48,9 +48,14 @@ function HeartButton({
 				e.stopPropagation();
 				onClick();
 			}}
-			class={cn(base[variant], on ? following : idle)}
+			// The hover shade is the state's too: a variant that carried one would
+			// compete with it, and cn does not resolve the conflict.
+			class={cn(
+				base[variant],
+				on ? `${heartOn} hover:text-red-300` : `${heartOff} hover:text-white`,
+			)}
 		>
-			<Heart class={cn("size-4 md:size-3.5", on && "fill-current")} />
+			<Heart size={18} class={on ? "fill-current" : undefined} />
 		</button>
 	);
 }

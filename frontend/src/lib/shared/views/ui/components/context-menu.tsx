@@ -10,6 +10,9 @@ export type Action = {
 	icon: LucideIcon;
 	label: string;
 	danger?: boolean;
+	// on is a toggle whose state is already set, so its icon reads as pressed:
+	// the same red, filled mark the heart shows outside the menu.
+	on?: boolean;
 	run: () => void;
 };
 
@@ -81,7 +84,10 @@ const item = (action: Action) => (
 	>
 		<action.icon
 			size={16}
-			class={action.danger ? "text-red-400" : "text-zinc-500"}
+			class={cn(
+				action.danger || action.on ? "text-red-400" : "text-zinc-500",
+				action.on && "fill-current",
+			)}
 		/>
 		{action.label}
 	</button>

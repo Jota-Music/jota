@@ -81,6 +81,7 @@ export function useSaved() {
 		return {
 			icon: Heart,
 			label: saveLabel(saved),
+			on: saved,
 			run: () => follow(id, !saved),
 		};
 	};

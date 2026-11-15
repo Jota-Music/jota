@@ -1,6 +1,7 @@
 import { Heart, Library, Settings, Turntable } from "lucide-preact";
 import type { ComponentChild, ComponentChildren } from "preact";
 import { useLocation } from "wouter-preact";
+import { heartOn } from "@/lib/music/views/ui/follow";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import YoutubeIcon from "@/lib/shared/views/ui/icons/youtube";
@@ -99,8 +100,8 @@ export function AllHint() {
 export function FollowingHint() {
 	return (
 		<Hint
-			icon={<Heart class="size-6 fill-current/20" />}
-			class="text-fuchsia-500"
+			icon={<Heart class="size-6 fill-current" />}
+			class={heartOn}
 			title={t("music.following.hint.title")}
 			body={t("music.following.hint.body")}
 			steps={[
