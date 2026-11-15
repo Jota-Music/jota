@@ -79,10 +79,10 @@ export function WindowControlsBar() {
 		isMaximised.value = await Window.IsMaximised();
 	};
 
-	// Close the window, not the app: Application.Quit destroys the process
-	// without emitting WindowClosing, which skips the geometry flush and the exit
-	// watchdog, and tears WebKit down so abruptly that the next launch could
-	// crash while creating its webview.
+	// Close the window, not the app: the window's own close path destroys the
+	// webview in order, on the GTK thread, and then ends the loop. A quit asked
+	// for from here races it and can leave WebKit to be torn down after the loop
+	// is gone, which is a crash rather than a close.
 	const onQuit = async () => {
 		await Window.Close();
 	};

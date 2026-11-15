@@ -526,6 +526,13 @@ func main() {
 		Linux: application.LinuxOptions{
 			ProgramName: "jota", // Linux program name (used in .desktop GTK app id)
 		},
+		Mac: application.MacOptions{
+			// The app is its window: closing the last one ends the process, the
+			// same way it does on Linux and Windows. The default (false) leaves a
+			// windowless process behind, which only a Quit from the close handler
+			// could end, and that Quit is what breaks the teardown order.
+			ApplicationShouldTerminateAfterLastWindowClosed: true,
+		},
 		Windows: application.WindowsOptions{
 			// WebView2 is Chromium: allow audio to start without a user gesture
 			// and keep it running while the window is unfocused or minimised.
@@ -663,22 +670,26 @@ func main() {
 		enforceMinSize(window)
 		saveWindowState(snapshot(window))
 	})
+	// The close finishes by itself: Wails destroys the widget on the GTK thread,
+	// unregisters the window and ends the loop, in that order, and the app is
+	// declared to end with its last window so every platform takes that path.
+	// Asking for a quit from here raced it instead: listeners run in their own
+	// goroutines, and a quit that reached the loop first ended it before the widget
+	// was destroyed, leaving WebKit to be torn down while GtkApplication was
+	// finalized after the loop was gone. That teardown crashes inside WebKit when
+	// the webview still has work in flight, and it kills the process before the
+	// marker is released, so the next launch only reads "ended unexpectedly".
+	//
+	// What is guarded here is the opposite failure: a loop that will not unwind
+	// leaves the process alive with no window, and the single-instance guard hands
+	// every later launch to it. The geometry is already flushed by the hook, so a
+	// late exit loses nothing.
 	window.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
 		if quitting.CompareAndSwap(false, true) {
-			// Armed before Quit: Quit marshals to the GTK thread and waits for it,
-			// so a watchdog registered after it would never run in the one case it
-			// exists for. Wails can keep that loop alive after the last window is
-			// gone, and the process would then live on with no window while the
-			// single-instance guard hands every later launch to it. The geometry is
-			// already flushed by the hook, so a late exit loses nothing.
-			// Armed before Quit, and never stopped: a loop that will not unwind would
-			// leave the process alive with no window, holding the single-instance
-			// socket that every later launch has to hand off to.
 			time.AfterFunc(shutdownBudget, func() {
 				log.Printf("shutdown: still running %s after the window closed, exiting", shutdownBudget)
 				exit(0)
 			})
-			wailsApp.Quit()
 		}
 	})
 	window.OnWindowEvent(events.Common.WindowMinimise, func(*application.WindowEvent) {

@@ -273,12 +273,30 @@ document is where both apps meet.
 
 ## Shutdown
 
-Closing goes through `Window.Close()`, never `Application.Quit()`: the latter calls
-`impl.destroy()` and skips `WindowClosing` entirely, so the geometry flush and the
-exit watchdog never run, and WebKit is torn down hard enough that the next launch can
-segfault inside `create_webview`. `Window.Close()` emits the event, `Run()` returns,
-and `main` flushes the geometry and exits.
-SIGTERM/SIGINT/SIGHUP take the same cleanup (see the signal handler in `main.go`).
+Closing goes through `Window.Close()`, and nothing asks for a quit of its own. The
+window's close path is the whole shutdown: Wails destroys the widget on the GTK
+thread, unregisters the window and ends the loop, in that order, and the app is
+declared to end with its last window (`ApplicationShouldTerminateAfterLastWindowClosed`
+is macOS's default *off*, which is why it is set). `Run()` then returns, `main`
+flushes the geometry and exits, and SIGTERM/SIGINT/SIGHUP take the same cleanup (see
+the signal handler in `main.go`).
+
+`Application.Quit()` from the `WindowClosing` handler is what this used to do, and it
+is the bug that made a close sometimes a crash. Wails runs each listener of an event
+in its own goroutine, so the quit and the widget's own destruction race on the main
+loop's idle queue; a quit that lands first ends the loop with the window still alive,
+and GtkApplication then destroys it while it is finalized, after the loop is gone.
+WebKit does not survive being torn down there when it still has work in flight. The
+process dies on a native thread, so nothing is logged: the marker stays `ready` and
+the next launch only reports "ended unexpectedly". The `gtk_widget_destroy` probe is
+what shows it, because the process exits cleanly either way, and so does the release
+smoke test.
+
+The watchdog that outlives the window (`shutdownBudget`) guards the opposite failure:
+a loop that never unwinds would leave the process alive with no window, holding the
+single-instance socket every later launch has to hand off to. Closing is best-effort
+and must not wait: `discord.Close` takes a `TryLock` and leaves an in-flight connect
+to the process exit for exactly this reason.
 
 ## YouTube sign-in
 
