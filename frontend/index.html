@@ -9,9 +9,219 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="description" content="Jota is a free, self-hosted music service. Stream your music anywhere, anytime." />
     <title>Jota | Free music self-hosted service</title>
+    <link rel="stylesheet" href="/src/style.tw.css?direct" />
+    <style>
+      /* Only a launch that takes longer than the app does to mount ever shows
+         this: it stays invisible for the first 500ms, which is past the point
+         the shell has painted. The mark is drawn rather than loaded, so the
+         splash costs no request and no bytes. */
+      html,
+      body {
+        background: #0c0a09;
+      }
+      .boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        justify-items: center;
+        align-content: center;
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        animation: boot-in 0.3s ease-out 0.5s forwards;
+      }
+      /* The bar is the app's own header, copied markup and all, so the swap is
+         seamless. Its mock parts must not eat the drag. */
+      .boot-bar-mock {
+        pointer-events: none;
+        cursor: default;
+      }
+      .boot-mark {
+        position: relative;
+        display: grid;
+        place-items: center;
+      }
+      .boot-halo {
+        position: absolute;
+        width: 240px;
+        height: 240px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 109, 214, 0.2), rgba(255, 109, 214, 0) 62%);
+        animation: boot-breathe 3.4s ease-in-out 0.5s infinite;
+      }
+      .boot-icon {
+        position: relative;
+        width: 68px;
+        height: 104px;
+        display: block;
+        filter: drop-shadow(0 16px 30px rgba(255, 109, 214, 0.22));
+      }
+      @keyframes boot-in {
+        to { visibility: visible; opacity: 1; }
+      }
+      @keyframes boot-breathe {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html,
+      body {
+        background: #0c0a09;
+      }
+      .boot { animation-duration: 0.01s; }
+        .boot-halo { animation: none; }
+      }
+    </style>
   </head>
   <body class="bg-stone-950 text-white">
-    <div id="app"></div>
+    <div id="app">
+      <header
+        class="boot-bar sticky top-0 z-40 md:z-100 border-b border-zinc-800 bg-zinc-950"
+        style="--wails-draggable: drag"
+      >
+        <div class="relative mx-auto flex items-center justify-between text-sm text-zinc-300 h-10 pr-4">
+          <div class="boot-bar-mock flex h-full items-center gap-1 pl-1" aria-hidden="true">
+            <span class="flex aspect-square h-full items-center justify-center text-zinc-400 opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 md:size-4"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg></span>
+            <span class="flex aspect-square h-full items-center justify-center text-zinc-400 opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 md:size-4"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg></span>
+            <span class="hidden md:flex aspect-square h-full items-center justify-center border-t-2 text-zinc-300 border-zinc-600 opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 md:size-4"><path d="M16 5H3" /><path d="M11 12H3" /><path d="M11 19H3" /><path d="M21 16V5" /><circle cx="18" cy="16" r="3" /></svg></span>
+            <span class="hidden md:flex aspect-square h-full items-center justify-center border-t-2 text-zinc-400 border-transparent opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 md:size-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><path d="M16 3.128a4 4 0 0 1 0 7.744" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="9" cy="7" r="4" /></svg></span>
+            <span class="hidden md:flex aspect-square h-full items-center justify-center border-t-2 text-zinc-400 border-transparent opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 md:size-4"><path d="M10 12.01h.01" /><path d="M18 8v4a8 8 0 0 1-1.07 4" /><circle cx="10" cy="12" r="4" /><rect x="2" y="4" width="20" height="16" rx="2" /></svg></span>
+            <span class="flex aspect-square h-full items-center justify-center border-t-2 text-zinc-400 border-transparent opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5 md:size-4"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /><circle cx="12" cy="12" r="3" /></svg></span>
+          </div>
+
+          <div class="boot-bar-mock absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2" aria-hidden="true">
+            <span class="flex size-8 items-center justify-center text-zinc-400 opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="size-5 md:size-4"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></svg></span>
+          </div>
+
+          <div class="flex items-center gap-3 pr-1 h-full">
+            <div class="h-full w-26" aria-hidden></div>
+            <div
+              class="boot-controls fixed top-0 right-0 z-200 flex h-10 items-center bg-zinc-950"
+              style="--wails-draggable: no-drag; -webkit-app-region: no-drag"
+            >
+              <span class="boot-bar-mock flex aspect-square h-full items-center justify-center text-zinc-400 opacity-30" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-3.5 transition-transform duration-150 ease-out rotate-25"><path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" /></svg></span>
+              <button
+                type="button"
+                data-window="17"
+                title="Minimise"
+                aria-label="Minimise"
+                class="flex aspect-square h-full items-center justify-center text-zinc-400 transition-colors cursor-pointer hover:text-zinc-100 hover:bg-white/5"
+              ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><path d="M5 12h14" /></svg></button>
+              <button
+                type="button"
+                data-window="39"
+                title="Maximise"
+                aria-label="Maximise"
+                class="flex aspect-square h-full items-center justify-center text-zinc-400 transition-colors cursor-pointer hover:text-zinc-100 hover:bg-white/5"
+              ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg></button>
+              <button
+                type="button"
+                data-window="2"
+                title="Close"
+                aria-label="Close"
+                class="flex aspect-square h-full items-center justify-center text-zinc-400 transition-colors cursor-pointer hover:text-zinc-100 hover:bg-white/5"
+              ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-3.5"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></button>
+            </div>
+          </div>
+        </div>
+      </header>
+      <div class="boot" aria-hidden="true">
+        <div class="boot-mark">
+          <div class="boot-halo"></div>
+          <!-- The mark is the vector in build/logo.svg, filled with the
+               brand pink; inlined so the splash costs no request. -->
+          <svg class="boot-icon" viewBox="0 0 404.694 624.458">
+            <g transform="translate(-139.97292 -28.253719)">
+              <path fill="#ff6dd6" d="m 305.8,651.9 c -15.9,-2 -27.7,-7.7 -39.7,-19.4 -11.3,-11 -18.2,-27.2 -18.2,-42.7 0,-7.9 -0.2,-8.5 -3,-8.5 -12.9,-0.1 -51.7,-11.8 -72.3,-21.9 C 148.8,547.8 140,539.2 140,527.7 c -0.6,-10.9 8.2,-17.2 15.3,-24.3 15.5,-15.2 22,-24.7 37,-53.1 14.8,-28.1 22.2,-39.1 35.5,-52.2 28.4,-28.1 62.2,-42.2 101.6,-42.3 25.8,-0.1 49.5,5.8 72.7,18.1 l 11.3,6 0,-80.3 c 0,-76.8 -0.1,-80.4 -2.6,-84.4 -6.1,-9.9 -18.8,-8.4 -30.1,3.6 -17.7,18.9 -18.7,46.9 -3,81.9 6.1,13.6 6.8,20.5 2.8,27.5 -3.8,6.6 -12.8,10.9 -20.8,9.9 -27.6,-3.5 -55.7,-18.4 -71.2,-37.8 -21.4,-26.9 -26.9,-62.4 -16.3,-105.4 2.7,-11.1 2.7,-11.2 0.2,-24 -3.5,-18 -3.2,-41 0.7,-56.2 10,-38.3 36.3,-65.2 77.7,-79.5 27.6,-13 168,-21 191.9,104.2 1.4,7.5 1.8,42 1.8,172.7 0,162.2 0,163.4 -2.9,179.3 -7.4,40.9 -23.5,73.2 -49,98.7 -20.8,20.8 -41.9,32.8 -78.7,44.7 -43.1,14 -82.8,20.3 -108.2,17.2 z m 35.5,-41.9 c 25.5,-3.4 65.9,-14.7 86.1,-24 39.6,-18.2 64.3,-51.7 73.6,-100.1 2.1,-11 2.3,-25.6 2.3,-174.7 0,-149.5 -0.2,-163.4 -2.3,-171.6 C 484,73.6 406.7,52.5 350.1,79.9 333,88.1 320.5,102.3 314.6,120 c -3,9 -5.3,30.3 -3.2,29.1 0.7,-0.4 6.5,-3.8 12.9,-7.6 l 11.7,-7 0,-5.6 c 0,-10.9 8.8,-19.6 20,-19.6 17.3,0 27,20.4 14.8,33.7 l -5.2,5.6 L 366.7,160 c 0.6,6.2 1.1,12.4 1.2,13.6 0.1,2 0.9,1.9 7.1,-0.9 22,-10 47.2,-5.3 63.5,12 7.9,8.4 12.7,17.5 14.7,28 1.1,5.7 1.4,42.2 1.1,130.6 -0.5,137.4 0.2,127.9 -10.5,149.7 -21.7,44.3 -77.1,79 -139.3,87.1 -16.2,2.1 -15.3,1.6 -15.3,8.6 0,7.5 2.6,12.8 8.4,17.2 8.1,6.2 20.1,7.3 43.6,4.2 z M 300.2,539.2 c 138.8,-20.8 143.6,-142 29.8,-142.2 -26.1,0 -47.1,7.5 -66.9,24.1 -12.5,10.5 -20.7,21.9 -33.8,47 -11.5,22.2 -21.7,38.5 -30.9,49.5 l -5.3,6.3 5.8,2.5 c 8.9,3.8 26.1,9.2 36.6,11.6 21.1,4.7 39.2,5 64.7,1.2 z m 26.8,-263.6 c -1.9,-8.3 -1,-37.2 1.4,-45.9 1.9,-7.1 2.1,-10.4 0.8,-24.7 -0.8,-9 -1.6,-16.6 -1.8,-16.8 -0.2,-0.2 -3.1,1.3 -6.5,3.3 -6.8,4.1 -7.6,5.7 -10.9,23.7 -4.6,25 -0.5,46.2 11.3,59.7 5.3,6.1 7,6.3 5.7,0.6 z" />
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <script>
+      // The window bar before the shell exists. Wails' own draggable hook is a
+      // no-op on Linux (its message channel is native-only), so the drag is done
+      // here over the same transport the runtime uses: Window methods, posted to
+      // /wails/runtime (minimise 17, toggle maximise 39, close 2, set position 24,
+      // args are named: {x, y}). A phone has no window to move: there the bar is
+      // removed and the splash keeps its mark alone.
+      (() => {
+        const bar = document.querySelector(".boot-bar");
+        if (!bar) return;
+        const android =
+          /android/i.test(navigator.userAgent) ||
+          window._wails?.environment?.OS === "android";
+        const touchOnly =
+          matchMedia("(pointer: coarse)").matches &&
+          !matchMedia("(any-pointer: fine)").matches;
+        if (android || touchOnly) {
+          bar.remove();
+          return;
+        }
+
+        const send = (method, args) =>
+          fetch("/wails/runtime", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-wails-client-id": "boot",
+            },
+            body: JSON.stringify(args ? { object: 6, method, args } : { object: 6, method }),
+          });
+
+        for (const button of document.querySelectorAll(".boot-controls button")) {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void send(Number(button.dataset.window)).catch(() => {});
+          });
+        }
+
+        // Drag over the host's own numbers: the window's position comes from the
+        // host (method 0) and only the pointer's *movement* is added to it, so a
+        // scale or origin mismatch between screenX and the host's coordinates
+        // cannot teleport the window.
+        let drag = null;
+        let frame = 0;
+        let next = null;
+
+        bar.addEventListener("mousedown", (event) => {
+          if (event.button !== 0) return;
+          if (event.target.closest(".boot-controls")) return;
+          const sx = event.screenX;
+          const sy = event.screenY;
+          event.preventDefault();
+          drag = null;
+          void send(0)
+            .then((response) => response.json())
+            .then((position) => {
+              drag = { x: position.x, y: position.y, sx, sy };
+            })
+            .catch(() => {});
+        });
+
+        window.addEventListener("mousemove", (event) => {
+          if (!drag) return;
+          next = {
+            x: drag.x + (event.screenX - drag.sx),
+            y: drag.y + (event.screenY - drag.sy),
+          };
+          if (frame) return;
+          frame = requestAnimationFrame(() => {
+            frame = 0;
+            if (!next) return;
+            void send(24, next).catch(() => {});
+          });
+        });
+
+        const stop = () => {
+          drag = null;
+          next = null;
+        };
+        window.addEventListener("mouseup", stop);
+        window.addEventListener("blur", stop);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

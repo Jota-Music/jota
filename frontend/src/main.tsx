@@ -8,7 +8,6 @@ import { dismiss } from "@/lib/shared/views/stores/overlays";
 import { Boundary } from "@/lib/shared/views/ui/components/boundary";
 import Router from "@/lib/shared/views/ui/router";
 import "@wailsio/runtime";
-import "@/style.tw.css";
 
 // Preact 10.29 has no options.devtools: preact/debug installs the warnings and
 // pulls in preact/devtools, which attaches to the extension when one is present.

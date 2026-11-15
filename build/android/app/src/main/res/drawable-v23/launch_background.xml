@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The window the system paints before the app draws anything: the app's
+     background with the boot mark centred. android:gravity on a layer-list item
+     needs API 23, so the API 21-22 fallback is the plain background. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/wails_background" />
+    <item
+        android:drawable="@drawable/ic_boot"
+        android:gravity="center" />
+</layer-list>
