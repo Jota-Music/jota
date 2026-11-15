@@ -1,16 +1,11 @@
 import { computed, signal } from "@preact/signals";
-import {
-	ChevronDown,
-	ChevronUp,
-	GripVertical,
-	TriangleAlert,
-} from "lucide-preact";
+import { ChevronDown, ChevronUp, TriangleAlert } from "lucide-preact";
 import { memo } from "preact/compat";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import type { Song } from "@/lib/music/model";
-import { rowSelect } from "@/lib/music/views/hooks/row-select";
+import { coarse, rowSelect } from "@/lib/music/views/hooks/row-select";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
 import {
 	currentSong,
@@ -21,7 +16,6 @@ import { playFromQueueSelection } from "@/lib/music/views/stores/player";
 import {
 	clearSelection,
 	selectedIds,
-	selectionActive,
 	toggleSelection,
 } from "@/lib/music/views/stores/selection";
 import TrackActions, {
@@ -75,7 +69,6 @@ function PlaylistRow({
 	index,
 	sourceId,
 	selected,
-	reorderable,
 	isDragSource,
 	isDropTarget,
 	removable,
@@ -86,7 +79,6 @@ function PlaylistRow({
 	index: number;
 	sourceId?: string;
 	selected: boolean;
-	reorderable: boolean;
 	isDragSource: boolean;
 	isDropTarget: boolean;
 	removable: boolean;
@@ -119,6 +111,12 @@ function PlaylistRow({
 			onClick={onClick}
 			onContextMenu={(e) => {
 				if (broken) return;
+				// Touch owns the long press for a drag, so the row's menu button is
+				// where that platform reaches the same actions.
+				if (coarse) {
+					e.preventDefault();
+					return;
+				}
 				const { actions } = buildActions({
 					songs: [song],
 					selection: selected,
@@ -157,14 +155,6 @@ function PlaylistRow({
 						}
 						imgClass="h-10 w-10 rounded-md object-cover"
 					/>
-					{reorderable && (
-						<span
-							class="pointer-events-none absolute top-1 left-1 flex size-5 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100"
-							aria-hidden
-						>
-							<GripVertical size={13} />
-						</span>
-					)}
 				</div>
 
 				<div class="flex min-w-0 flex-col text-start">
@@ -231,7 +221,6 @@ export function Virtualization({
 		ROW_PX,
 	);
 	const reorderable = !!onReorder && songs.length > 1;
-	const selection = selectionActive.value;
 	const selected = selectedIds.value;
 	const dragOrigin = useRef<number | null>(null);
 
@@ -250,6 +239,7 @@ export function Virtualization({
 
 	const { start, captureClick } = usePointerDrag({
 		scroll: ref,
+		touch: true,
 		begin: () => {
 			if (dragOrigin.current == null) return;
 			dragFrom.value = dragOrigin.current;
@@ -267,7 +257,7 @@ export function Virtualization({
 	});
 
 	const handlePointerDown = (e: PointerEvent) => {
-		if (!reorderable || selection) return;
+		if (!reorderable) return;
 		const target = e.target as Element;
 		if (target.closest("button")) return;
 		const row = target.closest("[data-playlist-index]");
@@ -351,6 +341,9 @@ export function Virtualization({
 					// The jump pill floats over the list's end: while it is up, leave room
 					// under the last row so it never sits on top of it.
 					(above || below) && "pb-14",
+					// A row's own controls must not answer the pointer that is dragging
+					// over them.
+					dragFrom.value != null && "[&_button]:pointer-events-none",
 				)}
 				onPointerDown={handlePointerDown}
 				onClickCapture={captureClick}
@@ -389,7 +382,6 @@ export function Virtualization({
 										index={virtualRow.index}
 										sourceId={sourceId}
 										selected={selected.has(song.id)}
-										reorderable={reorderable}
 										isDragSource={dragFrom.value === virtualRow.index}
 										isDropTarget={
 											dragFrom.value != null &&

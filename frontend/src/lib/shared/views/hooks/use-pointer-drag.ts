@@ -5,6 +5,9 @@ import { useAutoscroll } from "@/lib/shared/views/hooks/use-autoscroll";
 
 const DRAG_START_PX = 4;
 const HOLD_MS = 250;
+// How far a finger may drift while the hold lands. A hand is never perfectly
+// still, and a smaller slop made the long press feel like it did not exist.
+const HOLD_SLOP_PX = 10;
 
 type Options = {
 	begin: () => void;
@@ -90,14 +93,20 @@ export function usePointerDrag({
 	useEffect(() => {
 		const onMove = (e: PointerEvent) => {
 			if (!active.current) return;
-			// Moving before the hold completes means the finger is scrolling, not
-			// dragging.
+			const dx = e.clientX - origin.current.x;
+			const dy = e.clientY - origin.current.y;
+			const past = dx * dx + dy * dy >= DRAG_START_PX * DRAG_START_PX;
+			// A finger waiting for the hold is allowed to drift: clearing on the
+			// first pixel made a long press need a perfectly still hand. Past the
+			// slop it is scrolling, and a hold that never landed is not a drag.
+			if (e.pointerType !== "mouse" && !armed.current) {
+				if (dx * dx + dy * dy >= HOLD_SLOP_PX * HOLD_SLOP_PX) clearHold();
+				return;
+			}
 			clearHold();
 			last.current = e;
 			if (!moved.current) {
-				const dx = e.clientX - origin.current.x;
-				const dy = e.clientY - origin.current.y;
-				if (dx * dx + dy * dy < DRAG_START_PX * DRAG_START_PX) return;
+				if (!past) return;
 				beginDrag();
 			}
 			dragged.current = true;

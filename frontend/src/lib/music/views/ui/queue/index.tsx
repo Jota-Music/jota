@@ -212,13 +212,11 @@ const QueueRow = memo(function QueueRow({
 				<MoreVertical size={17} />
 			</button>
 
-			{/* Desktop drags from anywhere, so the grip is only decorative there.
-			    Touch drags from the grip alone, leaving the artist and album
-			    links tappable. */}
+			{/* The grip is the affordance, not the target: a mouse drags from
+			    anywhere on the row, and a finger from wherever it holds still. */}
 			<div
-				data-drag-handle
 				class={cn(
-					"ml-0.5 flex shrink-0 touch-none rounded p-0.5 text-zinc-600",
+					"ml-0.5 flex shrink-0 rounded p-0.5 text-zinc-600",
 					songsLength <= 1 && "opacity-30",
 				)}
 				aria-hidden
@@ -291,10 +289,6 @@ function Queue() {
 		if (songs.length <= 1) return;
 		const target = e.target as Element;
 		if (target.closest("button")) return;
-		// A finger has no hover to aim with, so it only drags from the grip; the
-		// rest of the row stays tappable down to the artist and album links.
-		if (e.pointerType !== "mouse" && !target.closest("[data-drag-handle]"))
-			return;
 		const row = target.closest("[data-queue-index]");
 		if (!row) return;
 		const index = Number(row.getAttribute("data-queue-index"));
