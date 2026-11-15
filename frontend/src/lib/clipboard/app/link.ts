@@ -7,11 +7,23 @@ export type ClipboardLink = {
 	to: string;
 };
 
+// Bare ids and @handles belong to the search box, not the clipboard: a word that
+// happens to be eleven characters is not a video, and neither is a mention.
+function isLink(text: string): boolean {
+	if (text.startsWith("spotify:")) return true;
+	try {
+		const url = new URL(text.includes("://") ? text : `https://${text}`);
+		return url.hostname.includes(".");
+	} catch {
+		return false;
+	}
+}
+
 // Resolves a pasted link to an in-app route, or to the id GetSong expects for
 // a single track. Anything else (plain text, local: ids, other hosts) is null.
 export function clipboardLink(text: string): ClipboardLink | null {
 	const trimmed = text.trim();
-	if (!trimmed) return null;
+	if (!trimmed || !isLink(trimmed)) return null;
 
 	const spotify = parseSpotifyLink(trimmed);
 	if (spotify) {

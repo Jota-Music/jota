@@ -75,3 +75,10 @@ test("anything that is not a known link is ignored", () => {
 	expect(clipboardLink(`https://example.com/playlist/${PLAYLIST}`)).toBeNull();
 	expect(clipboardLink("")).toBeNull();
 });
+
+test("bare ids and handles are search input, not clipboard links", () => {
+	expect(clipboardLink(VIDEO)).toBeNull();
+	expect(clipboardLink("aprendizaje")).toBeNull();
+	expect(clipboardLink("@usuario")).toBeNull();
+	expect(clipboardLink(`spotify:track:${TRACK}`)).not.toBeNull();
+});
