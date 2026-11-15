@@ -80,10 +80,16 @@ the release above 3000 ms.
 
 Rules that keep it there:
 
-- Nothing on the launch path may read the store or the sync folder. The window
-  geometry lives in `window.json` next to the log for that reason
-  (`loadWindowState`), and the state document and the cache start in the
-  background at `WindowRuntimeReady`.
+- The window geometry lives in `window.json` next to the log (`loadWindowState`),
+  so building the window never asks the store, and the state document and the
+  cache start in the background at `WindowRuntimeReady`. The page does read the
+  library before its first render (`warm()` in `main.tsx`): that is a state read
+  from memory, which is why it is allowed there, and it is the only read on the
+  launch path.
+- Nothing on the launch path may wait on the network. The statuses the page asks
+  for before painting are the store's; `syncYouTubeStatus` is not awaited because
+  resolving the account's own name is a request the first time, and the panel
+  fills in when it lands.
 - The sync document is never read at launch: the frontend throttles itself for
   `BOOT_GRACE_MS` and the backend's ticker only starts after `syncTick`.
 - A blocking call on the GTK thread is a frozen window, not a slow one. The
@@ -131,13 +137,30 @@ entries go first.
 A write lands through `tmp` + `rename`, so a reader never sees half an entry. A
 write that dies between the two leaves the temporary file behind;
 `cache.Start` sweeps the ones older than the process, and leaves the ones this
-run still owns.
+run still owns. The temporary name carries four random bytes, so two writers of
+the same entry (a background refresh and the request that asked for it) do not
+share one.
+
+An entry's file name carries the name it was written under: the last part is
+base64 when it fits, which is how `cache.Walk` reads a folder's names without
+opening a single file. A name too long for that is hashed, and the entry then
+carries its own name inside, which is the only case `Walk` opens.
 
 `internal/state` and `internal/cache` are the two halves. There are no keys and
 no buckets: a feature owns a section and writes it whole, and the cache is
 addressed by the entity it holds. A channel's playlist list and a playlist
 itself share the `youtube/playlists/` folder: a channel id starts with `UC` and
 a playlist id never does, so neither overwrites the other.
+
+A document that cannot be read is not an empty document: `state.load` returns the
+error and leaves the store unloaded, so the next read tries again and no write
+replaces a file that is still there. Only a document that does not decode is
+moved aside as `state.json.bad`, and only when the move itself works.
+
+Because a section is written whole, a feature that changes one field of it reads,
+changes and writes back under `editSettings`/`editSessions` (`internal/app`): two
+of those interleaved — a sync pass recording its status while the user flips a
+switch — would otherwise drop one of the two.
 
 The resolved YouTube streams live in `youtube/streams/<videoId>.json`, one file
 each, and they carry the life their URL has left: an entry a crash empties is
@@ -149,8 +172,10 @@ is a pick, not a decision, so it is cache and can be re-derived. The pins the
 user fixed by hand are the only thing that stays in the `youtube` section of the
 state (`links`), and they are never overwritten by a resolve. They are dropped
 only when the pinned video is gone and a search found a replacement. The
-`youtube/session` file holds the tokens alone (visitor, version, client), so
-writing one does not rewrite the streams.
+`linksMigrated` flag in that section is what keeps `youtube.MigrateLinks` from
+running twice: the map it reads is the one the pins live in now, so a second run
+would turn them into picks. The `youtube/session` file holds the tokens alone
+(visitor, version, client), so writing one does not rewrite the streams.
 
 The embedded store this app used to keep (`storage/kv`) is imported on the
 first launch after an upgrade: `importLegacyStore` runs from `ServiceStartup`,
@@ -163,7 +188,9 @@ launch never gets there.
 format: the manifest (protobuf), the table index (flatbuffers), the blocks
 (zstd) and the memtable log, all parsed by hand. Only the zstd decoder
 (`klauspost/compress`) is pulled in. The values that lived in the value log are
-the cached ones, which the sources answer again, so they are not read.
+not read: Badger only writes one there past a megabyte, so a record that big is
+cached content and not the device's state — and the store is kept, not pruned,
+when the reader skips any, because it cannot prove what it skipped.
 `internal/app/testdata/store` is a real Badger store and
 `internal/app/testdata/wal` a real Badger memtable log, so the reader is
 checked without Badger in the tree.
