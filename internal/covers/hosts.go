@@ -24,5 +24,10 @@ func allowed(raw string) (string, bool) {
 	if _, ok := hosts[parsed.Hostname()]; !ok {
 		return "", false
 	}
+	// The allowlist names the origin, and a port is another service on it:
+	// i.scdn.co:8443 is not the CDN the covers come from.
+	if parsed.Port() != "" || parsed.User != nil {
+		return "", false
+	}
 	return parsed.String(), true
 }
