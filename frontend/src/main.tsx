@@ -81,7 +81,13 @@ function deadline(ms: number): Promise<void> {
 // paints them together: asking after the paint filled the grid in one source at
 // a time. The reads are the store in memory, and the boot mark in index.html
 // covers the wait when it outlives the mount.
-await Promise.all([warm(), syncSpotifyStatus(), syncYouTubeStatus()]);
+await Promise.all([warm(), syncSpotifyStatus()]);
+
+// The YouTube status is where a launch used to reach the network: the account's
+// own name is a request the first time it is asked, and a launch never waits on
+// one. It gets no wait at all, so the shelf paints from this device and the
+// panel fills in when the answer lands.
+const youtubeStatus = syncYouTubeStatus();
 
 // The saved order is keyed by the account those readings name, and a shelf that
 // reorders once it lands is a shelf that jumps. The sources' own lists are asked
@@ -94,6 +100,12 @@ await Promise.race([
 	warmSources(spotifyUser.value, youtubeSignedIn.value),
 	deadline(sourceWait),
 ]);
+
+// The session the first ask carried was the one this device had before the
+// answer: a status that lands late is worth asking the sources' lists again for.
+void youtubeStatus.then(() =>
+	warmSources(spotifyUser.value, youtubeSignedIn.value),
+);
 
 render(
 	<Boundary>
