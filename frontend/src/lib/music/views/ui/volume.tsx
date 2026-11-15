@@ -39,19 +39,17 @@ const TIP_OPEN = 120;
 function VolumeControl({
 	class: className,
 	compact = false,
-	slider = true,
 	tip = false,
 }: {
 	class?: string;
 	compact?: boolean;
-	slider?: boolean;
 	// No room for a bar per control (the compact player): the slider hangs above
 	// the icon on hover instead. A finger has no hover, so touch keeps the icon
 	// alone and its click still mutes.
 	tip?: boolean;
 }) {
 	const Icon = getVolumeStatus(volume.value, muted.value);
-	const inline = slider && !tip;
+	const inline = !tip;
 
 	const open = useSignal(false);
 	const anchor = useRef<HTMLButtonElement>(null);
@@ -130,10 +128,24 @@ function VolumeControl({
 					if (!tip || e.pointerType !== "mouse") return;
 					closeSoon();
 				}}
+				// A pointer is not the only way in: the keyboard opens the same panel,
+				// and the slider inside it is reachable from there.
+				onFocus={() => {
+					if (tip) openSoon();
+				}}
+				onBlur={() => {
+					if (tip) closeSoon();
+				}}
 				aria-label={
 					muted.value ? t("music.volume.unmute") : t("music.volume.mute")
 				}
-				class={inline ? "contents" : "rounded-md p-1.5 cursor-pointer"}
+				class={
+					inline
+						? // display:contents keeps the icon in the row, so the focus mark
+							// has to land on the icon itself
+							"contents focus-visible:[&>svg]:rounded focus-visible:[&>svg]:ring-2 focus-visible:[&>svg]:ring-current"
+						: "rounded-md p-1.5 cursor-pointer"
+				}
 			>
 				<Icon class="size-6 cursor-pointer" />
 			</button>
