@@ -72,9 +72,6 @@ func MigrateLegacyStore() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("cannot read legacy store: %w", err)
 	}
-	if skipped > 0 {
-		log.Printf("migrate: %d cached values live in the value log and are not read", skipped)
-	}
 
 	m := migration{buckets: buckets, expect: map[string]int{}}
 	m.playlists()
@@ -90,10 +87,21 @@ func MigrateLegacyStore() (string, error) {
 
 	// Put the document on disk before the old store is touched: the CLI has no
 	// writer thread to flush it.
-	state.Close()
+	if err := state.Close(); err != nil {
+		return "", fmt.Errorf("the import could not be written, the old store is kept: %w", err)
+	}
 
 	if err := m.verify(); err != nil {
 		return "", fmt.Errorf("the import did not check out, the old store is kept: %w", err)
+	}
+
+	// A value the store kept in its value log is one this reader cannot see, and
+	// it may be a playlist rather than a cached song. The store stays where it is
+	// so the import can be repeated by a build that reads it, instead of being
+	// pruned a fortnight later with the record inside.
+	if skipped > 0 {
+		log.Printf("migrate: %d values live in the value log and were not read, the old store is kept", skipped)
+		return fmt.Sprintf("imported %d records, %d values left in the old store", m.count, skipped), nil
 	}
 
 	// Move the old store aside, so it is neither imported a second time nor
@@ -231,32 +239,32 @@ func (m *migration) verify() error {
 }
 
 func (m *migration) storedPlaylists() map[string]playlists.Playlist {
-	stored, _ := state.Read[playlists.Stored](state.Playlists)
+	stored, _ := state.OnDisk[playlists.Stored](state.Playlists)
 	return stored.Tracks
 }
 
 func (m *migration) storedFollows() follows.Section {
-	section, _ := state.Read[follows.Section](state.Follows)
+	section, _ := state.OnDisk[follows.Section](state.Follows)
 	return section
 }
 
 func (m *migration) storedSaved() saved.Section {
-	section, _ := state.Read[saved.Section](state.Saved)
+	section, _ := state.OnDisk[saved.Section](state.Saved)
 	return section
 }
 
 func (m *migration) storedOrder() ordering.Section {
-	section, _ := state.Read[ordering.Section](state.Order)
+	section, _ := state.OnDisk[ordering.Section](state.Order)
 	return section
 }
 
 func (m *migration) storedRooms() []rooms.Room {
-	list, _ := state.Read[[]rooms.Room](state.Rooms)
+	list, _ := state.OnDisk[[]rooms.Room](state.Rooms)
 	return list
 }
 
 func (m *migration) storedSessions() map[string]sessionEntry {
-	sessions, _ := state.Read[map[string]sessionEntry](state.Sessions)
+	sessions, _ := state.OnDisk[map[string]sessionEntry](state.Sessions)
 	return sessions
 }
 
@@ -283,7 +291,7 @@ type youtubeAccount struct {
 }
 
 func (m *migration) storedSpotify() int {
-	account, _ := state.Read[spotifyAccount](state.Spotify)
+	account, _ := state.OnDisk[spotifyAccount](state.Spotify)
 	if account.Session == nil {
 		return 0
 	}
@@ -291,7 +299,7 @@ func (m *migration) storedSpotify() int {
 }
 
 func (m *migration) storedYoutube() youtubeAccount {
-	account, _ := state.Read[youtubeAccount](state.YouTube)
+	account, _ := state.OnDisk[youtubeAccount](state.YouTube)
 	return account
 }
 
@@ -475,8 +483,20 @@ func collapse(stored *playlists.Stored, source, before map[string]bool) (kept, c
 		playlist := stored.Tracks[winner]
 		playlist.Id = keeper
 		stored.Tracks[keeper] = playlist
+		// The keeper is what the shelf lists. A copy the store knew under an id
+		// the document dropped leaves the keeper out of the index, and then the
+		// playlist is alive and invisible.
+		if !slices.Contains(stored.Index, keeper) {
+			stored.Index = append(stored.Index, keeper)
+		}
 		for _, id := range ids {
 			if id == keeper {
+				continue
+			}
+			// Only the store's own copies are dropped and tombstoned: a local
+			// playlist that shares the name was not made by the store's stale
+			// index and is the user's to keep.
+			if !source[id] {
 				continue
 			}
 			delete(stored.Tracks, id)
@@ -973,11 +993,20 @@ func (m *migration) window() {
 	}
 	path := filepath.Join(filepath.Dir(LogPath()), "window.json")
 	// The app writes this file on its own. An import that is retried must not
-	// move a window the user already placed, and the write is not atomic.
+	// move a window the user already placed.
 	if _, err := os.Stat(path); err == nil {
 		return
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	// Through a temporary one and a rename, the same way the app publishes it: a
+	// write cut short would leave a geometry that does not decode, and the next
+	// launch would start from the default size instead of the user's.
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		log.Printf("migrate: window: %v", err)
+		return
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
 		log.Printf("migrate: window: %v", err)
 		return
 	}
