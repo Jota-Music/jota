@@ -637,18 +637,11 @@ func main() {
 			// The picks the old layout kept in the state move to the cache, so
 			// the state only holds pins. Idempotent, off the launch path.
 			youtube.MigrateLinks()
-			err := error(nil)
 			// A read that arrives while the store opens waits for it and answers
 			// with the library, so a slow open costs the launch time but never a
-			// second pass. A store that could not be opened answered every read
-			// with an error instead, and that is the one case the page is told
-			// to read again.
+			// second pass.
 			if took := time.Since(opened); took > storeSlow {
 				log.Printf("store ready in %s", took.Round(time.Millisecond))
-			}
-			if err != nil {
-				log.Printf("store unavailable, asking the page to read again")
-				application.Get().Event.Emit("store:ready")
 			}
 		}()
 		application.Get().Event.Emit("window:always-on-top", getAlwaysOnTop())
