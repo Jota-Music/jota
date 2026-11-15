@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -43,6 +44,11 @@ const proxyAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/6
 // throttles a single long connection to a few tens of KB/s, so a track is
 // fetched as a sequence of short requests that each get a full-speed burst.
 const chunkSize = 5 * 1024 * 1024
+
+// chunkTimeout is how long one chunk may take. It is generous on purpose: it
+// only cuts a link that stalls, and a chunk is five megabytes, so a strict
+// deadline here would cut the playback of anyone on a slow connection.
+const chunkTimeout = 3 * time.Minute
 
 // StartProxy starts a local HTTP server that relays googlevideo streams under
 // simple URLs. WebKit and Chromium handle http://127.0.0.1 better than signed
@@ -190,7 +196,7 @@ func relay(w http.ResponseWriter, r *http.Request) {
 	}
 
 	flusher, _ := w.(http.Flusher)
-	chunkClient := &http.Client{Timeout: 30 * time.Second, Transport: proxyClient.Transport}
+	chunkClient := &http.Client{Transport: proxyClient.Transport}
 
 	offset := start
 	delivered := int64(0)
@@ -200,8 +206,13 @@ func relay(w http.ResponseWriter, r *http.Request) {
 		if ce > end {
 			ce = end
 		}
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, s.url, nil)
+		// The deadline is per chunk, not for the whole body: a chunk is five
+		// megabytes, and a link slow enough to take longer than this is the only
+		// one that should be cut, not every link under a few megabits.
+		ctx, cancel := context.WithTimeout(r.Context(), chunkTimeout)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.url, nil)
 		if err != nil {
+			cancel()
 			log.Printf("youtube: proxy %s err=%v", id, err)
 			break
 		}
@@ -209,19 +220,34 @@ func relay(w http.ResponseWriter, r *http.Request) {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, ce))
 		resp, err := chunkClient.Do(req)
 		if err != nil {
+			cancel()
 			if r.Context().Err() != nil {
 				return
 			}
 			log.Printf("youtube: proxy %s err=%v", id, err)
 			break
 		}
+		// A 200 to a ranged request is the whole object, not this chunk: copying
+		// it from a middle offset would write the wrong bytes under a length that
+		// says otherwise.
+		if resp.StatusCode == http.StatusOK && offset > start {
+			log.Printf("youtube: proxy %s upstream ignored the range", id)
+			resp.Body.Close()
+			cancel()
+			break
+		}
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
 			log.Printf("youtube: proxy %s upstream status %d", id, resp.StatusCode)
 			resp.Body.Close()
+			cancel()
 			break
 		}
-		n, err := io.Copy(w, resp.Body)
+		// Only what the caller asked for: an answer that carries more than the
+		// chunk must not overflow the length already written in the header.
+		room := end - offset + 1
+		n, err := io.Copy(w, io.LimitReader(resp.Body, room))
 		resp.Body.Close()
+		cancel()
 		if err != nil {
 			if r.Context().Err() == nil {
 				log.Printf("youtube: proxy %s copy err=%v", id, err)
@@ -244,14 +270,20 @@ func relay(w http.ResponseWriter, r *http.Request) {
 
 // ProxyURL registers a googlevideo URL and returns the local proxy URL for it.
 func ProxyURL(videoID, googlevideoURL string) string {
-	StartProxy()
+	port := StartProxy()
+	if port == 0 {
+		// No relay to hand the player: the URL the source signed still plays, it
+		// just does not get the range slicing. A silent http://127.0.0.1:0 would
+		// fail the playback with no reason in the log.
+		return googlevideoURL
+	}
 	proxyMu.Lock()
 	proxyStreams[videoID] = stream{
 		url:  unpinned(googlevideoURL),
 		mime: streamMime(googlevideoURL),
 	}
 	proxyMu.Unlock()
-	return fmt.Sprintf("http://127.0.0.1:%d/stream/%s", proxyPort, videoID)
+	return fmt.Sprintf("http://127.0.0.1:%d/stream/%s", port, videoID)
 }
 
 // unpinned drops the `range` query param YouTube signs into some stream URLs.
