@@ -80,18 +80,20 @@ export function getDominantColorFromImage(url: string): Promise<Rgb | null> {
 }
 
 async function computeDominantColor(url: string): Promise<Rgb | null> {
+	// A palette is an average: it reads the smallest cover the CDN has instead of
+	// a 160px download for a 64px canvas.
+	const size = 64;
+
 	const img = new Image();
 	img.crossOrigin = "anonymous";
 
 	await new Promise<void>((resolve, reject) => {
 		img.onload = () => resolve();
 		img.onerror = reject;
-		img.src = cover(url, 160) ?? url;
+		img.src = cover(url, size) ?? url;
 	});
 
 	if (!img.naturalWidth || !img.naturalHeight) return null;
-
-	const size = 100;
 
 	const canvas = document.createElement("canvas");
 	const ctx = canvas.getContext("2d");
