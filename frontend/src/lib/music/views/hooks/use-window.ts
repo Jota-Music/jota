@@ -85,10 +85,13 @@ export function useWindow<T extends HTMLElement>(
 		};
 	}, [element, rowHeight, overscan]);
 
-	const last = Math.min(count, view.first + view.visible);
+	// A band left behind by a list that got shorter would render nothing until a
+	// scroll event landed, so the start is held inside the list it belongs to.
+	const first = Math.min(view.first, Math.max(0, count - 1));
+	const last = Math.min(count, first + view.visible);
 
 	const items: WindowItem[] = [];
-	for (let index = view.first; index < last; index++) {
+	for (let index = first; index < last; index++) {
 		items.push({ index, start: index * rowHeight, size: rowHeight });
 	}
 
