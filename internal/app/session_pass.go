@@ -27,15 +27,11 @@ func (a *App) SessionPass() string {
 }
 
 // storedPass reads the shared passphrase without an App, for the paths that
-// apply a synced session at startup. The legacy youtube-cookie-pass key is
-// still read as a fallback so an upgrade does not lose the pass.
+// apply a synced session at startup. The older key it was saved under lives in
+// the store the import read, so it comes across there (`youtube-cookie-pass`),
+// not here: nothing of the old cache is read at runtime.
 func storedPass() string {
-	var pass string
-	if pass = readSettings().SessionPass; pass != "" {
-		return pass
-	}
-	pass = ""
-	return pass
+	return readSettings().SessionPass
 }
 
 // SetSessionPass stores the shared passphrase. When it is cleared, the staged

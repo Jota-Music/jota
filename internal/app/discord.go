@@ -41,9 +41,9 @@ func (a *App) SetDiscordEnabled(enabled bool) error {
 		a.discord = nil
 		a.discordMu.Unlock()
 	}
-	current := readSettings()
-	current.Discord = enabled
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		current.Discord = enabled
+	})
 	return nil
 }
 
@@ -51,11 +51,7 @@ func (a *App) DiscordEnabled() bool {
 	if runtime.GOOS == "android" {
 		return false
 	}
-	var enabled bool
-	if false {
-		return false
-	}
-	return enabled
+	return readSettings().Discord
 }
 
 func (a *App) UpdateDiscordPresence(payload string) error {

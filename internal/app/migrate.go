@@ -737,6 +737,11 @@ func (m *migration) settings() {
 		return
 	}
 	current, _ := state.Read[deviceSettings](state.Settings)
+	// Read before anything is carried: the switches below are only taken on a
+	// device that had no settings at all, and relay and pass are carried right
+	// here, so the test has to answer what the device held, not what this
+	// function has just written into current.
+	fresh := current.Relay.URL == "" && current.SessionPass == ""
 	carried := 0
 
 	if current.Relay.URL == "" {
@@ -750,11 +755,23 @@ func (m *migration) settings() {
 		}
 	}
 	if current.SessionPass == "" {
+		// The pass has had two names: the settings that carried the YouTube
+		// cookies used the older one, and a device that kept it is the one whose
+		// sealed sessions would stop opening.
 		if data, ok := legacy["session-pass"]; ok {
 			var pass string
 			if err := json.Unmarshal(data, &pass); err == nil && pass != "" {
 				current.SessionPass = pass
 				carried++
+			}
+		}
+		if current.SessionPass == "" {
+			if data, ok := legacy["youtube-cookie-pass"]; ok {
+				var pass string
+				if err := json.Unmarshal(data, &pass); err == nil && pass != "" {
+					current.SessionPass = pass
+					carried++
+				}
 			}
 		}
 	}
@@ -778,9 +795,30 @@ func (m *migration) settings() {
 			}
 		}
 	}
+	// The two switches decide whether a pass applies the document and whether
+	// the folder is reconciled at all. A device that turned one off would have
+	// it back on: a missing switch means on, so it has to be carried.
+	if current.Sync.Import == nil {
+		if data, ok := legacy["sync-import"]; ok {
+			var imported bool
+			if err := json.Unmarshal(data, &imported); err == nil {
+				current.Sync.Import = &imported
+				carried++
+			}
+		}
+	}
+	if current.Sync.Auto == nil {
+		if data, ok := legacy["sync-auto"]; ok {
+			var auto bool
+			if err := json.Unmarshal(data, &auto); err == nil {
+				current.Sync.Auto = &auto
+				carried++
+			}
+		}
+	}
 	// The two switches are only carried when the device holds no settings at
 	// all: a switch the user turned off after the upgrade must stay off.
-	if current.Relay.URL == "" && current.SessionPass == "" {
+	if fresh {
 		if data, ok := legacy["discord"]; ok {
 			var discord bool
 			if err := json.Unmarshal(data, &discord); err == nil && discord {
@@ -791,7 +829,8 @@ func (m *migration) settings() {
 		if data, ok := legacy["idle-reload"]; ok {
 			var idle bool
 			if err := json.Unmarshal(data, &idle); err == nil && idle {
-				current.IdleReload = true
+				on := true
+				current.IdleReload = &on
 				carried++
 			}
 		}

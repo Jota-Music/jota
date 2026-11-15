@@ -41,30 +41,30 @@ func (s *settingsStore) Section() (backup.Settings, error) {
 
 func (s *settingsStore) Apply(part backup.Settings) error {
 	applied := false
-	current := readSettings()
-	for key, entry := range part {
-		if len(entry.Value) == 0 || !slices.Contains(carriedSettings, key) {
-			continue
-		}
-		switch key {
-		case "sync":
-			options := syncValueOf(entry.Value)
-			current.Sync.Import = options.Import
-			current.Sync.Auto = options.Auto
-			current.Sync.Interval = options.Interval
-			current.Sync.At = entry.At
-		case "relay":
-			var relay Relay
-			if err := json.Unmarshal(entry.Value, &relay); err != nil {
+	editSettings(func(current *deviceSettings) {
+		for key, entry := range part {
+			if len(entry.Value) == 0 || !slices.Contains(carriedSettings, key) {
 				continue
 			}
-			current.Relay = relay
-			current.RelayAt = entry.At
+			switch key {
+			case "sync":
+				options := syncValueOf(entry.Value)
+				current.Sync.Import = options.Import
+				current.Sync.Auto = options.Auto
+				current.Sync.Interval = options.Interval
+				current.Sync.At = entry.At
+			case "relay":
+				var relay Relay
+				if err := json.Unmarshal(entry.Value, &relay); err != nil {
+					continue
+				}
+				current.Relay = relay
+				current.RelayAt = entry.At
+			}
+			applied = true
 		}
-		applied = true
-	}
+	})
 	if applied {
-		writeSettings(current)
 		s.dirty.Store(true)
 	}
 	return nil
@@ -81,17 +81,17 @@ func (s *settingsStore) Synced() {
 
 // touchSync dates the carried sync settings.
 func touchSync() {
-	current := readSettings()
-	current.Sync.At = time.Now().UnixMilli()
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		current.Sync.At = time.Now().UnixMilli()
+	})
 	settingsSync.dirty.Store(true)
 }
 
 // touchRelay dates the carried relay settings.
 func touchRelay() {
-	current := readSettings()
-	current.RelayAt = time.Now().UnixMilli()
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		current.RelayAt = time.Now().UnixMilli()
+	})
 	settingsSync.dirty.Store(true)
 }
 

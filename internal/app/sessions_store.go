@@ -42,12 +42,9 @@ func (s *sessionsStore) Apply(part backup.Settings) error {
 		if err := json.Unmarshal(entry.Value, &blob); err != nil {
 			continue
 		}
-		sessions := readSessions()
-		if sessions == nil {
-			sessions = map[string]sessionEntry{}
-		}
-		sessions[key] = sessionEntry{Value: blob, At: entry.At}
-		writeSessions(sessions)
+		editSessions(func(sessions map[string]sessionEntry) {
+			sessions[key] = sessionEntry{Value: blob, At: entry.At}
+		})
 		if blob == "" {
 			continue
 		}
@@ -81,14 +78,14 @@ func sealedSession(blob string) bool {
 // is waiting for a pass, so the panel can say so instead of showing silence.
 func markSealed() {
 	sealed := sealedSession(stagedSession("youtube")) || sealedSession(stagedSession("spotify"))
-	status := readSettings().Sync.Status
-	if status.Sealed == sealed {
-		return
-	}
-	status.Sealed = sealed
-	current := readSettings()
-	current.Sync.Status = status
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		status := current.Sync.Status
+		if status.Sealed == sealed {
+			return
+		}
+		status.Sealed = sealed
+		current.Sync.Status = status
+	})
 }
 
 // stagedSession reads the blob a pass staged for one source, empty when the

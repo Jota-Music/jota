@@ -86,37 +86,37 @@ func stamp(document string) uint32 {
 // stamp to offer: the folder path relies on MTime/FileSize instead.
 func (a *App) recordSync(stats backup.Stats, fresh, written bool, read int64) {
 	stale := stats.Modified && !fresh
-	current := readSettings()
-	uri := current.Sync.Folder
-	status := current.Sync.Status
-	status.At = time.Now().UnixMilli()
-	status.Uri = uri
-	status.ReadAt = status.At
-	status.Bytes = stats.Bytes
-	status.Remote = stats.InFile
-	status.Imported = stats.Changed()
-	status.Modified = stats.Modified
-	status.Stale = stale
-	status.ReadStamp = read
-	status.Problem = ""
-	if written && stats.Modified {
-		status.WriteAt = status.At
-		status.Hash = stamp(stats.Document)
-	}
-	// A stale read never wrote the document, so the copy in the file is not the
-	// snapshots this pass resolved.
-	if stats.Snapshots && !stale {
-		status.SnapshotsAt = status.At
-	}
-	status.MTime, status.FileSize = 0, 0
-	if uri != "" {
-		if info, err := os.Stat(filepath.Join(uri, backup.BackupFile)); err == nil {
-			status.MTime = info.ModTime().UnixNano()
-			status.FileSize = info.Size()
+	editSettings(func(current *deviceSettings) {
+		uri := current.Sync.Folder
+		status := current.Sync.Status
+		status.At = time.Now().UnixMilli()
+		status.Uri = uri
+		status.ReadAt = status.At
+		status.Bytes = stats.Bytes
+		status.Remote = stats.InFile
+		status.Imported = stats.Changed()
+		status.Modified = stats.Modified
+		status.Stale = stale
+		status.ReadStamp = read
+		status.Problem = ""
+		if written && stats.Modified {
+			status.WriteAt = status.At
+			status.Hash = stamp(stats.Document)
 		}
-	}
-	current.Sync.Status = status
-	writeSettings(current)
+		// A stale read never wrote the document, so the copy in the file is not the
+		// snapshots this pass resolved.
+		if stats.Snapshots && !stale {
+			status.SnapshotsAt = status.At
+		}
+		status.MTime, status.FileSize = 0, 0
+		if uri != "" {
+			if info, err := os.Stat(filepath.Join(uri, backup.BackupFile)); err == nil {
+				status.MTime = info.ModTime().UnixNano()
+				status.FileSize = info.Size()
+			}
+		}
+		current.Sync.Status = status
+	})
 	emitSections(stats)
 }
 
@@ -154,12 +154,12 @@ func emitSections(stats backup.Stats) {
 // it, and a failure that repeats every interval must leave a trace.
 func (a *App) recordProblem(err error) {
 	log.Printf("sync: %v", err)
-	current := readSettings()
-	status := current.Sync.Status
-	status.At = time.Now().UnixMilli()
-	status.Problem = err.Error()
-	current.Sync.Status = status
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		status := current.Sync.Status
+		status.At = time.Now().UnixMilli()
+		status.Problem = err.Error()
+		current.Sync.Status = status
+	})
 }
 
 // SyncProblem records a failure the page saw and Go did not: the document it
@@ -192,16 +192,16 @@ func (a *App) syncWrittenAt(dir string) error {
 		return err
 	}
 	_ = os.Remove(path)
-	current := readSettings()
-	status := current.Sync.Status
-	status.At = time.Now().UnixMilli()
-	status.Uri = a.SyncFolder()
-	status.WriteAt = status.At
-	status.Hash = stamp(string(data))
-	status.Stale = false
-	status.Problem = ""
-	current.Sync.Status = status
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		status := current.Sync.Status
+		status.At = time.Now().UnixMilli()
+		status.Uri = a.SyncFolder()
+		status.WriteAt = status.At
+		status.Hash = stamp(string(data))
+		status.Stale = false
+		status.Problem = ""
+		current.Sync.Status = status
+	})
 	// The document now carries every section this device wrote, so nothing is
 	// waiting to be saved any more.
 	Synced()
@@ -211,11 +211,11 @@ func (a *App) syncWrittenAt(dir string) error {
 // touchSync moves At alone. A settled pass reconciled nothing, but it did run,
 // so the panel's "last save" is the moment of that pass and not the last write.
 func (a *App) touchSync() {
-	current := readSettings()
-	status := current.Sync.Status
-	status.At = time.Now().UnixMilli()
-	current.Sync.Status = status
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		status := current.Sync.Status
+		status.At = time.Now().UnixMilli()
+		current.Sync.Status = status
+	})
 }
 
 // SyncTouched is the page's settled pass: the provider copy is the one it already
@@ -230,20 +230,15 @@ func (a *App) SyncFolder() string {
 
 func (a *App) SetSyncFolder(folder string) error {
 	folder = strings.TrimSpace(folder)
-	current := readSettings()
-	if folder == "" {
-		current.Sync.Folder = ""
-		writeSettings(current)
-		return nil
-	}
-	// Android keeps a content:// document URI here, not a filesystem path.
-	if runtime.GOOS != "android" {
+	if folder != "" && runtime.GOOS != "android" {
+		// Android keeps a content:// document URI here, not a filesystem path.
 		if info, err := os.Stat(folder); err != nil || !info.IsDir() {
 			return err
 		}
 	}
-	current.Sync.Folder = folder
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		current.Sync.Folder = folder
+	})
 	return nil
 }
 
@@ -273,9 +268,9 @@ func (a *App) SyncAuto() bool {
 }
 
 func (a *App) SetSyncAuto(enabled bool) error {
-	current := readSettings()
-	current.Sync.Auto = &enabled
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		current.Sync.Auto = &enabled
+	})
 	touchSync()
 	a.syncInBackground()
 	return nil
@@ -297,9 +292,9 @@ func (a *App) SyncImport() bool {
 }
 
 func (a *App) SetSyncImport(enabled bool) error {
-	current := readSettings()
-	current.Sync.Import = &enabled
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		current.Sync.Import = &enabled
+	})
 	touchSync()
 	a.syncInBackground()
 	return nil
@@ -317,9 +312,9 @@ func (a *App) SetSyncInterval(minutes int) error {
 	if minutes < 1 {
 		minutes = 15
 	}
-	current := readSettings()
-	current.Sync.Interval = &minutes
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		current.Sync.Interval = &minutes
+	})
 	touchSync()
 	a.syncInBackground()
 	return nil
@@ -529,14 +524,14 @@ func (a *App) syncDocument(data string, lastModified int64, trust bool) (string,
 // markStale records that the copy the pass read is behind this device, so the
 // page retries the read and writes the union.
 func (a *App) markStale() {
-	status := readSettings().Sync.Status
-	if status.Stale {
-		return
-	}
-	status.Stale = true
-	current := readSettings()
-	current.Sync.Status = status
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		status := current.Sync.Status
+		if status.Stale {
+			return
+		}
+		status.Stale = true
+		current.Sync.Status = status
+	})
 }
 
 // freshCopy is the rule the reading side applies to a copy a provider served.

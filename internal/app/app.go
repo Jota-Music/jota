@@ -284,12 +284,12 @@ func (a *App) SaveRelay(url string, token string) error {
 	if url == "" {
 		return nil
 	}
-	current := readSettings()
-	current.Relay = Relay{
-		URL:   url,
-		Token: strings.TrimSpace(token),
-	}
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		current.Relay = Relay{
+			URL:   url,
+			Token: strings.TrimSpace(token),
+		}
+	})
 	touchRelay()
 	a.syncInBackground()
 	return nil

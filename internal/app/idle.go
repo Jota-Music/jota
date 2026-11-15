@@ -15,13 +15,16 @@ func (a *App) IdleReload() bool {
 	// Reloading the hidden WebView is the only reliable way to release its
 	// internal image caches. Enable this for new installs; a saved user choice
 	// still takes precedence.
-	return readSettings().IdleReload
+	if value := readSettings().IdleReload; value != nil {
+		return *value
+	}
+	return true
 }
 
 func (a *App) SetIdleReload(enabled bool) {
-	current := readSettings()
-	current.IdleReload = enabled
-	writeSettings(current)
+	editSettings(func(current *deviceSettings) {
+		current.IdleReload = &enabled
+	})
 }
 
 // ReloadWindow reloads the webview. The queue and preferences live in

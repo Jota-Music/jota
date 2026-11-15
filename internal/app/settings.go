@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/Jota-Music/jota/internal/state"
@@ -18,8 +19,10 @@ type deviceSettings struct {
 	// the newer one.
 	RelayAt     int64  `json:"relayAt,omitempty"`
 	SessionPass string `json:"sessionPass,omitempty"`
-	IdleReload  bool   `json:"idleReload,omitempty"`
-	Discord     bool   `json:"discord,omitempty"`
+	// IdleReload is a pointer because it was on before it could be turned off:
+	// a device that never touched it has to keep the behaviour it had.
+	IdleReload *bool `json:"idleReload,omitempty"`
+	Discord    bool  `json:"discord,omitempty"`
 }
 
 // syncOptions is the sync part: where the document lives, whether a pass
@@ -42,6 +45,37 @@ type syncOptions struct {
 type sessionEntry struct {
 	Value string `json:"value,omitempty"`
 	At    int64  `json:"at,omitempty"`
+}
+
+// settingsMu serializes the read-modify-write of the settings section. A write
+// replaces the whole section, so two of them interleaved — a pass recording its
+// status while the user flips a switch — would drop one of the two.
+var settingsMu sync.Mutex
+
+// editSettings changes the settings under the lock that makes the whole
+// read-modify-write one step.
+func editSettings(change func(*deviceSettings)) {
+	settingsMu.Lock()
+	defer settingsMu.Unlock()
+	current := readSettings()
+	change(&current)
+	writeSettings(current)
+}
+
+// sessionsMu is the same lock for the sessions section, which is written whole
+// for the same reason.
+var sessionsMu sync.Mutex
+
+// editSessions changes the staged sessions under their lock.
+func editSessions(change func(map[string]sessionEntry)) {
+	sessionsMu.Lock()
+	defer sessionsMu.Unlock()
+	sessions := readSessions()
+	if sessions == nil {
+		sessions = map[string]sessionEntry{}
+	}
+	change(sessions)
+	writeSessions(sessions)
 }
 
 // readSettings reads the settings the device keeps.
@@ -78,12 +112,9 @@ func stagedBlob(source string) (sessionEntry, bool) {
 
 // stageBlob stores one staged session and dates it.
 func stageBlob(source string, blob string) error {
-	sessions := readSessions()
-	if sessions == nil {
-		sessions = map[string]sessionEntry{}
-	}
-	sessions[source] = sessionEntry{Value: blob, At: time.Now().UnixMilli()}
-	writeSessions(sessions)
+	editSessions(func(sessions map[string]sessionEntry) {
+		sessions[source] = sessionEntry{Value: blob, At: time.Now().UnixMilli()}
+	})
 	return nil
 }
 
@@ -91,12 +122,9 @@ func stageBlob(source string, blob string) error {
 // value is a tombstone that travels, so a session removed here is also removed
 // from the other devices.
 func unstageBlob(source string) {
-	sessions := readSessions()
-	if sessions == nil {
-		sessions = map[string]sessionEntry{}
-	}
-	sessions[source] = sessionEntry{At: time.Now().UnixMilli()}
-	writeSessions(sessions)
+	editSessions(func(sessions map[string]sessionEntry) {
+		sessions[source] = sessionEntry{At: time.Now().UnixMilli()}
+	})
 }
 
 // syncValue is the compound value the document carries for the sync settings.
