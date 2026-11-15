@@ -54,15 +54,20 @@ body {
 	color-scheme: dark;
 	--scrollbar-thumb: #1b1b1f;
 	--scrollbar-thumb-hover: #52525b;
+	--cover-slot: #18181b;
 }
 
 /* Over the ambient glow a near-black bar disappears into the tint, so the thumb
    turns translucent white there: it reads whatever colour is behind it instead
    of blending into it. With the glow off the surface is flat, and the dark thumb
-   stays the quieter one. */
+   stays the quieter one.
+   The glow also lifts what sits behind everything, so a cover slot at zinc-900
+   reads as a lighter grey box than the page it sits on: it drops to zinc-950
+   there, dark enough to stay a box without standing out of the tint. */
 [data-backdrop] {
 	--scrollbar-thumb: rgb(255 255 255 / 0.18);
 	--scrollbar-thumb-hover: rgb(255 255 255 / 0.38);
+	--cover-slot: #09090b;
 }
 
 * {

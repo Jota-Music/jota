@@ -58,7 +58,7 @@ export function Compact({
 									"bg-(--dominant-color)/15 ring-1 ring-(--dominant-color)/50 ring-inset",
 							)}
 						>
-							<div class="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-900">
+							<div class="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-(--cover-slot)">
 								<Cover item={item} size={22} iconSize={14} imageSize={80} />
 							</div>
 							<div class="flex min-w-0 flex-1 flex-col">

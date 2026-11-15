@@ -9,7 +9,7 @@ export function CoverFallback({ class: className }: { class?: string }) {
 	return (
 		<div
 			class={cn(
-				"flex items-center justify-center bg-zinc-900 text-zinc-600",
+				"flex items-center justify-center bg-(--cover-slot) text-zinc-600",
 				className || "h-full w-full",
 			)}
 		>

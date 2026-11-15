@@ -52,7 +52,7 @@ export function Grid({
 								"bg-(--dominant-color)/10 ring-2 ring-(--dominant-color) ring-inset",
 						)}
 					>
-						<div class="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-900">
+						<div class="relative aspect-square w-full overflow-hidden rounded-md bg-(--cover-slot)">
 							<Cover item={item} size={48} iconSize={28} imageSize={320} />
 							<div class={cn(hover, "left-1 top-1")}>{leading(item)}</div>
 							<div class={cn(hover, "right-1 top-1")}>{actions(item)}</div>
