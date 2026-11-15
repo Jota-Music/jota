@@ -4,7 +4,7 @@ go 1.26.1
 
 require (
 	github.com/devgianlu/go-librespot v0.9.0
-	github.com/klauspost/compress v1.18.3
+	github.com/klauspost/compress v1.18.7
 	github.com/wailsapp/wails/v3 v3.0.0-beta.16
 	golang.org/x/image v0.41.0
 	golang.org/x/oauth2 v0.35.0
