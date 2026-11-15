@@ -65,9 +65,11 @@ export function closeContextMenu() {
 	request.value = null;
 }
 
-const item = (action: Action) => (
+const item = (action: Action, index: number) => (
 	<button
-		key={action.label}
+		// The label is not unique (the same action can appear twice in a menu),
+		// and a duplicate key makes Preact reuse the wrong node.
+		key={`${index}-${action.label}`}
 		type="button"
 		role={COARSE ? undefined : "menuitem"}
 		onClick={() => {
@@ -128,6 +130,9 @@ function FloatingMenu() {
 		);
 		el.style.left = `${x}px`;
 		el.style.top = `${y}px`;
+		// The menu takes the focus, so closing it has to give it back: a keyboard
+		// user who dismissed it with Escape was left with nothing focused.
+		const restore = document.activeElement as HTMLElement | null;
 		el.querySelector("button")?.focus();
 
 		const onDown = (e: PointerEvent) => {
@@ -151,6 +156,12 @@ function FloatingMenu() {
 			document.removeEventListener("keydown", onKey);
 			window.removeEventListener("scroll", onScroll, true);
 			window.removeEventListener("resize", onResize);
+			// Only when the menu is what had the focus: a pointer that opened it
+			// elsewhere keeps the focus where the click landed.
+			if (el.contains(document.activeElement)) {
+				const back = (menu.anchor ?? restore) as HTMLElement | null;
+				back?.focus();
+			}
 		};
 	}, [menu]);
 
@@ -164,7 +175,7 @@ function FloatingMenu() {
 			style={{ top: 0, left: 0 }}
 		>
 			{header(menu)}
-			{menu.actions.map(item)}
+			{menu.actions.map((action, index) => item(action, index))}
 		</div>,
 		document.body,
 	);
