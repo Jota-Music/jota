@@ -224,19 +224,22 @@ export function FollowingShelf({ account }: { account: string }) {
 		void saveOrder("following", "", next);
 	};
 
+	// Same rule as the library: the shelf paints what it has and no loader sits
+	// over it, so the empty state waits until every source has answered.
+	const pending =
+		!spotifyReady.value ||
+		followedLoading ||
+		friends.isLoading ||
+		following.isLoading ||
+		orderQuery.isLoading;
+
 	return (
 		<Shelf
 			items={items}
 			to={link}
 			viewKey="following_view"
-			isLoading={
-				items.length === 0 &&
-				(followedLoading ||
-					friends.isLoading ||
-					following.isLoading ||
-					orderQuery.isLoading)
-			}
-			emptyMessage={<FollowingHint />}
+			isLoading={pending && items.length === 0}
+			emptyMessage={pending ? null : <FollowingHint />}
 			showLocal={false}
 			onReorder={reorder}
 			// Everything on this shelf is a follow, so the hover control is the

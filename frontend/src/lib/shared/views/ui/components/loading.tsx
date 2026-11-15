@@ -1,13 +1,44 @@
+import { useSignal } from "@preact/signals";
 import { Loader } from "lucide-preact";
+import type { ComponentChildren } from "preact";
+import { useEffect } from "preact/hooks";
 
-export function Loading() {
+// A read the store answers in a few milliseconds is not a wait: a placeholder
+// for one frame reads as a blink. Whatever stands in for the answer only shows
+// once the wait outlives the eye's tolerance, and until then the frame keeps
+// its room so nothing jumps when the answer lands.
+const flash = 200;
+
+function Delayed({
+	delay = flash,
+	children,
+}: {
+	delay?: number;
+	children: ComponentChildren;
+}) {
+	const visible = useSignal(false);
+
+	useEffect(() => {
+		const id = setTimeout(() => {
+			visible.value = true;
+		}, delay);
+		return () => clearTimeout(id);
+	}, [delay]);
+
+	if (!visible.value) return <div class="h-full min-h-0 flex-1" />;
+	return <>{children}</>;
+}
+
+export function Loading({ delay }: { delay?: number }) {
 	return (
-		<div
-			role="status"
-			class="flex h-full min-h-0 flex-1 items-center justify-center p-4"
-		>
-			<Loader size={24} class="animate-spin text-zinc-400" />
-		</div>
+		<Delayed delay={delay}>
+			<div
+				role="status"
+				class="flex h-full min-h-0 flex-1 items-center justify-center p-4"
+			>
+				<Loader size={24} class="animate-spin text-zinc-400" />
+			</div>
+		</Delayed>
 	);
 }
 

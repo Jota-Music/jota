@@ -10,7 +10,7 @@ import {
 	spotifyReady,
 	spotifyUser,
 } from "@/lib/auth/views/stores/session";
-import { youtubeSignedIn } from "@/lib/auth/views/stores/youtube";
+import { youtubeReady, youtubeSignedIn } from "@/lib/auth/views/stores/youtube";
 import { getUserPlaylists } from "@/lib/music/app/get-user-playlists";
 import { isLiked, likedCover } from "@/lib/music/app/liked";
 import { playlistSource } from "@/lib/music/app/playlist-source";
@@ -75,7 +75,7 @@ export function MainPage() {
 		retryOnMount: false,
 	});
 
-	const { saved, isLoading: loadingSaved } = useSaved();
+	const { saved } = useSaved();
 
 	const customQuery = useQuery({
 		queryKey: ["playlists"],
@@ -160,6 +160,17 @@ export function MainPage() {
 		[items, orderQuery.data],
 	);
 
+	// An empty shelf that is still waiting says nothing: it is not empty, it is
+	// on its way. The loader was replaced by that silence, so the records the
+	// app already holds paint instead of a spinner over them.
+	const pendingSources =
+		!spotifyReady.value ||
+		!youtubeReady.value ||
+		spotifyQuery.isLoading ||
+		youtubeQuery.isLoading ||
+		customQuery.isLoading ||
+		orderQuery.isLoading;
+
 	const reorder = (fromId: string, toId: string) => {
 		const next = move(
 			ordered.map((item) => item.id),
@@ -196,15 +207,10 @@ export function MainPage() {
 							followed.has(id) && followable(id) ? <SaveButton id={id} /> : null
 						}
 						actions={(id) => <PlaylistPlayButton id={id} />}
-						isLoading={
-							ordered.length === 0 &&
-							(spotifyQuery.isLoading ||
-								youtubeQuery.isLoading ||
-								loadingSaved ||
-								customQuery.isLoading ||
-								orderQuery.isLoading)
-						}
-						emptyMessage={<AllHint />}
+						// The loader is the last resort: it only stands in an empty shelf
+						// that is still waiting. Once a record paints, nothing covers it.
+						isLoading={pendingSources && ordered.length === 0}
+						emptyMessage={pendingSources ? null : <AllHint />}
 						onPlay={(id) => void playPlaylist(queryClient, id)}
 						onRemove={(id) => remove(id)}
 						onReorder={reorder}
