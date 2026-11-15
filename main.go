@@ -49,7 +49,7 @@ var windowPath string
 
 const (
 	windowMinWidth  = 500
-	windowMinHeight = 480
+	windowMinHeight = 800
 	logMaxBytes     = 2 << 20
 
 	// startupBudget is how long the process may go without a window before it
