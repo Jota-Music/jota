@@ -133,9 +133,7 @@ function VolumeControl({
 				aria-label={
 					muted.value ? t("music.volume.unmute") : t("music.volume.mute")
 				}
-				class={
-					inline ? "contents" : "rounded-md p-1.5 transition hover:bg-white/10"
-				}
+				class={inline ? "contents" : "rounded-md p-1.5 cursor-pointer"}
 			>
 				<Icon class="size-6 cursor-pointer" />
 			</button>

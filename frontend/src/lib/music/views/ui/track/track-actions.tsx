@@ -280,7 +280,7 @@ export default function TrackActions({
 				e.stopPropagation();
 			}}
 			onClick={toggle}
-			class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-white disabled:cursor-default disabled:opacity-40"
+			class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:text-white disabled:cursor-default disabled:opacity-40"
 		>
 			<EllipsisVertical size={18} />
 		</button>

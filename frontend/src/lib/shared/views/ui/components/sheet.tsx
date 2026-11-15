@@ -38,7 +38,7 @@ export function CloseButton({
 		<button
 			type="button"
 			class={cn(
-				"rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white cursor-pointer",
+				"rounded-lg p-1.5 text-zinc-400 transition hover:text-white cursor-pointer",
 				className,
 			)}
 			aria-label={label}

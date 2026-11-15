@@ -457,7 +457,7 @@ function SearchInput({
 					type="button"
 					title={t("search.clear")}
 					onClick={() => onInput("")}
-					class="absolute right-2 flex size-6 cursor-pointer items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-white"
+					class="absolute right-2 flex size-6 cursor-pointer items-center justify-center rounded text-zinc-500 transition-colors hover:text-white"
 				>
 					<X size={14} />
 				</button>

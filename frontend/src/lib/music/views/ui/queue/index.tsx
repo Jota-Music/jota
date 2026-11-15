@@ -175,7 +175,7 @@ const QueueRow = memo(function QueueRow({
 					draggable={false}
 					title={t("music.queue.moveDown")}
 					disabled={!canMoveDown}
-					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
 					onClick={() => void moveQueue(globalIndex, globalIndex + 1)}
 				>
 					<ChevronDown size={17} />
@@ -185,7 +185,7 @@ const QueueRow = memo(function QueueRow({
 					draggable={false}
 					title={t("music.queue.snapBelow")}
 					disabled={!canSnapBelow}
-					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+					class="cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
 					onClick={() => void moveAfterCurrent(globalIndex)}
 				>
 					<ArrowUpFromLine size={17} />
@@ -206,7 +206,7 @@ const QueueRow = memo(function QueueRow({
 				draggable={false}
 				title={t("music.queue.actions")}
 				aria-label={t("music.queue.actions")}
-				class="flex shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white sm:hidden"
+				class="flex shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:text-white sm:hidden"
 				onClick={(e) => openContextMenu(actions(), e)}
 			>
 				<MoreVertical size={17} />

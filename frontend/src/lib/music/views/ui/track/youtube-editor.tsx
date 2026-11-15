@@ -315,7 +315,7 @@ export default function YoutubeEditor() {
 											youtubeId.value = "";
 										}
 									}}
-									class="mr-2 flex size-6 shrink-0 cursor-pointer items-center justify-center self-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-white"
+									class="mr-2 flex size-6 shrink-0 cursor-pointer items-center justify-center self-center rounded text-zinc-500 transition-colors hover:text-white"
 								>
 									<X size={14} />
 								</button>
@@ -456,7 +456,7 @@ export default function YoutubeEditor() {
 									}
 									aria-pressed={previewPlaying.value}
 									onClick={togglePreview}
-									class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
+									class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-zinc-300 transition hover:text-white"
 								>
 									{previewPending.value ? (
 										<Loader2 class="size-4 animate-spin" />
@@ -499,7 +499,7 @@ export default function YoutubeEditor() {
 									title={t("music.youtubeId.previewStop")}
 									aria-label={t("music.youtubeId.previewStop")}
 									onClick={stopPreview}
-									class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
+									class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-zinc-500 transition hover:text-white"
 								>
 									<X class="size-4" />
 								</button>

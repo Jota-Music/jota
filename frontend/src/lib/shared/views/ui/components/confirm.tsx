@@ -34,7 +34,7 @@ export function ConfirmModal({
 						title={t("common.cancel")}
 						aria-label={t("common.cancel")}
 						onClick={close}
-						class="flex size-11 cursor-pointer items-center justify-center rounded-full border border-zinc-800 text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
+						class="flex size-11 cursor-pointer items-center justify-center rounded-full border border-zinc-800 text-zinc-300 transition-colors hover:text-white"
 					>
 						<X size={20} />
 					</button>

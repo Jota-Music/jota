@@ -286,7 +286,7 @@ function PlayerControlsRow({
 						"rounded-md p-1 transition cursor-pointer",
 						shuffle.value
 							? "text-(--dominant-color)"
-							: "text-neutral-400 hover:bg-white/10 hover:text-white",
+							: "text-neutral-400 hover:text-white",
 					)}
 				>
 					<Shuffle class="size-5.5 stroke-current" />
@@ -308,7 +308,7 @@ function PlayerControlsRow({
 						"rounded-md p-1 transition cursor-pointer",
 						repeat.value !== "off"
 							? "text-(--dominant-color)"
-							: "text-neutral-400 hover:bg-white/10 hover:text-white",
+							: "text-neutral-400 hover:text-white",
 					)}
 				>
 					{repeat.value === "one" ? (
@@ -333,7 +333,7 @@ function PlayerControlsRow({
 
 			<VolumeControl class="max-md:flex-1" />
 
-			<QueueButton class="hover:bg-white/10" iconClass="size-5.5" />
+			<QueueButton iconClass="size-5.5" />
 
 			{song && (
 				<div class="max-md:hidden">
@@ -345,7 +345,7 @@ function PlayerControlsRow({
 				type="button"
 				title={t("music.player.compact")}
 				onClick={() => setCompactPlayer(true)}
-				class="hidden md:block rounded-md p-1 transition text-neutral-400 hover:bg-white/10 hover:text-white cursor-pointer"
+				class="hidden md:block rounded-md p-1 transition text-neutral-400 hover:text-white cursor-pointer"
 			>
 				<Minimize2 class="size-6" />
 			</button>

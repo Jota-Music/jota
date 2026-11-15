@@ -405,7 +405,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 							onClick={() => {
 								search.value = "";
 							}}
-							className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
+							className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white"
 							aria-label={t("music.playlist.clearSearch")}
 						>
 							<X size={14} />
@@ -687,7 +687,7 @@ function PlaylistActions({
 				event.stopPropagation();
 				openContextMenu(actions, event);
 			}}
-			class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-800/80 hover:text-white disabled:cursor-default disabled:opacity-40"
+			class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:text-white disabled:cursor-default disabled:opacity-40"
 		>
 			<EllipsisVertical size={18} />
 		</button>

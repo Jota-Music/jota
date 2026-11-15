@@ -173,7 +173,7 @@ export function UserPage() {
 							onClick={() => {
 								videosSearch.value = "";
 							}}
-							class="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white hover:bg-zinc-800"
+							class="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 cursor-pointer items-center justify-center rounded text-zinc-500 hover:text-white"
 							aria-label={t("music.playlist.clearSearch")}
 						>
 							<X size={14} />
