@@ -16,6 +16,7 @@ import { t } from "@/lib/shared/i18n";
 import { logError } from "@/lib/shared/views/stores/errors";
 import { dismiss } from "@/lib/shared/views/stores/overlays";
 import { Boundary } from "@/lib/shared/views/ui/components/boundary";
+import { Tooltip } from "@/lib/shared/views/ui/components/tooltip";
 import Router from "@/lib/shared/views/ui/router";
 import "@wailsio/runtime";
 
@@ -133,6 +134,7 @@ void youtubeStatus.then(() =>
 render(
 	<Boundary>
 		<Router />
+		<Tooltip />
 	</Boundary>,
 	appRoot,
 );
