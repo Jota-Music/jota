@@ -1,7 +1,16 @@
 import { effect } from "@preact/signals";
 import { render } from "preact";
-import { watchIncoming } from "@/lib/auth/views/stores/youtube";
+import {
+	spotifyUser,
+	syncSpotifyStatus,
+} from "@/lib/auth/views/stores/session";
+import {
+	syncYouTubeStatus,
+	watchIncoming,
+	youtubeSignedIn,
+} from "@/lib/auth/views/stores/youtube";
 import { startAutosave } from "@/lib/music/app/backup";
+import { warm, warmOrder, warmSources } from "@/lib/music/app/prefetch";
 import { t } from "@/lib/shared/i18n";
 import { logError } from "@/lib/shared/views/stores/errors";
 import { dismiss } from "@/lib/shared/views/stores/overlays";
@@ -56,6 +65,36 @@ watchIncoming();
 
 const appRoot = document.getElementById("app");
 if (!appRoot) throw new Error("Missing #app root");
+
+// How long the first render may wait on a source's own list. Long enough for a
+// cache to answer on this machine, short enough that a source which has to fetch
+// never holds the window.
+const sourceWait = 120;
+
+function deadline(ms: number): Promise<void> {
+	return new Promise((resolve) => {
+		setTimeout(resolve, ms);
+	});
+}
+
+// The library's own records are read before the first render, so the shelf
+// paints them together: asking after the paint filled the grid in one source at
+// a time. The reads are the store in memory, and the boot mark in index.html
+// covers the wait when it outlives the mount.
+await Promise.all([warm(), syncSpotifyStatus(), syncYouTubeStatus()]);
+
+// The saved order is keyed by the account those readings name, and a shelf that
+// reorders once it lands is a shelf that jumps. The sources' own lists are asked
+// next: one first paint without them shows the library growing a tile at a time,
+// so they get a short wait and no more. That wait is a cache answering; a source
+// that has to fetch is a request, and a launch never waits on the network, so
+// past the wait the shelf paints what this device holds.
+await warmOrder(spotifyUser.value);
+await Promise.race([
+	warmSources(spotifyUser.value, youtubeSignedIn.value),
+	deadline(sourceWait),
+]);
+
 render(
 	<Boundary>
 		<Router />

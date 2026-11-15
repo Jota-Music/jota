@@ -159,14 +159,6 @@ const IDLE_RAM_MB = 600;
 const RELOAD_POLL_MS = 30 * 1000;
 
 function Router() {
-	useEffect(() => {
-		// The two readings that decide which sources the shelf asks for go first.
-		// Everything else in this file paints nothing on its own, so it waits for
-		// the first idle moment instead of crossing the bridge beside the data.
-		void syncSpotifyStatus();
-		void syncYouTubeStatus();
-	}, []);
-
 	// Warm the route chunks and ask the readings that paint nothing once the first
 	// frame is done, so a navigation never waits on the network and the shelf's
 	// data never queues behind them.
