@@ -71,10 +71,15 @@ func StartProxy() int {
 	return proxyPort
 }
 
-// relay answers one player request. The byte range googlevideo serves is
-// reassembled from short, bounded requests so the throttled long connection is
-// avoided, while the status, offsets and headers describe exactly what the
-// player asked for.
+// probeTimeout bounds the answer to a header-only request: one byte is all it
+// asks for, so a probe that outlives this is a link that will not play.
+const probeTimeout = 10 * time.Second
+
+// relay answers one player request. The slice it serves is also the request
+// that learns the stream's own size: googlevideo's Content-Range carries the
+// whole length, so a play costs one round trip instead of a probe plus the
+// slice. On a phone that round trip is most of what a track's start, and every
+// seek after it, is made of.
 func relay(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/stream/")
 	proxyMu.Lock()
@@ -85,101 +90,83 @@ func relay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ask googlevideo for a single byte first: its Content-Range carries the
-	// real total size, which is what the headers and the chunking need.
-	probeReq, err := http.NewRequestWithContext(r.Context(), http.MethodGet, s.url, nil)
-	if err != nil {
-		http.Error(w, err.Error(), 502)
+	if r.Method == http.MethodHead {
+		head(w, r, s)
 		return
 	}
-	probeReq.Header.Set("User-Agent", proxyAgent)
-	probeReq.Header.Set("Range", "bytes=0-0")
-	probeClient := &http.Client{Timeout: 10 * time.Second, Transport: proxyClient.Transport}
-	probeResp, err := probeClient.Do(probeReq)
+
+	// The range the player asked for. An open-ended request runs to the end of
+	// the stream, which is only known once googlevideo answers.
+	start := int64(0)
+	end := int64(-1)
+	hasRange := false
+	if rs, re, ok := parseRange(r.Header.Get("Range")); ok {
+		hasRange, start, end = true, rs, re
+	}
+
+	// The first slice is the probe: it is asked for before the headers because
+	// its answer is what tells them how long the stream is.
+	ce := start + chunkSize - 1
+	if end >= 0 && end < ce {
+		ce = end
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), chunkTimeout)
+	defer cancel()
+	resp, err := slice(ctx, s.url, start, ce)
 	if err != nil {
 		if r.Context().Err() != nil {
 			return
 		}
-		log.Printf("youtube: proxy %s probe err=%v", id, err)
+		log.Printf("youtube: proxy %s err=%v", id, err)
 		http.Error(w, "upstream unavailable", 502)
 		return
 	}
 
-	total := int64(0)
-	if parts := strings.Split(probeResp.Header.Get("Content-Range"), "/"); len(parts) == 2 {
-		fmt.Sscanf(parts[1], "%d", &total)
-	}
-	if total == 0 {
-		if cl := probeResp.Header.Get("Content-Length"); cl != "" {
-			fmt.Sscanf(cl, "%d", &total)
-		}
-	}
+	total := size(resp)
 	mime := s.mime
-	if ct := probeResp.Header.Get("Content-Type"); ct != "" {
+	if ct := resp.Header.Get("Content-Type"); ct != "" {
 		mime = ct
 	}
-	_, _ = io.Copy(io.Discard, probeResp.Body)
-	probeResp.Body.Close()
 
-	if total <= 0 {
-		// Fallback: pass the request through untouched when the size cannot be
-		// learned. Slower on throttled streams, but keeps playback working.
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, s.url, nil)
-		if err != nil {
-			http.Error(w, err.Error(), 502)
-			return
+	switch {
+	case resp.StatusCode == http.StatusRequestedRangeNotSatisfiable:
+		// A seek past the end: the answer already says how long the stream is.
+		if cr := resp.Header.Get("Content-Range"); cr != "" {
+			w.Header().Set("Content-Range", cr)
 		}
-		req.Header.Set("User-Agent", proxyAgent)
-		if rng := r.Header.Get("Range"); rng != "" {
-			req.Header.Set("Range", rng)
-		}
-		resp, err := proxyClient.Do(req)
-		if err != nil {
-			if r.Context().Err() != nil {
-				return
-			}
-			log.Printf("youtube: proxy %s err=%v", id, err)
-			http.Error(w, "upstream unavailable", 502)
-			return
-		}
-		defer resp.Body.Close()
-		for _, h := range []string{"Content-Type", "Content-Length", "Content-Range", "Last-Modified", "ETag"} {
-			if v := resp.Header.Get(h); v != "" {
-				w.Header().Set(h, v)
-			}
-		}
-		if w.Header().Get("Content-Type") == "" {
-			w.Header().Set("Content-Type", s.mime)
-		}
-		w.Header().Set("Accept-Ranges", "bytes")
-		w.WriteHeader(resp.StatusCode)
-		if _, err := io.Copy(w, resp.Body); err != nil && r.Context().Err() == nil {
-			log.Printf("youtube: proxy %s copy err=%v", id, err)
-		}
+		resp.Body.Close()
+		w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+		return
+	case resp.StatusCode == http.StatusOK && start > 0:
+		// The whole object under a range from the middle: its bytes do not
+		// start where the headers would say, so there is nothing to serve.
+		log.Printf("youtube: proxy %s upstream ignored the range", id)
+		resp.Body.Close()
+		http.Error(w, "upstream unavailable", 502)
+		return
+	case resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent:
+		log.Printf("youtube: proxy %s upstream status %d", id, resp.StatusCode)
+		resp.Body.Close()
+		http.Error(w, "upstream unavailable", 502)
 		return
 	}
 
-	// The range the player asked for. An open-ended request runs to the end.
-	start := int64(0)
-	end := total - 1
-	hasRange := false
-	if rng := r.Header.Get("Range"); rng != "" {
-		rs, re, ok := parseRange(rng)
-		if ok {
-			hasRange = true
-			start = rs
-			if re >= 0 {
-				end = re
-			}
-			if end >= total {
-				end = total - 1
-			}
-			if start > end {
-				w.Header().Set("Content-Range", fmt.Sprintf("bytes */%d", total))
-				w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
-				return
-			}
-		}
+	if total <= 0 {
+		// Without the size the slicing cannot describe what it sends: pass this
+		// same answer through instead of asking for it twice.
+		pass(w, resp, s.mime)
+		return
+	}
+
+	// The end the player asked for, or the end of the stream.
+	if end < 0 || end > total-1 {
+		end = total - 1
+	}
+	if start > end {
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes */%d", total))
+		resp.Body.Close()
+		w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+		return
 	}
 
 	if hasRange {
@@ -196,12 +183,22 @@ func relay(w http.ResponseWriter, r *http.Request) {
 	}
 
 	flusher, _ := w.(http.Flusher)
-	chunkClient := &http.Client{Transport: proxyClient.Transport}
-
-	offset := start
-	delivered := int64(0)
 	expected := end - start + 1
-	for offset <= end {
+
+	// The first slice is already open, so it is copied before the next one is
+	// asked for: a track that fits in one chunk costs a single request.
+	n, copyErr := io.Copy(w, io.LimitReader(resp.Body, expected))
+	resp.Body.Close()
+	if copyErr != nil && r.Context().Err() == nil {
+		log.Printf("youtube: proxy %s copy err=%v", id, copyErr)
+	}
+	delivered := n
+	if flusher != nil {
+		flusher.Flush()
+	}
+
+	offset := start + n
+	for copyErr == nil && n > 0 && delivered < expected {
 		ce := offset + chunkSize - 1
 		if ce > end {
 			ce = end
@@ -210,15 +207,7 @@ func relay(w http.ResponseWriter, r *http.Request) {
 		// megabytes, and a link slow enough to take longer than this is the only
 		// one that should be cut, not every link under a few megabits.
 		ctx, cancel := context.WithTimeout(r.Context(), chunkTimeout)
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.url, nil)
-		if err != nil {
-			cancel()
-			log.Printf("youtube: proxy %s err=%v", id, err)
-			break
-		}
-		req.Header.Set("User-Agent", proxyAgent)
-		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, ce))
-		resp, err := chunkClient.Do(req)
+		res, err := slice(ctx, s.url, offset, ce)
 		if err != nil {
 			cancel()
 			if r.Context().Err() != nil {
@@ -230,23 +219,23 @@ func relay(w http.ResponseWriter, r *http.Request) {
 		// A 200 to a ranged request is the whole object, not this chunk: copying
 		// it from a middle offset would write the wrong bytes under a length that
 		// says otherwise.
-		if resp.StatusCode == http.StatusOK && offset > start {
+		if res.StatusCode == http.StatusOK && offset > start {
 			log.Printf("youtube: proxy %s upstream ignored the range", id)
-			resp.Body.Close()
+			res.Body.Close()
 			cancel()
 			break
 		}
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
-			log.Printf("youtube: proxy %s upstream status %d", id, resp.StatusCode)
-			resp.Body.Close()
+		if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusPartialContent {
+			log.Printf("youtube: proxy %s upstream status %d", id, res.StatusCode)
+			res.Body.Close()
 			cancel()
 			break
 		}
 		// Only what the caller asked for: an answer that carries more than the
 		// chunk must not overflow the length already written in the header.
 		room := end - offset + 1
-		n, err := io.Copy(w, io.LimitReader(resp.Body, room))
-		resp.Body.Close()
+		n, err = io.Copy(w, io.LimitReader(res.Body, room))
+		res.Body.Close()
 		cancel()
 		if err != nil {
 			if r.Context().Err() == nil {
@@ -266,6 +255,86 @@ func relay(w http.ResponseWriter, r *http.Request) {
 	if delivered < expected {
 		log.Printf("youtube: proxy %s short response: got %d of %d bytes", id, delivered, expected)
 	}
+}
+
+// head answers a header-only player request. A one-byte range is the probe
+// googlevideo always answers, and nothing more of the stream is pulled.
+func head(w http.ResponseWriter, r *http.Request, s stream) {
+	ctx, cancel := context.WithTimeout(r.Context(), probeTimeout)
+	defer cancel()
+	resp, err := slice(ctx, s.url, 0, 0)
+	if err != nil {
+		if r.Context().Err() != nil {
+			return
+		}
+		http.Error(w, "upstream unavailable", 502)
+		return
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		http.Error(w, "upstream unavailable", 502)
+		return
+	}
+
+	mime := s.mime
+	if ct := resp.Header.Get("Content-Type"); ct != "" {
+		mime = ct
+	}
+	w.Header().Set("Content-Type", mime)
+	w.Header().Set("Accept-Ranges", "bytes")
+	if total := size(resp); total > 0 {
+		w.Header().Set("Content-Length", strconv.FormatInt(total, 10))
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// pass hands an upstream answer through untouched. It is the last resort for a
+// stream whose size cannot be learned, which is when the range slicing cannot
+// describe what it sends.
+func pass(w http.ResponseWriter, resp *http.Response, fallback string) {
+	defer resp.Body.Close()
+	for _, h := range []string{"Content-Type", "Content-Length", "Content-Range", "Last-Modified", "ETag"} {
+		if v := resp.Header.Get(h); v != "" {
+			w.Header().Set(h, v)
+		}
+	}
+	if w.Header().Get("Content-Type") == "" {
+		w.Header().Set("Content-Type", fallback)
+	}
+	w.Header().Set("Accept-Ranges", "bytes")
+	w.WriteHeader(resp.StatusCode)
+	if _, err := io.Copy(w, resp.Body); err != nil {
+		log.Printf("youtube: proxy copy err=%v", err)
+	}
+}
+
+// slice asks googlevideo for one bounded slice of a stream, with the headers
+// the player will be answered from.
+func slice(ctx context.Context, raw string, start, end int64) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", proxyAgent)
+	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
+	return proxyClient.Do(req)
+}
+
+// size is the whole stream's length, as the answer to a slice advertises it: a
+// 206 carries it in Content-Range, and a 200 in Content-Length.
+func size(resp *http.Response) int64 {
+	if parts := strings.Split(resp.Header.Get("Content-Range"), "/"); len(parts) == 2 {
+		if total, err := strconv.ParseInt(strings.TrimSpace(parts[1]), 10, 64); err == nil {
+			return total
+		}
+	}
+	if resp.StatusCode == http.StatusOK {
+		if total, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64); err == nil {
+			return total
+		}
+	}
+	return 0
 }
 
 // ProxyURL registers a googlevideo URL and returns the local proxy URL for it.

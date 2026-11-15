@@ -1,12 +1,29 @@
 package youtube
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
+
+// register puts a stream in the relay's table for the length of one test.
+func register(t *testing.T, id, url, mime string) {
+	t.Helper()
+	proxyMu.Lock()
+	proxyStreams[id] = stream{url: url, mime: mime}
+	proxyMu.Unlock()
+	t.Cleanup(func() {
+		proxyMu.Lock()
+		delete(proxyStreams, id)
+		proxyMu.Unlock()
+	})
+}
 
 // The player seeks with a byte range. The proxy must ask googlevideo for that
 // same range and hand back its answer untouched: a body that starts where the
@@ -17,31 +34,32 @@ func TestRelayForwardsRange(t *testing.T) {
 	var gotRange string
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotRange = r.Header.Get("Range")
-		start := 400
+		start, end, ok := parseRange(gotRange)
+		if !ok {
+			t.Errorf("upstream got no range: %q", gotRange)
+			http.Error(w, "range required", http.StatusBadRequest)
+			return
+		}
+		// googlevideo clamps a range that asks past the end of the stream.
+		if end > int64(len(body))-1 {
+			end = int64(len(body)) - 1
+		}
 		w.Header().Set("Content-Type", "audio/mp4")
-		w.Header().Set("Content-Range", "bytes 400-999/1000")
-		w.Header().Set("Content-Length", "600")
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(body)))
+		w.Header().Set("Content-Length", strconv.FormatInt(end-start+1, 10))
 		w.WriteHeader(http.StatusPartialContent)
-		_, _ = io.WriteString(w, body[start:])
+		_, _ = io.WriteString(w, body[start:end+1])
 	}))
 	defer upstream.Close()
-
-	proxyMu.Lock()
-	proxyStreams["seek"] = stream{url: upstream.URL, mime: "audio/mp4"}
-	proxyMu.Unlock()
-	defer func() {
-		proxyMu.Lock()
-		delete(proxyStreams, "seek")
-		proxyMu.Unlock()
-	}()
+	register(t, "seek", upstream.URL, "audio/mp4")
 
 	req := httptest.NewRequest(http.MethodGet, "/stream/seek", nil)
 	req.Header.Set("Range", "bytes=400-")
 	rec := httptest.NewRecorder()
 	relay(rec, req)
 
-	if gotRange != "bytes=400-999" {
-		t.Fatalf("upstream got range %q, want bytes=400-999", gotRange)
+	if start, _, _ := parseRange(gotRange); start != 400 {
+		t.Fatalf("upstream got range %q, want it to start at 400", gotRange)
 	}
 	if rec.Code != http.StatusPartialContent {
 		t.Fatalf("status = %d, want 206", rec.Code)
@@ -51,6 +69,111 @@ func TestRelayForwardsRange(t *testing.T) {
 	}
 	if got := rec.Body.String(); got != body[400:] {
 		t.Fatalf("body carried %d bytes, want the 600 from offset 400", len(got))
+	}
+}
+
+// A play costs one upstream request: the slice the player gets is also the
+// answer that carries the stream's size. A probe before it doubles the latency
+// of every start and every seek, which is what a phone notices first.
+func TestRelayAsksTheUpstreamOnce(t *testing.T) {
+	var calls int32
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		start, end, _ := parseRange(r.Header.Get("Range"))
+		if end > 999 {
+			end = 999
+		}
+		w.Header().Set("Content-Type", "audio/webm")
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/1000", start, end))
+		w.Header().Set("Content-Length", strconv.FormatInt(end-start+1, 10))
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = io.WriteString(w, strings.Repeat("a", int(end-start+1)))
+	}))
+	defer upstream.Close()
+	register(t, "once", upstream.URL, "audio/webm")
+
+	req := httptest.NewRequest(http.MethodGet, "/stream/once", nil)
+	req.Header.Set("Range", "bytes=0-999")
+	rec := httptest.NewRecorder()
+	relay(rec, req)
+
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Fatalf("upstream asked %d times, want 1", got)
+	}
+	if rec.Code != http.StatusPartialContent || rec.Body.Len() != 1000 {
+		t.Fatalf("status = %d, body = %d bytes", rec.Code, rec.Body.Len())
+	}
+}
+
+// A stream longer than one chunk is fetched as a chain of slices, and the size
+// the headers carry came from the first of them.
+func TestRelayChainsChunks(t *testing.T) {
+	size := 2*chunkSize + 4096
+	body := make([]byte, size)
+	for i := range body {
+		body[i] = byte(i % 251)
+	}
+	var calls int32
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		start, end, _ := parseRange(r.Header.Get("Range"))
+		if end > int64(size)-1 {
+			end = int64(size) - 1
+		}
+		w.Header().Set("Content-Type", "audio/webm")
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, size))
+		w.Header().Set("Content-Length", strconv.FormatInt(end-start+1, 10))
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = w.Write(body[start : end+1])
+	}))
+	defer upstream.Close()
+	register(t, "chain", upstream.URL, "audio/webm")
+
+	req := httptest.NewRequest(http.MethodGet, "/stream/chain", nil)
+	req.Header.Set("Range", "bytes=0-")
+	rec := httptest.NewRecorder()
+	relay(rec, req)
+
+	if got := atomic.LoadInt32(&calls); got != 3 {
+		t.Fatalf("upstream asked %d times, want 3 for %d bytes", got, size)
+	}
+	if rec.Body.Len() != size {
+		t.Fatalf("body carried %d bytes, want %d", rec.Body.Len(), size)
+	}
+	if !bytes.Equal(rec.Body.Bytes(), body) {
+		t.Fatal("the chained slices do not rebuild the stream")
+	}
+	if cl := rec.Header().Get("Content-Length"); cl != strconv.Itoa(size) {
+		t.Fatalf("content-length = %q, want %d", cl, size)
+	}
+}
+
+// A HEAD is answered from a one-byte probe: the stream itself is not pulled
+// through the relay just so the player can read its length.
+func TestRelayHeadProbesOnly(t *testing.T) {
+	var gotRange string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotRange = r.Header.Get("Range")
+		w.Header().Set("Content-Type", "audio/mp4")
+		w.Header().Set("Content-Range", "bytes 0-0/5000")
+		w.Header().Set("Content-Length", "1")
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = io.WriteString(w, "x")
+	}))
+	defer upstream.Close()
+	register(t, "head", upstream.URL, "audio/mp4")
+
+	rec := httptest.NewRecorder()
+	relay(rec, httptest.NewRequest(http.MethodHead, "/stream/head", nil))
+
+	if gotRange != "bytes=0-0" {
+		t.Fatalf("upstream got range %q, want bytes=0-0", gotRange)
+	}
+	if cl := rec.Header().Get("Content-Length"); cl != "5000" {
+		t.Fatalf("content-length = %q, want the stream's 5000", cl)
+	}
+	if rec.Body.Len() != 0 {
+		t.Fatalf("head carried %d bytes", rec.Body.Len())
 	}
 }
 
@@ -64,15 +187,7 @@ func TestRelayWithoutRange(t *testing.T) {
 		_, _ = io.WriteString(w, "abc")
 	}))
 	defer upstream.Close()
-
-	proxyMu.Lock()
-	proxyStreams["whole"] = stream{url: upstream.URL, mime: "audio/webm"}
-	proxyMu.Unlock()
-	defer func() {
-		proxyMu.Lock()
-		delete(proxyStreams, "whole")
-		proxyMu.Unlock()
-	}()
+	register(t, "whole", upstream.URL, "audio/webm")
 
 	rec := httptest.NewRecorder()
 	relay(rec, httptest.NewRequest(http.MethodGet, "/stream/whole", nil))

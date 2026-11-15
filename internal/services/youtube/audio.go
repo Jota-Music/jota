@@ -17,7 +17,11 @@ import (
 	"time"
 )
 
-var probeClient = &http.Client{Timeout: 8 * time.Second}
+// probeClient validates a stream URL without pulling the stream. It shares the
+// relay's transport on purpose: the probe that proves a URL also opens the
+// connection the first chunk is served from, so a track's start pays one TLS
+// handshake and not two.
+var probeClient = &http.Client{Timeout: 8 * time.Second, Transport: proxyClient.Transport}
 
 // ErrLoginRequired means YouTube wants a signed-in session: either the bot
 // check, or an age-restricted video. Neither resolves without account cookies.
