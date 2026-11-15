@@ -17,10 +17,10 @@ const base = {
 
 type Variant = keyof typeof base;
 
-// The heart has one look wherever a follow is shown: red and filled when it is
-// on, grey and hollow when it is off. The tone sits on the wrapper, so a button
-// can still shade it on hover.
-export const heartOn = "text-red-400";
+// The heart has one look wherever a follow is shown: the player's accent and
+// filled when it is on, grey and hollow when it is off. The tone sits on the
+// wrapper, so a button can still shade it on hover.
+export const heartOn = "text-(--dominant-color)";
 const heartOff = "text-zinc-400";
 
 function HeartButton({
@@ -52,7 +52,7 @@ function HeartButton({
 			// compete with it, and cn does not resolve the conflict.
 			class={cn(
 				base[variant],
-				on ? `${heartOn} hover:text-red-300` : `${heartOff} hover:text-white`,
+				on ? `${heartOn} hover:opacity-75` : `${heartOff} hover:text-white`,
 			)}
 		>
 			<Heart size={18} class={on ? "fill-current" : undefined} />
