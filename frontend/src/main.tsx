@@ -1,4 +1,5 @@
 import { effect } from "@preact/signals";
+import { System, Window as WailsWindow } from "@wailsio/runtime";
 import { render } from "preact";
 import {
 	spotifyUser,
@@ -62,6 +63,28 @@ startAutosave();
 
 // A session export opened with Jota (Android "open with") lands here.
 watchIncoming();
+
+// The boot mark in index.html copies the app's bar, and that bar's window
+// buttons belong to a component that is not mounted yet: the markup is static,
+// so the click is answered here. It reads the attribute, so it does nothing once
+// the real header is on screen and the boot node is gone.
+if (System.IsDesktop()) {
+	document.addEventListener("click", (event) => {
+		const target = event.target;
+		if (!(target instanceof Element)) return;
+		switch (target.closest("[data-window]")?.getAttribute("data-window")) {
+			case "minimise":
+				void WailsWindow.Minimise();
+				break;
+			case "maximise":
+				void WailsWindow.Maximise();
+				break;
+			case "close":
+				void WailsWindow.Close();
+				break;
+		}
+	});
+}
 
 const appRoot = document.getElementById("app");
 if (!appRoot) throw new Error("Missing #app root");
