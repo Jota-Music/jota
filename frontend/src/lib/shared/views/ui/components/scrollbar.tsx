@@ -46,6 +46,7 @@ export function Scrollbar({
 		let frame = 0;
 		let pending = 0;
 		let watch = 0;
+		let tries = 0;
 		let el: HTMLElement;
 		let detach: (() => void) | undefined;
 
@@ -122,9 +123,11 @@ export function Scrollbar({
 			const scroller = target.current;
 			// The scroller can mount a frame later, as in a modal animating in.
 			// This effect only reruns when `target` changes identity, so bailing
-			// here would leave the observers off for good.
+			// here would leave the observers off for good. The wait is bounded: a
+			// target that is still gone after a couple of seconds is a pane that is
+			// not going to mount, and a frame callback for it is a loop for nothing.
 			if (!scroller) {
-				watch = requestAnimationFrame(attach);
+				if (tries++ < 120) watch = requestAnimationFrame(attach);
 				return;
 			}
 			el = scroller;
