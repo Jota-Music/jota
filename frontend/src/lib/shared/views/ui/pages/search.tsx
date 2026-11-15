@@ -2,10 +2,10 @@ import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { useLayoutEffect } from "preact/hooks";
 import { useLocation, useParams } from "wouter-preact";
 import {
+	plainId,
 	type SearchResult,
 	searchResultToSong,
 	searchSpotify,
-	stripUriPrefix,
 } from "@/lib/music/app/search";
 import { spotifyRef } from "@/lib/music/app/spotify-link";
 import { playAlbum, playPlaylist } from "@/lib/music/views/play";
@@ -94,7 +94,7 @@ export function SearchPage() {
 	const items: Item[] = tracks
 		? []
 		: results.map((item) => {
-				const id = stripUriPrefix(item.uri, type ?? "");
+				const id = plainId(item.uri);
 				const subtitle = [
 					(item.artists ?? []).map((artist) => artist.name).join(", "),
 					item.ownerName,

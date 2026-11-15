@@ -19,6 +19,13 @@ export function stripUriPrefix(query: string, type: string): string {
 	return query.startsWith(prefix) ? query.slice(prefix.length) : query;
 }
 
+// plainId is the id a Spotify URI carries, whatever kind it is. A search answers
+// with the URI, and the tab that asked is not always the kind it answers with: a
+// profile search answers playlists, so the tab cannot be what strips it.
+export function plainId(uri: string): string {
+	return uri.replace(/^spotify:[a-z]+:/, "");
+}
+
 export async function searchSpotify(
 	type_: "user" | "track" | "album" | "playlist" | "artist",
 	query: string,
