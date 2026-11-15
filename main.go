@@ -541,12 +541,27 @@ func main() {
 	geometry := loadWindowState()
 	windowSaveState = geometry
 
+	// A frameless window cannot be dragged smaller than its own minimum, and the
+	// minimum has to fit the screen it opens on: a 768-tall display with an
+	// 800-tall window puts the player row under the screen edge with no way to
+	// reach it.
+	minWidth, minHeight := windowMinWidth, windowMinHeight
+	if screens := application.Get().Screen.GetAll(); len(screens) > 0 {
+		for _, screen := range screens {
+			if screen.WorkArea.Width > 0 {
+				minWidth = min(minWidth, screen.WorkArea.Width)
+				minHeight = min(minHeight, screen.WorkArea.Height)
+				break
+			}
+		}
+	}
+
 	opts := application.WebviewWindowOptions{
 		Title:            "Jota",
 		Width:            1100,
 		Height:           720,
-		MinWidth:         windowMinWidth,
-		MinHeight:        windowMinHeight,
+		MinWidth:         minWidth,
+		MinHeight:        minHeight,
 		Frameless:        true,
 		AlwaysOnTop:      geometry.AlwaysOnTop,
 		BackgroundType:   application.BackgroundTypeSolid,
