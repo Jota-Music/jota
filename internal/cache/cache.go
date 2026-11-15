@@ -1,10 +1,13 @@
 package cache
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -117,23 +120,31 @@ func cacheLocation(name, suffix string) (string, error) {
 	return filepath.Join(append([]string{base, "jota", "cache"}, parts...)...) + suffix, nil
 }
 
-// safePart turns one part of a name into a file name.
+// safePart turns one part of a name into a file name, and the name is
+// recoverable from it: the base64 of the part when it fits, a hash when it does
+// not, so walking a directory does not have to open every file to learn what it
+// holds.
 func safePart(part string) string {
-	safe := strings.Map(func(r rune) rune {
-		switch {
-		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
-			return r
-		case r == '-', r == '_':
-			return r
-		default:
-			return '_'
-		}
-	}, part)
-	if len(safe) > 80 {
-		safe = safe[:80]
+	encoded := base64.RawURLEncoding.EncodeToString([]byte(part))
+	if len(encoded) <= 80 {
+		return "~" + encoded
 	}
 	sum := sha256.Sum256([]byte(part))
-	return safe + "-" + hex.EncodeToString(sum[:4])
+	return "_" + hex.EncodeToString(sum[:16])
+}
+
+// partOf reads back the name a file name was made from. A name the encoder
+// could not carry (one longer than it fits) answers false, and the caller falls
+// back to the name stored inside the file.
+func partOf(file string) (string, bool) {
+	if !strings.HasPrefix(file, "~") {
+		return "", false
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(file[1:])
+	if err != nil {
+		return "", false
+	}
+	return string(decoded), true
 }
 
 // Write replaces a cache file through a temporary one.
@@ -161,11 +172,23 @@ func writeEntry(name string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	// A temporary name of its own per write: two writers of the same entity (a
+	// background refresh and the request that asked for it) would otherwise share
+	// one file and publish a mixture of both.
+	suffix := make([]byte, 4)
+	if _, err := rand.Read(suffix); err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	tmp := fmt.Sprintf("%s.%x.tmp", path, suffix)
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 // ReadRaw returns the raw bytes stored under name, without unmarshalling an
@@ -265,8 +288,10 @@ func Refreshable[T any](name string, fetch func() (T, error)) bool {
 	return true
 }
 
-// Walk visits every entity stored under a directory prefix. It reads only the
-// names from the directory listing, not the file contents, for speed.
+// Walk visits every entity stored under a directory prefix. The name comes out
+// of the file name, which carries it, so a pass over a folder of thousands of
+// entries does not read or decode a single file. An entry written by the older
+// naming form still carries the name inside it and is read for that.
 func Walk(dir string, fn func(name string) error) error {
 	base, err := state.Dir()
 	if err != nil {
@@ -284,10 +309,13 @@ func Walk(dir string, fn func(name string) error) error {
 		if item.IsDir() || !strings.HasSuffix(item.Name(), ".json") {
 			continue
 		}
-		// Decode the name from the filename. The filename is safePart(name)+".json".
-		// Since safePart is lossy, we fall back to reading the file for the name.
-		path := filepath.Join(root, item.Name())
-		data, err := os.ReadFile(path)
+		if part, ok := partOf(strings.TrimSuffix(item.Name(), ".json")); ok {
+			if err := fn(dir + "/" + part); err != nil {
+				return err
+			}
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(root, item.Name()))
 		if err != nil {
 			continue
 		}
