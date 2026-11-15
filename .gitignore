@@ -41,3 +41,5 @@ build/android/gen/
 build/android/local.properties
 build/android/keystore.properties
 TODO.md
+
+build/android/overlay.json

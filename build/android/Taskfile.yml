@@ -58,6 +58,10 @@ tasks:
 
   compile:go:shared:
     summary: Compile Go code to shared library (.so)
+    deps:
+      # The overlay is generated, not tracked: a checkout carries no absolute
+      # path from whoever built it last.
+      - task: generate:android:overlay
     cmds:
       - |
         # Locate the NDK: $ANDROID_NDK_HOME, or the newest installed NDK
