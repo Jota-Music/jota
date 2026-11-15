@@ -72,13 +72,12 @@ func keepAudio(videoID string, audio music.Audio, ttl time.Duration) {
 	fresh.Store(videoID, time.Now())
 }
 
-// forgetAudio drops the stream of a video: the user picked another one.
-func forgetAudio(videoID string) {
+// forgetStream drops the resolved stream of a video, so the next request
+// resolves it again. The relay registration is left alone: a video that is
+// playing keeps answering its ranges, and the next resolve registers anyway.
+func forgetStream(videoID string) {
 	fresh.Delete(videoID)
 	_ = cache.Forget(streamName(videoID))
-	proxyMu.Lock()
-	delete(proxyStreams, videoID)
-	proxyMu.Unlock()
 }
 
 // PurgeStreams drops the streams whose URL died with its signature. The age of

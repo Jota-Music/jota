@@ -3,7 +3,6 @@ package youtube
 import (
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/Jota-Music/jota/internal/cache"
 )
@@ -29,8 +28,10 @@ func pin(song, video string) error {
 
 		// Invalidate the cached stream so the new video is resolved on the next
 		// request: the old one still plays, but it is not what the user picked.
+		// Only the resolve is dropped, not the relay: if that video happens to be
+		// the one playing, its ranges have to keep being served.
 		if old := stored.Links[song]; old != "" && old != video {
-			forgetAudio(old)
+			forgetStream(old)
 		}
 
 		if video == "" {
@@ -104,17 +105,23 @@ func remember(song, video string) {
 }
 
 // MigrateLinks moves the picks the old layout kept in the state into the cache,
-// so the state only holds pins. Idempotent: a device with no picks is a no-op.
-var MigrateLinks = sync.OnceFunc(func() {
-	if len(readSession().Links) == 0 {
+// so the state only holds pins. The flag is what makes it once per device: the
+// map it reads is the same one the pins live in now, so a second run would turn
+// the user's pins into picks a resolve may overwrite.
+var MigrateLinks = func() {
+	if readSession().LinksMigrated {
 		return
 	}
 	_ = updateSession(func(stored *session) {
+		if stored.LinksMigrated {
+			return
+		}
 		for song, video := range stored.Links {
 			if video != "" {
 				remember(song, video)
 			}
 		}
 		stored.Links = nil
+		stored.LinksMigrated = true
 	})
-})
+}

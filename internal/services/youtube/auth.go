@@ -32,6 +32,10 @@ type session struct {
 	// state and carried in the backup. The videos a search settled on are not
 	// here, they have a file each.
 	Links map[string]string `json:"links,omitempty"`
+	// LinksMigrated records that the picks the layout before the split kept in
+	// Links were moved to the cache, so a later launch does not mistake the pins
+	// the user set since for those old picks.
+	LinksMigrated bool `json:"linksMigrated,omitempty"`
 }
 
 // sessionMu serializes the read-modify-write of the session. The cookies, the
