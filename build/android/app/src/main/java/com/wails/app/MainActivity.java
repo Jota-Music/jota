@@ -409,6 +409,10 @@ public class MainActivity extends AppCompatActivity {
         if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return;
         final Uri data = intent.getData();
         if (data == null || bridge == null) return;
+        // Our own `jota://callback` return from the Spotify sign-in is an ACTION_VIEW
+        // too, and it is not a file: it would fail the read and wail at the user.
+        final String scheme = data.getScheme();
+        if (!"content".equals(scheme) && !"file".equals(scheme)) return;
         new Thread(() -> {
             String text = readSharedText(data);
             if (text == null || text.isEmpty()) {
