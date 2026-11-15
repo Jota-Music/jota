@@ -33,7 +33,10 @@ export function Hint({
 				className,
 			)}
 		>
-			<div class="pointer-events-none absolute top-0 size-32 rounded-full bg-current/20 blur-3xl" />
+			{/* A gradient fades inside its own box, so no ancestor can cut the glow.
+			A blurred blob paints past the hint and the shelf clips it on a short
+			screen. */}
+			<div class="pointer-events-none absolute inset-x-0 top-0 mx-auto size-40 bg-[radial-gradient(closest-side,currentColor,transparent)] opacity-20" />
 
 			<div class="relative flex size-12 items-center justify-center rounded-full bg-current/10 ring-1 ring-inset ring-current/25">
 				{icon}
