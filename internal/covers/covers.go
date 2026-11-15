@@ -19,17 +19,30 @@ import (
 )
 
 const (
-	path          = "/__img"
-	minWidth      = 32
-	maxWidth      = 640
-	defaultWidth  = 300
-	maxSource     = 8 << 20
-	maxPixels     = 40 << 20
-	maxAspect     = 8
-	quality       = 82
-	fetchTimeout  = 10 * time.Second
-	maxConcurrent = 4
-	cacheBudget   = 4 << 20
+	path         = "/__img"
+	minWidth     = 32
+	maxWidth     = 640
+	defaultWidth = 300
+	maxSource    = 8 << 20
+	maxPixels    = 40 << 20
+	maxAspect    = 8
+	quality      = 82
+	fetchTimeout = 10 * time.Second
+	// A screen of art is asked for at once. With four slots the nine tiles of a
+	// shelf waited out three rounds of a network round trip before the grid
+	// looked whole, which read as the covers "arriving late" instead of with the
+	// page. The download slot only holds a network wait; the decoded image is
+	// what holds memory, so that stays on its own, smaller pool.
+	maxDownloads = 12
+	maxDecodes   = 6
+	cacheBudget  = 4 << 20
+	// A source is the upstream JPEG/PNG as it arrived, so the same cover asked
+	// at three widths is downloaded and decoded once. The budget is one album
+	// view, not the library: the hot set is the art on screen plus the copy the
+	// dominant-color probe asks for.
+	sourceBudget = 1 << 20
+	// A source past this size is not worth evicting the whole hot set for.
+	sourceCeiling = 512 << 10
 	userAgent     = "Mozilla/5.0 (compatible; Jota/1.0)"
 )
 
@@ -39,13 +52,15 @@ const (
 var buckets = []int{80, 128, 160, 320, 480, 640}
 
 // Server resizes remote cover art to the exact size the UI shows, so the
-// webview never decodes a full-resolution image for a small thumbnail. Rendered
-// covers are kept in a small bounded memory cache (never on disk), on top of
-// whatever the webview caches for itself.
+// webview never decodes a full-resolution image for a small thumbnail. Fetched
+// sources and rendered covers are kept in two small bounded memory caches
+// (never on disk), on top of whatever the webview caches for itself.
 type Server struct {
-	client *http.Client
-	sem    chan struct{}
-	cache  *lru
+	client  *http.Client
+	sem     chan struct{}
+	work    chan struct{}
+	cache   *lru
+	sources *lru
 
 	mu      sync.Mutex
 	flights map[string]*flight
@@ -62,8 +77,10 @@ type flight struct {
 func New() *Server {
 	return &Server{
 		client:  &http.Client{Timeout: fetchTimeout},
-		sem:     make(chan struct{}, maxConcurrent),
+		sem:     make(chan struct{}, maxDownloads),
+		work:    make(chan struct{}, maxDecodes),
 		cache:   newLRU(cacheBudget),
+		sources: newLRU(sourceBudget),
 		flights: make(map[string]*flight),
 	}
 }
@@ -110,6 +127,19 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 // render returns the encoded cover for key, joining a render already in flight
 // for it instead of starting a second one.
 func (s *Server) render(ctx context.Context, key, target string, width int) ([]byte, error) {
+	return s.share(key, func() ([]byte, error) {
+		data, err := s.produce(ctx, target, width)
+		if err != nil {
+			return nil, err
+		}
+		s.cache.put(key, data)
+		return data, nil
+	})
+}
+
+// share runs produce once per key and hands the result to every caller that
+// asked for it while it was running.
+func (s *Server) share(key string, produce func() ([]byte, error)) ([]byte, error) {
 	s.mu.Lock()
 	if f, ok := s.flights[key]; ok {
 		s.mu.Unlock()
@@ -121,10 +151,7 @@ func (s *Server) render(ctx context.Context, key, target string, width int) ([]b
 	s.flights[key] = f
 	s.mu.Unlock()
 
-	f.data, f.err = s.produce(ctx, target, width)
-	if f.err == nil {
-		s.cache.put(key, f.data)
-	}
+	f.data, f.err = produce()
 	f.wg.Done()
 
 	s.mu.Lock()
@@ -135,25 +162,51 @@ func (s *Server) render(ctx context.Context, key, target string, width int) ([]b
 }
 
 func (s *Server) produce(ctx context.Context, target string, width int) ([]byte, error) {
-	s.sem <- struct{}{}
-	img, err := s.fetch(ctx, target)
+	raw, err := s.source(ctx, target)
 	if err != nil {
-		<-s.sem
 		return nil, err
 	}
-	resized := resize(img, width)
-	// Free the slot before encoding: JPEG is CPU work, and holding a download
-	// slot through it starves the fetches of covers scrolling into view.
-	<-s.sem
+	// Decoding is CPU work and happens outside the download slot, so it never
+	// keeps a cover scrolling into view waiting on the network. It is still
+	// capped on its own: each decode holds a full RGBA image, and that is where
+	// the memory goes.
+	s.work <- struct{}{}
+	defer func() { <-s.work }()
+
+	img, err := decode(raw)
+	if err != nil {
+		return nil, err
+	}
 
 	var buf bytes.Buffer
-	if err := jpeg.Encode(&buf, resized, &jpeg.Options{Quality: quality}); err != nil {
+	if err := jpeg.Encode(&buf, resize(img, width), &jpeg.Options{Quality: quality}); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func (s *Server) fetch(ctx context.Context, target string) (image.Image, error) {
+// source returns the upstream bytes for target, from the source cache or from a
+// download shared with every other width asking for the same cover. The bytes
+// are kept as they arrived: the decoded image is the expensive thing to hold.
+func (s *Server) source(ctx context.Context, target string) ([]byte, error) {
+	if raw, ok := s.sources.get(target); ok {
+		return raw, nil
+	}
+	return s.share("src|"+target, func() ([]byte, error) {
+		s.sem <- struct{}{}
+		raw, err := s.download(ctx, target)
+		<-s.sem
+		if err != nil {
+			return nil, err
+		}
+		if len(raw) <= sourceCeiling {
+			s.sources.put(target, raw)
+		}
+		return raw, nil
+	})
+}
+
+func (s *Server) download(ctx context.Context, target string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
 		return nil, err
@@ -185,7 +238,10 @@ func (s *Server) fetch(ctx context.Context, target string) (image.Image, error) 
 	if !fits(cfg.Width, cfg.Height) {
 		return nil, fmt.Errorf("cover: %s is %dx%d", target, cfg.Width, cfg.Height)
 	}
+	return raw, nil
+}
 
+func decode(raw []byte) (image.Image, error) {
 	img, _, err := image.Decode(bytes.NewReader(raw))
 	return img, err
 }
@@ -209,7 +265,10 @@ func resize(img image.Image, width int) image.Image {
 	}
 	height := max(width*bounds.Dy()/bounds.Dx(), 1)
 	dst := image.NewRGBA(image.Rect(0, 0, width, height))
-	draw.CatmullRom.Scale(dst, dst.Bounds(), img, bounds, draw.Over, nil)
+	// Bilinear, not CatmullRom: the cubic kernel costs 4x to 60x more per cover
+	// (12ms against 3ms at a 480px bucket) and thumbnails cannot tell the two
+	// apart. The scale is a downscale, so the sample footprint stays small.
+	draw.ApproxBiLinear.Scale(dst, dst.Bounds(), img, bounds, draw.Over, nil)
 	return dst
 }
 
@@ -230,8 +289,9 @@ func bucketWidth(width int) int {
 	return maxWidth
 }
 
-// lru is a byte-budgeted least-recently-used cache of rendered covers. It is
-// deliberately tiny and internal: one lock, a map and an eviction list.
+// lru is a byte-budgeted least-recently-used cache holding sources or rendered
+// covers. It is deliberately tiny and internal: one lock, a map and an eviction
+// list.
 type lru struct {
 	mu    sync.Mutex
 	items map[string]*list.Element

@@ -216,7 +216,7 @@ func TestBombFallsBackToOriginal(t *testing.T) {
 	server := New()
 	server.client = &http.Client{Transport: tripper}
 
-	_, err := server.fetch(context.Background(), target)
+	_, err := server.download(context.Background(), target)
 	if err == nil {
 		t.Fatal("expected an oversized header to be rejected")
 	}
@@ -270,6 +270,29 @@ func TestConcurrentRequestsShareRender(t *testing.T) {
 		if !bytes.Equal(body, bodies[0]) {
 			t.Fatalf("caller %d got a different cover", i)
 		}
+	}
+}
+
+// A cover is asked at several widths as the same art moves from a card to a
+// track row to the color probe. All of them come from one download.
+func TestWidthsShareOneDownload(t *testing.T) {
+	tripper := &gateTripper{image: pngSource(t, 640)}
+	server := New()
+	server.client = &http.Client{Transport: tripper}
+	handler := server.Middleware(http.NotFoundHandler())
+
+	for _, width := range []int{80, 160, 320, 480} {
+		req := httptest.NewRequest(http.MethodGet,
+			fmt.Sprintf("%s?u=https://i.scdn.co/image/a&w=%d", path, width), nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("w=%d status = %d, want 200", width, rec.Code)
+		}
+	}
+
+	if got := tripper.count(); got != 1 {
+		t.Fatalf("upstream requests = %d, want 1", got)
 	}
 }
 
