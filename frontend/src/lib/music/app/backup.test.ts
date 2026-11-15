@@ -50,6 +50,9 @@ const stages: string[] = [];
 const notices: string[] = [];
 
 mock.module("@/lib/shared/i18n", () => ({ t: (key: string) => key }));
+// The flag is computed when the module loads, and any other test file may have
+// loaded it first: the seam is the module, not the user agent.
+mock.module("@/lib/shared/utils/platform", () => ({ isAndroid: true }));
 mock.module("@/lib/shared/views/stores/errors", () => ({
 	logError: () => {},
 	notify: (message: string) => notices.push(message),
@@ -144,10 +147,6 @@ const bridge = {
 	},
 	syncFileInfoAsync: (id: string) => answer(id, JSON.stringify(meta), null),
 };
-Object.defineProperty(globalThis.navigator, "userAgent", {
-	value: "Android 13",
-	configurable: true,
-});
 Object.defineProperty(globalThis, "window", {
 	value: { wails: bridge, addEventListener: () => {} },
 	configurable: true,
