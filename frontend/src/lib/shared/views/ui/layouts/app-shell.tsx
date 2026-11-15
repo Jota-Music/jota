@@ -10,7 +10,11 @@ import {
 	clearSelection,
 	selectionActive,
 } from "@/lib/music/views/stores/selection";
-import { backdrop } from "@/lib/music/views/stores/visuals";
+import {
+	backdrop,
+	moteScale,
+	strength,
+} from "@/lib/music/views/stores/visuals";
 import { PlayerBar } from "@/lib/music/views/ui/player";
 import { PlaylistPicker } from "@/lib/music/views/ui/playlists/picker";
 import Queue from "@/lib/music/views/ui/queue";
@@ -44,7 +48,7 @@ const dust = Array.from({ length: DUST }, (_, id) => {
 		id,
 		left: `${((id + Math.random()) / DUST) * 100}%`,
 		top: `${55 + Math.random() * 45}%`,
-		size: `${2 + Math.random() * 2.5}px`,
+		size: 2 + Math.random() * 2.5,
 		peak: `${0.15 + Math.random() * 0.3}`,
 		duration,
 		delay: -Math.random() * duration,
@@ -101,7 +105,8 @@ export function AppShell({
 						<>
 							<div
 								aria-hidden="true"
-								class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_30%_0%,currentColor,transparent_60%),radial-gradient(circle_at_85%_100%,currentColor,transparent_60%)] text-(--dominant-color) opacity-[0.12] transition-colors duration-1000 ease-out"
+								class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_30%_0%,currentColor,transparent_60%),radial-gradient(circle_at_85%_100%,currentColor,transparent_60%)] text-(--dominant-color) transition-colors duration-1000 ease-out"
+								style={{ opacity: strength.value }}
 							/>
 
 							<div
@@ -115,8 +120,8 @@ export function AppShell({
 										style={{
 											left: mote.left,
 											top: mote.top,
-											width: mote.size,
-											height: mote.size,
+											width: `${mote.size * moteScale.value}px`,
+											height: `${mote.size * moteScale.value}px`,
 											"--peak": mote.peak,
 											"--dur": `${mote.duration}s`,
 											animation: `${mote.sway ? "mote-sway" : "mote"} ${mote.duration}s linear ${mote.delay}s infinite`,

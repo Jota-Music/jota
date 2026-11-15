@@ -76,9 +76,16 @@
 		},
 		"visuals": {
 			"title": "Visuals",
+			"reset": "Reset",
 			"background": {
 				"label": "Ambient background",
 				"description": "A soft glow in the colour of the playing cover, behind the content."
+			},
+			"strength": {
+				"label": "Glow intensity"
+			},
+			"particleSize": {
+				"label": "Particle size"
 			}
 		},
 		"discord": {

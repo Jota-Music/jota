@@ -76,9 +76,16 @@
 		},
 		"visuals": {
 			"title": "Visual",
+			"reset": "Restablecer",
 			"background": {
 				"label": "Fondo ambiental",
 				"description": "Un brillo suave con el color de la portada en reproducción, detrás del contenido."
+			},
+			"strength": {
+				"label": "Intensidad del brillo"
+			},
+			"particleSize": {
+				"label": "Tamaño de las partículas"
 			}
 		},
 		"discord": {
