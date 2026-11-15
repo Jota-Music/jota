@@ -1,7 +1,6 @@
 import { effect, signal, useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import {
-	ArrowUpDown,
 	Check,
 	EllipsisVertical,
 	ListChecks,
@@ -14,7 +13,13 @@ import {
 	Trash2,
 	X,
 } from "lucide-preact";
-import { useEffect, useMemo, useRef } from "preact/hooks";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+} from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import {
@@ -47,10 +52,11 @@ import {
 	selectedIds,
 } from "@/lib/music/views/stores/selection";
 import { SaveButton } from "@/lib/music/views/ui/follow";
+import { OrderSelect, type OrderType } from "@/lib/music/views/ui/order-select";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
-import { move } from "@/lib/shared/app/reorder";
+import { place } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
 import { translateError } from "@/lib/shared/i18n/errors";
 import { cn } from "@/lib/shared/utils/tw";
@@ -65,8 +71,6 @@ import { Modal } from "@/lib/shared/views/ui/components/modal";
 import { PageHeader } from "@/lib/shared/views/ui/components/page-header";
 
 const storageKey = "playlist_filters";
-
-type OrderType = "added" | "reverse" | "duration-asc" | "duration-desc";
 
 type Filters = {
 	order: OrderType;
@@ -131,10 +135,6 @@ function getInputValue(e: Event): string {
 	return (e.target as HTMLInputElement).value;
 }
 
-function getSelectValue(e: Event): OrderType {
-	return (e.target as HTMLSelectElement).value as OrderType;
-}
-
 /* ------------------ State ------------------ */
 
 const initial = loadFilters();
@@ -161,7 +161,9 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	const [, navigate] = useLocation();
 	const custom = isCustom(id);
 
-	useEffect(() => {
+	// Before the paint: a playlist that opened with the filter the previous one
+	// left would show its songs missing for one frame.
+	useLayoutEffect(() => {
 		search.value = "";
 	}, [id]);
 
@@ -180,6 +182,12 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	});
 
 	const removing = useSignal<Song[] | null>(null);
+
+	// One handler for every row: a fresh arrow per render is a new prop, and the
+	// memo on the rows would re-render all of them for each keystroke.
+	const askRemove = useCallback((next: Song[]) => {
+		removing.value = next;
+	}, []);
 
 	// The selection banner lives in the shell, above every page, so this page
 	// tells it how to remove the selected songs from this playlist.
@@ -306,11 +314,15 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				: [],
 			filteredSongs: sorted,
 			playable: sorted.filter((song) => !song.broken),
+			// added and reverse paint the stored order itself, so a drop can be read
+			// off the rows on screen and written back. A duration sort paints another
+			// order, where a drop would have nowhere to land, and a search shows a
+			// subset, where the drop would be missing its neighbours.
 			canReorder:
 				custom &&
 				query.length === 0 &&
-				order.value === "added" &&
-				songs.length > 1,
+				songs.length > 1 &&
+				(order.value === "added" || order.value === "reverse"),
 		};
 	}, [songs, custom, query, order.value]);
 
@@ -319,14 +331,12 @@ export default function PlaylistPlain({ id }: { id: string }) {
 	);
 
 	const handleReorder = (from: number, to: number) => {
-		const fromSong = songs[from];
-		const toSong = songs[to];
-		if (!fromSong || !toSong) return;
 		reorder.mutate(
-			move(
+			place(
 				songs.map((song) => song.id),
-				fromSong.id,
-				toSong.id,
+				from,
+				to,
+				order.value === "reverse",
 			),
 		);
 	};
@@ -414,29 +424,12 @@ export default function PlaylistPlain({ id }: { id: string }) {
 				</div>
 
 				{/* order */}
-				<div className="relative w-full">
-					<ArrowUpDown
-						size={16}
-						className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-					/>
-					<select
-						value={order.value}
-						onInput={(e) => {
-							order.value = getSelectValue(e);
-						}}
-						aria-label={t("music.playlist.orderBy")}
-						className="h-10 w-max appearance-none rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
-					>
-						<option value="added">{t("music.playlist.order.added")}</option>
-						<option value="reverse">{t("music.playlist.order.reverse")}</option>
-						<option value="duration-asc">
-							{t("music.playlist.order.durationAsc")}
-						</option>
-						<option value="duration-desc">
-							{t("music.playlist.order.durationDesc")}
-						</option>
-					</select>
-				</div>
+				<OrderSelect
+					value={order.value}
+					onChange={(value) => {
+						order.value = value;
+					}}
+				/>
 
 				{/* refresh */}
 				{!custom && (
@@ -446,10 +439,10 @@ export default function PlaylistPlain({ id }: { id: string }) {
 						aria-label={t("music.playlist.refresh")}
 						onClick={handleRefresh}
 						disabled={refreshing.value}
-						className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white disabled:opacity-50"
+						className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-zinc-400 transition-colors hover:text-white disabled:opacity-50"
 					>
 						<RefreshCw
-							size={16}
+							size={18}
 							class={refreshing.value ? "animate-spin" : ""}
 						/>
 					</button>
@@ -469,13 +462,7 @@ export default function PlaylistPlain({ id }: { id: string }) {
 					songs={filteredSongs}
 					sourceId={id}
 					resetKey={`${order.value}|${query}`}
-					onRemove={
-						custom
-							? (next) => {
-									removing.value = next;
-								}
-							: undefined
-					}
+					onRemove={custom ? askRemove : undefined}
 					onReorder={canReorder ? handleReorder : undefined}
 				/>
 			)}
