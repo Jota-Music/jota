@@ -375,6 +375,9 @@ func getVisitorData() (string, string, error) {
 		blockedUntil = time.Now().Add(visitorBackoff)
 		vd := visitorData
 		visitorDataMu.Unlock()
+		// The answer degrades to the cached token on purpose: an innertube request
+		// without a visitor id is still answered, and failing one because the
+		// homepage did would stop a resolve that had nothing to do with it.
 		log.Printf("youtube: visitor refresh failed, backing off %s: %v", visitorBackoff, err)
 		return vd, currentAPIKey(), nil
 	}
