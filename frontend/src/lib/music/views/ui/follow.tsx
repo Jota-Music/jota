@@ -12,13 +12,16 @@ const base = {
 	cover:
 		"flex h-8 w-8 cursor-pointer items-center justify-center rounded-md bg-black/70 transition hover:bg-black/90 disabled:opacity-50",
 	toolbar:
-		"flex h-10 w-10 md:h-8 md:w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 transition hover:text-white disabled:opacity-50",
+		"flex h-10 w-10 md:h-8 md:w-8 cursor-pointer items-center justify-center rounded-md transition disabled:opacity-50",
 } as const;
 
 type Variant = keyof typeof base;
 
-const idle = "text-zinc-400";
-const following = "text-red-400 hover:text-red-300";
+// The heart has one look wherever a follow is shown: red and filled when it is
+// on, grey and hollow when it is off. The tone sits on the wrapper, so a button
+// can still shade it on hover.
+export const heartOn = "text-red-400";
+const heartOff = "text-zinc-400";
 
 function HeartButton({
 	on,

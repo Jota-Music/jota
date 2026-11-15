@@ -121,10 +121,9 @@ export function Controls({
 						onClick={onCreate}
 						title={t("music.custom.create")}
 						aria-label={t("music.custom.create")}
-						class="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 transition-colors hover:text-white md:size-8"
+						class="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md text-zinc-400 transition-colors hover:text-white md:size-8"
 					>
-						<Plus size={20} class="md:hidden" />
-						<Plus size={16} class="hidden md:block" />
+						<Plus size={18} />
 					</button>
 				)}
 			</div>
