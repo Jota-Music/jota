@@ -1,6 +1,8 @@
+import { useSignal } from "@preact/signals";
 import type { RefObject } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { atWindowEdge } from "@/lib/shared/utils/pointer";
+import { cn } from "@/lib/shared/utils/tw";
 
 const MIN_THUMB_PX = 40;
 const CORNER_PX = 2;
@@ -26,7 +28,10 @@ export function Scrollbar({
 	gutter?: number;
 }) {
 	const bar = useRef<HTMLDivElement>(null);
-	const drag = useRef<{ y: number; top: number } | null>(null);
+	const drag = useRef<{ y: number; top: number; id: number } | null>(null);
+	// A finger never sets `:active` on a plain element, so the gesture drives the
+	// cue itself and the thumb lights up the same way under a mouse and a thumb.
+	const held = useSignal(false);
 	const metrics = useRef<Metrics>({
 		height: 0,
 		travel: 0,
@@ -162,8 +167,12 @@ export function Scrollbar({
 	const onDown = (e: PointerEvent) => {
 		const el = target.current;
 		if (!el) return;
+		// A second finger on the gutter is not a second drag: it would restart the
+		// travel from where it lands and put the cue out under the first one.
+		if (drag.current) return;
 		if (atWindowEdge(e)) return;
-		drag.current = { y: e.clientY, top: el.scrollTop };
+		drag.current = { y: e.clientY, top: el.scrollTop, id: e.pointerId };
+		held.value = true;
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 		e.preventDefault();
 	};
@@ -178,6 +187,9 @@ export function Scrollbar({
 	};
 
 	const onUp = (e: PointerEvent) => {
+		// Only the pointer that grabbed the thumb ends it; a stray one does not.
+		if (drag.current && drag.current.id !== e.pointerId) return;
+		held.value = false;
 		if (!drag.current) return;
 		drag.current = null;
 		const node = e.currentTarget as HTMLElement;
@@ -190,7 +202,7 @@ export function Scrollbar({
 		<div
 			ref={bar}
 			aria-hidden
-			class="group absolute right-0 top-0 will-change-transform touch-none cursor-grab active:cursor-grabbing"
+			class="absolute right-0 top-0 will-change-transform touch-none cursor-grab active:cursor-grabbing"
 			style={{ width: `${gutter}px` }}
 			onPointerDown={onDown}
 			onPointerMove={onMove}
@@ -199,7 +211,12 @@ export function Scrollbar({
 			onLostPointerCapture={onUp}
 		>
 			<div
-				class="ml-auto h-full w-2 rounded-full bg-(--scrollbar-thumb) transition-colors pointer-fine:hover:bg-(--scrollbar-thumb-hover) group-active:bg-(--scrollbar-thumb-hover)"
+				class={cn(
+					"ml-auto h-full w-2 rounded-full transition-colors pointer-fine:hover:bg-(--scrollbar-thumb-hover)",
+					held.value
+						? "bg-(--scrollbar-thumb-hover)"
+						: "bg-(--scrollbar-thumb)",
+				)}
 				style={{ marginRight: `${(gutter - 8) / 2}px` }}
 			/>
 		</div>
