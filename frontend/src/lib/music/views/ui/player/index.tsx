@@ -630,11 +630,8 @@ export function PlayerBar() {
 
 						<div class="flex items-center gap-1 max-[420px]:gap-0.5">
 							{/* Android has no room to spare here and its menu carries the
-							    switch instead; elsewhere the speaker stays in the row.
-							    The speaker glyph is narrower than the skip icons, so its
-							    box carries more air on the right: pulled in so the whole
-							    control row reads at one rhythm. */}
-							{!isAndroid && <VolumeControl class="-mr-2" tip />}
+							    switch instead; elsewhere the speaker stays in the row. */}
+							{!isAndroid && <VolumeControl tip />}
 
 							<button
 								type="button"
