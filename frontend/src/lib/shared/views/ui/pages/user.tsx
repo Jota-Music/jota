@@ -21,6 +21,7 @@ import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { type Item, Shelf, Tabs } from "@/lib/music/views/ui/shelf";
 import { UserHeader } from "@/lib/music/views/ui/user/header";
 import { t } from "@/lib/shared/i18n";
+import { cn } from "@/lib/shared/utils/tw";
 import { Rows } from "@/lib/shared/views/ui/components/loading";
 
 type Tab = "playlists" | "videos";
@@ -143,6 +144,27 @@ export function UserPage() {
 			: videos.filter((video) => video.name.toLowerCase().includes(query));
 	const filteredVideos = sortVideos(base, videoOrder.value);
 
+	const tabs = (
+		<Tabs
+			items={[
+				{
+					id: "videos",
+					icon: CirclePlay,
+					label: t("pages.youtube.videos"),
+				},
+				{
+					id: "playlists",
+					icon: ListVideo,
+					label: t("pages.youtube.playlists"),
+				},
+			]}
+			active={activeTab.value}
+			onSelect={(next) => {
+				activeTab.value = next;
+			}}
+		/>
+	);
+
 	// The filters belong to the tab, not to the page: they only make sense over
 	// the videos and disappear with them.
 	const videoBody = (
@@ -211,28 +233,19 @@ export function UserPage() {
 			{/* The tabs pick what the page shows, so they stand on their own above
 			    the body instead of riding in a panel: the videos are a list, not a
 			    shelf, and the playlists bring their own. They sit tight against the
-			    body, which keeps the loose gap from the header for itself. */}
+			    body, which keeps the loose gap from the header for itself. A phone
+			    has no shelf panel to hold a bar of its own, so there the playlists
+			    take the tabs into that bar instead of stacking a row of buttons
+			    with nothing beside them on top of the grid. */}
 			<div class="flex min-h-0 flex-1 flex-col gap-2">
 				{youtube && (
-					<div class="flex shrink-0 items-center gap-2 px-3 md:px-0">
-						<Tabs
-							items={[
-								{
-									id: "videos",
-									icon: CirclePlay,
-									label: t("pages.youtube.videos"),
-								},
-								{
-									id: "playlists",
-									icon: ListVideo,
-									label: t("pages.youtube.playlists"),
-								},
-							]}
-							active={activeTab.value}
-							onSelect={(next) => {
-								activeTab.value = next;
-							}}
-						/>
+					<div
+						class={cn(
+							"flex shrink-0 items-center gap-2 px-3 pt-2 md:px-0 md:pt-0",
+							!watchingVideos && "hidden md:flex",
+						)}
+					>
+						{tabs}
 					</div>
 				)}
 
@@ -246,6 +259,7 @@ export function UserPage() {
 						actions={(id) => <PlaylistPlayButton id={id} />}
 						onPlay={(id) => void playPlaylist(queryClient, id)}
 						viewKey="user_view"
+						toolbar={youtube ? <div class="md:hidden">{tabs}</div> : undefined}
 						isLoading={playlistsQuery.isLoading}
 						emptyMessage={t("pages.user.noPlaylists")}
 					/>
