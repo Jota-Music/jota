@@ -2,7 +2,7 @@ import { useSignal } from "@preact/signals";
 import { X } from "lucide-preact";
 import { type ComponentChildren, createContext, type RefObject } from "preact";
 import { createPortal } from "preact/compat";
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { useSheetDrag } from "@/lib/shared/views/hooks/use-sheet-drag";
@@ -64,7 +64,14 @@ export function Sheet({
 	const shown = useSignal(false);
 	const panelRef = useRef<HTMLDivElement>(null);
 	const backdropRef = useRef<HTMLButtonElement>(null);
-	const host = useContext(OverlayHost)?.current ?? null;
+	// The host lives in the shell, and the ref is still empty on the first render
+	// of a sheet that mounts with the app: read it once it is in the document, or
+	// the panel lands on the body and sits under the player bar.
+	const hostRef = useContext(OverlayHost);
+	const [host, setHost] = useState<HTMLDivElement | null>(null);
+	useLayoutEffect(() => {
+		if (hostRef && hostRef.current !== host) setHost(hostRef.current);
+	});
 	const dragging = useSheetDrag(panelRef, backdropRef, close, mounted.value);
 
 	// Most call sites pass an inline arrow, so `close` changes identity on
