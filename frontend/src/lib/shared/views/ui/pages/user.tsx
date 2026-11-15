@@ -1,14 +1,7 @@
 import { useSignal } from "@preact/signals";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import {
-	ArrowUpDown,
-	CirclePlay,
-	ListVideo,
-	RefreshCw,
-	Search,
-	X,
-} from "lucide-preact";
-import { useEffect } from "preact/hooks";
+import { CirclePlay, ListVideo, RefreshCw, Search, X } from "lucide-preact";
+import { useEffect, useLayoutEffect } from "preact/hooks";
 import { useParams } from "wouter-preact";
 import { getChannelInfo, getChannelVideos } from "@/lib/music/app/get-channel";
 import {
@@ -21,6 +14,7 @@ import type { PlaylistSummary, Song } from "@/lib/music/model";
 import { playPlaylist } from "@/lib/music/views/play";
 import { clearSelection } from "@/lib/music/views/stores/selection";
 import { SaveButton } from "@/lib/music/views/ui/follow";
+import { OrderSelect, type OrderType } from "@/lib/music/views/ui/order-select";
 import { PlaylistPlayButton } from "@/lib/music/views/ui/playlist/play-button";
 import { followable, useSaved } from "@/lib/music/views/ui/playlist/saved";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
@@ -30,8 +24,6 @@ import { t } from "@/lib/shared/i18n";
 import { Rows } from "@/lib/shared/views/ui/components/loading";
 
 type Tab = "playlists" | "videos";
-
-type OrderType = "added" | "reverse" | "duration-asc" | "duration-desc";
 
 function sortVideos(videos: Song[], order: OrderType): Song[] {
 	switch (order) {
@@ -69,7 +61,10 @@ export function UserPage() {
 	const videosSearch = useSignal("");
 	const videoOrder = useSignal<OrderType>("added");
 
-	useEffect(() => {
+	// Before the paint, and the tab with them: opening another channel kept the
+	// tab the previous one was left on.
+	useLayoutEffect(() => {
+		activeTab.value = "videos";
 		videosSearch.value = "";
 		videoOrder.value = "added";
 	}, [id]);
@@ -123,9 +118,9 @@ export function UserPage() {
 					type="button"
 					onClick={handleRefresh}
 					title={t("common.retry")}
-					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white transition-colors"
+					class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-zinc-400 hover:text-white transition-colors"
 				>
-					<RefreshCw size={14} />
+					<RefreshCw size={18} />
 				</button>
 			</div>
 		);
@@ -180,30 +175,12 @@ export function UserPage() {
 						</button>
 					)}
 				</div>
-				<div class="relative">
-					<ArrowUpDown
-						size={16}
-						class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-					/>
-					<select
-						value={videoOrder.value}
-						onInput={(e) => {
-							videoOrder.value = (e.target as HTMLSelectElement)
-								.value as OrderType;
-						}}
-						aria-label={t("music.playlist.orderBy")}
-						class="h-10 w-max appearance-none rounded-md border border-zinc-800 bg-zinc-950 pl-9 pr-3 text-sm text-white outline-none focus:border-zinc-600"
-					>
-						<option value="added">{t("music.playlist.order.added")}</option>
-						<option value="reverse">{t("music.playlist.order.reverse")}</option>
-						<option value="duration-asc">
-							{t("music.playlist.order.durationAsc")}
-						</option>
-						<option value="duration-desc">
-							{t("music.playlist.order.durationDesc")}
-						</option>
-					</select>
-				</div>
+				<OrderSelect
+					value={videoOrder.value}
+					onChange={(value) => {
+						videoOrder.value = value;
+					}}
+				/>
 			</div>
 
 			{videosQuery.isLoading ? (
