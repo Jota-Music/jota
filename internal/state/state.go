@@ -9,6 +9,7 @@ package state
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -67,26 +68,40 @@ func (s *Store) load() error {
 	if s.where == path && s.sections != nil {
 		return nil
 	}
-	s.where = path
-	s.sections = map[string]json.RawMessage{}
-	s.dirty = false
 
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			log.Printf("state: cannot read the document: %v", err)
+		if errors.Is(err, os.ErrNotExist) {
+			s.where = path
+			s.sections = map[string]json.RawMessage{}
+			s.dirty = false
+			return nil
 		}
-		return nil
+		// A document that could not be read is not an empty document. Left
+		// unloaded, the next read tries again and no write replaces a file that
+		// is still there: an EACCES or an I/O error would otherwise cost every
+		// section the user had.
+		log.Printf("state: cannot read the document: %v", err)
+		return fmt.Errorf("state: cannot read the document: %w", err)
 	}
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &top); err != nil {
 		// The document is kept aside so the user can recover it by hand: it is
-		// the only copy of what the app knew.
+		// the only copy of what the app knew. A document that cannot be moved
+		// aside is not replaced either.
 		log.Printf("state: the document will not decode, it is kept as %s", path+".bad")
-		_ = os.Rename(path, path+".bad")
+		if err := os.Rename(path, path+".bad"); err != nil {
+			log.Printf("state: cannot keep the document aside: %v", err)
+			return fmt.Errorf("state: cannot keep the document aside: %w", err)
+		}
+		s.where = path
+		s.sections = map[string]json.RawMessage{}
+		s.dirty = false
 		return nil
 	}
+	s.where = path
 	s.sections = top
+	s.dirty = false
 	return nil
 }
 
@@ -171,7 +186,9 @@ func Start() {
 		go func() {
 			for range current.wake {
 				time.Sleep(debounce)
-				_ = current.save()
+				if err := current.save(); err != nil {
+					log.Printf("state: cannot write the document: %v", err)
+				}
 			}
 		}()
 	})
@@ -187,8 +204,12 @@ func Reset() {
 }
 
 // Close writes the document that is still pending.
-func Close() {
-	_ = current.save()
+func Close() error {
+	if err := current.save(); err != nil {
+		log.Printf("state: the document could not be written on the way out: %v", err)
+		return err
+	}
+	return nil
 }
 
 // Read returns a section, decoded.
@@ -204,8 +225,38 @@ func Read[T any](name string) (T, error) {
 		return value, nil
 	}
 	if err := json.Unmarshal(raw, &value); err != nil {
+		// The section is left in the document as it is: the raw bytes are only
+		// dropped when this section is written again, and answering empty here
+		// must not be the excuse to lose it.
 		log.Printf("state: the %s section will not decode, it starts empty", name)
 		return value, nil
+	}
+	return value, nil
+}
+
+// OnDisk reads a section from the file instead of from memory. It is what a
+// caller that has just written the document reads back: the copy in memory
+// answers whether the import decoded, not whether it reached the disk.
+func OnDisk[T any](name string) (T, error) {
+	var value T
+	path, err := current.path()
+	if err != nil {
+		return value, err
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return value, err
+	}
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &top); err != nil {
+		return value, err
+	}
+	section, ok := top[name]
+	if !ok {
+		return value, nil
+	}
+	if err := json.Unmarshal(section, &value); err != nil {
+		return value, err
 	}
 	return value, nil
 }
@@ -220,6 +271,12 @@ func Write[T any](name string, value T) error {
 		return err
 	}
 	current.mu.Lock()
+	if previous, ok := current.sections[name]; ok {
+		var check T
+		if json.Unmarshal(previous, &check) != nil {
+			log.Printf("state: the %s section did not decode and is replaced by this write", name)
+		}
+	}
 	current.sections[name] = raw
 	current.dirty = true
 	current.mu.Unlock()

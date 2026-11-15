@@ -80,9 +80,9 @@ export function WindowControlsBar() {
 	};
 
 	// Close the window, not the app: Application.Quit destroys the process
-	// without emitting WindowClosing, which skips the geometry flush, the exit
-	// watchdog and Badger's checkpoint, and tears WebKit down so abruptly that
-	// the next launch could crash while creating its webview.
+	// without emitting WindowClosing, which skips the geometry flush and the exit
+	// watchdog, and tears WebKit down so abruptly that the next launch could
+	// crash while creating its webview.
 	const onQuit = async () => {
 		await Window.Close();
 	};
