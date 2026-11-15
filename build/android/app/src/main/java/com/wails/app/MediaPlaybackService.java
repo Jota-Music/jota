@@ -88,7 +88,7 @@ public class MediaPlaybackService extends Service {
     private MediaSession session;
     private Bitmap artwork;
     private String artworkUrl = "";
-    private String pendingArtworkUrl = "";
+    private volatile String pendingArtworkUrl = "";
     private boolean playing = false;
     private String title = "";
     private String artist = "";
@@ -193,7 +193,8 @@ public class MediaPlaybackService extends Service {
             if (art.isEmpty()) {
                 artwork = null;
                 artworkUrl = "";
-            } else if (!art.equals(artworkUrl)) {
+                pendingArtworkUrl = "";
+            } else if (!art.equals(artworkUrl) && !art.equals(pendingArtworkUrl)) {
                 loadArtwork(art);
             }
         } catch (Exception e) {
@@ -237,7 +238,7 @@ public class MediaPlaybackService extends Service {
                         + "\n"
                         + durationMs
                         + "\n"
-                        + (artwork != null);
+                        + (artwork == null ? 0 : System.identityHashCode(artwork));
         if (key.equals(shownMetadata)) return;
         shownMetadata = key;
 
@@ -294,7 +295,11 @@ public class MediaPlaybackService extends Service {
                                 Log.e(TAG, "artwork download failed", e);
                             }
                             final Bitmap result = bmp;
-                            if (result == null || !url.equals(pendingArtworkUrl)) return;
+                            if (result == null) {
+                                if (url.equals(pendingArtworkUrl)) pendingArtworkUrl = "";
+                                return;
+                            }
+                            if (!url.equals(pendingArtworkUrl)) return;
                             main.post(
                                     () -> {
                                         if (session == null) return;
