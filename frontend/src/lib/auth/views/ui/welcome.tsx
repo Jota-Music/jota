@@ -1,6 +1,7 @@
 import { useSignal, useSignalEffect } from "@preact/signals";
 import { Check } from "lucide-preact";
 import {
+	cancelSpotifyLogin,
 	loginSpotifyAndWait,
 	spotifyConnected,
 	spotifyDegraded,
@@ -42,19 +43,24 @@ export function Welcome() {
 		if (ok) dismissWelcome(mute.value);
 	}
 
+	// Closing the welcome while the browser is still out ends the pending flow:
+	// nobody is watching the spinner any more, and a closed tab never answers.
+	function close() {
+		void cancelSpotifyLogin();
+		dismissWelcome(mute.value);
+	}
+
 	return (
-		<Modal
-			open={welcomeOpen.value}
-			close={() => dismissWelcome(mute.value)}
-			labelledBy="welcome-title"
-		>
+		<Modal open={welcomeOpen.value} close={close} labelledBy="welcome-title">
 			<div class="flex flex-col items-center gap-4 px-6 pt-6 pb-6 text-center">
 				<SpotifyIcon size={32} class="text-green-500" />
 				<div class="space-y-1">
 					<h2 id="welcome-title" class="text-lg font-bold text-zinc-100">
 						{t("auth.welcome.title")}
 					</h2>
-					<p class="text-sm text-zinc-400">{t("auth.welcome.body")}</p>
+					<p class="text-balance text-sm text-zinc-400">
+						{t("auth.welcome.body")}
+					</p>
 				</div>
 
 				<div class="flex items-center gap-2">

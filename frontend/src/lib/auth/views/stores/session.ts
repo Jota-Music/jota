@@ -1,4 +1,5 @@
 import {
+	SpotifyCancelLogin,
 	SpotifyDisconnect,
 	SpotifyGetStatus,
 	SpotifyLogin,
@@ -55,7 +56,12 @@ export async function loginSpotifyAndWait(): Promise<boolean> {
 		if (!url) return false;
 
 		await open(url);
-		await SpotifyLoginAndWait();
+		const returned = watchReturn();
+		try {
+			await SpotifyLoginAndWait();
+		} finally {
+			returned();
+		}
 
 		await syncSpotifyStatus();
 		return true;
@@ -64,4 +70,40 @@ export async function loginSpotifyAndWait(): Promise<boolean> {
 		await syncSpotifyStatus();
 		return false;
 	}
+}
+
+// A closed browser tab never reaches the loopback callback, so the pending wait
+// would hold the panel until the timeout. This is the button that ends it.
+export async function cancelSpotifyLogin(): Promise<void> {
+	try {
+		await SpotifyCancelLogin();
+	} catch {}
+}
+
+// Closing the tab is not observable; the window coming back is. Jota is left for
+// the browser, so a window that regains the focus while the flow is still
+// pending means the tab was left behind: the wait ends instead of spinning.
+// The grace period covers a user who comes back to read the browser again.
+const settle = 5_000;
+
+function watchReturn(): () => void {
+	let away = !document.hasFocus();
+	let done = false;
+	let timer: number | undefined;
+
+	const poll = window.setInterval(() => {
+		if (!document.hasFocus()) {
+			away = true;
+			return;
+		}
+		if (!away || done) return;
+		done = true;
+		window.clearInterval(poll);
+		timer = window.setTimeout(() => void cancelSpotifyLogin(), settle);
+	}, 500);
+
+	return () => {
+		window.clearInterval(poll);
+		window.clearTimeout(timer);
+	};
 }

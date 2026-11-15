@@ -440,6 +440,14 @@ export function SetYouTubeId(cacheKey: string, youtubeId: string): $CancellableP
     return $Call.ByID(965987300, cacheKey, youtubeId);
 }
 
+/**
+ * SpotifyCancelLogin ends a pending flow whose browser tab the user closed, so
+ * the waiting SpotifyLoginAndWait answers instead of spinning to the timeout.
+ */
+export function SpotifyCancelLogin(): $CancellablePromise<void> {
+    return $Call.ByID(2143747085);
+}
+
 export function SpotifyDisconnect(): $CancellablePromise<void> {
     return $Call.ByID(3257614804);
 }

@@ -94,6 +94,13 @@ func (c *callbackServer) wait(ctx context.Context) (string, error) {
 	}
 }
 
+// cancel ends a wait nobody is going to answer, such as a browser tab the user
+// closed instead of approving. It fills the slot with an empty code so the
+// pending login reads it as a failed flow instead of spinning to the timeout.
+func (c *callbackServer) cancel() {
+	c.once.Do(func() { c.result <- "" })
+}
+
 func (c *callbackServer) stop() {
 	if c.server != nil {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

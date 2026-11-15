@@ -212,7 +212,7 @@
 		"notNow": "Not now",
 		"welcome": {
 			"title": "Welcome to Jota",
-			"body": "Log in with Spotify to search, play and sync your music.",
+			"body": "Log in with Spotify to load, search and sync your library.",
 			"connect": "Connect with Spotify",
 			"connecting": "Connecting…",
 			"dontShow": "Don't show this message again"
@@ -225,7 +225,14 @@
 			"couldNotConnect": "Could not connect to Spotify.",
 			"offline": "Spotify is unreachable — showing your saved library",
 			"retry": "Retry",
-			"offlineLimited": "Spotify is unreachable, and this needs a live connection. Your saved library still works."
+			"offlineLimited": "Spotify is unreachable, and this needs a live connection. Your saved library still works.",
+			"hint": {
+				"title": "Connect your Spotify account",
+				"body": "Jota reads your playlists and metadata through your own Spotify account, so it needs one. Audio plays from YouTube.",
+				"step1": "Press Connect with Spotify.",
+				"step2": "Approve Jota in the browser window that opens.",
+				"step3": "Come back here — your library loads on its own."
+			}
 		},
 		"youtube": {
 			"signInTitle": "Sign in to YouTube",
@@ -332,7 +339,7 @@
 				"durationAsc": "Shortest",
 				"durationDesc": "Longest"
 			},
-			"spotifyLoginNeeded": "Sign in to Spotify to play these songs."
+			"spotifyLoginNeeded": "Sign in to Spotify to load these songs."
 		},
 		"track": {
 			"actions": "More actions",

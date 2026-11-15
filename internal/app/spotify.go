@@ -57,6 +57,12 @@ func (a *App) SpotifyLoginAndWait() error {
 	return nil
 }
 
+// SpotifyCancelLogin ends a pending flow whose browser tab the user closed, so
+// the waiting SpotifyLoginAndWait answers instead of spinning to the timeout.
+func (a *App) SpotifyCancelLogin() {
+	a.Spotify.CancelLogin()
+}
+
 func (a *App) SpotifyDisconnect() error {
 	err := a.Spotify.Disconnect()
 	tombstoneSession("spotify")

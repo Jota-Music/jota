@@ -76,12 +76,17 @@ export function AccountSettings() {
 				</div>
 			) : (
 				<div class="rounded-xl p-6 ring-1 ring-zinc-800">
+					<p class="mb-3 text-balance text-center text-sm text-zinc-400">
+						{t("auth.spotify.prompt")}
+					</p>
 					<SpotifyConnect />
 				</div>
 			)}
 
 			<div class="space-y-2 border-t border-zinc-800 pt-4">
-				<p class="text-xs text-zinc-500">{t("auth.account.youtubeHint")}</p>
+				<p class="text-balance text-xs text-zinc-500">
+					{t("auth.account.youtubeHint")}
+				</p>
 				{youtubeSignedIn.value ? (
 					<div class="space-y-2">
 						<div class="flex items-center justify-between gap-3 rounded-xl p-3 ring-1 ring-zinc-800">
@@ -113,7 +118,7 @@ export function AccountSettings() {
 
 						{!youtubeSessionFull.value && (
 							<div class="space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
-								<p class="text-xs text-amber-300">
+								<p class="text-balance text-xs text-amber-300">
 									{t("auth.youtube.partial")}
 								</p>
 								<BrowserImport />
@@ -131,7 +136,9 @@ export function AccountSettings() {
 								: t("auth.account.exportCookies")}
 						</button>
 
-						{error.value && <p class="text-xs text-red-400">{error.value}</p>}
+						{error.value && (
+							<p class="text-balance text-xs text-red-400">{error.value}</p>
+						)}
 					</div>
 				) : (
 					<div class="rounded-xl p-4 ring-1 ring-zinc-800">

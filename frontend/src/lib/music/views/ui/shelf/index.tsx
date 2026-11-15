@@ -4,7 +4,7 @@ import {
 	spotifyConnected,
 	spotifyDegraded,
 } from "@/lib/auth/views/stores/session";
-import { SpotifyConnect } from "@/lib/auth/views/ui/spotify-connect";
+import { SpotifyHint } from "@/lib/auth/views/ui/spotify-connect";
 import { pageLink } from "@/lib/music/app/share";
 import { isPlaying } from "@/lib/music/views/stores/audio";
 import { queueSource } from "@/lib/music/views/stores/queue";
@@ -177,7 +177,7 @@ export function Shelf({
 		sourceFilter === "spotify" &&
 		!spotifyConnected.value &&
 		!spotifyDegraded.value ? (
-			<SpotifyConnect />
+			<SpotifyHint />
 		) : sourceFilter === "spotify" ? (
 			t("music.shelf.noSpotify")
 		) : sourceFilter === "local" ? (

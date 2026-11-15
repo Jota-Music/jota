@@ -212,7 +212,7 @@
 		"notNow": "Ahora no",
 		"welcome": {
 			"title": "Bienvenido a Jota",
-			"body": "Inicia sesión con Spotify para buscar, reproducir y sincronizar tu música.",
+			"body": "Inicia sesión con Spotify para cargar, buscar y sincronizar tu biblioteca.",
 			"connect": "Conectar con Spotify",
 			"connecting": "Conectando…",
 			"dontShow": "No volver a mostrar este mensaje"
@@ -225,7 +225,14 @@
 			"couldNotConnect": "No se pudo conectar con Spotify.",
 			"offline": "Spotify no responde — mostrando tu biblioteca guardada",
 			"retry": "Reintentar",
-			"offlineLimited": "Spotify no responde y esto necesita conexión. Tu biblioteca guardada sigue funcionando."
+			"offlineLimited": "Spotify no responde y esto necesita conexión. Tu biblioteca guardada sigue funcionando.",
+			"hint": {
+				"title": "Conecta tu cuenta de Spotify",
+				"body": "Jota lee tus listas y metadatos con tu propia cuenta de Spotify; el audio se reproduce desde YouTube.",
+				"step1": "Pulsa Conectar con Spotify.",
+				"step2": "Aprueba a Jota en la ventana del navegador que se abre.",
+				"step3": "Vuelve aquí: tu biblioteca se carga sola."
+			}
 		},
 		"youtube": {
 			"signInTitle": "Inicia sesión en YouTube",
@@ -332,7 +339,7 @@
 				"durationAsc": "Más cortas",
 				"durationDesc": "Más largas"
 			},
-			"spotifyLoginNeeded": "Inicia sesión en Spotify para reproducir estas canciones."
+			"spotifyLoginNeeded": "Inicia sesión en Spotify para cargar estas canciones."
 		},
 		"track": {
 			"actions": "Más acciones",

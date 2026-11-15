@@ -1,10 +1,12 @@
 package spotify
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // A stray hit on the callback port must not consume the slot the real browser is
@@ -59,5 +61,29 @@ func TestCallbackProviderErrorEndsWait(t *testing.T) {
 	}
 	if body := w.Body.String(); !strings.Contains(body, "Login failed") {
 		t.Errorf("body = %q, want a failure page", body)
+	}
+}
+
+// Closing the browser tab never reaches the loopback listener, so nothing would
+// fill the slot and the panel would spin for the whole loginTimeout. Cancelling
+// has to answer the wait now, and a later cancel must not block on a full slot.
+func TestCallbackCancelEndsWait(t *testing.T) {
+	c, err := newCallbackServer("expected-state")
+	if err != nil {
+		t.Fatalf("newCallbackServer: %v", err)
+	}
+	t.Cleanup(c.stop)
+
+	c.cancel()
+	c.cancel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	code, err := c.wait(ctx)
+	if err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	if code != "" {
+		t.Errorf("code = %q, want empty", code)
 	}
 }

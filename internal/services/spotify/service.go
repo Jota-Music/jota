@@ -353,10 +353,28 @@ func (s *SpotifyService) StartupLogin() (string, error) {
 
 var ErrNoLoginInProgress = errors.New("no login in progress")
 
-func (s *SpotifyService) CompleteLogin() error {
+// CancelLogin ends a flow the user walked away from, so the waiting call
+// answers now instead of holding the panel for the whole loginTimeout. A
+// cancelled flow is not a refusal: the next StartupLogin starts clean.
+func (s *SpotifyService) CancelLogin() {
 	s.pendingMu.Lock()
 	p := s.pending
 	s.pending = nil
+	s.pendingMu.Unlock()
+	if p == nil {
+		return
+	}
+	log.Printf("spotify: login cancelled")
+	p.server.cancel()
+	p.server.stop()
+}
+
+func (s *SpotifyService) CompleteLogin() error {
+	// The pending entry stays in place while the wait runs, because that is what
+	// a cancel reaches: a login whose browser tab the user closed has nothing
+	// else to end it before the timeout.
+	s.pendingMu.Lock()
+	p := s.pending
 	s.pendingMu.Unlock()
 	if p == nil {
 		log.Printf("spotify: CompleteLogin: no pending login")
@@ -372,6 +390,13 @@ func (s *SpotifyService) CompleteLogin() error {
 
 	log.Printf("spotify: waiting for callback...")
 	code, err := p.server.wait(ctx)
+
+	s.pendingMu.Lock()
+	if s.pending == p {
+		s.pending = nil
+	}
+	s.pendingMu.Unlock()
+
 	p.server.stop()
 	if err != nil {
 		log.Printf("spotify: callback error: %v", err)
