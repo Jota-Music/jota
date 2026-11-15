@@ -32,7 +32,8 @@ func (a *App) ExportYouTubeCookiesFile() (string, error) {
 		return "", err
 	}
 
-	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+	// A cookies.txt is the account: only this user reads it back.
+	if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
 		return "", err
 	}
 	return path, nil
