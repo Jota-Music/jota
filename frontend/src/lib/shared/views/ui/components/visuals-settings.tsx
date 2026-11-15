@@ -18,7 +18,7 @@ export function VisualsSettings() {
 					<p class="text-sm text-zinc-200">
 						{t("settings.visuals.background.label")}
 					</p>
-					<p class="text-xs text-zinc-500">
+					<p class="text-balance text-xs text-zinc-500">
 						{t("settings.visuals.background.description")}
 					</p>
 				</div>

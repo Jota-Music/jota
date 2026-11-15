@@ -39,8 +39,8 @@ export function Hint({
 			</div>
 
 			<div class="relative flex flex-col gap-1">
-				<p class="text-sm font-semibold text-zinc-100">{title}</p>
-				<p class="text-xs text-zinc-500">{body}</p>
+				<p class="text-balance text-sm font-semibold text-zinc-100">{title}</p>
+				<p class="text-balance text-xs text-zinc-500">{body}</p>
 			</div>
 
 			<ol class="relative flex w-full flex-col text-left">

@@ -346,7 +346,9 @@ function Queue() {
 					{songs.length === 0 ? (
 						<li class="flex min-h-40 list-none flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-zinc-500">
 							<p>{t("music.queue.empty")}</p>
-							<p class="text-xs text-zinc-600">{t("music.queue.emptyHint")}</p>
+							<p class="text-balance text-xs text-zinc-600">
+								{t("music.queue.emptyHint")}
+							</p>
 						</li>
 					) : (
 						<div

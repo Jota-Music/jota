@@ -121,7 +121,7 @@ export function ArtistPage() {
 	if (isError) {
 		return (
 			<div class="flex flex-col gap-6 min-h-0 flex-1 items-center justify-center">
-				<p class="text-red-400">{t("pages.artist.failed")}</p>
+				<p class="text-balance text-red-400">{t("pages.artist.failed")}</p>
 			</div>
 		);
 	}
@@ -234,7 +234,9 @@ export function ArtistPage() {
 			) : isLoading ? (
 				<Rows />
 			) : tracks.length === 0 ? (
-				<p class="text-sm text-zinc-500">{t("pages.artist.noSongs")}</p>
+				<p class="text-balance text-sm text-zinc-500">
+					{t("pages.artist.noSongs")}
+				</p>
 			) : (
 				<Virtualization songs={tracks} />
 			)}

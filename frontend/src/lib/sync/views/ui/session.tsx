@@ -115,7 +115,7 @@ function SessionForm() {
 					<p class="text-sm font-medium text-zinc-100">
 						{t("sync.session.relayRequired")}
 					</p>
-					<p class="mb-2 block text-xs text-zinc-500">
+					<p class="text-balance mb-2 block text-xs text-zinc-500">
 						{t("sync.session.relayRequiredBody")}
 					</p>
 				</div>
@@ -153,7 +153,7 @@ function SessionForm() {
 					{t("sync.session.generate")}
 				</button>
 			</div>
-			<p class="mb-2 block text-xs text-zinc-500">
+			<p class="mb-2 block text-balance text-xs text-zinc-500">
 				{active
 					? t("sync.session.inRoom", { room: currentRoom })
 					: t("sync.session.hostHint")}
@@ -225,14 +225,14 @@ function SessionForm() {
 				</button>
 			)}
 			{pendingStart.value && (
-				<p class="mb-2 block text-xs text-zinc-500">
+				<p class="text-balance mb-2 block text-xs text-zinc-500">
 					{t("sync.session.waiting")}
 				</p>
 			)}
 			{store.error.value && (
 				<p class="text-xs text-red-400">{store.error.value}</p>
 			)}
-			<p class="pt-1 text-xs text-zinc-600">
+			<p class="text-balance pt-1 text-xs text-zinc-600">
 				{t("sync.session.relay", { url: relay })}{" "}
 				<button
 					type="button"

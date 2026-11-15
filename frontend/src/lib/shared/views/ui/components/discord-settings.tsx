@@ -54,7 +54,9 @@ export function DiscordSettings() {
 					<div class="shimmer h-6 w-11 shrink-0 rounded-full" />
 				)}
 			</div>
-			<p class="text-xs text-zinc-500">{t("settings.discord.description")}</p>
+			<p class="text-balance text-xs text-zinc-500">
+				{t("settings.discord.description")}
+			</p>
 		</section>
 	);
 }

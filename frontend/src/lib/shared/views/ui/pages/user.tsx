@@ -116,7 +116,9 @@ export function UserPage() {
 	if (failed) {
 		return (
 			<div class="flex flex-col items-start gap-3 p-6 text-sm">
-				<p class="text-red-400">{t("pages.user.failed", { user: id })}</p>
+				<p class="text-balance text-red-400">
+					{t("pages.user.failed", { user: id })}
+				</p>
 				<button
 					type="button"
 					onClick={handleRefresh}
@@ -207,7 +209,7 @@ export function UserPage() {
 			{videosQuery.isLoading ? (
 				<Rows />
 			) : filteredVideos.length === 0 ? (
-				<p class="flex flex-1 items-center justify-center px-3 text-sm text-zinc-500 md:px-0">
+				<p class="text-balance flex flex-1 items-center justify-center px-3 text-sm text-zinc-500 md:px-0">
 					{t("pages.user.noVideos")}
 				</p>
 			) : (

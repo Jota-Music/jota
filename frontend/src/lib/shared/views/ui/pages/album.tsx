@@ -77,7 +77,9 @@ export function AlbumPage() {
 			) : isLoading ? (
 				<Rows />
 			) : tracks.length === 0 ? (
-				<p class="text-sm text-zinc-500">{t("pages.album.noTracks")}</p>
+				<p class="text-balance text-sm text-zinc-500">
+					{t("pages.album.noTracks")}
+				</p>
 			) : (
 				<Virtualization songs={tracks} sourceId={id} />
 			)}

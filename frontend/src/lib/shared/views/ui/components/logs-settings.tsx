@@ -22,7 +22,7 @@ export function LogsSettings() {
 			</div>
 
 			<div class="flex items-center justify-between gap-3 rounded-xl p-3 ring-1 ring-zinc-800">
-				<p class="min-w-0 text-xs text-zinc-500">
+				<p class="text-balance min-w-0 text-xs text-zinc-500">
 					{t("settings.logs.description")}
 				</p>
 				<button

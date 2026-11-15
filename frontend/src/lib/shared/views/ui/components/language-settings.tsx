@@ -18,7 +18,9 @@ export function LanguageSettings() {
 					{t("settings.language.title")}
 				</h2>
 			</div>
-			<p class="text-xs text-zinc-500">{t("settings.language.description")}</p>
+			<p class="text-balance text-xs text-zinc-500">
+				{t("settings.language.description")}
+			</p>
 			<div class="relative">
 				<label for="settings-language" class="sr-only">
 					{t("settings.language.label")}

@@ -274,8 +274,10 @@ export function Autosave() {
 					{t("settings.autosave.title")}
 				</h3>
 			</div>
-			<p class="text-xs text-zinc-500">{t("settings.autosave.description")}</p>
-			<p class="flex items-start gap-1.5 text-[11px] text-zinc-500">
+			<p class="text-balance text-xs text-zinc-500">
+				{t("settings.autosave.description")}
+			</p>
+			<p class="flex items-start gap-1.5 text-balance text-[11px] text-zinc-500">
 				<TriangleAlert size={14} class="mt-px shrink-0" />
 				{t("settings.autosave.secret")}
 			</p>
@@ -293,7 +295,7 @@ export function Autosave() {
 					placeholder={t("settings.autosave.session.pass")}
 					class="w-full rounded-lg border border-zinc-800 bg-zinc-950 p-2 text-xs text-zinc-200 outline-none transition-all focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
 				/>
-				<p class="text-xs text-zinc-500">
+				<p class="text-balance text-xs text-zinc-500">
 					{t("settings.autosave.session.hint")}
 				</p>
 			</div>
@@ -357,13 +359,13 @@ export function Autosave() {
 					</dl>
 				)}
 				{status?.sealed && (
-					<p class="mt-2 text-[11px] text-amber-300">
+					<p class="text-balance mt-2 text-[11px] text-amber-300">
 						{t("settings.autosave.session.sealed")}
 					</p>
 				)}
 				{status?.problem && (
 					<div class="mt-2 space-y-0.5">
-						<p class="text-[11px] text-amber-300">
+						<p class="text-balance text-[11px] text-amber-300">
 							{t("settings.autosave.problem")}
 						</p>
 						<p class="break-words text-[11px] text-amber-300/70">
@@ -398,7 +400,9 @@ export function Autosave() {
 			</button>
 			{status?.stale && (
 				<div class="flex items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
-					<p class="text-xs text-amber-300">{t("settings.autosave.stale")}</p>
+					<p class="text-balance text-xs text-amber-300">
+						{t("settings.autosave.stale")}
+					</p>
 					<button
 						type="button"
 						disabled={busy}

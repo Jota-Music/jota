@@ -38,8 +38,10 @@ export function SignInPrompt() {
 					<h2 id="youtube-signin-title" class="text-lg font-bold text-zinc-100">
 						{t("auth.youtube.signInTitle")}
 					</h2>
-					<p class="text-sm text-zinc-400">{t("auth.youtube.signInBody")}</p>
-					<p class="text-xs text-amber-300/80">
+					<p class="text-balance text-sm text-zinc-400">
+						{t("auth.youtube.signInBody")}
+					</p>
+					<p class="text-balance text-xs text-amber-300/80">
 						{t("auth.youtube.signInRisk")}
 					</p>
 				</div>
@@ -67,7 +69,9 @@ export function SignInPrompt() {
 					</div>
 				) : (
 					<div class="space-y-3">
-						<p class="text-xs text-zinc-500">{t("auth.youtube.unavailable")}</p>
+						<p class="text-balance text-xs text-zinc-500">
+							{t("auth.youtube.unavailable")}
+						</p>
 						<button
 							type="button"
 							onClick={() => dismissYouTubeSignInSuggestion()}
@@ -79,7 +83,7 @@ export function SignInPrompt() {
 				)}
 
 				{error.value && (
-					<p class="text-xs text-red-400">
+					<p class="text-balance text-xs text-red-400">
 						{t("auth.youtube.errorHint", { error: error.value })}
 					</p>
 				)}

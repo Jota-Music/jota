@@ -126,7 +126,7 @@ export function YouTubeSearchPage() {
 	// leaves nothing to switch between.
 	if (tabs.length === 0 && !loading) {
 		return (
-			<p class="px-3 pt-4 text-sm text-zinc-500 md:px-0 md:pt-0">
+			<p class="text-balance px-3 pt-4 text-sm text-zinc-500 md:px-0 md:pt-0">
 				{t("pages.youtube.noResults")}
 			</p>
 		);
@@ -172,11 +172,11 @@ export function YouTubeSearchPage() {
 	const videoBody = videosQuery.isLoading ? (
 		<Rows />
 	) : videosQuery.isError ? (
-		<p class="flex flex-1 items-center justify-center px-3 text-red-400 md:px-0">
+		<p class="text-balance flex flex-1 items-center justify-center px-3 text-red-400 md:px-0">
 			{t("pages.youtube.failed")}
 		</p>
 	) : songs.length === 0 ? (
-		<p class="flex flex-1 items-center justify-center px-3 text-sm text-zinc-500 md:px-0">
+		<p class="text-balance flex flex-1 items-center justify-center px-3 text-sm text-zinc-500 md:px-0">
 			{t("pages.youtube.noResults")}
 		</p>
 	) : (

@@ -83,7 +83,9 @@ export function BackupFile() {
 					{t("settings.playlists.title")}
 				</h3>
 			</div>
-			<p class="text-xs text-zinc-500">{t("settings.playlists.description")}</p>
+			<p class="text-balance text-xs text-zinc-500">
+				{t("settings.playlists.description")}
+			</p>
 
 			<div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
 				<button

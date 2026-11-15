@@ -108,11 +108,13 @@ export function BrowserImport() {
 					: t("auth.youtube.browserImport", { browser: browser.value })}
 			</button>
 
-			<p class="text-xs text-zinc-500">
+			<p class="text-balance text-xs text-zinc-500">
 				{t("auth.youtube.browserImportHint", { browser: browser.value })}
 			</p>
 
-			{error.value && <p class="text-xs text-red-400">{error.value}</p>}
+			{error.value && (
+				<p class="text-balance text-xs text-red-400">{error.value}</p>
+			)}
 		</div>
 	);
 }
@@ -188,7 +190,7 @@ export function YouTubeSignIn() {
 						: t("auth.youtube.signInWindow")}
 				</button>
 			) : (
-				<p class="text-xs leading-relaxed text-zinc-500">
+				<p class="text-balance text-xs leading-relaxed text-zinc-500">
 					{t("auth.youtube.unavailableShort")}
 				</p>
 			)}
@@ -205,7 +207,7 @@ export function YouTubeSignIn() {
 					}}
 					class="space-y-3 border-t border-zinc-800 p-3"
 				>
-					<p class="text-xs leading-relaxed text-zinc-500">
+					<p class="text-balance text-xs leading-relaxed text-zinc-500">
 						{t("auth.youtube.pasteHint")}
 					</p>
 
@@ -245,12 +247,14 @@ export function YouTubeSignIn() {
 				</form>
 			</details>
 
-			<p class="flex gap-2 text-xs leading-relaxed text-amber-300/80">
+			<p class="flex gap-2 text-balance text-xs leading-relaxed text-amber-300/80">
 				<ShieldAlert size={14} class="mt-0.5 shrink-0" />
 				{t("auth.youtube.settingsRisk")}
 			</p>
 
-			{error.value && <p class="text-xs text-red-400">{error.value}</p>}
+			{error.value && (
+				<p class="text-balance text-xs text-red-400">{error.value}</p>
+			)}
 		</div>
 	);
 }

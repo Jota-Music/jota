@@ -55,7 +55,7 @@ export function RelaySettings() {
 				</h2>
 				<Status state={relay.value} />
 			</div>
-			<p class="text-xs text-zinc-500">{t("sync.relay.body")}</p>
+			<p class="text-balance text-xs text-zinc-500">{t("sync.relay.body")}</p>
 
 			<div class="space-y-1.5">
 				<label
@@ -76,14 +76,14 @@ export function RelaySettings() {
 			</div>
 
 			{store.relayLocked.value && (
-				<p class="flex items-center gap-1.5 text-xs text-zinc-500">
+				<p class="flex items-center gap-1.5 text-balance text-xs text-zinc-500">
 					<TriangleAlert size={14} class="shrink-0" />
 					{t("sync.relay.pinned")}
 				</p>
 			)}
 
 			{verdict.value.error !== "" && (
-				<p class="flex items-start gap-1.5 text-xs text-red-400">
+				<p class="flex items-start gap-1.5 text-balance text-xs text-red-400">
 					<CircleAlert size={14} class="mt-px shrink-0" />
 					{verdict.value.error}
 				</p>

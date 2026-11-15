@@ -97,7 +97,7 @@ export function PlaylistPicker() {
 					{isLoading ? (
 						<Loading />
 					) : playlists.length === 0 ? (
-						<p class="px-2 py-3 text-xs text-zinc-500">
+						<p class="text-balance px-2 py-3 text-xs text-zinc-500">
 							{t("music.custom.noPlaylists")}
 						</p>
 					) : (

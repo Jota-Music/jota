@@ -67,7 +67,7 @@ export function SearchPage() {
 
 	if (detailRoute && !redirectId) {
 		return (
-			<p class="px-3 pt-4 text-sm text-zinc-500 md:px-0 md:pt-0">
+			<p class="text-balance px-3 pt-4 text-sm text-zinc-500 md:px-0 md:pt-0">
 				{t("pages.search.referenceOnly", { type: t(`search.type.${type}`) })}
 			</p>
 		);
@@ -75,7 +75,7 @@ export function SearchPage() {
 
 	if (isError) {
 		return (
-			<p class="px-3 pt-4 text-red-400 md:px-0 md:pt-0">
+			<p class="text-balance px-3 pt-4 text-red-400 md:px-0 md:pt-0">
 				{t("pages.search.failed")}
 			</p>
 		);
@@ -142,7 +142,9 @@ export function SearchPage() {
 					{isLoading ? (
 						<Rows />
 					) : songs.length === 0 ? (
-						<p class="text-sm text-zinc-500">{t("common.noResults")}</p>
+						<p class="text-balance text-sm text-zinc-500">
+							{t("common.noResults")}
+						</p>
 					) : (
 						<Virtualization songs={songs} />
 					)}

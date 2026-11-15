@@ -39,7 +39,9 @@ function SettingsPage() {
 			>
 				<header class="space-y-1">
 					<h1 class="text-xl font-bold text-zinc-100">{t("settings.title")}</h1>
-					<p class="text-sm text-zinc-500">{t("settings.subtitle")}</p>
+					<p class="text-balance text-sm text-zinc-500">
+						{t("settings.subtitle")}
+					</p>
 				</header>
 
 				<AccountSettings />

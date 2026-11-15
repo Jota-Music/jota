@@ -343,17 +343,17 @@ export default function YoutubeEditor() {
 									class="absolute inset-0 overflow-y-auto overscroll-contain rounded-lg border border-zinc-800 bg-zinc-950"
 								>
 									{query.value.length === 0 ? (
-										<p class="py-6 text-sm text-zinc-500">
+										<p class="text-balance py-6 text-sm text-zinc-500">
 											{t("music.youtubeId.searchPrompt")}
 										</p>
 									) : videosQuery.isLoading ? (
 										<Loading />
 									) : videosQuery.isError ? (
-										<p class="text-sm text-red-400">
+										<p class="text-balance text-sm text-red-400">
 											{t("music.youtubeId.searchFailed")}
 										</p>
 									) : videos.length === 0 ? (
-										<p class="text-sm text-zinc-500">
+										<p class="text-balance text-sm text-zinc-500">
 											{t("music.youtubeId.searchEmpty")}
 										</p>
 									) : (
