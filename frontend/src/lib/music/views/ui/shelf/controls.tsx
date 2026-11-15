@@ -153,6 +153,7 @@ export function Controls({
 							type="button"
 							onClick={() => setVariant("grid")}
 							aria-label={t("music.shelf.gridView")}
+							aria-pressed={variant === "grid"}
 							class={cn(
 								"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
 								onSortMode && "border-l border-zinc-800",
@@ -168,6 +169,7 @@ export function Controls({
 							type="button"
 							onClick={() => setVariant("compact")}
 							aria-label={t("music.shelf.compactView")}
+							aria-pressed={variant === "compact"}
 							class={cn(
 								"size-10 md:size-8 cursor-pointer flex items-center justify-center border-l border-zinc-800 transition-colors",
 								variant === "compact"
