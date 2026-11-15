@@ -117,7 +117,7 @@ func readDeviceId(t *testing.T, dir string) string {
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	t.Setenv("APPDATA", dir)
 	state.Close()
-	t.Cleanup(state.Close)
+	t.Cleanup(func() { state.Close() })
 	return deviceId()
 }
 

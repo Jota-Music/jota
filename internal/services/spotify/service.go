@@ -142,10 +142,15 @@ func (s *SpotifyService) Connect(ctx context.Context) error {
 	defer s.mu.Unlock()
 	if err == nil {
 		// An interactive login can land while this restore runs; the session it
-		// published is the one the user just asked for, so it wins.
-		if s.sess == nil {
-			s.sess = sess
+		// published is the one the user just asked for, so it wins. The one built
+		// here is then nobody's, and it holds an access point and its goroutines:
+		// closed off the lock so the close cannot wait on this one.
+		if s.sess != nil {
+			go sess.Close()
+			log.Printf("spotify: restore landed behind a session the user opened")
+			return nil
 		}
+		s.sess = sess
 		s.degraded = false
 		log.Printf("spotify: connected as %s", sess.Username())
 		return nil
@@ -165,7 +170,7 @@ func (s *SpotifyService) Connect(ctx context.Context) error {
 }
 
 // Watch retries a degraded restore until it succeeds, then reports it through
-// onReconnect. It is a no-op while connected and exits on Disconnect.
+// onReconnect. It is a no-op while a watcher is already running.
 func (s *SpotifyService) Watch() {
 	s.mu.Lock()
 	if s.watching {
@@ -179,6 +184,14 @@ func (s *SpotifyService) Watch() {
 }
 
 func (s *SpotifyService) reconnectLoop() {
+	// The watcher is over when it returns, whether it reconnected or stopped
+	// because the account was connected or signed out: leaving the flag set
+	// would keep a later degraded session from ever being retried.
+	defer func() {
+		s.mu.Lock()
+		s.watching = false
+		s.mu.Unlock()
+	}()
 	// ponytail: fixed ladder 15s -> 1m -> 4m -> 5m, no jitter; a real fleet
 	// would want backoff with jitter.
 	wait := 15 * time.Second

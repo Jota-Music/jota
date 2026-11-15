@@ -72,6 +72,9 @@ func (c *callbackServer) handle(w http.ResponseWriter, r *http.Request) {
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
+		// Nothing to exchange, and the flow is over: ending the wait here gives
+		// the panel a failure it can show instead of one that only times out.
+		c.once.Do(func() { c.result <- "" })
 		http.Error(w, "no authorization code", http.StatusBadRequest)
 		return
 	}
