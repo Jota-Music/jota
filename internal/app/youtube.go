@@ -303,6 +303,10 @@ type YouTubeStatus struct {
 // YouTubeStatus answers the four readings in one crossing of the bridge. They
 // were four bindings, all of them asked before the first paint.
 func (a *App) YouTubeStatus() YouTubeStatus {
+	// The import fills the session this reads, and it runs in the background:
+	// waiting here is two stats once the store is gone, and it is what keeps the
+	// first launch after the upgrade from answering "signed out".
+	importLegacy()
 	return YouTubeStatus{
 		SignedIn: youtube.HasAuth(),
 		Full:     youtube.SessionFull(),
