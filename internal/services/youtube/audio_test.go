@@ -241,6 +241,41 @@ func TestBestAudioPrefersWebMWhereMP4CannotSeek(t *testing.T) {
 	}
 }
 
+func TestBestAudioPrefersOriginalTrackOverDub(t *testing.T) {
+	original := &audioTrack{ID: "es-US.4", Default: true}
+	dub := &audioTrack{ID: "ar.10"}
+
+	// The order IOS answers QUVWPQOSsio with: the Arabic dub comes first and
+	// shares every itag with the original, so the itag tie picks it.
+	formats := []format{
+		{Itag: 139, MimeType: "audio/mp4", URL: "dub-low", AudioTrack: dub},
+		{Itag: 139, MimeType: "audio/mp4", URL: "original-low", AudioTrack: original},
+		{Itag: 140, MimeType: "audio/mp4", URL: "dub", AudioTrack: dub},
+		{Itag: 140, MimeType: "audio/mp4", URL: "original", AudioTrack: original},
+	}
+	got, ok := bestAudio(formats)
+	if !ok || got.URL != "original" {
+		t.Fatalf("url = %q (ok %v), want the original track", got.URL, ok)
+	}
+
+	if got, _ := bestAudio([]format{{Itag: 140, MimeType: "audio/mp4", URL: "only-dub", AudioTrack: dub}}); got.URL != "only-dub" {
+		t.Fatalf("url = %q, want the dub when it is the only track", got.URL)
+	}
+}
+
+func TestDubbed(t *testing.T) {
+	dub := "https://rr1---sn-x.googlevideo.com/videoplayback?itag=140&xtags=acont%3Ddubbed-auto%3Alang%3Dar&n=abc"
+	original := "https://rr1---sn-x.googlevideo.com/videoplayback?itag=140&xtags=acont%3Doriginal%3Alang%3Des-US&n=abc"
+	plain := "https://rr1---sn-x.googlevideo.com/videoplayback?itag=140&n=abc"
+
+	if !dubbed(dub) {
+		t.Fatal("a dubbed-auto URL was not recognised")
+	}
+	if dubbed(original) || dubbed(plain) {
+		t.Fatal("an original track was reported as dubbed")
+	}
+}
+
 func TestStreamPlayable(t *testing.T) {
 	okServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodHead {

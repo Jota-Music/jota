@@ -41,6 +41,12 @@ func cachedAudio(videoID string) *music.Audio {
 	if !ok {
 		return nil
 	}
+	// A stream resolved before the picker learned about audio tracks may be a
+	// dub, and it is played in the wrong language until its URL dies. Resolve it
+	// again instead.
+	if dubbed(audio.Url) {
+		return nil
+	}
 	// A stream resolved before the preferred container changed would keep
 	// playing the one this player cannot seek, so it is resolved again.
 	if preferWebM != strings.HasPrefix(streamMime(audio.Url), "audio/webm") {

@@ -42,13 +42,21 @@ var ErrNChallenge = errors.New("youtube: stream needs the n challenge")
 // so "highest itag" alone would pick the slow one on desktop Linux. The order
 // flips where the platform player cannot seek the fragmented MP4 (see
 // preferWebM), because a track that cannot be seeked is worse than a slow start.
+//
+// The original track always wins over a dub, whatever its itag or container: a
+// video with auto-dubbed audio answers every language with the same itags, so
+// the first one in the list is not the one to play. A response without
+// audioTrack metadata (the usual case) is unaffected.
 func bestAudio(formats []format) (format, bool) {
 	var pick format
-	bestTier := -1
-	bestItag := -1
+	bestTrack, bestTier, bestItag := -1, -1, -1
 	for _, f := range formats {
 		if !strings.HasPrefix(f.MimeType, "audio/") || f.URL == "" {
 			continue
+		}
+		track := 1
+		if f.AudioTrack != nil && !f.AudioTrack.Default {
+			track = 0
 		}
 		tier := 0
 		if strings.HasPrefix(f.MimeType, "audio/mp4") {
@@ -57,11 +65,13 @@ func bestAudio(formats []format) (format, bool) {
 		if preferWebM && strings.HasPrefix(f.MimeType, "audio/webm") {
 			tier = 2
 		}
-		if tier > bestTier || (tier == bestTier && f.Itag > bestItag) {
-			bestTier, bestItag, pick = tier, f.Itag, f
+		better := track > bestTrack ||
+			(track == bestTrack && (tier > bestTier || (tier == bestTier && f.Itag > bestItag)))
+		if better {
+			bestTrack, bestTier, bestItag, pick = track, tier, f.Itag, f
 		}
 	}
-	return pick, bestTier >= 0
+	return pick, bestTrack >= 0
 }
 
 func getExpireAndDurationFromURL(raw string) (*expireAndDuration, bool) {
@@ -130,6 +140,14 @@ func clientByName(name string) (clientConfig, bool) {
 		}
 	}
 	return clientConfig{}, false
+}
+
+// dubbed reports whether a stream URL carries an auto-dubbed track instead of
+// the video's original audio. The player response marks it on the format, but
+// a URL already resolved and cached does not carry that; its `xtags` does.
+func dubbed(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && strings.Contains(u.Query().Get("xtags"), "acont=dubbed-auto")
 }
 
 // audioCacheStillValid reports whether a cached stream can still be used: not

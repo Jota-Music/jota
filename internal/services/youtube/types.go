@@ -10,6 +10,15 @@ type format struct {
 	Itag     int    `json:"itag"`
 	MimeType string `json:"mimeType"`
 	URL      string `json:"url"`
+	// AudioTrack is only present when YouTube serves the video in more than one
+	// language: every track repeats the same itags, so the itag alone cannot
+	// tell the original from a dub.
+	AudioTrack *audioTrack `json:"audioTrack"`
+}
+
+type audioTrack struct {
+	ID      string `json:"id"`
+	Default bool   `json:"audioIsDefault"`
 }
 
 type playerResponse struct {
