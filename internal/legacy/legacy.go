@@ -301,7 +301,10 @@ func readTable(path string, compression uint32) ([]entry, error) {
 	if err := verifyChecksum(index, raw[len(raw)-4-checksumLen:len(raw)-4]); err != nil {
 		return nil, err
 	}
-	offsets := parseIndex(index)
+	offsets, err := parseIndex(index)
+	if err != nil {
+		return nil, err
+	}
 
 	var decoder *zstd.Decoder
 	if compression == 2 {
@@ -437,8 +440,14 @@ func parseChecksum(buf []byte) (int, uint64, error) {
 				}
 				buf = buf[n+int(length):]
 			case 5:
+				if len(buf) < 4 {
+					return 0, 0, errors.New("legacy: the store is damaged (a checksum is cut short)")
+				}
 				buf = buf[4:]
 			case 1:
+				if len(buf) < 8 {
+					return 0, 0, errors.New("legacy: the store is damaged (a checksum is cut short)")
+				}
 				buf = buf[8:]
 			default:
 				return 0, 0, errors.New("legacy: the store is damaged (a checksum does not decode)")
@@ -469,19 +478,24 @@ type blockOffset struct {
 	length uint32
 }
 
-// parseIndex reads the flatbuffers index of a table.
-func parseIndex(buf []byte) []blockOffset {
+// parseIndex reads the flatbuffers index of a table. An index it cannot read is
+// an error and not an empty table: a table that is silently dropped from the
+// import is a half import, and the store would be moved aside as if complete.
+func parseIndex(buf []byte) ([]blockOffset, error) {
+	damaged := errors.New("legacy: a table is damaged (the index does not decode)")
 	if len(buf) < 8 {
-		return nil
+		return nil, damaged
 	}
 	root := fbTable{buf, int(binary.LittleEndian.Uint32(buf))}
 	field := root.field(0)
 	if field == 0 {
-		return nil
+		// An empty table has no vector to point at, and carrying nothing from it
+		// is the whole of the import it asks for.
+		return nil, nil
 	}
 	vector := root.indirect(root.pos + field)
-	if vector+4 > len(buf) {
-		return nil
+	if vector < 0 || vector+4 > len(buf) {
+		return nil, damaged
 	}
 	count := int(binary.LittleEndian.Uint32(buf[vector:]))
 	out := make([]blockOffset, 0, count)
@@ -509,7 +523,7 @@ func parseIndex(buf []byte) []blockOffset {
 		}
 		out = append(out, o)
 	}
-	return out
+	return out, nil
 }
 
 // fbTable is a flatbuffers table: a place in the buffer plus the vtable that
