@@ -135,9 +135,8 @@ export function Controls({
 							<button
 								type="button"
 								onClick={onSortMode}
-								aria-pressed={sortMode}
-								title={t("music.shelf.sortMode")}
 								aria-label={t("music.shelf.sortMode")}
+								aria-pressed={sortMode}
 								class={cn(
 									"size-10 md:size-8 cursor-pointer flex items-center justify-center transition-colors",
 									sortMode
