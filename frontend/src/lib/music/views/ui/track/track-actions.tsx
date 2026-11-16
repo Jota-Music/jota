@@ -1,5 +1,4 @@
 import {
-	EllipsisVertical,
 	Link2,
 	ListChecks,
 	ListPlus,
@@ -38,6 +37,7 @@ import { shareActions } from "@/lib/music/views/ui/share";
 import { t } from "@/lib/shared/i18n";
 import {
 	type Action,
+	MenuButton,
 	openContextMenu,
 } from "@/lib/shared/views/ui/components/context-menu";
 
@@ -257,32 +257,13 @@ export default function TrackActions({
 	const empty = actions.length === 0;
 	if (empty && !reserve) return null;
 
-	const toggle = (e: MouseEvent) => {
-		if (empty) return;
-		e.stopPropagation();
-		openContextMenu(
-			actions,
-			e,
-			count > 0 ? t("music.custom.selected", { count }) : undefined,
-			bottom,
-		);
-	};
-
 	return (
-		<button
-			type="button"
-			title={t("music.track.actions")}
-			aria-label={t("music.track.actions")}
-			aria-haspopup="menu"
-			disabled={empty}
-			onPointerDown={(e) => {
-				e.preventDefault();
-				e.stopPropagation();
-			}}
-			onClick={toggle}
-			class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:text-white disabled:cursor-default disabled:opacity-40"
-		>
-			<EllipsisVertical size={18} />
-		</button>
+		<MenuButton
+			actions={actions}
+			label={t("music.track.actions")}
+			header={count > 0 ? t("music.custom.selected", { count }) : undefined}
+			reserve={reserve}
+			bottom={bottom}
+		/>
 	);
 }

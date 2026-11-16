@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import type { LucideIcon } from "lucide-preact";
+import { EllipsisVertical, type LucideIcon } from "lucide-preact";
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { bottomBarHeight } from "@/lib/shared/utils/layout";
@@ -63,6 +63,54 @@ export function openContextMenu(
 
 export function closeContextMenu() {
 	request.value = null;
+}
+
+type MenuButtonProps = {
+	actions: Action[];
+	// label names the button for a screen reader, since the trigger is an icon.
+	label: string;
+	// header labels the menu itself when it is about a selection rather than
+	// about one item.
+	header?: string;
+	// reserve keeps the button in place while the actions are still loading, so
+	// the header it sits in does not shift when they land.
+	reserve?: boolean;
+	// bottom is the clearance below the viewport bottom for a fixed element
+	// anchored there (the compact player bar).
+	bottom?: number;
+};
+
+// MenuButton is the ⋯ trigger for a menu built elsewhere: a page header whose
+// actions are about the page, or a row that reuses the menu its list builds.
+export function MenuButton({
+	actions,
+	label,
+	header,
+	reserve = false,
+	bottom = 0,
+}: MenuButtonProps) {
+	const empty = actions.length === 0;
+	if (empty && !reserve) return null;
+	return (
+		<button
+			type="button"
+			title={label}
+			aria-label={label}
+			aria-haspopup="menu"
+			disabled={empty}
+			onPointerDown={(event) => {
+				event.preventDefault();
+				event.stopPropagation();
+			}}
+			onClick={(event) => {
+				event.stopPropagation();
+				openContextMenu(actions, event, header, bottom);
+			}}
+			class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:text-white disabled:cursor-default disabled:opacity-40"
+		>
+			<EllipsisVertical size={18} />
+		</button>
+	);
 }
 
 const item = (action: Action, index: number) => (

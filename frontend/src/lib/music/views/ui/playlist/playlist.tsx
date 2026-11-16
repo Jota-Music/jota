@@ -2,7 +2,6 @@ import { effect, signal, useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/preact-query";
 import {
 	Check,
-	EllipsisVertical,
 	ListChecks,
 	ListPlus,
 	Pencil,
@@ -64,7 +63,7 @@ import { addError } from "@/lib/shared/views/stores/errors";
 import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
 import {
 	type Action,
-	openContextMenu,
+	MenuButton,
 } from "@/lib/shared/views/ui/components/context-menu";
 import { Rows } from "@/lib/shared/views/ui/components/loading";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
@@ -646,37 +645,13 @@ function PlaylistHeader({
 			}
 			playing={active && isPlaying.value}
 			loading={active && playbackLoading.value}
-			actions={<PlaylistActions actions={menuActions} reserve={reserve} />}
+			actions={
+				<MenuButton
+					actions={menuActions}
+					label={t("music.track.actions")}
+					reserve={reserve}
+				/>
+			}
 		/>
-	);
-}
-
-function PlaylistActions({
-	actions,
-	reserve,
-}: {
-	actions: Action[];
-	reserve?: boolean;
-}) {
-	if (actions.length === 0 && !reserve) return null;
-	return (
-		<button
-			type="button"
-			title={t("music.track.actions")}
-			aria-label={t("music.track.actions")}
-			aria-haspopup="menu"
-			disabled={actions.length === 0}
-			onPointerDown={(event) => {
-				event.preventDefault();
-				event.stopPropagation();
-			}}
-			onClick={(event) => {
-				event.stopPropagation();
-				openContextMenu(actions, event);
-			}}
-			class="shrink-0 cursor-pointer rounded-md p-1.5 text-zinc-400 transition hover:text-white disabled:cursor-default disabled:opacity-40"
-		>
-			<EllipsisVertical size={18} />
-		</button>
 	);
 }
