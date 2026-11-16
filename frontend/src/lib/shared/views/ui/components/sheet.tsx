@@ -122,6 +122,9 @@ export function Sheet({
 			<button
 				ref={backdropRef}
 				type="button"
+				// A backdrop is not a control: a tip under it is a bubble at the
+				// bottom edge of the window that reads as a second dialog.
+				data-tip=""
 				class={cn(
 					"absolute inset-x-0 top-0 bg-black/70 transition-opacity duration-300 sm:inset-0",
 					"bottom-0",
@@ -178,7 +181,7 @@ export function Sheet({
 				<CloseButton
 					close={close}
 					label={closeLabel}
-					class="absolute right-3 top-3 z-20"
+					class="absolute right-3 top-3 z-20 sm:top-2"
 				/>
 
 				{children}

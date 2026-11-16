@@ -10,7 +10,8 @@ import {
 export { CloseButton, OverlayHost };
 
 // The close button belongs to the sheet, not to the header: it always sits in
-// the same top-right corner. A header is only the row of content under it.
+// the same top-right corner. A header is only the row of content under it, so it
+// reserves that corner instead of running under it.
 export function ModalHeader({
 	children,
 	bordered = true,
@@ -21,7 +22,7 @@ export function ModalHeader({
 	return (
 		<header
 			class={cn(
-				"flex shrink-0 items-center gap-2 px-4 py-3 pl-5.5",
+				"flex shrink-0 items-center gap-2 py-3 pl-5.5 pr-12",
 				bordered && "border-b border-zinc-800",
 			)}
 		>
