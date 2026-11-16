@@ -15,7 +15,11 @@ function detail(error: unknown): string {
 	if (typeof DOMException !== "undefined" && error instanceof DOMException) {
 		return `${error.name}: ${error.message}`;
 	}
-	if (error instanceof Error) return error.stack ?? error.message;
+	if (error instanceof Error) {
+		// WebKit's stack is a list of frames with no message on it, so the message
+		// has to be written next to it or the log says only where it failed.
+		return `${error.name}: ${error.message}\n${error.stack ?? ""}`;
+	}
 	if (typeof error === "string") return error;
 	try {
 		return JSON.stringify(error);
