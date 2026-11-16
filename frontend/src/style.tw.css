@@ -133,6 +133,12 @@ body {
 	}
 }
 
+/* A hidden window shows nothing, so the field stops instead of keeping 64
+   composited layers animating for a screen nobody is looking at. */
+[data-motes-paused] span {
+	animation-play-state: paused;
+}
+
 @keyframes page-in {
 	from {
 		opacity: 0;

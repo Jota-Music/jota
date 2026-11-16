@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { DegradedBanner } from "@/lib/auth/views/ui/degraded-banner";
 import { SignInPrompt } from "@/lib/auth/views/ui/sign-in-prompt";
@@ -69,6 +69,15 @@ export function AppShell({
 	const [location] = useLocation();
 	// The app paints at full opacity; only an arriving page fades in.
 	const firstRoute = useRef(location);
+	// A hidden window is nobody's screen, so the field is paused rather than
+	// animating 64 layers behind it.
+	const [hidden, setHidden] = useState(document.hidden);
+
+	useEffect(() => {
+		const onVisibility = () => setHidden(document.hidden);
+		document.addEventListener("visibilitychange", onVisibility);
+		return () => document.removeEventListener("visibilitychange", onVisibility);
+	}, []);
 
 	useEffect(() => {
 		clearSelection();
@@ -111,6 +120,7 @@ export function AppShell({
 
 							<div
 								aria-hidden="true"
+								data-motes-paused={hidden || undefined}
 								class="motes pointer-events-none absolute inset-0 -z-10 overflow-hidden text-(--dominant-color) transition-colors duration-1000 ease-out"
 							>
 								{dust.map((mote) => (
