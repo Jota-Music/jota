@@ -6,6 +6,7 @@ import { useLocation } from "wouter-preact";
 import { spotifyConnected } from "@/lib/auth/views/stores/session";
 import type { Song } from "@/lib/music/model";
 import { coarse, rowSelect } from "@/lib/music/views/hooks/row-select";
+import { ROW_PX, useRowReorder } from "@/lib/music/views/hooks/use-row-reorder";
 import { useWindow } from "@/lib/music/views/hooks/use-window";
 import {
 	currentSong,
@@ -26,15 +27,12 @@ import { t } from "@/lib/shared/i18n";
 import { cover } from "@/lib/shared/utils/cover";
 import { secondsToTime } from "@/lib/shared/utils/format";
 import { cn } from "@/lib/shared/utils/tw";
-import { usePointerDrag } from "@/lib/shared/views/hooks/use-pointer-drag";
 import AlbumLink from "@/lib/shared/views/ui/components/album-link";
 import ArtistLinks from "@/lib/shared/views/ui/components/artist-links";
 import { openContextMenu } from "@/lib/shared/views/ui/components/context-menu";
 import { CoverFallback } from "@/lib/shared/views/ui/components/cover-fallback";
 import { Image } from "@/lib/shared/views/ui/components/image";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
-
-const ROW_PX = 64;
 
 type Props = {
 	songs: Song[];
@@ -57,11 +55,6 @@ const dragFrom = signal<number | null>(null);
 const dragOver = signal<number | null>(null);
 
 const currentId = computed(() => currentSong.value?.id);
-
-function endDrag() {
-	dragFrom.value = null;
-	dragOver.value = null;
-}
 
 function PlaylistRow({
 	song,
@@ -222,51 +215,13 @@ export function Virtualization({
 	);
 	const reorderable = !!onReorder && songs.length > 1;
 	const selected = selectedIds.value;
-	const dragOrigin = useRef<number | null>(null);
-
-	const indexFromClientY = (clientY: number) => {
-		const el = ref.current;
-		if (!el || songs.length === 0) return 0;
-		const rect = el.getBoundingClientRect();
-		const rel = el.scrollTop + (clientY - rect.top);
-		return Math.max(0, Math.min(songs.length - 1, Math.floor(rel / ROW_PX)));
-	};
-
-	const hover = (clientY: number) => {
-		const next = indexFromClientY(clientY);
-		if (dragOver.value !== next) dragOver.value = next;
-	};
-
-	const { start, captureClick } = usePointerDrag({
-		scroll: ref,
-		touch: true,
-		begin: () => {
-			if (dragOrigin.current == null) return;
-			dragFrom.value = dragOrigin.current;
-			dragOver.value = dragOrigin.current;
-		},
-		move: (e) => hover(e.clientY),
-		end: (dragged) => {
-			const from = dragFrom.value;
-			const to = dragOver.value;
-			endDrag();
-			if (dragged && from != null && to != null && from !== to) {
-				onReorder?.(from, to);
-			}
-		},
+	const { pointerDown, captureClick } = useRowReorder(ref, songs.length, {
+		from: dragFrom,
+		over: dragOver,
+		row: "playlist-index",
+		enabled: reorderable,
+		onMove: (from, to) => onReorder?.(from, to),
 	});
-
-	const handlePointerDown = (e: PointerEvent) => {
-		if (!reorderable) return;
-		const target = e.target as Element;
-		if (target.closest("button")) return;
-		const row = target.closest("[data-playlist-index]");
-		if (!row) return;
-		const index = Number(row.getAttribute("data-playlist-index"));
-		if (!Number.isInteger(index)) return;
-		if (!start(e)) return;
-		dragOrigin.current = index;
-	};
 
 	// The list opens where it was left: a remount (a route change, a cleared
 	// query) or a different playlist in place restores the saved offset instead
@@ -345,7 +300,7 @@ export function Virtualization({
 					// over them.
 					dragFrom.value != null && "[&_button]:pointer-events-none",
 				)}
-				onPointerDown={handlePointerDown}
+				onPointerDown={pointerDown}
 				onClickCapture={captureClick}
 				onClick={(e) => {
 					const target = e.target as Element;
