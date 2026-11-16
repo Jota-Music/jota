@@ -35,21 +35,23 @@ func (a *App) ReloadWindow() {
 	}
 }
 
-// RamMB reports the resident memory of the app plus its WebKit helper
-// processes (renderer, network, GPU), so the frontend can flush WebKit's
-// internal image caches exactly when they are what is growing. Zero means the
-// platform exposes no /proc and the frontend falls back to its deadline.
+// RamMB reports the memory the app costs: this process plus its WebKit helpers
+// (renderer, network, GPU), so the frontend can flush WebKit's internal image
+// caches when they are what is growing.
+//
+// The number is the proportional set size, not RSS. RSS counts every shared
+// library once per process, and a WebKit app maps the same few hundred
+// megabytes of engine into each helper: summing it answers with roughly twice
+// what the app holds. PSS splits a shared page between the processes that map
+// it, which is the figure a memory monitor reports as the app's own. Zero means
+// the platform exposes no /proc and the frontend falls back to its deadline.
 func (a *App) RamMB() int {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
 		return 0
 	}
-	type pstat struct {
-		ppid int
-		rss  int
-	}
 	self := os.Getpid()
-	stats := make(map[int]pstat)
+	ppid := make(map[int]int, len(entries))
 	for _, e := range entries {
 		pid, err := strconv.Atoi(e.Name())
 		if err != nil || !e.IsDir() {
@@ -59,32 +61,47 @@ func (a *App) RamMB() int {
 		if err != nil {
 			continue
 		}
-		var s pstat
 		for _, line := range strings.Split(string(b), "\n") {
-			switch {
-			case strings.HasPrefix(line, "PPid:"):
-				fields := strings.Fields(strings.TrimPrefix(line, "PPid:"))
-				if len(fields) > 0 {
-					s.ppid, _ = strconv.Atoi(fields[0])
-				}
-			case strings.HasPrefix(line, "VmRSS:"):
-				fields := strings.Fields(strings.TrimPrefix(line, "VmRSS:"))
-				if len(fields) > 0 {
-					s.rss, _ = strconv.Atoi(fields[0])
-				}
+			if !strings.HasPrefix(line, "PPid:") {
+				continue
 			}
+			fields := strings.Fields(strings.TrimPrefix(line, "PPid:"))
+			if len(fields) > 0 {
+				ppid[pid], _ = strconv.Atoi(fields[0])
+			}
+			break
 		}
-		stats[pid] = s
 	}
 	kb := 0
-	for pid, s := range stats {
+	for pid := range ppid {
 		p := pid
 		for i := 0; i < 16 && p != 0 && p != self; i++ {
-			p = stats[p].ppid
+			p = ppid[p]
 		}
 		if p == self {
-			kb += s.rss
+			kb += pssKB(pid)
 		}
 	}
 	return kb / 1024
+}
+
+// pssKB is one process's proportional set size, read from the rollup the kernel
+// keeps for exactly this question: summing its mappings would mean parsing
+// smaps, which is megabytes of text for a process holding a few hundred.
+func pssKB(pid int) int {
+	b, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "smaps_rollup"))
+	if err != nil {
+		return 0
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		if !strings.HasPrefix(line, "Pss:") {
+			continue
+		}
+		fields := strings.Fields(strings.TrimPrefix(line, "Pss:"))
+		if len(fields) > 0 {
+			kb, _ := strconv.Atoi(fields[0])
+			return kb
+		}
+	}
+	return 0
 }
