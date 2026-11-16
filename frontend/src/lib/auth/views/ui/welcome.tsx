@@ -1,5 +1,6 @@
 import { useSignal, useSignalEffect } from "@preact/signals";
 import { Check } from "lucide-preact";
+import { useRef } from "preact/hooks";
 import {
 	cancelSpotifyLogin,
 	loginSpotifyAndWait,
@@ -16,11 +17,13 @@ import {
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { Modal } from "@/lib/shared/views/ui/components/modal";
+import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
 import { SpotifyIcon } from "@/lib/shared/views/ui/icons/spotify";
 
 export function Welcome() {
 	const busy = useSignal(false);
 	const mute = useSignal(false);
+	const listRef = useRef<HTMLDivElement>(null);
 
 	useSignalEffect(() => {
 		// An account is not something to welcome, and a session that is still
@@ -52,59 +55,65 @@ export function Welcome() {
 
 	return (
 		<Modal open={welcomeOpen.value} close={close} labelledBy="welcome-title">
-			<div class="flex flex-col items-center gap-4 px-6 pt-6 pb-6 text-center">
-				<SpotifyIcon size={32} class="text-green-500" />
-				<div class="space-y-1">
-					<h2 id="welcome-title" class="text-lg font-bold text-zinc-100">
-						{t("auth.welcome.title")}
-					</h2>
-					<p class="text-balance text-sm text-zinc-400">
-						{t("auth.welcome.body")}
-					</p>
-				</div>
+			<div class="relative flex min-h-0 flex-1 flex-col">
+				<div
+					ref={listRef}
+					class="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto px-6 pt-6 pb-6 text-center"
+				>
+					<SpotifyIcon size={32} class="shrink-0 text-green-500" />
+					<div class="shrink-0 space-y-1">
+						<h2 id="welcome-title" class="text-lg font-bold text-zinc-100">
+							{t("auth.welcome.title")}
+						</h2>
+						<p class="text-balance text-sm text-zinc-400">
+							{t("auth.welcome.body")}
+						</p>
+					</div>
 
-				<div class="flex items-center gap-2">
-					<button
-						type="button"
-						disabled={busy.value}
-						onClick={() => void connect()}
-						class="rounded-full bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer disabled:opacity-50"
-					>
-						{busy.value
-							? t("auth.welcome.connecting")
-							: t("auth.welcome.connect")}
-					</button>
-					<button
-						type="button"
-						disabled={busy.value}
-						onClick={() => dismissWelcome(mute.value)}
-						class="rounded-full px-5 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer disabled:opacity-50"
-					>
-						{t("auth.notNow")}
-					</button>
-				</div>
+					<div class="flex shrink-0 items-center gap-2">
+						<button
+							type="button"
+							disabled={busy.value}
+							onClick={() => void connect()}
+							class="rounded-full bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer disabled:opacity-50"
+						>
+							{busy.value
+								? t("auth.welcome.connecting")
+								: t("auth.welcome.connect")}
+						</button>
+						<button
+							type="button"
+							disabled={busy.value}
+							onClick={() => dismissWelcome(mute.value)}
+							class="rounded-full px-5 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer disabled:opacity-50"
+						>
+							{t("auth.notNow")}
+						</button>
+					</div>
 
-				<label class="flex cursor-pointer select-none items-center gap-2 text-xs text-zinc-500 transition-colors hover:text-zinc-300">
-					<input
-						type="checkbox"
-						checked={mute.value}
-						onChange={(e) => {
-							mute.value = e.currentTarget.checked;
-						}}
-						class="peer sr-only"
-					/>
-					<span
-						class={cn(
-							"flex size-4 items-center justify-center rounded border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-(--dominant-color)/40",
-							mute.value
-								? "border-(--dominant-color) bg-(--dominant-color) text-(--binary-color)"
-								: "border-zinc-700 bg-zinc-900 text-transparent",
-						)}
-					>
-						<Check size={12} strokeWidth={3} />
-					</span>
-					{t("auth.welcome.dontShow")}
-				</label>
+					<label class="flex shrink-0 cursor-pointer select-none items-center gap-2 text-xs text-zinc-500 transition-colors hover:text-zinc-300">
+						<input
+							type="checkbox"
+							checked={mute.value}
+							onChange={(e) => {
+								mute.value = e.currentTarget.checked;
+							}}
+							class="peer sr-only"
+						/>
+						<span
+							class={cn(
+								"flex size-4 items-center justify-center rounded border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-(--dominant-color)/40",
+								mute.value
+									? "border-(--dominant-color) bg-(--dominant-color) text-(--binary-color)"
+									: "border-zinc-700 bg-zinc-900 text-transparent",
+							)}
+						>
+							<Check size={12} strokeWidth={3} />
+						</span>
+						{t("auth.welcome.dontShow")}
+					</label>
+				</div>
+				<Scrollbar target={listRef} gutter={24} />
 			</div>
 		</Modal>
 	);
