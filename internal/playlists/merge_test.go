@@ -77,7 +77,7 @@ func TestMerge(t *testing.T) {
 			s := New(nil)
 			seed(t, s, c.local)
 
-			got, applied, err := s.merge(c.remote, mergeNewer, true)
+			got, applied, err := s.merge(c.remote, Newer, true)
 			if err != nil {
 				t.Fatalf("merge: %v", err)
 			}
@@ -109,7 +109,7 @@ func TestMerge(t *testing.T) {
 			}
 
 			if c.twice {
-				again, applied, err := s.merge(c.remote, mergeNewer, true)
+				again, applied, err := s.merge(c.remote, Newer, true)
 				if err != nil {
 					t.Fatalf("second merge: %v", err)
 				}
@@ -141,7 +141,7 @@ func TestMergeWithoutApplyLeavesStore(t *testing.T) {
 		},
 		Deleted: map[string]int64{"phone-gone": 30},
 	}
-	out, applied, err := s.merge(remote, mergeNewer, false)
+	out, applied, err := s.merge(remote, Newer, false)
 	if err != nil {
 		t.Fatalf("merge: %v", err)
 	}

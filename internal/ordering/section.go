@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/Jota-Music/jota/internal/reconcile"
 	"github.com/Jota-Music/jota/internal/state"
 )
 
@@ -53,19 +54,8 @@ func (r Record) shelf() shelfKey {
 // Merge modes, for the callers outside this package that decide between a
 // background sync and an explicit restore.
 const (
-	Newer   = mergeNewer
-	Restore = mergeRestore
-)
-
-type mergeMode int
-
-// Same rule as every other section: a sync takes the newer copy, an explicit
-// import lets the file win.
-const (
-	// mergeNewer is a background sync: the newest list wins.
-	mergeNewer mergeMode = iota
-	// mergeRestore is an explicit import, where the file's list always wins.
-	mergeRestore
+	Newer   = reconcile.Newer
+	Restore = reconcile.Restore
 )
 
 // Section reads every stored order into the ordering part of a backup document.
@@ -122,7 +112,7 @@ func index(part Section) map[shelfKey]Record {
 // list wins by its timestamp, because merging positions is meaningless; an
 // explicit restore lets the file's list win even when the local one is newer.
 // With apply off the union is answered but the store keeps its own orders.
-func (s *Service) MergeSection(part Section, mode mergeMode, apply bool) (Section, int, error) {
+func (s *Service) MergeSection(part Section, mode reconcile.Mode, apply bool) (Section, int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -133,7 +123,7 @@ func (s *Service) MergeSection(part Section, mode mergeMode, apply bool) (Sectio
 	out := mergeSection(part, local, mode)
 	// A background sync leaves us holding what the file holds, so nothing is left
 	// to write, whether or not the pass applied it.
-	if mode == mergeNewer {
+	if mode == reconcile.Newer {
 		s.dirty = false
 	}
 	if !apply {
@@ -155,7 +145,7 @@ func (s *Service) MergeSection(part Section, mode mergeMode, apply bool) (Sectio
 		}
 	}
 	// An explicit restore is a local change and has to be pushed.
-	if mode == mergeRestore && applied > 0 {
+	if mode == reconcile.Restore && applied > 0 {
 		s.dirty = true
 	}
 	return out, applied, nil
@@ -163,7 +153,7 @@ func (s *Service) MergeSection(part Section, mode mergeMode, apply bool) (Sectio
 
 // mergeSection is the reconciliation rule itself: every shelf keeps the list of
 // the copy that saved last, with no per-id merge.
-func mergeSection(remote Section, local Section, mode mergeMode) Section {
+func mergeSection(remote Section, local Section, mode reconcile.Mode) Section {
 	shelves := index(local)
 	for _, entry := range remote {
 		entry.Scope = normalize(entry.Scope)
@@ -172,7 +162,7 @@ func mergeSection(remote Section, local Section, mode mergeMode) Section {
 			continue
 		}
 		rec := clean(Record(entry))
-		if cur, ok := shelves[rec.shelf()]; ok && mode != mergeRestore && cur.At >= rec.At {
+		if cur, ok := shelves[rec.shelf()]; ok && mode != reconcile.Restore && cur.At >= rec.At {
 			continue
 		}
 		shelves[rec.shelf()] = rec

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/reconcile"
 )
 
 // exportPlaylist is the portable shape of a playlist. Songs are the references
@@ -108,8 +109,8 @@ func (s Section) Empty() bool {
 // Merge modes, for the callers outside this package that decide between a
 // background sync and an explicit restore.
 const (
-	Newer   = mergeNewer
-	Restore = mergeRestore
+	Newer   = reconcile.Newer
+	Restore = reconcile.Restore
 )
 
 // wirePlaylist is a playlist as the document writes it.
@@ -500,7 +501,7 @@ func snapshots(external []Snapshot) []exportPlaylist {
 // changed. An explicit restore also undoes local deletions; the playlists of a
 // source are a snapshot and are never recreated locally. With apply off the
 // union is answered but the store keeps its own playlists.
-func (s *Service) MergeSection(part Section, mode mergeMode, apply bool) (Section, int, error) {
+func (s *Service) MergeSection(part Section, mode reconcile.Mode, apply bool) (Section, int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

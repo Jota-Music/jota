@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Jota-Music/jota/internal/music"
+	"github.com/Jota-Music/jota/internal/reconcile"
 	"github.com/Jota-Music/jota/internal/state"
 )
 
@@ -81,24 +82,11 @@ func mergeTracks(base, extra map[string]music.Song) map[string]music.Song {
 	return base
 }
 
-// mergeMode selects how far one reconciliation may go.
-type mergeMode int
-
-// Same rule as every other section: a sync takes the newer copy, an explicit
-// import lets the file win.
-const (
-	// mergeNewer is a background sync: newer copies win and a tombstone keeps
-	// a deletion.
-	mergeNewer mergeMode = iota
-	// mergeRestore is an explicit import, which may undo a local deletion.
-	mergeRestore
-)
-
 // merge reconciles the store with a remote document and returns the document
 // both sides agree on, plus how many stored playlists changed. With apply off it
 // still returns the agreed document, but the store keeps its own playlists. The
 // caller holds s.mu.
-func (s *Service) merge(remote Section, mode mergeMode, apply bool) (Section, int, error) {
+func (s *Service) merge(remote Section, mode reconcile.Mode, apply bool) (Section, int, error) {
 	ids, err := s.index()
 	if err != nil {
 		return Section{}, 0, err
@@ -129,7 +117,7 @@ func (s *Service) merge(remote Section, mode mergeMode, apply bool) (Section, in
 	}
 	// A background sync leaves us holding what the file holds, so nothing is left
 	// to write. An explicit restore is a local change and has to be pushed.
-	if mode == mergeNewer {
+	if mode == reconcile.Newer {
 		s.dirty = false
 	} else if applied > 0 || buried {
 		s.dirty = true
@@ -141,8 +129,8 @@ func (s *Service) merge(remote Section, mode mergeMode, apply bool) (Section, in
 // takes the remote document, the local snapshot and the tombstones and answers
 // the document both sides agree on. Newer copies win by ModifiedAt, metadata is
 // additive and tombstones keep a deletion from coming back unless mode is
-// mergeRestore. The answer owns the snapshot's maps, so it may adopt them.
-func mergeDocument(remote Section, local map[string]exportPlaylist, graves map[string]int64, mode mergeMode) (Section, map[string]int64, bool) {
+// reconcile.Restore. The answer owns the snapshot's maps, so it may adopt them.
+func mergeDocument(remote Section, local map[string]exportPlaylist, graves map[string]int64, mode reconcile.Mode) (Section, map[string]int64, bool) {
 	merged := make(map[string]exportPlaylist, len(local)+len(remote.Items))
 	for id, p := range local {
 		merged[id] = p
@@ -178,7 +166,7 @@ func mergeDocument(remote Section, local map[string]exportPlaylist, graves map[s
 
 		stored := storedId(rp.Id)
 		if at, ok := next[stored]; ok {
-			if mode != mergeRestore && rp.ModifiedAt <= at {
+			if mode != reconcile.Restore && rp.ModifiedAt <= at {
 				continue
 			}
 			delete(next, stored)
