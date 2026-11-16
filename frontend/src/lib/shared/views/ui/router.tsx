@@ -110,7 +110,11 @@ Events.On("youtube:session-updated", async () => {
 // A pass applied these sections of the document to the store: the page asks
 // again only for what they feed, which is the whole of the UI's update.
 Events.On("library:changed", (event) => {
-	invalidate((event.data ?? []) as Section[]);
+	const changed = (event.data ?? []) as Section[];
+	invalidate(changed);
+	// The relay is a signal read once at startup, not a query, so a copy that
+	// arrived with the document has to be read back here.
+	if (changed.includes("settings")) void loadRelay();
 });
 
 // The answers a source owes the page are worth asking again when its session
