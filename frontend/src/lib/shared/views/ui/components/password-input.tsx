@@ -11,6 +11,7 @@ interface PasswordInputProps {
 	disabled?: boolean;
 	onValue: (value: string) => void;
 	onBlur?: () => void;
+	onEnter?: () => void;
 	label?: string;
 }
 
@@ -22,6 +23,7 @@ export function PasswordInput({
 	disabled,
 	onValue,
 	onBlur,
+	onEnter,
 	label,
 }: PasswordInputProps) {
 	const visible = useSignal(false);
@@ -38,6 +40,11 @@ export function PasswordInput({
 				disabled={disabled}
 				onInput={(e) => onValue(e.currentTarget.value)}
 				onBlur={onBlur}
+				onKeyDown={(e) => {
+					if (e.key !== "Enter") return;
+					e.currentTarget.blur();
+					onEnter?.();
+				}}
 			/>
 			<button
 				type="button"

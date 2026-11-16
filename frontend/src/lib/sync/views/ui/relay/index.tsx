@@ -72,6 +72,9 @@ export function RelaySettings() {
 					disabled={store.relayLocked.value}
 					onInput={(e) => (store.relayUrl.value = e.currentTarget.value)}
 					onBlur={transport.save}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") e.currentTarget.blur();
+					}}
 				/>
 			</div>
 
