@@ -220,7 +220,7 @@ export function FollowingShelf({ account }: { account: string }) {
 			fromId,
 			toId,
 		);
-		queryClient.setQueryData(["shelf-order", "following", account], next);
+		queryClient.setQueryData(["shelf-order", "following"], next);
 		void saveOrder("following", "", next);
 	};
 
