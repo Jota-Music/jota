@@ -23,6 +23,11 @@ const (
 	// bridge as a string.
 	syncIncoming = "incoming.json"
 	syncOutgoing = "outgoing.json"
+
+	// slowPass is the duration worth a log line even when the pass wrote
+	// nothing: a merge of a small library is milliseconds, so anything past this
+	// is a mount that stalled and the number is the point of logging it.
+	slowPass = 250 * time.Millisecond
 )
 
 // SyncStatus is what the last sync read and changed. It lives in settings
@@ -467,16 +472,22 @@ func (a *App) syncDocumentAt(dir string, lastModified int64, trust bool) (bool, 
 	return true, nil
 }
 
-// logPass leaves one line per reconciled document: how long the merge took and
-// how much it moved. A pass that feels slow is then a number instead of a
-// feeling, and a pass that runs on every resume shows up as one line per resume.
+// logPass leaves one line per pass that did something: how long the merge took
+// and how much it moved. A pass that keeps the document is the normal case and
+// it runs on every resume, so logging it too would fill the file with the same
+// line and bury the ones that say the document moved. A slow pass still gets a
+// line: the number is why this exists, and a pass that feels slow should be one.
 func logPass(where string, started time.Time, read, written int, modified bool) {
+	took := time.Since(started)
+	if !modified && took < slowPass {
+		return
+	}
 	state := "kept"
 	if modified {
 		state = "wrote"
 	}
 	log.Printf("sync: %s in %s: read %dKB, %s %dKB",
-		where, time.Since(started).Round(time.Millisecond), read/1024, state, written/1024)
+		where, took.Round(time.Millisecond), read/1024, state, written/1024)
 }
 
 // syncDocument merges a backup document in memory and answers the document both

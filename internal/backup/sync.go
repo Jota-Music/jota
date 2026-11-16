@@ -154,7 +154,6 @@ func (s *Service) Sync(folder string, opts Options) (Stats, error) {
 	// Outside the lock: resolving a source is a network round trip.
 	doc, refreshed := s.prepare(doc, opts.Snapshots, opts.Force || opts.Refresh)
 	remote := len(doc.Playlists.Items)
-	log.Printf("sync: %s: %d remote playlists", path, remote)
 
 	// The store is applied first: the file is a backup, so a failed write must
 	// never discard what another instance already knows.

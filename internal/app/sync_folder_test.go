@@ -1,7 +1,9 @@
 package app
 
 import (
+	"bytes"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -789,5 +791,30 @@ func TestSyncPendingAfterProblem(t *testing.T) {
 	a.recordProblem(errors.New("write failed"))
 	if !a.SyncPending() {
 		t.Fatal("a failed pass offered no manual save")
+	}
+}
+
+// A pass that keeps the document is the normal case and runs on every resume,
+// so it stays quiet: the file is for the passes that moved something or stalled.
+func TestLogPassSpeaksOnlyWhenItMoved(t *testing.T) {
+	var buf bytes.Buffer
+	previous := log.Writer()
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(previous) })
+
+	logPass("folder", time.Now(), 1024, 1024, false)
+	if got := buf.String(); got != "" {
+		t.Fatalf("a pass that kept the document logged %q", got)
+	}
+
+	logPass("folder", time.Now(), 1024, 2048, true)
+	if got := buf.String(); !strings.Contains(got, "wrote 2KB") {
+		t.Fatalf("a pass that wrote logged %q", got)
+	}
+
+	buf.Reset()
+	logPass("folder", time.Now().Add(-time.Second), 1024, 1024, false)
+	if got := buf.String(); !strings.Contains(got, "kept") {
+		t.Fatalf("a slow pass that kept the document logged %q", got)
 	}
 }
