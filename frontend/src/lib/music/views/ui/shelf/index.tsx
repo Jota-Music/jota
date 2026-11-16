@@ -190,89 +190,94 @@ export function Shelf({
 
 	return (
 		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md md:border border-zinc-800">
-			{/* The bar keeps its room while loading, so the shelf does not drop
-			below it once the items arrive. A title needs it too: a search page
-			has no other place for the query, and the layout switch needs it
-			even when the shelf has no sources to filter. */}
-			{(filterable || isLoading || title || toolbar || modes) && (
-				<Controls
-					title={title}
-					toolbar={toolbar}
-					modes={modes}
-					filterable={filterable}
-					sourceFilter={sourceFilter}
-					setFilter={setFilter}
-					variant={variant}
-					setVariant={setVariant}
-					sortMode={canSort ? sortMode.value : undefined}
-					onSortMode={canSort ? toggleSortMode : undefined}
-					onCreate={items.length > 0 ? onCreate : undefined}
-					showLocal={showLocal}
-				/>
-			)}
+			{/* One padding and one gap for the whole shelf: the bar and the items sit
+			on the same 8px, so the first row lines up with the filters and nothing
+			has to guess where the content starts. */}
+			<section class="flex min-h-0 flex-1 flex-col gap-2 p-3">
+				{/* The bar keeps its room while loading, so the shelf does not drop
+				below it once the items arrive. A title needs it too: a search page
+				has no other place for the query, and the layout switch needs it
+				even when the shelf has no sources to filter. */}
+				{(filterable || isLoading || title || toolbar || modes) && (
+					<Controls
+						title={title}
+						toolbar={toolbar}
+						modes={modes}
+						filterable={filterable}
+						sourceFilter={sourceFilter}
+						setFilter={setFilter}
+						variant={variant}
+						setVariant={setVariant}
+						sortMode={canSort ? sortMode.value : undefined}
+						onSortMode={canSort ? toggleSortMode : undefined}
+						onCreate={items.length > 0 ? onCreate : undefined}
+						showLocal={showLocal}
+					/>
+				)}
 
-			{isLoading ? (
-				<Loading />
-			) : children ? (
-				// A body of the page's own brings its own scroll: a row list is
-				// not a set of items and does not share their container.
-				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-					{children}
-				</div>
-			) : items.length === 0 ? (
-				<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500 pb-6">
-					{empty()}
-					{onCreate && sourceFilter === "local" && (
-						<button
-							type="button"
-							onClick={onCreate}
-							title={t("music.custom.create")}
-							aria-label={t("music.custom.create")}
-							class="flex h-10 md:h-8 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-4 text-zinc-400 transition-colors hover:text-white"
-						>
-							<Plus size={18} class="md:hidden" />
-							<Plus size={14} class="hidden md:block" />
-							{t("music.custom.create")}
-						</button>
-					)}
-				</div>
-			) : (
-				<div class="relative min-h-0 flex-1">
-					<div
-						ref={listRef}
-						class="h-full overflow-y-auto pl-2 pr-4 pb-4 md:pb-0"
-						onClickCapture={captureClick}
-					>
-						{filteredItems.length === 0 ? (
-							<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
-								{empty()}
-							</div>
-						) : variant === "grid" ? (
-							<Grid
-								items={filteredItems}
-								to={to}
-								dragProps={dragProps}
-								select={select}
-								menu={openItemMenu}
-								actions={renderActions}
-								leading={renderLeading}
-							/>
-						) : (
-							<Compact
-								items={filteredItems}
-								to={to}
-								dragProps={dragProps}
-								select={select}
-								menu={openItemMenu}
-								actions={renderActions}
-								leading={renderLeading}
-								hoverable={hoverable}
-							/>
+				{isLoading ? (
+					<Loading />
+				) : children ? (
+					// A body of the page's own brings its own scroll: a row list is
+					// not a set of items and does not share their container.
+					<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+						{children}
+					</div>
+				) : items.length === 0 ? (
+					<div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-sm text-zinc-500 pb-6">
+						{empty()}
+						{onCreate && sourceFilter === "local" && (
+							<button
+								type="button"
+								onClick={onCreate}
+								title={t("music.custom.create")}
+								aria-label={t("music.custom.create")}
+								class="flex h-10 md:h-8 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-4 text-zinc-400 transition-colors hover:text-white"
+							>
+								<Plus size={18} class="md:hidden" />
+								<Plus size={14} class="hidden md:block" />
+								{t("music.custom.create")}
+							</button>
 						)}
 					</div>
-					<Scrollbar target={listRef} gutter={16} />
-				</div>
-			)}
+				) : (
+					<div class="relative min-h-0 flex-1">
+						<div
+							ref={listRef}
+							class="h-full overflow-y-auto pr-6 md:pr-4"
+							onClickCapture={captureClick}
+						>
+							{filteredItems.length === 0 ? (
+								<div class="flex h-full items-center justify-center p-8 text-sm text-zinc-500">
+									{empty()}
+								</div>
+							) : variant === "grid" ? (
+								<Grid
+									items={filteredItems}
+									to={to}
+									dragProps={dragProps}
+									select={select}
+									menu={openItemMenu}
+									actions={renderActions}
+									leading={renderLeading}
+								/>
+							) : (
+								<Compact
+									items={filteredItems}
+									to={to}
+									dragProps={dragProps}
+									select={select}
+									menu={openItemMenu}
+									actions={renderActions}
+									leading={renderLeading}
+									hoverable={hoverable}
+								/>
+							)}
+						</div>
+						<Scrollbar target={listRef} gutter={16} />
+					</div>
+				)}
+			</section>
 		</div>
 	);
 }

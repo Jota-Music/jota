@@ -32,7 +32,7 @@ export function Grid({
 	leading,
 }: GridProps) {
 	return (
-		<div class="grid grid-cols-3 gap-0.5 md:gap-4">
+		<div class="grid grid-cols-3 gap-3 md:gap-4">
 			{items.map((item) => (
 				<Link
 					key={item.id}
@@ -45,7 +45,7 @@ export function Grid({
 				>
 					<div
 						class={cn(
-							"group flex cursor-pointer select-none flex-col gap-2 overflow-hidden rounded-md p-1.5 transition-shadow duration-150 [-webkit-touch-callout:none]",
+							"group flex cursor-pointer select-none flex-col gap-2 overflow-hidden rounded-md transition-shadow duration-150 [-webkit-touch-callout:none]",
 							dragFrom.value === item.id && "opacity-40",
 							dragOver.value === item.id &&
 								dragFrom.value !== item.id &&

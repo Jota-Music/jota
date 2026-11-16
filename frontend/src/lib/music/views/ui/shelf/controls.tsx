@@ -43,7 +43,7 @@ export function Controls({
 	showLocal = true,
 }: ControlsProps) {
 	return (
-		<div class="relative flex shrink-0 items-center justify-between gap-2 px-3 pt-2 pb-2">
+		<header class="relative flex shrink-0 items-center justify-between gap-2">
 			{title && (
 				<span class="pointer-events-none absolute inset-x-28 top-1/2 -translate-y-1/2 truncate text-center text-base font-semibold text-white md:inset-x-32">
 					{title}
@@ -182,6 +182,6 @@ export function Controls({
 					</div>
 				)}
 			</div>
-		</div>
+		</header>
 	);
 }
