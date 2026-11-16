@@ -1,10 +1,14 @@
 import { parseSpotifyLink } from "@/lib/music/app/spotify-link";
 import { parseYoutubeLink, youtubeList } from "@/lib/music/app/youtube-link";
+import { parseRoomLink } from "@/lib/sync/app/room-link";
 
 export type ClipboardLink = {
-	kind: "playlist" | "album" | "artist" | "user" | "channel" | "song";
+	kind: "playlist" | "album" | "artist" | "user" | "channel" | "song" | "room";
 	text: string;
 	to: string;
+	// room carries what a link has no route for: the code and its password, which
+	// are an action (join) rather than a destination.
+	room?: { code: string; password: string };
 };
 
 // Bare ids and @handles belong to the search box, not the clipboard: a word that
@@ -23,7 +27,21 @@ function isLink(text: string): boolean {
 // a single track. Anything else (plain text, local: ids, other hosts) is null.
 export function clipboardLink(text: string): ClipboardLink | null {
 	const trimmed = text.trim();
-	if (!trimmed || !isLink(trimmed)) return null;
+	if (!trimmed) return null;
+
+	// A room is the app's own link, so it is read before the external ones: it is
+	// not a URL anything else would recognise.
+	const room = parseRoomLink(trimmed);
+	if (room) {
+		return {
+			kind: "room",
+			text: trimmed,
+			to: "/rooms",
+			room: { code: room.code, password: room.password },
+		};
+	}
+
+	if (!isLink(trimmed)) return null;
 
 	const spotify = parseSpotifyLink(trimmed);
 	if (spotify) {

@@ -4,6 +4,7 @@ import {
 	ListMusic,
 	Loader2,
 	Play,
+	Turntable,
 	Tv,
 	UserRound,
 	X,
@@ -22,15 +23,19 @@ import {
 import { playNow } from "@/lib/music/views/stores/player";
 import { t } from "@/lib/shared/i18n";
 import { addError } from "@/lib/shared/views/stores/errors";
+import * as transport from "@/lib/sync/app/transport";
+import * as store from "@/lib/sync/views/stores";
 
 function label(link: ClipboardLink): string {
 	switch (link.kind) {
 		case "song":
-			return link.to.startsWith("youtube:")
-				? t("clipboard.track")
-				: t("clipboard.track");
+			// A YouTube id is played as audio here, never watched, so a video gets
+			// the same wording as any other track.
+			return t("clipboard.track");
 		case "user":
 			return t("clipboard.channel");
+		case "room":
+			return t("clipboard.room");
 		default:
 			return t(`clipboard.${link.kind}`);
 	}
@@ -58,9 +63,12 @@ export function ClipboardBanner() {
 
 	const current = pending.value;
 	const link = current?.link;
+	// A room is not a page: its link is an action, and standing on the shelf it
+	// still points at is not the same as being in it.
 	const alreadyAtDestination =
 		link !== undefined &&
 		link.kind !== "song" &&
+		link.kind !== "room" &&
 		routeKey(location) === routeKey(link.to);
 	const alreadyPlayingSong =
 		isCurrentSong(link) &&
@@ -79,15 +87,26 @@ export function ClipboardBanner() {
 	const Icon =
 		link.kind === "song"
 			? Play
-			: link.kind === "album"
-				? Disc3
-				: link.kind === "playlist"
-					? ListMusic
-					: link.kind === "channel"
-						? Tv
-						: UserRound;
+			: link.kind === "room"
+				? Turntable
+				: link.kind === "album"
+					? Disc3
+					: link.kind === "playlist"
+						? ListMusic
+						: link.kind === "channel"
+							? Tv
+							: UserRound;
 
 	const open = async () => {
+		// A room link carries its own password, so the shelf it lands on and the
+		// session it opens are one gesture.
+		if (link.kind === "room" && link.room) {
+			pending.value = null;
+			store.password.value = link.room.password;
+			setLocation(link.to);
+			void transport.connect(link.room.code);
+			return;
+		}
 		if (!playable) {
 			pending.value = null;
 			setLocation(link.to);

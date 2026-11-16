@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { clipboardLink } from "@/lib/clipboard/app/link";
+import { roomLink } from "@/lib/sync/app/room-link";
 
 const TRACK = "4cOdK2wGLETKBW3PvgPWqT";
 const ALBUM = "4aawyAB9vmqN3uQ7FjRGTy";
@@ -81,4 +82,38 @@ test("bare ids and handles are search input, not clipboard links", () => {
 	expect(clipboardLink("aprendizaje")).toBeNull();
 	expect(clipboardLink("@usuario")).toBeNull();
 	expect(clipboardLink(`spotify:track:${TRACK}`)).not.toBeNull();
+});
+
+test("a room link carries its code, and the password when there is one", () => {
+	expect(clipboardLink("room/consejo:1234")).toEqual({
+		kind: "room",
+		text: "room/consejo:1234",
+		to: "/rooms",
+		room: { code: "consejo", password: "1234" },
+	});
+	expect(clipboardLink("  room/consejo ")).toMatchObject({
+		kind: "room",
+		room: { code: "consejo", password: "" },
+	});
+	// A password is the tail, so a colon inside it is part of it.
+	expect(clipboardLink("room/consejo:12:34")).toMatchObject({
+		room: { code: "consejo", password: "12:34" },
+	});
+});
+
+test("a room link with no code is not a room", () => {
+	expect(clipboardLink("room/")).toBeNull();
+	expect(clipboardLink("room")).toBeNull();
+});
+
+test("sharing a room writes what the paste detector reads back", () => {
+	expect(roomLink("consejo", "1234")).toBe("room/consejo:1234");
+	expect(roomLink("consejo", "")).toBe("room/consejo");
+	expect(clipboardLink(roomLink("consejo", "1234"))).toMatchObject({
+		kind: "room",
+		room: { code: "consejo", password: "1234" },
+	});
+	expect(clipboardLink(roomLink("consejo", ""))).toMatchObject({
+		room: { code: "consejo", password: "" },
+	});
 });
