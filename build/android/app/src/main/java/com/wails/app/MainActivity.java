@@ -133,7 +133,13 @@ public class MainActivity extends AppCompatActivity {
     private void applySafeArea() {
         View container = findViewById(R.id.main_container);
         ViewCompat.setOnApplyWindowInsetsListener(container, (v, insets) -> {
-            int types = WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout();
+            // Edge-to-edge (enforced from Android 15) makes adjustResize stop
+            // shrinking the window, so the keyboard would cover the page and its
+            // sheets. Pad it away like the system bars: the WebView then reports
+            // the smaller viewport and a modal sizes itself above the keyboard.
+            int types = WindowInsetsCompat.Type.systemBars()
+                    | WindowInsetsCompat.Type.displayCutout()
+                    | WindowInsetsCompat.Type.ime();
             Insets bars = insets.getInsets(types);
             // Insets are delivered again on unrelated events (a focus change, a
             // rotation, a sheet dismiss). setPadding invalidates the container and
