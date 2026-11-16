@@ -3,15 +3,10 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import {
 	listRooms,
 	type Room,
-	removeRoom,
+	randomCode,
 	saveRoom,
 } from "@/lib/sync/app/rooms";
-import * as transport from "@/lib/sync/app/transport";
 import * as store from "@/lib/sync/views/stores";
-
-function randomCode(): string {
-	return Math.random().toString(36).slice(2, 8);
-}
 
 // A room is identified by relay and code, the same key the store uses.
 function identity(relayUrl: string, code: string): string {
@@ -19,22 +14,20 @@ function identity(relayUrl: string, code: string): string {
 }
 
 // Form state and actions for the Rooms panel: what the user typed, what is
-// saved, and the connect/save/unsave/leave actions. The panel stays declarative.
+// saved, and the save action. The panel stays declarative: naming a room and
+// entering one are two different gestures, and only the shelf enters.
 export function useRoomForm() {
 	const queryClient = useQueryClient();
-	const [code, setCode] = useState(store.room.value);
+	const [code, setCode] = useState(() => store.takeDraft() ?? store.room.value);
 
-	const role = store.role.value;
-	const status = store.status.value;
 	const relay = store.relayUrl.value.trim();
-	const currentRoom = store.room.value.trim();
-	const password = store.password.value;
 	const token = store.token.value.trim();
+	// The password is the panel's own field, not the session's: the room we are
+	// connected to never lends its secret to the one being named here, and the
+	// store is not touched at all because this panel does not connect.
+	const [password, setPassword] = useState("");
 
 	const ready = relay !== "" && code.trim() !== "";
-	const connecting = status === "connecting";
-	const active = role !== "off";
-	const switching = active && code.trim() !== currentRoom;
 
 	const [savedRooms, setSavedRooms] = useState<Room[]>(
 		() => queryClient.getQueryData<Room[]>(["rooms"]) ?? [],
@@ -69,7 +62,6 @@ export function useRoomForm() {
 			}),
 		onSuccess: keep,
 	});
-	const remove = useMutation({ mutationFn: removeRoom, onSuccess: keep });
 	const commit = save.mutate;
 
 	// The shelf owns the saved list; read it through the cache so query-core
@@ -86,26 +78,16 @@ export function useRoomForm() {
 		};
 	}, [queryClient]);
 
-	// Switching rooms must not carry the previous password: take the target
-	// room's saved one, or clear it when it has none.
-	const lastCode = useRef(code);
+	// A code change brings that room's saved password, and clears it when the room
+	// has none: what was typed for another room never travels. The first pass runs
+	// on mount, so a panel opened on a new code starts empty even while a locked
+	// room is playing.
+	const lastCode = useRef<string | null>(null);
 	useEffect(() => {
-		if (code.trim() === lastCode.current.trim()) return;
-		lastCode.current = code;
-		store.password.value = savedRoom?.password ?? "";
+		if (lastCode.current === code.trim()) return;
+		lastCode.current = code.trim();
+		setPassword(savedRoom?.password ?? "");
 	}, [code, savedRoom]);
-
-	// Closing the panel without a room drops a password typed for nothing; a
-	// room still connected keeps its password for a reconnect. A reconnect in
-	// flight (status "closed") must keep it too, or a locked room is rejoined
-	// without a password.
-	useEffect(() => {
-		return () => {
-			if (store.role.value === "off" && store.status.value === "idle") {
-				store.password.value = "";
-			}
-		};
-	}, []);
 
 	// Editing a saved room updates it after a pause; leaving the field commits
 	// right away. `password` and `savedToken` are deps so each keystroke restarts
@@ -128,28 +110,17 @@ export function useRoomForm() {
 		generate: () => setCode(randomCode()),
 
 		password,
-		setPassword: (value: string) => {
-			store.password.value = value;
-		},
+		setPassword,
 		commitPassword: () => {
 			if (changed) commit();
 		},
 
 		relay,
 		ready,
-		connecting,
-		active,
-		currentRoom,
-		switching,
 		savedRoom,
-		host: role === "host",
 
 		saving: save.isPending,
-		removing: remove.isPending,
 
-		connect: () => void transport.connect(code.trim()),
-		leave: () => transport.stop(),
 		save: () => commit(),
-		unsave: (id: string) => remove.mutate(id),
 	};
 }

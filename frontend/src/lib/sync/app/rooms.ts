@@ -32,3 +32,9 @@ export async function roomStatus(
 ): Promise<RoomStatus> {
 	return await SyncRoomStatus(relayUrl, code, token);
 }
+
+// A room is created by connecting to a code nobody hosts: the relay hands the
+// first caller the host role, so the code only has to be free and readable.
+export function randomCode(): string {
+	return Math.random().toString(36).slice(2, 8);
+}

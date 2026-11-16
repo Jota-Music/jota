@@ -51,7 +51,7 @@
 		"artist": "Ir a este artista",
 		"channel": "Ir a este canal",
 		"track": "Escuchar canción",
-		"video": "Reproducir vídeo"
+		"room": "Entrar en esta sala"
 	},
 	"window": {
 		"pin": "Siempre encima",
@@ -447,14 +447,15 @@
 		"rooms": {
 			"hint": {
 				"title": "Aún no hay servidor relay",
-				"body": "Las salas se alojan en un relay, así que necesitas uno antes de unirte o crear una sala.",
+				"body": "Las salas viven en un relay, así que necesitas uno antes de registrar la tuya.",
 				"step1": "Abre Ajustes y ve a la sección de Salas.",
 				"step2": "Indica la dirección del servidor relay.",
-				"step3": "Vuelve aquí y únete o crea una sala."
+				"step3": "Vuelve aquí y registra tu primera sala."
 			},
-			"joinHost": "Unirse o crear sala",
+			"create": "Nueva sala",
 			"leave": "Salir de la sala",
-			"connect": "Conectar",
+			"connect": "Entrar en la sala",
+			"share": "Compartir sala",
 			"save": "Guardar sala",
 			"status": {
 				"connecting": "Conectando",
@@ -467,10 +468,10 @@
 			},
 			"emptyHint": {
 				"title": "Aún no hay salas guardadas",
-				"body": "Una sala es una cola compartida que varios móviles reproducen a la vez. Únete a la de alguien o abre la tuya.",
-				"step1": "Pulsa Unirse o crear sala.",
-				"step2": "Pega el código de una sala, o deja que se genere el tuyo.",
-				"step3": "Conéctate y guarda la sala para tenerla aquí a mano."
+				"body": "Una sala es una cola compartida que varios móviles reproducen a la vez. Regístrala aquí y entra en ella cuando quieras.",
+				"step1": "Pulsa Nueva sala: se propone un código, o escribe el de la sala que te pasaron.",
+				"step2": "Añade su contraseña si la tiene y guarda: la sala queda registrada.",
+				"step3": "Entra en ella con el botón de su tarjeta."
 			}
 		},
 		"session": {
@@ -481,19 +482,12 @@
 			"connecting": "Conectando...",
 			"offline": "Sin conexión",
 			"relayRequired": "Se requiere servidor relay",
-			"relayRequiredBody": "Para usar esta función necesitas un servidor relay. Configura uno en Ajustes para crear o unirte a una sala.",
+			"relayRequiredBody": "Para usar esta función necesitas un servidor relay. Configura uno en Ajustes para registrar una sala.",
 			"openSettings": "Abrir ajustes",
 			"roomCode": "Código de sala",
 			"generate": "Generar",
-			"inRoom": "Estás en la sala {room}. Edita el código para cambiar de sala.",
-			"hostHint": "Si nadie la está alojando, te conviertes en anfitrión; si no, te unes y escuchas en sincronía.",
+			"inRoom": "Estás en la sala {room}.",
 			"password": "Contraseña de la sala",
-			"connect": "Conectar",
-			"switch": "Cambiar de sala",
-			"saveTitle": "Guardar esta sala en la estantería de Salas",
-			"saveRoom": "Guardar sala",
-			"saved": "Guardada en Salas",
-			"removeTitle": "Quitar de Salas",
 			"stop": "Detener sesión",
 			"leave": "Salir de la sesión",
 			"waiting": "Esperando a que cargue la sala…",

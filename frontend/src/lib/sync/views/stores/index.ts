@@ -22,3 +22,15 @@ export const password = signal(get("sync:password"));
 export const error = signal("");
 export const offsetMs = signal(0);
 export const showSync = signal(false);
+// The code the panel opens on, when the caller knows which room it means. A
+// saved room's row seeds it; the join-or-create buttons leave it empty, so the
+// panel never reopens the room this device was already in.
+export const draft = signal<string | null>(null);
+
+// takeDraft hands the panel its starting code and forgets it, so the next open
+// starts from the room we are in again.
+export function takeDraft(): string | null {
+	const code = draft.value;
+	draft.value = null;
+	return code;
+}

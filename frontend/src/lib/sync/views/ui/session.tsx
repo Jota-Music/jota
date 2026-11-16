@@ -1,21 +1,8 @@
-import { useSignal } from "@preact/signals";
-import {
-	BookmarkCheck,
-	BookmarkPlus,
-	LogIn,
-	LogOut,
-	RefreshCw,
-	Settings,
-	Trash2,
-	Turntable,
-	Unplug,
-} from "lucide-preact";
-import { useRef } from "preact/hooks";
+import { BookmarkPlus, RefreshCw, Settings, Turntable } from "lucide-preact";
+import { useEffect, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { pendingStart } from "@/lib/music/views/stores/audio";
 import { t } from "@/lib/shared/i18n";
-import { cn } from "@/lib/shared/utils/tw";
-import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
 import { Modal, ModalHeader } from "@/lib/shared/views/ui/components/modal";
 import { PasswordInput } from "@/lib/shared/views/ui/components/password-input";
 import { Scrollbar } from "@/lib/shared/views/ui/components/scrollbar";
@@ -38,18 +25,18 @@ export function SyncPanel() {
 			<ModalHeader>
 				<Turntable
 					size={22}
-					class={cn(
+					class={
 						active
 							? connected
 								? "text-green-400"
 								: "text-yellow-400"
-							: "text-zinc-400",
-					)}
+							: "text-zinc-400"
+					}
 				/>
 				<h2 id="sync-panel-title" class="text-sm font-medium text-white">
 					{t("sync.session.title")}
 				</h2>
-				<span class="text-xs text-zinc-500 tabular-nums">
+				<span class="min-w-0 truncate text-xs text-zinc-500 tabular-nums">
 					{active
 						? connected
 							? store.joined.value
@@ -64,8 +51,11 @@ export function SyncPanel() {
 				</span>
 			</ModalHeader>
 
-			<div class="relative h-[min(70dvh,26rem)]">
-				<div ref={listRef} class="h-full overflow-y-auto px-4 py-4">
+			<div class="relative min-h-0 shrink">
+				<div
+					ref={listRef}
+					class="max-h-[min(70dvh,26rem)] overflow-y-auto px-4 py-4"
+				>
 					<SessionForm />
 				</div>
 				<Scrollbar target={listRef} gutter={16} />
@@ -84,30 +74,36 @@ function SessionForm() {
 		commitPassword,
 		relay,
 		ready,
-		connecting,
-		active,
-		currentRoom,
-		switching,
-		savedRoom,
-		host,
 		saving,
-		removing,
-		connect,
-		leave,
 		save,
-		unsave,
 	} = useRoomForm();
 	const [, setLocation] = useLocation();
-	const confirming = useSignal(false);
+	const field = useRef<HTMLInputElement>(null);
+
+	// The panel opens ready to type: the code is the reason it is here, and a
+	// focused, selected field lets the reader rewrite it or press Enter without a
+	// second tap.
+	useEffect(() => {
+		field.current?.focus();
+		field.current?.select();
+	}, []);
 
 	const openSettings = () => {
 		showSync.value = false;
 		setLocation("/settings");
 	};
 
+	// This panel names a room, it does not enter it: Enter saves what is typed and
+	// closes, and the room is joined from its row on the shelf like any other.
+	const submit = () => {
+		if (!ready || saving) return;
+		save();
+		showSync.value = false;
+	};
+
 	if (relay === "") {
 		return (
-			<div class="flex h-full flex-col items-center justify-center gap-4 text-center">
+			<div class="flex flex-col items-center gap-4 py-4 text-center">
 				<div class="flex size-14 items-center justify-center rounded-full bg-zinc-900 ring-1 ring-zinc-800">
 					<Turntable size={26} class="text-zinc-500" />
 				</div>
@@ -115,13 +111,13 @@ function SessionForm() {
 					<p class="text-sm font-medium text-zinc-100">
 						{t("sync.session.relayRequired")}
 					</p>
-					<p class="text-balance mb-2 block text-xs text-zinc-500">
+					<p class="mb-2 block text-xs text-balance text-zinc-500">
 						{t("sync.session.relayRequiredBody")}
 					</p>
 				</div>
 				<button
 					type="button"
-					class="flex items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 hover:bg-zinc-700 transition-colors cursor-pointer"
+					class="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700"
 					onClick={openSettings}
 				>
 					<Settings size={16} />
@@ -132,129 +128,67 @@ function SessionForm() {
 	}
 
 	return (
-		<div class="flex flex-col gap-3">
-			<label for="sync-room" class="mb-2 block text-xs text-zinc-500">
-				{t("sync.session.roomCode")}
-			</label>
-			<div class="flex gap-2">
+		<div class="flex flex-col gap-2">
+			<div class="relative">
 				<input
-					id="sync-room"
-					class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all font-mono"
+					ref={field}
+					aria-label={t("sync.session.roomCode")}
+					class="w-full rounded-lg border border-zinc-800 bg-zinc-900 py-3 pr-11 pl-3 font-mono text-sm text-zinc-100 outline-none transition-all focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
 					placeholder="party-42"
 					value={code}
 					onInput={(e) => setCode(e.currentTarget.value)}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") submit();
+					}}
 				/>
 				<button
 					type="button"
-					class="flex shrink-0 items-center gap-2 rounded-lg border border-zinc-800 px-3 text-sm text-zinc-100 hover:bg-zinc-800 transition-colors cursor-pointer"
+					title={t("sync.session.generate")}
+					aria-label={t("sync.session.generate")}
 					onClick={generate}
+					class="absolute top-1/2 right-1.5 -translate-y-1/2 cursor-pointer rounded-md p-1.5 text-zinc-500 transition-colors hover:text-zinc-200"
 				>
 					<RefreshCw size={16} />
-					{t("sync.session.generate")}
 				</button>
 			</div>
-			<p class="mb-2 block text-balance text-xs text-zinc-500">
-				{active
-					? t("sync.session.inRoom", { room: currentRoom })
-					: t("sync.session.hostHint")}
-			</p>
-			<label for="sync-pass" class="mb-2 block text-xs text-zinc-500">
-				{t("sync.session.password")}
-			</label>
 			<PasswordInput
-				id="sync-pass"
-				class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
-				placeholder={t("common.optional")}
+				class="w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none transition-all focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600"
+				placeholder={t("sync.session.password")}
 				label={t("sync.session.password")}
 				value={password}
 				onValue={setPassword}
 				onBlur={commitPassword}
+				onEnter={submit}
 			/>
 			<button
 				type="button"
-				class="flex items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-40"
-				disabled={!ready || connecting || (active && !switching)}
-				onClick={connect}
+				class="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 disabled:opacity-40"
+				disabled={!ready || saving}
+				onClick={submit}
 			>
-				<LogIn size={16} />
-				{connecting
-					? t("sync.session.connecting")
-					: active
-						? t("sync.session.switch")
-						: t("sync.session.connect")}
+				<BookmarkPlus size={16} />
+				{t("sync.rooms.save")}
 			</button>
-			{ready && !savedRoom && (
-				<button
-					type="button"
-					title={t("sync.session.saveTitle")}
-					class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 disabled:opacity-40"
-					disabled={saving}
-					onClick={save}
-				>
-					<BookmarkPlus size={16} />
-					{saving ? t("common.saving") : t("sync.session.saveRoom")}
-				</button>
-			)}
-			{ready && savedRoom && (
-				<div class="flex items-center gap-2">
-					<p class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm text-green-400">
-						<BookmarkCheck size={16} />
-						{saving ? t("common.saving") : t("sync.session.saved")}
-					</p>
-					<button
-						type="button"
-						title={t("sync.session.removeTitle")}
-						class="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-zinc-800 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-red-300 disabled:opacity-40"
-						disabled={removing}
-						onClick={() => {
-							confirming.value = true;
-						}}
-					>
-						<Trash2 size={16} />
-					</button>
-				</div>
-			)}
-			{active && (
-				<button
-					type="button"
-					class="flex items-center justify-center gap-2 rounded-lg bg-red-900/40 px-4 py-2.5 text-sm text-red-200 hover:bg-red-900/60 transition-colors cursor-pointer"
-					onClick={leave}
-				>
-					{host ? <Unplug size={16} /> : <LogOut size={16} />}
-					{host ? t("sync.session.stop") : t("sync.session.leave")}
-				</button>
-			)}
 			{pendingStart.value && (
-				<p class="text-balance mb-2 block text-xs text-zinc-500">
+				<p class="text-xs text-balance text-zinc-500">
 					{t("sync.session.waiting")}
 				</p>
 			)}
 			{store.error.value && (
 				<p class="text-xs text-red-400">{store.error.value}</p>
 			)}
-			<p class="text-balance pt-1 text-xs text-zinc-600">
-				{t("sync.session.relay", { url: relay })}{" "}
+			<p class="flex items-center gap-1 pt-1 text-xs text-zinc-600">
+				<span class="min-w-0 truncate">
+					{t("sync.session.relay", { url: relay })}
+				</span>
 				<button
 					type="button"
-					class="underline hover:text-zinc-400 cursor-pointer"
+					class="shrink-0 cursor-pointer underline hover:text-zinc-400"
 					onClick={openSettings}
 				>
 					{t("sync.session.settings")}
 				</button>
 			</p>
-
-			<ConfirmModal
-				open={confirming.value}
-				danger
-				pending={removing}
-				close={() => {
-					confirming.value = false;
-				}}
-				onConfirm={() => {
-					if (savedRoom) unsave(savedRoom.id);
-					confirming.value = false;
-				}}
-			/>
 		</div>
 	);
 }

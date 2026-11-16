@@ -1,3 +1,4 @@
+import { useSignal } from "@preact/signals";
 import {
 	useMutation,
 	useQueries,
@@ -10,23 +11,29 @@ import {
 	Lock,
 	LogIn,
 	LogOut,
+	Plus,
 	PowerOff,
 	TriangleAlert,
 	Turntable,
+	Unplug,
 	Wifi,
 	WifiOff,
 } from "lucide-preact";
 import { useEffect } from "preact/hooks";
+import { shareLink } from "@/lib/music/views/ui/share";
 import { Hint, type Item, RelayHint, Shelf } from "@/lib/music/views/ui/shelf";
 import { getOrder, saveOrder } from "@/lib/shared/app/order";
 import { applyOrder, move } from "@/lib/shared/app/reorder";
 import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
+import { ConfirmModal } from "@/lib/shared/views/ui/components/confirm";
 import type { Action } from "@/lib/shared/views/ui/components/context-menu";
+import { roomLink } from "@/lib/sync/app/room-link";
 import {
 	listRooms,
 	type Room,
 	type RoomStatus,
+	randomCode,
 	removeRoom,
 	roomStatus,
 	saveRoom,
@@ -147,7 +154,7 @@ function lockSize(size: number): number {
 // A relay is set, so a room can exist: the shelf is empty only because none has
 // been saved yet. The hint says how, instead of leaving the reader with a line
 // of grey text and a button above it whose purpose is not obvious.
-function RoomsHint() {
+function RoomsHint({ onNew }: { onNew: () => void }) {
 	return (
 		<Hint
 			icon={<Turntable size={24} />}
@@ -162,11 +169,11 @@ function RoomsHint() {
 			action={
 				<button
 					type="button"
-					onClick={() => (store.showSync.value = true)}
+					onClick={onNew}
 					class="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700"
 				>
-					<LogIn size={16} />
-					{t("sync.rooms.joinHost")}
+					<Plus size={16} />
+					{t("sync.rooms.create")}
 				</button>
 			}
 		/>
@@ -175,6 +182,7 @@ function RoomsHint() {
 
 export function RoomsShelf() {
 	const queryClient = useQueryClient();
+	const confirming = useSignal<string | null>(null);
 	const rooms = useQuery({ queryKey: ["rooms"], queryFn: listRooms });
 	const orderQuery = useQuery({
 		queryKey: ["shelf-order", "rooms"],
@@ -194,6 +202,13 @@ export function RoomsShelf() {
 	const connectingCode =
 		status === "connecting" || status === "closed" ? current : "";
 	const connectedCode = status === "open" && role !== "off" ? current : "";
+	const hosting = role === "host";
+	// A session belongs to the shelf while it lasts: the way out sits in the bar
+	// next to the rooms it is playing to, not inside the panel that only sets it.
+	const session = {
+		label: hosting ? t("sync.session.stop") : t("sync.session.leave"),
+		icon: hosting ? Unplug : LogOut,
+	};
 
 	// Status is read-only: it asks the relay by code and never joins, so polling
 	// a shelf of rooms cannot disturb any room.
@@ -274,7 +289,7 @@ export function RoomsShelf() {
 		const room = rows.find((r) => r.id === id);
 		if (!room) return;
 		apply(room);
-		store.room.value = room.code;
+		store.draft.value = room.code;
 		store.showSync.value = true;
 	};
 
@@ -283,11 +298,25 @@ export function RoomsShelf() {
 		void transport.connect(room.code);
 	};
 
+	// Creating opens the panel on a fresh code: the room exists once the listener
+	// confirms it there, and Enter is that confirmation.
+	const create = () => {
+		store.draft.value = randomCode();
+		store.showSync.value = true;
+	};
+
 	const leave = () => {
 		transport.stop();
 	};
 
 	const onRemove = (id: string) => {
+		confirming.value = id;
+	};
+
+	const confirmRemove = () => {
+		const id = confirming.value;
+		confirming.value = null;
+		if (!id) return;
 		const room = rows.find((r) => r.id === id);
 		// A room we are in is left first, so we never stay in a room the shelf no
 		// longer shows.
@@ -339,6 +368,11 @@ export function RoomsShelf() {
 				run: () => persist(room),
 			});
 		}
+		// What is shared is the line the paste detector reads back, password
+		// included: whoever receives it enters without typing either.
+		menu.push(
+			...shareLink(roomLink(room.code, room.password), t("sync.rooms.share")),
+		);
 		return {
 			id: room.id,
 			name: room.name || room.code,
@@ -371,25 +405,43 @@ export function RoomsShelf() {
 
 	return (
 		<>
-			{/* The hint below carries this button while the shelf is empty: two of
-			    them a few lines apart read as a mistake. It stays while the list
-			    loads, so the header does not jump once the rows arrive. */}
-			{(ordered.length > 0 || rooms.isLoading) && (
-				<div class="flex shrink-0 items-center px-3 pt-4 md:px-0 md:pt-0">
-					<button
-						type="button"
-						onClick={() => (store.showSync.value = true)}
-						class="flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 cursor-pointer"
-					>
-						<LogIn size={16} />
-						{t("sync.rooms.joinHost")}
-					</button>
-				</div>
-			)}
 			<Shelf
 				items={items}
 				to={() => "/"}
 				viewKey="rooms_view"
+				// The hint carries the button while the shelf is empty, so this one
+				// waits for rows; a session does not hide it either, because a new room
+				// is another room to enter, not a switch.
+				toolbar={
+					<>
+						{(ordered.length > 0 || rooms.isLoading) && (
+							<button
+								type="button"
+								onClick={create}
+								title={t("sync.rooms.create")}
+								aria-label={t("sync.rooms.create")}
+								class="flex h-10 md:h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-400 transition-colors hover:text-white"
+							>
+								<Plus size={18} class="md:hidden" />
+								<Plus size={14} class="hidden md:block" />
+								{t("sync.rooms.create")}
+							</button>
+						)}
+						{role !== "off" && (
+							<button
+								type="button"
+								onClick={leave}
+								title={session.label}
+								aria-label={session.label}
+								class="flex h-10 md:h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-red-900/40 px-3 text-xs text-red-200 transition-colors hover:bg-red-900/60"
+							>
+								<session.icon size={18} class="md:hidden" />
+								<session.icon size={14} class="hidden md:block" />
+								{session.label}
+							</button>
+						)}
+					</>
+				}
 				onSelect={open}
 				onReorder={reorder}
 				actions={(id) => {
@@ -457,8 +509,19 @@ export function RoomsShelf() {
 					);
 				}}
 				isLoading={rooms.isLoading}
-				emptyMessage={relay === "" ? <RelayHint /> : <RoomsHint />}
+				emptyMessage={
+					relay === "" ? <RelayHint /> : <RoomsHint onNew={create} />
+				}
 				onRemove={onRemove}
+			/>
+			<ConfirmModal
+				open={confirming.value !== null}
+				danger
+				pending={remove.isPending}
+				close={() => {
+					confirming.value = null;
+				}}
+				onConfirm={confirmRemove}
 			/>
 		</>
 	);

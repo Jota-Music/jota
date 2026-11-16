@@ -86,12 +86,12 @@ export function shareActions(song: Song): Action[] {
 	return actions;
 }
 
-export function shareLink(link: string | null): Action[] {
+export function shareLink(link: string | null, label?: string): Action[] {
 	if (!link) return [];
 	return [
 		{
 			icon: Link2,
-			label: t("music.share.link"),
+			label: label ?? t("music.share.link"),
 			run: () => {
 				void copy(link).catch((error) => addError(error, "share"));
 			},

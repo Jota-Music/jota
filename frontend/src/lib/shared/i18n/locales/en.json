@@ -51,7 +51,7 @@
 		"artist": "Go to this artist",
 		"channel": "Go to this channel",
 		"track": "Listen to this song",
-		"video": "Play this video"
+		"room": "Join this room"
 	},
 	"window": {
 		"pin": "Always on top",
@@ -447,14 +447,15 @@
 		"rooms": {
 			"hint": {
 				"title": "No relay server yet",
-				"body": "Rooms are hosted by a relay, so you need one before you can join or host a room.",
+				"body": "Rooms live on a relay, so you need one before you can register your own.",
 				"step1": "Open Settings and go to the Rooms section.",
 				"step2": "Set the relay server address.",
-				"step3": "Come back here and join or host a room."
+				"step3": "Come back here and register your first room."
 			},
-			"joinHost": "Join or host a room",
+			"create": "New room",
 			"leave": "Leave room",
-			"connect": "Connect",
+			"connect": "Join this room",
+			"share": "Share room",
 			"save": "Save room",
 			"status": {
 				"connecting": "Connecting",
@@ -467,10 +468,10 @@
 			},
 			"emptyHint": {
 				"title": "No rooms saved yet",
-				"body": "A room is a shared queue several phones play together. Join someone else's room or open your own.",
-				"step1": "Tap Join or create room.",
-				"step2": "Paste a room code, or let yours be generated.",
-				"step3": "Connect, then save the room to keep it here."
+				"body": "A room is a shared queue several phones play together. Register it here and join it whenever you want.",
+				"step1": "Tap New room: a code is suggested, or type the one you were given.",
+				"step2": "Add its password if it has one, then save: the room is registered.",
+				"step3": "Join it with the button on its card."
 			}
 		},
 		"session": {
@@ -481,19 +482,12 @@
 			"connecting": "Connecting...",
 			"offline": "Offline",
 			"relayRequired": "Relay server required",
-			"relayRequiredBody": "To use this feature you need a relay server. Configure one in Settings to start or join a room.",
+			"relayRequiredBody": "To use this feature you need a relay server. Configure one in Settings to register a room.",
 			"openSettings": "Open settings",
 			"roomCode": "Room code",
 			"generate": "Generate",
-			"inRoom": "You are in room {room}. Edit the code to switch rooms.",
-			"hostHint": "If nobody is hosting it yet, you become the host; otherwise you join and listen in sync.",
+			"inRoom": "You are in room {room}.",
 			"password": "Room password",
-			"connect": "Connect",
-			"switch": "Switch room",
-			"saveTitle": "Save this room to the Rooms shelf",
-			"saveRoom": "Save room",
-			"saved": "Saved to Rooms",
-			"removeTitle": "Remove from Rooms",
 			"stop": "Stop session",
 			"leave": "Leave session",
 			"waiting": "Waiting for the room to load…",
