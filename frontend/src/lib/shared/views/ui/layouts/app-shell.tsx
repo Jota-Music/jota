@@ -56,6 +56,13 @@ const dust = Array.from({ length: DUST }, (_, id) => {
 	};
 });
 
+// The header links the playlists shelf to both "/" and "/playlists", and the
+// route is the same page either way: keyed on the path, arriving from one to the
+// other remounted the shelf and faded it in over a page that was already there.
+function page(path: string): string {
+	return path === "/" ? "/playlists" : path;
+}
+
 export function AppShell({
 	children,
 	player,
@@ -67,8 +74,9 @@ export function AppShell({
 }) {
 	const overlayLayer = useRef<HTMLDivElement>(null);
 	const [location] = useLocation();
+	const route = page(location);
 	// The app paints at full opacity; only an arriving page fades in.
-	const firstRoute = useRef(location);
+	const firstRoute = useRef(route);
 	// A hidden window is nobody's screen, so the field is paused rather than
 	// animating 64 layers behind it.
 	const [hidden, setHidden] = useState(document.hidden);
@@ -155,13 +163,13 @@ export function AppShell({
 							mainClass,
 						)}
 					>
-						{/* Keyed on the route so the incoming page fades in instead of
+						{/* Keyed on the page so the incoming one fades in instead of
 						    cutting: opacity only, so nothing about the geometry moves. */}
 						<div
-							key={location}
+							key={route}
 							class={cn(
 								"flex min-h-0 flex-1 flex-col",
-								location !== firstRoute.current &&
+								route !== firstRoute.current &&
 									"animate-[page-in_140ms_ease-out]",
 							)}
 						>
