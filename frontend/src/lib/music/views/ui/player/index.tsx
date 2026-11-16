@@ -86,6 +86,7 @@ const Disc = memo(function Disc({
 	disabled = false,
 	isLoading,
 	isPlaying,
+	narrow,
 	toggleSong,
 	nextSong,
 	prevSong,
@@ -94,6 +95,7 @@ const Disc = memo(function Disc({
 	disabled?: boolean;
 	isLoading: boolean;
 	isPlaying: boolean;
+	narrow?: boolean;
 	toggleSong: () => Promise<void>;
 	nextSong: () => Promise<void>;
 	prevSong: () => Promise<void>;
@@ -106,7 +108,14 @@ const Disc = memo(function Disc({
 			onChange={previewSeek}
 			onCommit={commitSeek}
 			disabled={disabled}
-			class="text-current mx-auto w-48"
+			class={cn(
+				"text-current mx-auto",
+				// The sheet is capped by the space above the player bar, so a
+				// fixed disc does not fit once the keyboard or a short window
+				// eats that space. Keep the design size until the viewport is
+				// too short for it.
+				narrow ? "w-[min(12rem,36dvh)]" : "w-48",
+			)}
 		>
 			<div class="relative aspect-square w-full">
 				<Image
@@ -122,7 +131,12 @@ const Disc = memo(function Disc({
 					fallback={<CoverFallback class="absolute inset-0 rounded-full" />}
 				/>
 
-				<div class="absolute inset-0 w-max h-max flex items-center justify-center gap-6 m-auto">
+				<div
+					class={cn(
+						"absolute inset-0 w-max h-max flex items-center justify-center m-auto gap-6",
+						narrow && "[@media(max-height:533px)]:gap-2",
+					)}
+				>
 					<button
 						type="button"
 						disabled={disabled || !canPrev.value}
@@ -376,6 +390,7 @@ function NothingPlayingContent({ narrow = false }: { narrow?: boolean }) {
 			<div class="relative flex max-h-max w-full md:w-max">
 				<Disc
 					disabled
+					narrow={narrow}
 					isLoading={false}
 					isPlaying={false}
 					toggleSong={noop}
