@@ -22,7 +22,7 @@ func TestRoomLifecycle(t *testing.T) {
 	if len(saved) != 1 {
 		t.Fatalf("saved = %v", saved)
 	}
-	if saved[0].Name != "party" || saved[0].Id != "relay.example.com|party" {
+	if saved[0].Name != "party" || saved[0].Id != "local:room:relay.example.com|party" {
 		t.Fatalf("normalized = %+v", saved[0])
 	}
 	if saved[0].Password != "pw" {
@@ -56,7 +56,7 @@ func TestRoomLifecycle(t *testing.T) {
 		t.Fatalf("list = %v", got)
 	}
 
-	left, err := s.Remove("relay.example.com|party")
+	left, err := s.Remove("local:room:relay.example.com|party")
 	if err != nil {
 		t.Fatalf("remove: %v", err)
 	}
@@ -71,6 +71,45 @@ func TestRoomLifecycle(t *testing.T) {
 
 	if _, err := s.Save(Room{Code: "no-relay"}); err == nil {
 		t.Fatal("expected error for room without a relay")
+	}
+}
+
+// A store written before the id rule keeps its rooms: the key the page gets is
+// the composed one, and removing by it finds the bare record.
+func TestRoomsSavedBeforeTheIdRuleStillAnswerTheCurrentKey(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	state.Reset()
+	t.Cleanup(state.Reset)
+
+	legacy := []Room{{
+		Id:       "relay.example.com|party",
+		Code:     "party",
+		RelayURL: "relay.example.com",
+		Password: "pw",
+		Name:     "party",
+		SavedAt:  1,
+	}}
+	if err := state.Write(state.Rooms, legacy); err != nil {
+		t.Fatalf("write legacy: %v", err)
+	}
+
+	s := NewStore()
+	got, err := s.List()
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(got) != 1 || got[0].Id != "local:room:relay.example.com|party" {
+		t.Fatalf("list = %+v", got)
+	}
+
+	left, err := s.Remove(got[0].Id)
+	if err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	if len(left) != 0 {
+		t.Fatalf("after remove = %+v", left)
 	}
 }
 

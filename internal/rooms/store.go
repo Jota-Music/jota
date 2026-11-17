@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/state"
 )
 
@@ -17,16 +18,23 @@ func NewStore() *Store {
 	return &Store{}
 }
 
-// roomID identifies a room by relay and code. The relay treats codes as
-// case-sensitive, so only the relay is lowercased.
+// roomID identifies a room by relay and code, named like every other id in the
+// app: the relay treats codes as case-sensitive, so only the relay is
+// lowercased.
 func roomID(relayURL string, code string) string {
-	return strings.ToLower(strings.TrimSpace(relayURL)) + "|" + strings.TrimSpace(code)
+	return music.RoomID(relayURL, code)
 }
 
 func (s *Store) List() ([]Room, error) {
 	rooms, err := state.Read[[]Room](state.Rooms)
 	if err != nil {
 		return nil, err
+	}
+	// A room saved before the naming rule carries its bare relay|code key. The
+	// id is the door the page uses to join, poll and remove it, so every read
+	// answers the current form.
+	for i := range rooms {
+		rooms[i].Id = roomID(rooms[i].RelayURL, rooms[i].Code)
 	}
 	return rooms, nil
 }
@@ -69,6 +77,7 @@ func (s *Store) Remove(id string) ([]Room, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	id = music.StoredRoomID(id)
 	rooms, err := s.List()
 	if err != nil {
 		return nil, err

@@ -5,12 +5,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/state"
 )
 
 // Library is the scope of the home library shelf. Its order predates scopes and
 // is still stored under the bare account key, so List falls back to it.
 const Library = "library"
+
+// Rooms is the scope of the saved rooms shelf. Its entries are rooms, so its
+// ids follow the room naming rule instead of being stored as they are typed.
+const Rooms = "rooms"
 
 // Service stores the user's custom order for a shelf. Orders are local to Jota
 // and keyed by the shelf's scope plus, when the shelf belongs to one, the owning
@@ -52,7 +57,7 @@ func (s *Service) List(scope string, account string) (Order, error) {
 	}
 	for _, entry := range part {
 		if normalize(entry.Scope) == scope && normalize(entry.Account) == account {
-			return entry.Ids, nil
+			return clean(Record(entry)).Ids, nil
 		}
 	}
 	return nil, nil
@@ -97,14 +102,19 @@ func (s *Service) Save(scope string, account string, ids Order) error {
 }
 
 // clean trims the ids, drops the empty ones and the duplicates, so a stored
-// order never carries noise.
+// order never carries noise. The rooms shelf is named by the room rule, which
+// also maps an order written before it.
 func clean(rec Record) Record {
 	seen := make(map[string]struct{}, len(rec.Ids))
 	out := make(Order, 0, len(rec.Ids))
+	rooms := normalize(rec.Scope) == Rooms
 	for _, id := range rec.Ids {
 		id = strings.TrimSpace(id)
 		if id == "" {
 			continue
+		}
+		if rooms {
+			id = music.StoredRoomID(id)
 		}
 		if _, ok := seen[id]; ok {
 			continue

@@ -56,6 +56,38 @@ func TestOrderLifecycle(t *testing.T) {
 	}
 }
 
+// The rooms shelf keeps ids in the app's naming rule, including an order
+// written before it (`<relay>|<code>`).
+func TestRoomsOrderFollowsTheNamingRule(t *testing.T) {
+	s := setup(t)
+
+	if err := s.Save(Rooms, "", Order{"relay.example.com|party", "local:room:other.example.com|jam"}); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+
+	got, err := s.List(Rooms, "")
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	want := Order{"local:room:relay.example.com|party", "local:room:other.example.com|jam"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("list = %v, want %v", got, want)
+	}
+
+	// A document written before the rule is read and written back composed.
+	legacy := Section{{Scope: Rooms, Ids: []string{"relay.example.com|party"}, At: 9}}
+	merged, applied, err := s.MergeSection(legacy, Restore, true)
+	if err != nil || applied == 0 {
+		t.Fatalf("merge = %v, %d, %v", merged, applied, err)
+	}
+	if id := entry(t, merged, Rooms, "").Ids[0]; id != "local:room:relay.example.com|party" {
+		t.Fatalf("merged id = %q", id)
+	}
+	if got, _ := s.List(Rooms, ""); len(got) != 1 || got[0] != "local:room:relay.example.com|party" {
+		t.Fatalf("stored = %v", got)
+	}
+}
+
 func TestScopesAreSeparate(t *testing.T) {
 	s := setup(t)
 
