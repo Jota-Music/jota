@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"os"
@@ -18,13 +19,21 @@ const (
 	opPing      = 3
 	opPong      = 4
 	timeout     = 5 * time.Second
+	// maxFrame bounds a payload length read off the socket. Discord's IPC
+	// messages are tiny, so anything past this is a broken local endpoint and
+	// not something worth allocating for.
+	maxFrame = 1 << 20
 )
 
 type Service struct {
 	clientID string
 	mu       sync.Mutex
-	writeMu  sync.Mutex
-	conn     net.Conn
+	// dialMu serializes a connect attempt: the dial happens outside mu so a hung
+	// endpoint cannot hold a status read, and this keeps a burst of updates from
+	// opening two connections.
+	dialMu  sync.Mutex
+	writeMu sync.Mutex
+	conn    net.Conn
 }
 
 func New(clientID string) *Service {
@@ -90,29 +99,33 @@ func (s *Service) Close() error {
 }
 
 func (s *Service) connect() (net.Conn, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.conn != nil {
-		return s.conn, nil
+	s.dialMu.Lock()
+	defer s.dialMu.Unlock()
+	if conn := s.current(); conn != nil {
+		return conn, nil
 	}
 	conn, err := platformDial()
 	if err != nil {
 		return nil, err
 	}
-	s.conn = conn
 	handshake, err := json.Marshal(map[string]any{"v": 1, "client_id": s.clientID})
 	if err != nil {
-		s.invalidateLocked(conn)
+		_ = conn.Close()
 		return nil, err
 	}
 	if err := s.frame(conn, opHandshake, handshake); err != nil {
-		s.invalidateLocked(conn)
+		_ = conn.Close()
 		return nil, err
 	}
 	if err := readHandshake(conn); err != nil {
-		s.invalidateLocked(conn)
+		_ = conn.Close()
 		return nil, err
 	}
+	// Published once it answered the handshake, so no caller is handed a
+	// connection that is not usable yet.
+	s.mu.Lock()
+	s.conn = conn
+	s.mu.Unlock()
 	go s.listen(conn)
 	return conn, nil
 }
@@ -177,7 +190,11 @@ func readFrame(conn net.Conn) (uint32, []byte, error) {
 		return 0, nil, err
 	}
 	op := binary.LittleEndian.Uint32(header[0:4])
-	payload := make([]byte, binary.LittleEndian.Uint32(header[4:8]))
+	length := binary.LittleEndian.Uint32(header[4:8])
+	if length > maxFrame {
+		return 0, nil, errors.New("discord: frame too large")
+	}
+	payload := make([]byte, length)
 	if _, err := io.ReadFull(conn, payload); err != nil {
 		return 0, nil, err
 	}
