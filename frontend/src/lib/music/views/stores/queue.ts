@@ -161,12 +161,19 @@ export function remember(song: Song) {
 // Index of the track played before the current one, or null when this queue has
 // nothing behind the playhead. Entries the queue no longer holds are dropped.
 export function unwind(songs: Song[]): number | null {
+	let found: number | null = null;
 	while (heard.length > 0) {
 		const id = heard.pop();
 		const at = songs.findIndex((song) => song.id === id);
-		if (at !== -1) return at;
+		if (at !== -1) {
+			found = at;
+			break;
+		}
 	}
-	return null;
+	// The entries popped are consumed, and the trail outlives a reload: leaving
+	// them in storage would walk back through songs already played.
+	persistQueue();
+	return found;
 }
 
 export function clearHeard() {
