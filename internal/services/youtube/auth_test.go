@@ -253,7 +253,7 @@ func TestBrowseDataSignsPlaylistsWhenSignedIn(t *testing.T) {
 	if calls[0].signed {
 		t.Fatalf("first attempt should be anonymous, got %+v", calls[0])
 	}
-	if calls[1].client != strconv.Itoa(signedPlaylistClient.ClientName) || !calls[1].signed {
+	if calls[1].client != strconv.Itoa(signedPlaylistClient().ClientName) || !calls[1].signed {
 		t.Fatalf("second attempt should be the signed Android VR client, got %+v", calls[1])
 	}
 }

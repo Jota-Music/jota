@@ -85,8 +85,12 @@ func playlistPayload(c clientConfig, playlistID, continuation string) map[string
 
 // signedPlaylistClient is the client a private or own playlist is read with: the
 // account session is a web session, so the web client is the only one that both
-// carries the cookies and accepts them for a playlist the account owns.
-var signedPlaylistClient = webClient()
+// carries the cookies and accepts them for a playlist the account owns. It is
+// built at each call: the version is learned from a homepage later, and a value
+// taken at init would keep the hardcoded one forever.
+func signedPlaylistClient() clientConfig {
+	return webClient()
+}
 
 // browseData reads a playlist, anonymously first: that is the path every public
 // playlist takes and the shape this package parses. The account is asked next
@@ -102,7 +106,8 @@ func browseData(playlistID, continuation string) ([]byte, error) {
 		return anonymous, anonymousErr
 	}
 
-	signed, signedErr := postBrowseWithClient(signedPlaylistClient, playlistPayload(signedPlaylistClient, playlistID, continuation))
+	client := signedPlaylistClient()
+	signed, signedErr := postBrowseWithClient(client, playlistPayload(client, playlistID, continuation))
 	return pickPlaylist(anonymous, anonymousErr, signed, signedErr, sessionValue(cookies()) != "")
 }
 
