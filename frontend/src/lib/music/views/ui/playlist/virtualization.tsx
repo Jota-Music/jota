@@ -169,12 +169,17 @@ function PlaylistRow({
 						) : (
 							<>
 								<ArtistLinks artists={song.artists} />
-								{song.album?.title && song.album.id !== sourceId && (
-									<>
-										{" • "}
-										<AlbumLink album={song.album} />
-									</>
-								)}
+								{song.album?.title &&
+									song.album.id !== sourceId &&
+									song.playlistId !== sourceId && (
+										<>
+											{" • "}
+											<AlbumLink
+												album={song.album}
+												playlistId={song.playlistId}
+											/>
+										</>
+									)}
 							</>
 						)}
 					</span>

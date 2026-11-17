@@ -6,19 +6,27 @@ import { cn } from "@/lib/shared/utils/tw";
 
 type Props = {
 	album: Album;
+	// A song taken from a playlist names it in the album slot; the playlist id
+	// is what the player can open.
+	playlistId?: string;
 	class?: string;
 };
 
-export function AlbumLink({ album, class: className }: Props) {
-	if (!album.id || !album.title) {
+export function AlbumLink({ album, playlistId, class: className }: Props) {
+	const to = playlistId
+		? `/playlist/${playlistId}`
+		: album.id
+			? `/album/${album.id}`
+			: "";
+	if (!to || !album.title) {
 		return <span class={className}>{album.title}</span>;
 	}
 	return (
 		<Link
-			href={`/album/${album.id}`}
+			href={to}
 			class={cn(className, "hover:underline")}
-			onPointerEnter={() => prefetch(`/album/${album.id}`)}
-			onFocus={() => prefetch(`/album/${album.id}`)}
+			onPointerEnter={() => prefetch(to)}
+			onFocus={() => prefetch(to)}
 			onClick={(e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
 				e.stopPropagation();
 			}}

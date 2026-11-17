@@ -220,7 +220,7 @@ function FullPlayerContent(props: FullPlayerProps) {
 
 			<div class="flex-1 min-w-0 w-full">
 				<small class="text-white text-xs opacity-60 block truncate">
-					<AlbumLink album={song.album} />
+					<AlbumLink album={song.album} playlistId={song.playlistId} />
 				</small>
 
 				<h1 class="text-white text-xl font-semibold truncate">{song.name}</h1>

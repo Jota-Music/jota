@@ -155,7 +155,7 @@ const QueueRow = memo(function QueueRow({
 					{song.album.title && (
 						<>
 							{" • "}
-							<AlbumLink album={song.album} />
+							<AlbumLink album={song.album} playlistId={song.playlistId} />
 						</>
 					)}
 				</p>
