@@ -588,7 +588,11 @@ func main() {
 	}
 	if geometry.Width > 0 {
 		screen := clampWindowState(&geometry, application.Get().Screen.GetAll())
-		opts.Width, opts.Height = geometry.Width, geometry.Height
+		// A geometry the clamp dropped stays at the defaults: assigning the zero
+		// it left behind would open the window at Wails' 800x600 instead.
+		if geometry.Width > 0 {
+			opts.Width, opts.Height = geometry.Width, geometry.Height
+		}
 		// Wails centres a window whose InitialPosition is left unset and the ready
 		// event then moves it, which is the jump the user sees. Linux takes X/Y
 		// relative to a screen's work area, so the screen holding the saved point
