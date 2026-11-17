@@ -57,6 +57,19 @@ func writeAccount(a account) error {
 	return state.Write(state.Spotify, a)
 }
 
+// accountMu serializes the read-modify-write of the account section. It is
+// written whole, so two of them interleaved — a session arriving with the sync
+// document while the device id is generated — would drop one of the two.
+var accountMu sync.Mutex
+
+func editAccount(change func(*account)) error {
+	accountMu.Lock()
+	defer accountMu.Unlock()
+	current := readAccount()
+	change(&current)
+	return writeAccount(current)
+}
+
 type SpotifyService struct {
 	mu   sync.Mutex
 	sess *session.Session
@@ -122,9 +135,7 @@ func (s *SpotifyService) Connect(ctx context.Context) error {
 	data, decodeErr := hex.DecodeString(creds.Data)
 	if decodeErr != nil {
 		log.Printf("spotify: invalid stored credentials (not hex): %v", decodeErr)
-		current := readAccount()
-		current.Session = nil
-		_ = writeAccount(current)
+		_ = editAccount(func(a *account) { a.Session = nil })
 		return ErrNotConnected
 	}
 
@@ -303,9 +314,7 @@ func (s *SpotifyService) Disconnect() error {
 	// goodbye to the peer is a network round trip, so it happens behind the
 	// answer instead of holding the panel that asked for the disconnect.
 	closeBehind(sess)
-	current := readAccount()
-	current.Session = nil
-	return writeAccount(current)
+	return editAccount(func(a *account) { a.Session = nil })
 }
 
 func (s *SpotifyService) StartupLogin() (string, error) {
@@ -479,6 +488,8 @@ func (s *SpotifyService) CompleteLogin() error {
 // and stored, because a new id on every launch registers a new device on the
 // account and silently drops the saved playback state.
 func deviceId() string {
+	accountMu.Lock()
+	defer accountMu.Unlock()
 	current := readAccount()
 	if len(current.Device) == 40 {
 		return current.Device
@@ -507,12 +518,12 @@ func loadCreds() (*storedCreds, error) {
 }
 
 func saveCreds(username string, data []byte) error {
-	current := readAccount()
-	current.Session = &storedCreds{
-		Username: username,
-		Data:     hex.EncodeToString(data),
-	}
-	return writeAccount(current)
+	return editAccount(func(a *account) {
+		a.Session = &storedCreds{
+			Username: username,
+			Data:     hex.EncodeToString(data),
+		}
+	})
 }
 
 // StoreCredentials saves the credentials of a session without connecting, so a
