@@ -63,14 +63,22 @@ func Acquire(focus func()) (*Guard, error) {
 	if handoff(path) {
 		return nil, ErrHandedOff
 	}
-	replace(path)
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
+	// Bind before removing anything: a socket a peer just bound is left alone,
+	// so a launch that lost the double-click race hands off to it instead of
+	// unlinking it. Only a path that is really taken is cleared, and a second
+	// handoff covers the peer that is still starting to serve.
 	ln, err := net.Listen("unix", path)
 	if err != nil {
-		return nil, err
+		if handoff(path) {
+			return nil, ErrHandedOff
+		}
+		replace(path)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return nil, err
+		}
+		if ln, err = net.Listen("unix", path); err != nil {
+			return nil, err
+		}
 	}
 	if err := os.WriteFile(path+pidSuffix, []byte(strconv.Itoa(os.Getpid())), 0o644); err != nil {
 		_ = ln.Close()
