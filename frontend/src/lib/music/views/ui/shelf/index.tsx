@@ -241,10 +241,10 @@ export function Shelf({
 						)}
 					</div>
 				) : (
-					<div class="relative min-h-0 flex-1">
+					<div class="relative -mr-1 min-h-0 flex-1">
 						<div
 							ref={listRef}
-							class="h-full overflow-y-auto pr-6 md:pr-4"
+							class="h-full overflow-y-auto pr-5 md:pr-4"
 							onClickCapture={captureClick}
 						>
 							{filteredItems.length === 0 ? (
