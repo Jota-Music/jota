@@ -854,7 +854,9 @@ export function pause(): boolean {
 export async function togglePlayPause(): Promise<boolean> {
 	const el = audio;
 	if (el && hasLoadedAudio() && !el.paused) {
-		el.pause();
+		// Through pause(): it ends the quiet reload and the recovery ladder, which
+		// a bare el.pause() would leave running and the UI would stay "playing".
+		pause();
 		return false;
 	}
 	return await resume();
