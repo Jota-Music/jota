@@ -106,9 +106,19 @@ export function Autosave() {
 			folderName.value = "";
 			return;
 		}
-		void syncName(folder).then((name) => {
-			folderName.value = name;
-		});
+		let cancelled = false;
+		void syncName(folder)
+			.then((name) => {
+				// The folder may have moved while the provider answered: a late name
+				// would label the new location with the previous document.
+				if (!cancelled) folderName.value = name;
+			})
+			.catch(() => {
+				// A name that cannot be read leaves the location as it was.
+			});
+		return () => {
+			cancelled = true;
+		};
 	}, [folder]);
 
 	const { data: auto = false, isLoading: autoLoading } = useQuery({
