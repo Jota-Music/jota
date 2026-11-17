@@ -488,6 +488,7 @@
 			"generate": "Generate",
 			"inRoom": "You are in room {room}.",
 			"password": "Room password",
+			"join": "Join",
 			"stop": "Stop session",
 			"leave": "Leave session",
 			"waiting": "Waiting for the room to load…",

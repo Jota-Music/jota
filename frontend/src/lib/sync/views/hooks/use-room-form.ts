@@ -6,6 +6,7 @@ import {
 	randomCode,
 	saveRoom,
 } from "@/lib/sync/app/rooms";
+import * as transport from "@/lib/sync/app/transport";
 import * as store from "@/lib/sync/views/stores";
 
 // A room is identified by relay and code, the same key the store uses.
@@ -22,9 +23,9 @@ export function useRoomForm() {
 
 	const relay = store.relayUrl.value.trim();
 	const token = store.token.value.trim();
-	// The password is the panel's own field, not the session's: the room we are
-	// connected to never lends its secret to the one being named here, and the
-	// store is not touched at all because this panel does not connect.
+	// The password is the panel's own field, not the session's, until the user
+	// asks to join: the room we are connected to never lends its secret to the
+	// one being named here, and a room that is only saved never dials.
 	const [password, setPassword] = useState("");
 
 	const ready = relay !== "" && code.trim() !== "";
@@ -104,6 +105,14 @@ export function useRoomForm() {
 		return () => clearTimeout(id);
 	}, [savedRoom, password, savedToken, commit]);
 
+	// The panel's password is what the session dials: joining spends it on the
+	// store, saving never does.
+	const join = () => {
+		if (!ready) return;
+		store.password.value = password.trim();
+		void transport.connect(code.trim());
+	};
+
 	return {
 		code,
 		setCode,
@@ -122,5 +131,6 @@ export function useRoomForm() {
 		saving: save.isPending,
 
 		save: () => commit(),
+		join,
 	};
 }

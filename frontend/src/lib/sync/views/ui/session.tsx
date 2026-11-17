@@ -1,4 +1,10 @@
-import { BookmarkPlus, RefreshCw, Settings, Turntable } from "lucide-preact";
+import {
+	BookmarkPlus,
+	LogIn,
+	RefreshCw,
+	Settings,
+	Turntable,
+} from "lucide-preact";
 import { useEffect, useRef } from "preact/hooks";
 import { useLocation } from "wouter-preact";
 import { pendingStart } from "@/lib/music/views/stores/audio";
@@ -76,6 +82,7 @@ function SessionForm() {
 		ready,
 		saving,
 		save,
+		join,
 	} = useRoomForm();
 	const [, setLocation] = useLocation();
 	const field = useRef<HTMLInputElement>(null);
@@ -93,11 +100,20 @@ function SessionForm() {
 		setLocation("/settings");
 	};
 
-	// This panel names a room, it does not enter it: Enter saves what is typed and
-	// closes, and the room is joined from its row on the shelf like any other.
+	// Enter saves what is typed and closes: naming a room and entering it are
+	// two gestures, and only the buttons below or the shelf enter it.
 	const submit = () => {
 		if (!ready || saving) return;
 		save();
+		showSync.value = false;
+	};
+
+	// The shortcut skips the shelf: the room is entered with what is typed, and
+	// it shows up there as the room we are in, unsaved, until the save button on
+	// its row keeps it.
+	const enter = () => {
+		if (!ready) return;
+		join();
 		showSync.value = false;
 	};
 
@@ -160,15 +176,26 @@ function SessionForm() {
 				onBlur={commitPassword}
 				onEnter={submit}
 			/>
-			<button
-				type="button"
-				class="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 disabled:opacity-40"
-				disabled={!ready || saving}
-				onClick={submit}
-			>
-				<BookmarkPlus size={16} />
-				{t("sync.rooms.save")}
-			</button>
+			<div class="grid gap-2 sm:grid-cols-2">
+				<button
+					type="button"
+					class="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 disabled:opacity-40"
+					disabled={!ready}
+					onClick={enter}
+				>
+					<LogIn size={16} />
+					{t("sync.session.join")}
+				</button>
+				<button
+					type="button"
+					class="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 disabled:opacity-40"
+					disabled={!ready || saving}
+					onClick={submit}
+				>
+					<BookmarkPlus size={16} />
+					{t("common.save")}
+				</button>
+			</div>
 			{pendingStart.value && (
 				<p class="text-xs text-balance text-zinc-500">
 					{t("sync.session.waiting")}
