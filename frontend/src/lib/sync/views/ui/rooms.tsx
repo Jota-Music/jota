@@ -418,11 +418,9 @@ export function RoomsShelf() {
 							<button
 								type="button"
 								onClick={create}
-								title={t("sync.rooms.create")}
-								aria-label={t("sync.rooms.create")}
-								class="flex h-10 md:h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-400 transition-colors hover:text-white"
+								class="flex h-10 md:h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-500 transition-colors hover:text-zinc-50"
 							>
-								<Plus size={18} class="md:hidden" />
+								<Plus size={16} class="md:hidden" />
 								<Plus size={14} class="hidden md:block" />
 								{t("sync.rooms.create")}
 							</button>
@@ -431,11 +429,9 @@ export function RoomsShelf() {
 							<button
 								type="button"
 								onClick={leave}
-								title={session.label}
-								aria-label={session.label}
-								class="flex h-10 md:h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-red-900/40 px-3 text-xs text-red-200 transition-colors hover:bg-red-900/60"
+								class="flex h-10 md:h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-red-900/40 px-3 text-sm text-red-200 transition-colors hover:bg-red-900/60"
 							>
-								<session.icon size={18} class="md:hidden" />
+								<session.icon size={16} class="md:hidden" />
 								<session.icon size={14} class="hidden md:block" />
 								{session.label}
 							</button>

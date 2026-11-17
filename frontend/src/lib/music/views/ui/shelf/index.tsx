@@ -230,8 +230,6 @@ export function Shelf({
 							<button
 								type="button"
 								onClick={onCreate}
-								title={t("music.custom.create")}
-								aria-label={t("music.custom.create")}
 								class="flex h-10 md:h-8 cursor-pointer items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-4 text-zinc-400 transition-colors hover:text-white"
 							>
 								<Plus size={18} class="md:hidden" />
