@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Jota-Music/jota/internal/state"
-
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -40,11 +38,12 @@ func storedPass() string {
 // those blobs were waiting for, and staging the local session over them before
 // applying them would throw the other device's session away.
 func (a *App) SetSessionPass(pass string) error {
-	current := readSettings()
-	current.SessionPass = pass
-	if err := state.Write(state.Settings, current); err != nil {
-		return err
-	}
+	// Under the settings lock: a pass recording its status writes the same
+	// section whole, and an unlocked read-modify-write here would drop it (or
+	// lose the passphrase) depending on which write landed last.
+	editSettings(func(current *deviceSettings) {
+		current.SessionPass = pass
+	})
 	if pass == "" {
 		tombstoneSession("youtube")
 		tombstoneSession("spotify")
