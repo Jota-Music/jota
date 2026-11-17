@@ -214,20 +214,14 @@ func (r *refs) artistRef(artist music.Artist) artistRef {
 	if artist.Id == "" {
 		return artistRef{wireArtist: wireArtist{Name: artist.Name, Source: artist.Source}}
 	}
-	key := artistKey(artist)
-	if _, ok := r.artists[key]; !ok {
-		r.artists[key] = wireArtist{Name: artist.Name, Source: artist.Source}
+	// The id travels as it is: it is what the reader answers back, and the two
+	// sources never collide (a YouTube channel is "UC" plus 22 characters, a
+	// Spotify id is 22). Prefixing it here would be a transformation the reader
+	// cannot undo: an id that already carried one would lose it on the way back.
+	if _, ok := r.artists[artist.Id]; !ok {
+		r.artists[artist.Id] = wireArtist{Name: artist.Name, Source: artist.Source}
 	}
-	return artistRef{Id: key}
-}
-
-// artistKey names an artist by source and id, so a YouTube channel id can never
-// collide with a Spotify one.
-func artistKey(artist music.Artist) string {
-	if strings.Contains(artist.Id, ":") || artist.Source == "" {
-		return artist.Id
-	}
-	return artist.Source + ":" + artist.Id
+	return artistRef{Id: artist.Id}
 }
 
 // extraVideoId writes youtubeId only when the song's id does not already carry
@@ -346,11 +340,7 @@ func (ref artistRef) artist(artists map[string]wireArtist) music.Artist {
 	if !ok {
 		known = ref.wireArtist
 	}
-	id := ref.Id
-	if known.Source != "" {
-		id = strings.TrimPrefix(id, known.Source+":")
-	}
-	return music.Artist{Id: id, Name: known.Name, Source: known.Source}
+	return music.Artist{Id: ref.Id, Name: known.Name, Source: known.Source}
 }
 
 // UnmarshalJSON turns the section's shared songs map back into the metadata of

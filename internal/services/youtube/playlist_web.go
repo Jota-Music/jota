@@ -116,7 +116,7 @@ func channelID(id string) string {
 
 // lockupArtist reads the byline of a lockup: the first part of its first
 // metadata row, plus the channel it links to.
-func lockupArtist(meta map[string]any) (name, channelID string) {
+func lockupArtist(meta map[string]any) (name, channel string) {
 	rows, _ := meta["metadata"].(map[string]any)["contentMetadataViewModel"].(map[string]any)["metadataRows"].([]any)
 	if len(rows) == 0 {
 		return "YouTube", ""
@@ -130,14 +130,14 @@ func lockupArtist(meta map[string]any) (name, channelID string) {
 		name = "YouTube"
 	}
 	walkJSON(parts[0], func(node map[string]any) {
-		if channelID != "" {
+		if channel != "" {
 			return
 		}
 		if id, ok := node["browseId"].(string); ok && channelIDPattern.MatchString(id) {
-			channelID = id
+			channel = id
 		}
 	})
-	return name, channelID
+	return name, channel
 }
 
 // lockupDuration reads the length badge the thumbnail carries ("7:52",

@@ -154,10 +154,8 @@ var channelIDPattern = regexp.MustCompile(`^UC[A-Za-z0-9_-]{22}$`)
 
 // resolveChannelID turns a channel URL, @handle, or bare channel ID into the
 // channel ID the browse endpoint expects. Non-ID inputs are resolved through
-// innertube and cached.
-// resolveChannelID turns whatever names a channel — an id, a handle or a URL —
-// into the bare id YouTube answers with. An artist link carries the app's own
-// `youtube:channel:` form, so both prefixes are understood here.
+// innertube and cached. An artist link carries the app's own `youtube:channel:`
+// form, so both prefixes are understood here.
 func resolveChannelID(channel string) (string, error) {
 	channel = strings.TrimSpace(channel)
 	channel = strings.TrimPrefix(channel, music.YouTubePrefix)
@@ -344,7 +342,7 @@ func (s itemSection) summaries() []music.PlaylistSummary {
 	return out
 }
 
-func (s itemSection) videos(channelID, channelName string) []music.Song {
+func (s itemSection) videos(channel, channelName string) []music.Song {
 	out := make([]music.Song, 0, len(s.Contents))
 	for _, item := range s.Contents {
 		v := item.CompactVideoRenderer
@@ -359,7 +357,7 @@ func (s itemSection) videos(channelID, channelName string) []music.Song {
 			Duration:  v.duration(),
 			Share:     music.Share{Id: music.YouTubePrefix + "track:" + id, Url: "https://www.youtube.com/watch?v=" + id},
 			Album:     music.Album{Title: "YouTube", Covers: []string{v.Thumbnail.url()}},
-			Artists:   []music.Artist{{Id: music.YouTubePrefix + "channel:" + channelID, Name: channelName, Source: "youtube"}},
+			Artists:   []music.Artist{{Id: channelID(channel), Name: channelName, Source: "youtube"}},
 			YoutubeId: id,
 		})
 	}
@@ -411,7 +409,7 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 		if cover == "" && len(songs) > 0 && len(songs[0].Album.Covers) > 0 {
 			cover = songs[0].Album.Covers[0]
 		}
-		return music.Playlist{Name: name, Cover: cover, Owner: owner, OwnerId: ownerID, Songs: songs}, nil
+		return music.Playlist{Name: name, Cover: cover, Owner: owner, OwnerId: ownerID, Songs: withPlaylistID(songs, playlistID)}, nil
 	}
 
 	if name == "" {
@@ -447,8 +445,19 @@ func fetchFullPlaylist(playlistID string) (music.Playlist, error) {
 		Cover:   cover,
 		Owner:   owner,
 		OwnerId: ownerID,
-		Songs:   songs,
+		Songs:   withPlaylistID(songs, playlistID),
 	}, nil
+}
+
+// withPlaylistID names the playlist every song came from, the way the app
+// writes a playlist id. A song relayed in a room keeps it, so the other client
+// can still open the playlist from the player.
+func withPlaylistID(songs []music.Song, playlistID string) []music.Song {
+	id := music.YouTubePrefix + "playlist:" + playlistID
+	for i := range songs {
+		songs[i].PlaylistId = id
+	}
+	return songs
 }
 
 func fetchPlaylistSummary(playlistID string) (music.PlaylistSummary, error) {
@@ -583,7 +592,7 @@ func videoToSong(v playlistVideoRenderer, playlist string) (music.Song, bool) {
 		Duration:  int(duration),
 		Share:     music.Share{Id: music.YouTubePrefix + "track:" + id, Url: "https://www.youtube.com/watch?v=" + id},
 		Album:     music.Album{Title: album, Covers: []string{v.Thumbnail.url()}},
-		Artists:   []music.Artist{{Id: v.ByLine.browseID(), Name: artist, Source: "youtube"}},
+		Artists:   []music.Artist{{Id: channelID(v.ByLine.browseID()), Name: artist, Source: "youtube"}},
 		YoutubeId: id,
 	}, true
 }

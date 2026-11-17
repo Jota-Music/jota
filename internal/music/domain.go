@@ -7,14 +7,15 @@ const (
 )
 
 type Song struct {
-	Id        string   `json:"id"`
-	Url       string   `json:"url"`
-	Name      string   `json:"name"`
-	Duration  int      `json:"duration"`
-	Share     Share    `json:"share"`
-	Album     Album    `json:"album"`
-	Artists   []Artist `json:"artists"`
-	YoutubeId string   `json:"youtubeId,omitempty"`
+	Id         string   `json:"id"`
+	Url        string   `json:"url"`
+	Name       string   `json:"name"`
+	Duration   int      `json:"duration"`
+	Share      Share    `json:"share"`
+	Album      Album    `json:"album"`
+	Artists    []Artist `json:"artists"`
+	YoutubeId  string   `json:"youtubeId,omitempty"`
+	PlaylistId string   `json:"playlistId,omitempty"`
 	// Broken marks a stored reference that no longer resolves at its source.
 	Broken bool `json:"broken,omitempty"`
 }

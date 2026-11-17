@@ -112,7 +112,7 @@ func mixToSong(v mixVideo, mix string) (music.Song, bool) {
 		Duration:  clockSeconds(v.LengthText.first()),
 		Share:     music.Share{Id: music.YouTubePrefix + "track:" + id, Url: "https://www.youtube.com/watch?v=" + id},
 		Album:     music.Album{Title: mix, Covers: []string{v.Thumbnail.url()}},
-		Artists:   []music.Artist{{Id: music.YouTubePrefix + "channel:" + v.ByLine.browseID(), Name: artist, Source: "youtube"}},
+		Artists:   []music.Artist{{Id: channelID(v.ByLine.browseID()), Name: artist, Source: "youtube"}},
 		YoutubeId: id,
 	}, true
 }

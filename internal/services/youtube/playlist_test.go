@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+
+	"github.com/Jota-Music/jota/internal/music"
 )
 
 const browseFixture = `{
@@ -376,5 +378,41 @@ func TestContinuationShapeIsFound(t *testing.T) {
 	list, next, ok := playlistPage(data)
 	if !ok || len(extractSongs(list, "x")) != 1 || next != "page-three" {
 		t.Fatalf("page = %+v/%q/%v, want the continued videos", list, next, ok)
+	}
+}
+
+// A playlist entry names its artist the way the rest of the app does: the
+// channel id keeps the youtube:channel: prefix.
+func TestPlaylistVideoKeepsTheChannelWithItsPrefix(t *testing.T) {
+	var renderer playlistVideoRenderer
+	err := json.Unmarshal([]byte(`{
+		"videoId": "abc12345678",
+		"title": { "runs": [{ "text": "A video" }] },
+		"shortBylineText": { "runs": [{
+			"text": "Lofi Girl",
+			"navigationEndpoint": { "browseEndpoint": { "browseId": "UClofi" } }
+		}]}
+	}`), &renderer)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	song, ok := videoToSong(renderer, "Mix")
+	if !ok {
+		t.Fatal("expected a song")
+	}
+	if len(song.Artists) != 1 || song.Artists[0].Id != "youtube:channel:UClofi" {
+		t.Fatalf("artists = %+v", song.Artists)
+	}
+}
+
+// A song read from a playlist names it, so the player can open the list it
+// came from.
+func TestPlaylistSongsCarryTheirPlaylistID(t *testing.T) {
+	songs := withPlaylistID([]music.Song{{}, {}}, "PLabc")
+	for _, song := range songs {
+		if song.PlaylistId != "youtube:playlist:PLabc" {
+			t.Fatalf("playlistId = %q", song.PlaylistId)
+		}
 	}
 }

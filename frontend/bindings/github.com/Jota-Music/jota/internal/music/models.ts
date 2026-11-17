@@ -99,6 +99,7 @@ export interface Song {
     "album": Album;
     "artists": Artist[] | null;
     "youtubeId"?: string;
+    "playlistId"?: string;
 
     /**
      * Broken marks a stored reference that no longer resolves at its source.

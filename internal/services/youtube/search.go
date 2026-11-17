@@ -184,7 +184,7 @@ func (s *Service) SearchPlaylists(query string) ([]music.PlaylistSummary, error)
 
 	if id := playlistIdFromQuery(query); id != "" {
 		if summary, err := fetchPlaylistSummary(id); err == nil {
-			summary.Id = "youtube:" + id
+			summary.Id = music.YouTubePrefix + "playlist:" + id
 			return []music.PlaylistSummary{summary}, nil
 		}
 	}
