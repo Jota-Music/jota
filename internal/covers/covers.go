@@ -151,12 +151,18 @@ func (s *Server) share(key string, produce func() ([]byte, error)) ([]byte, erro
 	s.flights[key] = f
 	s.mu.Unlock()
 
-	f.data, f.err = produce()
-	f.wg.Done()
+	// Deferred: a panic in produce (a pathological image in the decoder) would
+	// otherwise leave the flight in the map and every later caller of this key
+	// blocked on f.wg forever. net/http recovers the panic, so the request dies
+	// and the key stays usable.
+	defer func() {
+		s.mu.Lock()
+		delete(s.flights, key)
+		s.mu.Unlock()
+	}()
+	defer f.wg.Done()
 
-	s.mu.Lock()
-	delete(s.flights, key)
-	s.mu.Unlock()
+	f.data, f.err = produce()
 
 	return f.data, f.err
 }
@@ -194,8 +200,10 @@ func (s *Server) source(ctx context.Context, target string) ([]byte, error) {
 	}
 	return s.share("src|"+target, func() ([]byte, error) {
 		s.sem <- struct{}{}
+		// Released on the way out even if the download panics, or one of the
+		// fixed download slots would be lost for the rest of the session.
+		defer func() { <-s.sem }()
 		raw, err := s.download(ctx, target)
-		<-s.sem
 		if err != nil {
 			return nil, err
 		}
