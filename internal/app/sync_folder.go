@@ -464,7 +464,17 @@ func (a *App) syncDocumentAt(dir string, lastModified int64, trust bool) (bool, 
 		logPass("document", started, len(data), 0, false)
 		return false, nil
 	}
-	if err := os.WriteFile(filepath.Join(dir, syncOutgoing), []byte(merged), 0o600); err != nil {
+	// Through a temporary name: the page commits this file, and a crash in the
+	// middle of a plain write would hand the provider a truncated document.
+	outgoing := filepath.Join(dir, syncOutgoing)
+	tmp := outgoing + ".tmp"
+	if err := os.WriteFile(tmp, []byte(merged), 0o600); err != nil {
+		_ = os.Remove(tmp)
+		a.recordProblem(err)
+		return false, err
+	}
+	if err := os.Rename(tmp, outgoing); err != nil {
+		_ = os.Remove(tmp)
 		a.recordProblem(err)
 		return false, err
 	}
