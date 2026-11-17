@@ -107,7 +107,12 @@ func (a *App) SetYouTubeCookies(cookies string) error {
 		return err
 	}
 	if err := youtube.Verify(); err != nil {
-		_ = youtube.ClearCookies()
+		// Only a session YouTube rejects is dropped. A transport failure says
+		// nothing about the cookies, and clearing them on a flaky connection
+		// would sign the device out for a network hiccup.
+		if errors.Is(err, youtube.ErrSession) {
+			_ = youtube.ClearCookies()
+		}
 		return err
 	}
 	a.syncYouTubeCookies()
