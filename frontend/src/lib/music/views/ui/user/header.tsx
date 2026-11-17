@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/preact-query";
 import { User as UserIcon } from "lucide-preact";
 import { Link } from "wouter-preact";
 import type { UserSource } from "@/lib/music/app/get-user-playlists";
+import { channelFollow, userFollow } from "@/lib/music/app/follows";
 import getUserProfile from "@/lib/music/app/get-user-profile";
 import { FollowButton } from "@/lib/music/views/ui/follow";
 import { t } from "@/lib/shared/i18n";
@@ -30,11 +31,9 @@ export function UserHeader({
 		enabled: spotify && !!identifier,
 	});
 
-	// The follow key names the channel the way the store does, whatever form of
-	// the id the page was opened with.
-	const followKey = spotify
-		? identifier
-		: `youtube:${identifier.replace(/^(youtube:)?(channel:)?/, "")}`;
+	// The follow key names the page the way the store does, whatever form of the
+	// id the page was opened with.
+	const followKey = spotify ? userFollow(identifier) : channelFollow(identifier);
 	const loading = pending || profile.isLoading;
 
 	const name = profile.data?.displayName || fallbackName || identifier;

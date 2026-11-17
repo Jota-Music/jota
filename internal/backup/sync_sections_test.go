@@ -70,7 +70,7 @@ func TestSyncRestoresEverySection(t *testing.T) {
 		t.Fatalf("playlists = %+v", list)
 	}
 	users, _ := target.Follows.List()
-	if len(users) != 1 || users[0] != "friend" {
+	if len(users) != 1 || users[0] != "spotify:user:friend" {
 		t.Fatalf("follows = %v", users)
 	}
 	kept, _ := target.Saved.List()

@@ -16,6 +16,7 @@ import {
 import { playList } from "@/lib/music/views/stores/player";
 import { queueSource } from "@/lib/music/views/stores/queue";
 import { clearSelection, selectAll } from "@/lib/music/views/stores/selection";
+import { artistFollow } from "@/lib/music/app/follows";
 import { FollowButton } from "@/lib/music/views/ui/follow";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";
@@ -132,7 +133,7 @@ export function ArtistPage() {
 				cover={data?.imageUrl}
 				title={data?.name ?? t("pages.artist.defaultName")}
 				pending={isLoading}
-				beforePlay={id ? <FollowButton id={`artist:${id}`} /> : undefined}
+				beforePlay={id ? <FollowButton id={artistFollow(id)} /> : undefined}
 				onPlay={
 					activeTab === "tracks" && tracks.length > 0
 						? () => void playList(tracks, id)
@@ -150,7 +151,7 @@ export function ArtistPage() {
 					activeTab === "tracks" ? (
 						<TrackActions
 							songs={tracks}
-							playlistActions={id ? [toggle(`artist:${id}`)] : undefined}
+							playlistActions={id ? [toggle(artistFollow(id))] : undefined}
 							share={shareLink(pageLink("artist", id ?? ""))}
 							onSelectAll={selectAll}
 							reserve={isLoading}

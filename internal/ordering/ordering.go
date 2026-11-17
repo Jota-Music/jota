@@ -17,6 +17,10 @@ const Library = "library"
 // ids follow the room naming rule instead of being stored as they are typed.
 const Rooms = "rooms"
 
+// Following is the scope of the following shelf. Its entries are follows, so
+// its ids follow the follow naming rule too.
+const Following = "following"
+
 // Service stores the user's custom order for a shelf. Orders are local to Jota
 // and keyed by the shelf's scope plus, when the shelf belongs to one, the owning
 // account, so different shelves and different accounts keep separate orders. It
@@ -107,14 +111,17 @@ func (s *Service) Save(scope string, account string, ids Order) error {
 func clean(rec Record) Record {
 	seen := make(map[string]struct{}, len(rec.Ids))
 	out := make(Order, 0, len(rec.Ids))
-	rooms := normalize(rec.Scope) == Rooms
+	scope := normalize(rec.Scope)
 	for _, id := range rec.Ids {
 		id = strings.TrimSpace(id)
 		if id == "" {
 			continue
 		}
-		if rooms {
+		switch scope {
+		case Rooms:
 			id = music.StoredRoomID(id)
+		case Following:
+			id = music.StoredFollowID(id)
 		}
 		if _, ok := seen[id]; ok {
 			continue

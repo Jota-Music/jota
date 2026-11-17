@@ -106,7 +106,7 @@ func TestDocumentRoundTrip(t *testing.T) {
 	if err != nil || len(lists) != 1 || lists[0].Name != "Mix" {
 		t.Fatalf("playlists = %+v, %v", lists, err)
 	}
-	if users, _ := dst.Follows.List(); !reflect.DeepEqual(users, follows.Users{"bob"}) {
+	if users, _ := dst.Follows.List(); !reflect.DeepEqual(users, follows.Users{"spotify:user:bob"}) {
 		t.Fatalf("follows = %v", users)
 	}
 	if kept, _ := dst.Saved.List(); len(kept) != 1 || kept[0].Id != "spotify:p1" {

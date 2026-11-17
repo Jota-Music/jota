@@ -1,6 +1,11 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Mic2, User as UserIcon } from "lucide-preact";
 import { spotifyReady } from "@/lib/auth/views/stores/session";
+import {
+	artistFollow,
+	parseFollow,
+	userFollow,
+} from "@/lib/music/app/follows";
 import { getArtist } from "@/lib/music/app/get-artist";
 import { getChannelInfo } from "@/lib/music/app/get-channel";
 import getFollowing from "@/lib/music/app/get-following";
@@ -35,12 +40,10 @@ type Entry = {
 };
 
 function link(id: string): string {
-	if (id.startsWith("youtube:")) {
-		return `/youtube/user/${id.slice("youtube:".length)}`;
-	}
-	return id.startsWith("artist:")
-		? `/artist/${id.slice("artist:".length)}`
-		: `/spotify/user/${id.slice("user:".length)}`;
+	const target = parseFollow(id);
+	if (target.channel) return `/youtube/user/${target.channel}`;
+	if (target.artist) return `/artist/${target.artist}`;
+	return `/spotify/user/${target.user ?? ""}`;
 }
 
 // Following merges the account's own follows with the friends stored locally,
@@ -80,7 +83,7 @@ export function FollowingShelf({ account }: { account: string }) {
 	const seen = new Set<string>();
 
 	function addUser(user: string) {
-		const key = `user:${user}`;
+		const key = userFollow(user);
 		if (seen.has(key.toLowerCase())) return;
 		seen.add(key.toLowerCase());
 		entries.push({
@@ -92,37 +95,27 @@ export function FollowingShelf({ account }: { account: string }) {
 	}
 
 	for (const user of followed) {
-		if (user.startsWith("youtube:")) {
-			const channel = user.slice("youtube:".length);
-			const key = `youtube:${channel}`.toLowerCase();
-			if (seen.has(key)) continue;
-			seen.add(key);
-			entries.push({
-				id: `youtube:${channel}`,
-				name: channel,
-				icon: YoutubeIcon,
-				channel,
-				follow: user,
-				source: "youtube",
-			});
-		} else {
-			const artist = user.startsWith("artist:");
-			const handle = artist ? user.slice("artist:".length) : user;
-			const key = `${artist ? "artist:" : "user:"}${handle}`;
-			if (seen.has(key.toLowerCase())) continue;
-			seen.add(key.toLowerCase());
-			entries.push({
-				id: key,
-				name: handle,
-				icon: artist ? Mic2 : UserIcon,
-				follow: user,
-				...(artist ? { artist: handle } : { user: handle }),
-			});
-		}
+		const target = parseFollow(user);
+		if (seen.has(target.key.toLowerCase())) continue;
+		seen.add(target.key.toLowerCase());
+		entries.push({
+			id: target.key,
+			name: target.artist ?? target.channel ?? target.user ?? "",
+			icon: target.channel ? YoutubeIcon : target.artist ? Mic2 : UserIcon,
+			follow: user,
+			...(target.channel
+				? { channel: target.channel, source: "youtube" as const }
+				: {}),
+			...(target.artist ? { artist: target.artist } : {}),
+			...(target.user ? { user: target.user } : {}),
+		});
 	}
 
 	for (const follow of following.data ?? []) {
-		const key = `${follow.kind}:${follow.id}`;
+		const key =
+			follow.kind === "artist"
+				? artistFollow(follow.id)
+				: userFollow(follow.id);
 		if (seen.has(key.toLowerCase())) continue;
 		seen.add(key.toLowerCase());
 		entries.push({
@@ -181,10 +174,8 @@ export function FollowingShelf({ account }: { account: string }) {
 		]),
 	);
 
-	// Shelf ids are not store keys: a Spotify user is stored as a bare handle
-	// while the shelf prefixes it to route it, and an artist is stored with the
-	// prefix the shelf drops. Resolving it once keeps the menu and the hover
-	// button from disagreeing about what to unfollow.
+	// The table maps a shelf id to the key the follows store holds, so the menu
+	// and the hover button unfollow the same record.
 	const followById = new Map(
 		entries.flatMap((entry) =>
 			entry.follow ? [[entry.id.toLowerCase(), entry.follow] as const] : [],

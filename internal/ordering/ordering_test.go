@@ -88,13 +88,42 @@ func TestRoomsOrderFollowsTheNamingRule(t *testing.T) {
 	}
 }
 
+// The following shelf names a follow by the app rule too, including an order
+// written before it.
+func TestFollowingOrderFollowsTheNamingRule(t *testing.T) {
+	s := setup(t)
+
+	if err := s.Save(Following, "", Order{
+		"artist:4uLU6hMCjMI75M1A2tKUQC",
+		"youtube:UCY4YovmJwl4_BivQ-LkzU2A",
+		"aokihiro",
+		"spotify:artist:abc",
+	}); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+
+	got, err := s.List(Following, "")
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	want := Order{
+		"spotify:artist:4uLU6hMCjMI75M1A2tKUQC",
+		"youtube:channel:UCY4YovmJwl4_BivQ-LkzU2A",
+		"spotify:user:aokihiro",
+		"spotify:artist:abc",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("list = %v, want %v", got, want)
+	}
+}
+
 func TestScopesAreSeparate(t *testing.T) {
 	s := setup(t)
 
 	if err := s.Save(Library, "alice", Order{"a", "b"}); err != nil {
 		t.Fatalf("save library: %v", err)
 	}
-	if err := s.Save("following", "alice", Order{"b", "a"}); err != nil {
+	if err := s.Save("following", "alice", Order{"spotify:artist:b", "spotify:artist:a"}); err != nil {
 		t.Fatalf("save following: %v", err)
 	}
 
@@ -103,7 +132,7 @@ func TestScopesAreSeparate(t *testing.T) {
 		t.Fatalf("library = %v, want %v", library, want)
 	}
 	following, _ := s.List("following", "alice")
-	if want := (Order{"b", "a"}); !reflect.DeepEqual(following, want) {
+	if want := (Order{"spotify:artist:b", "spotify:artist:a"}); !reflect.DeepEqual(following, want) {
 		t.Fatalf("following = %v, want %v", following, want)
 	}
 }
@@ -111,7 +140,7 @@ func TestScopesAreSeparate(t *testing.T) {
 func TestOrderWithoutAccount(t *testing.T) {
 	s := setup(t)
 
-	if err := s.Save("following", "", Order{"a", "b"}); err != nil {
+	if err := s.Save("following", "", Order{"spotify:user:a", "spotify:user:b"}); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 
@@ -119,7 +148,7 @@ func TestOrderWithoutAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if want := (Order{"a", "b"}); !reflect.DeepEqual(got, want) {
+	if want := (Order{"spotify:user:a", "spotify:user:b"}); !reflect.DeepEqual(got, want) {
 		t.Fatalf("following = %v, want %v", got, want)
 	}
 	part, err := s.Section()
@@ -127,7 +156,7 @@ func TestOrderWithoutAccount(t *testing.T) {
 		t.Fatalf("section: %v", err)
 	}
 	rec := entry(t, part, "following", "")
-	if rec.Account != "" || !reflect.DeepEqual(Order(rec.Ids), Order{"a", "b"}) {
+	if rec.Account != "" || !reflect.DeepEqual(Order(rec.Ids), Order{"spotify:user:a", "spotify:user:b"}) {
 		t.Fatalf("section = %+v, want the shelf without an account", rec)
 	}
 }

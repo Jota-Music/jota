@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/state"
 )
 
@@ -54,7 +55,7 @@ func (s *Service) List() (Users, error) {
 }
 
 func (s *Service) Follow(user string) error {
-	user = strings.TrimSpace(user)
+	user = music.StoredFollowID(user)
 	if user == "" {
 		return nil
 	}
@@ -88,7 +89,7 @@ func (s *Service) Follow(user string) error {
 }
 
 func (s *Service) Unfollow(user string) error {
-	user = strings.TrimSpace(user)
+	user = music.StoredFollowID(user)
 	if user == "" {
 		return nil
 	}

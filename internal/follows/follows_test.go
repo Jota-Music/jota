@@ -36,7 +36,7 @@ func TestFollowLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if want := (Users{"spotify:artist:abc", "youtube:UC123"}); !reflect.DeepEqual(got, want) {
+	if want := (Users{"spotify:artist:abc", "youtube:channel:UC123"}); !reflect.DeepEqual(got, want) {
 		t.Fatalf("list = %v, want %v", got, want)
 	}
 	if !s.Pending() {
@@ -50,7 +50,7 @@ func TestFollowLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list after unfollow: %v", err)
 	}
-	if want := (Users{"youtube:UC123"}); !reflect.DeepEqual(got, want) {
+	if want := (Users{"youtube:channel:UC123"}); !reflect.DeepEqual(got, want) {
 		t.Fatalf("after unfollow = %v, want %v", got, want)
 	}
 }
@@ -69,7 +69,7 @@ func TestMergeSectionHonoursTombstones(t *testing.T) {
 		t.Fatalf("merge: %v", err)
 	}
 	users, _ := s.List()
-	if want := (Users{"youtube:UC123"}); !reflect.DeepEqual(users, want) {
+	if want := (Users{"youtube:channel:UC123"}); !reflect.DeepEqual(users, want) {
 		t.Fatalf("after merge = %v, want %v; an unfollow must not be undone", users, want)
 	}
 
@@ -78,7 +78,7 @@ func TestMergeSectionHonoursTombstones(t *testing.T) {
 		t.Fatalf("restore: %v", err)
 	}
 	users, _ = s.List()
-	if want := (Users{"spotify:artist:abc", "youtube:UC123"}); !reflect.DeepEqual(users, want) {
+	if want := (Users{"spotify:artist:abc", "youtube:channel:UC123"}); !reflect.DeepEqual(users, want) {
 		t.Fatalf("after restore = %v, want %v", users, want)
 	}
 }
@@ -122,7 +122,7 @@ func TestMergeSectionWithoutApplyLeavesStore(t *testing.T) {
 	if applied != 0 {
 		t.Fatalf("applied = %d, want 0 without apply", applied)
 	}
-	if want := (Users{"spotify:artist:abc", "youtube:UC123"}); !reflect.DeepEqual(users(out), want) {
+	if want := (Users{"spotify:artist:abc", "youtube:channel:UC123"}); !reflect.DeepEqual(users(out), want) {
 		t.Fatalf("union = %v, want %v", users(out), want)
 	}
 	got, _ := s.List()

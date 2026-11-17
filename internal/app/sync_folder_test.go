@@ -401,7 +401,8 @@ func TestImportBackupCountsSections(t *testing.T) {
 	if list, _ := a.Playlists.List(); len(list) != 1 || list[0].Name != "Mix" {
 		t.Fatalf("playlists = %+v", list)
 	}
-	if users, _ := a.Follows.List(); len(users) != 1 || users[0] != "bob" {
+	// The file names the user by the bare handle; the store answers the id.
+	if users, _ := a.Follows.List(); len(users) != 1 || users[0] != "spotify:user:bob" {
 		t.Fatalf("follows = %v", users)
 	}
 	if kept, _ := a.Saved.List(); len(kept) != 1 || kept[0].Id != "spotify:playlist:x" {

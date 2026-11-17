@@ -1,8 +1,7 @@
 package follows
 
 import (
-	"strings"
-
+	"github.com/Jota-Music/jota/internal/music"
 	"github.com/Jota-Music/jota/internal/reconcile"
 	"github.com/Jota-Music/jota/internal/state"
 )
@@ -33,17 +32,30 @@ const (
 	Restore = reconcile.Restore
 )
 
-// clean trims the stored ids and drops the empty ones. Callers hold no lock.
+// clean trims the stored ids, drops the empty ones and names every follow the
+// way the app names ids, so a list or a document written before the rule is
+// answered in the current form. Callers hold no lock.
 func clean(list Section) Section {
 	items := make([]Entry, 0, len(list.Items))
 	for _, item := range list.Items {
-		id := strings.TrimSpace(item.Id)
+		id := music.StoredFollowID(item.Id)
 		if id == "" {
 			continue
 		}
 		items = append(items, Entry{Id: id, At: item.At})
 	}
-	return Section{Items: items, Removed: list.Removed}
+
+	removed := make(map[string]int64, len(list.Removed))
+	for id, at := range list.Removed {
+		key := music.StoredFollowID(id)
+		if key == "" {
+			continue
+		}
+		if at > removed[key] {
+			removed[key] = at
+		}
+	}
+	return Section{Items: items, Removed: removed}
 }
 
 // Section reads the stored list into the follows part of a backup document.
@@ -66,7 +78,9 @@ func (s *Service) MergeSection(part Section, mode reconcile.Mode, apply bool) (S
 	if err != nil {
 		return Section{}, 0, err
 	}
-	out := mergeSection(part, local, mode)
+	// The file may name a follow the way it was written before the rule, and
+	// the merge keys on the id: both sides have to speak the same form.
+	out := mergeSection(clean(part), local, mode)
 	// A background sync leaves us holding what the file holds, so nothing is left
 	// to write, whether or not the pass applied it.
 	if mode == reconcile.Newer {
