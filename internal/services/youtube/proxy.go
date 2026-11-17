@@ -24,7 +24,14 @@ var proxyStreams = map[string]stream{} // videoID -> registered stream
 type stream struct {
 	url  string
 	mime string
+	// at is when the entry was registered, so the registry can drop the oldest
+	// one instead of growing with every video played.
+	at time.Time
 }
+
+// proxyStreamLimit bounds the registry. Each entry is a signed URL of about a
+// kilobyte, and a session plays far more videos than it ever serves at once.
+const proxyStreamLimit = 256
 
 // proxyClient relays a stream as it comes. It has no total timeout on purpose:
 // a body lasts as long as the track, and a deadline that cuts it mid-way looks
@@ -350,6 +357,17 @@ func ProxyURL(videoID, googlevideoURL string) string {
 	proxyStreams[videoID] = stream{
 		url:  unpinned(googlevideoURL),
 		mime: streamMime(googlevideoURL),
+		at:   time.Now(),
+	}
+	if len(proxyStreams) > proxyStreamLimit {
+		var oldest string
+		var at time.Time
+		for id, s := range proxyStreams {
+			if oldest == "" || s.at.Before(at) {
+				oldest, at = id, s.at
+			}
+		}
+		delete(proxyStreams, oldest)
 	}
 	proxyMu.Unlock()
 	return fmt.Sprintf("http://127.0.0.1:%d/stream/%s", port, videoID)
