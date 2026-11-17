@@ -50,6 +50,16 @@ body {
 	height: 100%;
 }
 
+/* On a phone the page is the app, never a document to scroll: a layout viewport
+   that can scroll lets the keyboard's scroll-into-view push the header off the
+   screen and slide every absolutely placed overlay with it. */
+@media (max-width: 639px) {
+	body {
+		position: fixed;
+		inset: 0;
+	}
+}
+
 :root {
 	color-scheme: dark;
 	--scrollbar-thumb: #1b1b1f;
