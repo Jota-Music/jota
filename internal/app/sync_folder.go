@@ -91,8 +91,17 @@ func stamp(document string) uint32 {
 // stamp to offer: the folder path relies on MTime/FileSize instead.
 func (a *App) recordSync(stats backup.Stats, fresh, written bool, read int64) {
 	stale := stats.Modified && !fresh
+	// Stat'ed before the lock: the sync folder can be a stalled mount, and a
+	// stat inside the settings lock would hold every settings edit behind it.
+	uri := a.SyncFolder()
+	mtime, size := int64(0), int64(0)
+	if uri != "" {
+		if info, err := os.Stat(filepath.Join(uri, backup.BackupFile)); err == nil {
+			mtime = info.ModTime().UnixNano()
+			size = info.Size()
+		}
+	}
 	editSettings(func(current *deviceSettings) {
-		uri := current.Sync.Folder
 		status := current.Sync.Status
 		status.At = time.Now().UnixMilli()
 		status.Uri = uri
@@ -113,13 +122,7 @@ func (a *App) recordSync(stats backup.Stats, fresh, written bool, read int64) {
 		if stats.Snapshots && !stale {
 			status.SnapshotsAt = status.At
 		}
-		status.MTime, status.FileSize = 0, 0
-		if uri != "" {
-			if info, err := os.Stat(filepath.Join(uri, backup.BackupFile)); err == nil {
-				status.MTime = info.ModTime().UnixNano()
-				status.FileSize = info.Size()
-			}
-		}
+		status.MTime, status.FileSize = mtime, size
 		current.Sync.Status = status
 	})
 	emitSections(stats)
