@@ -28,7 +28,7 @@ export function usePlayer() {
 
 		let cancelled = false;
 
-		(async () => {
+		void (async () => {
 			let rgb: [number, number, number] | null = null;
 			rgb = await getDominantColorFromImage(cover);
 
@@ -40,7 +40,9 @@ export function usePlayer() {
 
 			dominantColor.value = color;
 			binaryColor.value = binary;
-		})();
+		})().catch(() => {
+			// A cover that will not load leaves the previous palette in place.
+		});
 
 		return () => {
 			cancelled = true;
