@@ -351,6 +351,11 @@ func parseBlock(data []byte, baseKey []byte) ([]entry, error) {
 	if err := verifyChecksum(data[:readPos], data[readPos:readPos+checksumLen]); err != nil {
 		return nil, err
 	}
+	// The count needs four bytes of its own: a checksum that fills the block
+	// leaves readPos at zero here, and the read below would slice backwards.
+	if readPos < 4 {
+		return nil, errors.New("legacy: a block is damaged (no room for its count)")
+	}
 	readPos -= 4
 	count := int(binary.BigEndian.Uint32(data[readPos:]))
 	start := readPos - count*4
