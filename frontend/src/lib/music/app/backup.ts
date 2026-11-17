@@ -320,10 +320,12 @@ export function reload(): Promise<Awaited<ReturnType<typeof SyncReload>>> {
 // exit offered after a save failed: it writes our document over the file instead
 // of trusting the copy the provider serves.
 export function autosave(mode: Mode = "manual", force = false): Promise<void> {
-	if (running)
-		return mode === "manual"
-			? running.then(() => autosave("manual", force))
-			: running;
+	if (running) {
+		if (mode !== "manual") return running;
+		// A manual pass runs even when the one in flight failed: the user asked
+		// for a save now, and the error they should see is their own.
+		return running.catch(() => {}).then(() => autosave("manual", force));
+	}
 	return queue(() => run(mode, force));
 }
 
