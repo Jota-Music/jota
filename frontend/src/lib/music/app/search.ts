@@ -57,7 +57,7 @@ export function youtubeVideoToSong(video: Video): Song {
 	return {
 		id,
 		name: video.title,
-		duration: 0,
+		duration: video.duration ?? 0,
 		url: "",
 		share: {
 			id,
