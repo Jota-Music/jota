@@ -247,10 +247,16 @@ export function OpenURL(url: string): $CancellablePromise<void> {
 }
 
 /**
- * RamMB reports the resident memory of the app plus its WebKit helper
- * processes (renderer, network, GPU), so the frontend can flush WebKit's
- * internal image caches exactly when they are what is growing. Zero means the
- * platform exposes no /proc and the frontend falls back to its deadline.
+ * RamMB reports the memory the app costs: this process plus its WebKit helpers
+ * (renderer, network, GPU), so the frontend can flush WebKit's internal image
+ * caches when they are what is growing.
+ * 
+ * The number is the proportional set size, not RSS. RSS counts every shared
+ * library once per process, and a WebKit app maps the same few hundred
+ * megabytes of engine into each helper: summing it answers with roughly twice
+ * what the app holds. PSS splits a shared page between the processes that map
+ * it, which is the figure a memory monitor reports as the app's own. Zero means
+ * the platform exposes no /proc and the frontend falls back to its deadline.
  */
 export function RamMB(): $CancellablePromise<number> {
     return $Call.ByID(1151072423);
