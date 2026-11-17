@@ -144,10 +144,13 @@ func (s *Service) Delete(id string) error {
 			out = append(out, existing)
 		}
 	}
-	if err := s.setIndex(out); err != nil {
+	// The tombstone lands first: a crash between these writes then leaves the
+	// playlist listed but buried, which the next pass removes, instead of a
+	// playlist that vanished with nothing to stop the document bringing it back.
+	if err := s.bury(id, time.Now().UnixMilli()); err != nil {
 		return err
 	}
-	if err := s.bury(id, time.Now().UnixMilli()); err != nil {
+	if err := s.setIndex(out); err != nil {
 		return err
 	}
 	part, err := s.stored()

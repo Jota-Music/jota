@@ -149,6 +149,20 @@ func mergeDocument(remote Section, local map[string]exportPlaylist, graves map[s
 		}
 	}
 
+	// A tombstone is a deletion, not only a gate on the copy that carries it: a
+	// device that still holds the record has to lose it, or it would keep
+	// exporting the playlist next to the tombstone that buries it and the
+	// document would never settle. A copy edited after the deletion is newer
+	// than it and stays.
+	if mode != reconcile.Restore {
+		for stored, at := range next {
+			if lp, ok := merged[stored]; ok && lp.ModifiedAt <= at {
+				delete(merged, stored)
+				buried = true
+			}
+		}
+	}
+
 	for _, rp := range remote.Items {
 		rp.Id = strings.TrimSpace(rp.Id)
 		if rp.Id == "" {
@@ -274,6 +288,25 @@ func (s *Service) applyMerge(out Section, graves map[string]int64, buried bool) 
 			return applied, err
 		}
 		part.Deleted = graves
+		// A tombstone is a deletion here too, so the record it buries is dropped
+		// and the index stops listing it. One write carries all three: a device
+		// that kept the record would re-export it forever.
+		agreed := make(map[string]bool, len(out.Items))
+		for _, p := range out.Items {
+			agreed[storedId(p.Id)] = true
+		}
+		kept := part.Index[:0]
+		for _, id := range part.Index {
+			if _, gone := graves[id]; gone && !agreed[id] {
+				if _, ok := part.Tracks[id]; ok {
+					delete(part.Tracks, id)
+					applied++
+				}
+				continue
+			}
+			kept = append(kept, id)
+		}
+		part.Index = kept
 		if err := state.Write(state.Playlists, part); err != nil {
 			return applied, err
 		}

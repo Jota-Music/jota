@@ -42,6 +42,24 @@ func TestMerge(t *testing.T) {
 			applied: 0,
 		},
 		{
+			name:  "a tombstone deletes the copy this device still holds",
+			local: []exportPlaylist{{Id: "local:gone", Name: "Gone", Songs: []string{"youtube:c"}, ModifiedAt: 10}},
+			remote: Section{
+				Deleted: map[string]int64{"local:gone": 30},
+			},
+			gone:    []string{"local:gone"},
+			applied: 1,
+			twice:   true,
+		},
+		{
+			name:  "a copy edited after the deletion stays",
+			local: []exportPlaylist{{Id: "local:kept", Name: "Kept", Songs: []string{"youtube:d"}, ModifiedAt: 40}},
+			remote: Section{
+				Deleted: map[string]int64{"local:kept": 30},
+			},
+			want: []exportPlaylist{{Source: "local", Id: "local:kept", Name: "Kept", Songs: []string{"youtube:d"}, ModifiedAt: 40}},
+		},
+		{
 			name:  "an untimed copy keeps the local songs",
 			local: []exportPlaylist{{Id: "local:aaaa", Name: "Local", Songs: []string{"youtube:x"}, ModifiedAt: 0}},
 			remote: Section{Items: []exportPlaylist{
