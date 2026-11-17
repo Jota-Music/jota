@@ -271,6 +271,11 @@ export async function unqueue(removeIdx: number): Promise<void> {
 
 	q.splice(removeIdx, 1);
 
+	// The track that was playing left the queue: the panel would show the next
+	// one while the element kept the removed one, so the load has to follow.
+	const playingGone =
+		playingId != null && !q.some((song) => song.id === playingId);
+
 	let nextIndex: number;
 
 	if (q.length === 0) {
@@ -283,6 +288,7 @@ export async function unqueue(removeIdx: number): Promise<void> {
 	}
 
 	setQueueState(q, nextIndex);
+	if (playingGone && nextIndex >= 0) await playAtIndex(nextIndex);
 }
 
 export async function moveQueue(from: number, to: number): Promise<void> {
