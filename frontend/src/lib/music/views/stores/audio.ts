@@ -100,7 +100,13 @@ function endPlayback(a: HTMLAudioElement) {
 		retries === 0
 	) {
 		retries++;
-		void a.play().catch(() => requestRecovery());
+		// play() on an element that already reported `ended` seeks to the
+		// beginning by specification, so the position it reached is put back: a
+		// range the browser cut short continues instead of replaying the track.
+		const resumeAt = a.currentTime;
+		const playback = a.play();
+		a.currentTime = resumeAt;
+		void playback.catch(() => requestRecovery());
 		return;
 	}
 	endedElement = a;
