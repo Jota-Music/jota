@@ -5,8 +5,12 @@ import (
 	"github.com/Jota-Music/jota/internal/music"
 )
 
-// playlistName is where a playlist is cached.
-func playlistName(playlistID string) string { return "spotify/playlists/" + playlistID }
+// playlistName is where a playlist is cached. The id is normalized first: the
+// same playlist pasted as a URI and opened from the library must share one
+// entry, or a revalidation of one form leaves the other stale.
+func playlistName(playlistID string) string {
+	return "spotify/playlists/" + normalizeID(playlistID, "playlist")
+}
 
 // contextName is where a user context is cached: a list that looks like a
 // playlist but has no revision to compare.
