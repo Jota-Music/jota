@@ -80,6 +80,21 @@ export function AppShell({
 	// A hidden window is nobody's screen, so the field is paused rather than
 	// animating 64 layers behind it.
 	const [hidden, setHidden] = useState(document.hidden);
+	const dockRef = useRef<HTMLDivElement>(null);
+
+	// A sheet is 100dvh minus the dock, so it stops above the player bar. The
+	// height of that row is measured here and kept in sync by the row itself: the
+	// safe area and a track starting both move it.
+	useEffect(() => {
+		const dock = dockRef.current;
+		if (!dock) return;
+		const root = document.documentElement.style;
+		const sync = () => root.setProperty("--dock-h", `${dock.offsetHeight}px`);
+		sync();
+		const sizes = new ResizeObserver(sync);
+		sizes.observe(dock);
+		return () => sizes.disconnect();
+	}, []);
 
 	useEffect(() => {
 		const onVisibility = () => setHidden(document.hidden);
@@ -178,7 +193,7 @@ export function AppShell({
 					</main>
 				</div>
 
-				<div class="flex max-w-dvw flex-col">
+				<div ref={dockRef} class="flex max-w-dvw flex-col">
 					<PlayerBar />
 					<MobileBottomNav />
 				</div>

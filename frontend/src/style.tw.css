@@ -65,6 +65,10 @@ body {
 	--scrollbar-thumb: #1b1b1f;
 	--scrollbar-thumb-hover: #52525b;
 	--cover-slot: #18181b;
+	/* Height of the player bar plus the bottom nav on a phone. A sheet is
+	   100dvh minus this, so it stops above the player bar, and `dvh` is what
+	   shrinks it when the keyboard opens. */
+	--dock-h: 0px;
 }
 
 /* Over the ambient glow a near-black bar disappears into the tint, so the thumb

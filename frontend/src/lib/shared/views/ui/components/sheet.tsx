@@ -116,6 +116,15 @@ export function Sheet({
 				"pointer-events-auto z-50 md:z-120 flex items-end justify-center p-0",
 				centered && "sm:items-center sm:p-4",
 				"absolute inset-0",
+				// On a phone the sheet is the window less the dock: it stops above
+				// the player bar, and `dvh` is what shrinks it when the keyboard
+				// opens, so the panel lands above the keyboard with nothing to
+				// compute frame by frame.
+				"max-sm:fixed",
+				// The extra pixel overlaps the dock's top border: an edge that
+				// lands between two pixels otherwise leaves a row of the page it is
+				// supposed to be covering.
+				"max-sm:h-[calc(100dvh-var(--dock-h,0px)+1px)]",
 				mobileOnly && "md:hidden",
 			)}
 			role="presentation"
