@@ -71,7 +71,14 @@ func (s *Service) Follow(user string) error {
 			return nil
 		}
 	}
-	delete(list.Removed, user)
+	// The tombstone is keyed by the casing Unfollow stored, which is the one the
+	// list carried, so a follow spelled differently has to clear it too or the
+	// unfollow would bury this record again on every pass.
+	for id := range list.Removed {
+		if strings.EqualFold(id, user) {
+			delete(list.Removed, id)
+		}
+	}
 	list.Items = append(list.Items, Entry{Id: user, At: time.Now().UnixMilli()})
 	if err := state.Write(state.Follows, list); err != nil {
 		return err
