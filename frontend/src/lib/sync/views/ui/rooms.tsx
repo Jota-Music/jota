@@ -20,6 +20,7 @@ import {
 	WifiOff,
 } from "lucide-preact";
 import { useEffect } from "preact/hooks";
+import { currentSong } from "@/lib/music/views/stores/audio";
 import { shareLink } from "@/lib/music/views/ui/share";
 import { Hint, type Item, RelayHint, Shelf } from "@/lib/music/views/ui/shelf";
 import { getOrder, saveOrder } from "@/lib/shared/app/order";
@@ -228,8 +229,15 @@ export function RoomsShelf() {
 	const statusById = new Map(list.map((room, i) => [room.id, statuses[i]]));
 
 	// Refetch right away when we join or leave, instead of waiting for the poll.
+	// The relay keeps counting a connection until its close lands, so a read
+	// issued in the same tick as a leave still sees us in the room (or still
+	// sees the host we were): one more read once the socket is gone settles it.
 	useEffect(() => {
 		void queryClient.invalidateQueries({ queryKey: ["room-status"] });
+		const settled = setTimeout(() => {
+			void queryClient.invalidateQueries({ queryKey: ["room-status"] });
+		}, 1500);
+		return () => clearTimeout(settled);
 	}, [queryClient, status, role, current]);
 
 	const remove = useMutation({
@@ -346,12 +354,16 @@ export function RoomsShelf() {
 				needsPassword={needsPassword}
 			/>
 		);
-		// The relay caches the room's playback, so a live room can show what it
-		// is playing before we join. The status stays overlaid on the cover.
-		const song = query?.data?.active ? query.data.state?.song : undefined;
+		// The room we are in plays locally: its tile reads the player, since an
+		// unsaved room has no status query and the relay cache lags a track
+		// change. A room we are not in can still show what it plays from that
+		// cache, whose status stays overlaid on the cover.
+		const connected = live === "connected";
+		const song =
+			(connected ? currentSong.value : undefined) ??
+			(query?.data?.active ? query.data.state?.song : undefined);
 		const cover = song?.album?.covers?.[0];
 		const artist = song?.artists?.[0]?.name;
-		const connected = live === "connected";
 		const menu: Action[] = [
 			connected
 				? { icon: LogOut, label: t("sync.rooms.leave"), run: leave }
