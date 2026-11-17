@@ -1,13 +1,15 @@
 // The frameless window resizes from the last pixels of its own sides. A gesture
 // that claims that strip swallows the mouse events the resizer waits for, so
-// the edge goes dead; the app's own drags leave it alone.
+// the edge goes dead; the app's own gestures leave it alone.
 const EDGE_PX = 8;
 
 // Only a mouse feeds the resizer. A finger has none to feed, and on a phone the
 // strip is where a thumb grabs the scrollbar: guarding it there eats half of a
-// target that is already at the screen's own edge.
-export function atWindowEdge(e: PointerEvent): boolean {
-	if (e.pointerType !== "mouse") return false;
+// target that is already at the screen's own edge. A plain mouse event carries
+// no pointerType, and that is the resizer's own input.
+export function atWindowEdge(e: MouseEvent): boolean {
+	const pointer = (e as PointerEvent).pointerType;
+	if (pointer && pointer !== "mouse") return false;
 	return e.clientX < EDGE_PX || e.clientX > window.innerWidth - EDGE_PX;
 }
 

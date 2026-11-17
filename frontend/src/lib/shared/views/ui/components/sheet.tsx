@@ -4,6 +4,7 @@ import { type ComponentChildren, createContext, type RefObject } from "preact";
 import { createPortal } from "preact/compat";
 import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { t } from "@/lib/shared/i18n";
+import { atWindowEdge } from "@/lib/shared/utils/pointer";
 import { cn } from "@/lib/shared/utils/tw";
 import { useSheetDrag } from "@/lib/shared/views/hooks/use-sheet-drag";
 import { hold } from "@/lib/shared/views/stores/overlays";
@@ -125,13 +126,22 @@ export function Sheet({
 				// A backdrop is not a control: a tip under it is a bubble at the
 				// bottom edge of the window that reads as a second dialog.
 				data-tip=""
+				// The resizer writes the edge cursor on the body, and a browser
+				// gives a button its own: without inheriting, the strip under a
+				// sheet shows an arrow and reads as dead.
 				class={cn(
 					"absolute inset-x-0 top-0 bg-black/70 transition-opacity duration-300 sm:inset-0",
 					"bottom-0",
+					"cursor-[inherit]",
 					shown.value ? "opacity-100" : "opacity-0",
 				)}
 				aria-label={closeLabel}
-				onClick={close}
+				// A press on the window's own edge belongs to the resizer: closing
+				// here would do it under the drag that was about to resize.
+				onClick={(e) => {
+					if (atWindowEdge(e)) return;
+					close();
+				}}
 			/>
 
 			<div
