@@ -193,11 +193,14 @@ function Router() {
 			reload = undefined;
 		};
 		const onVisibility = () => {
+			// Each transition starts clean: a hidden event that arrives twice (a
+			// frozen renderer, a pagehide without a visible in between) would
+			// otherwise leave the previous timers running with no way to stop them.
+			cancel();
 			if (!document.hidden) {
 				// A release being (re)created while the app is backgrounded can
 				// leave the update snapshot stale; refresh on return.
 				void checkUpdate();
-				cancel();
 				return;
 			}
 			shed = setTimeout(() => {
