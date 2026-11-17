@@ -3,10 +3,24 @@
 package youtube
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
+
+// keyringTimeout bounds one keyring answer. A locked wallet opens a prompt and
+// the command waits on it, and this runs on a request the settings panel is
+// waiting for, so a keyring that never answers must not hold it.
+const keyringTimeout = 5 * time.Second
+
+// keyringCommand runs a keyring tool with the deadline above.
+func keyringCommand(name string, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), keyringTimeout)
+	defer cancel()
+	return exec.CommandContext(ctx, name, args...).Output()
+}
 
 var (
 	keyringMu      sync.Mutex
@@ -38,8 +52,8 @@ func keyringSecret(browser string) []string {
 // libsecret asks the GNOME keyring, which is where the Chromium family stores
 // "<Browser> Safe Storage" on anything that is not KDE.
 func libsecret(browser string) []string {
-	out, err := exec.Command("secret-tool", "search", "--all",
-		"xdg:schema", "chrome_libsecret_os_crypt_password_v2").Output()
+	out, err := keyringCommand("secret-tool", "search", "--all",
+		"xdg:schema", "chrome_libsecret_os_crypt_password_v2")
 	if err != nil {
 		return nil
 	}
@@ -74,7 +88,7 @@ func libsecret(browser string) []string {
 func kwallet(browser string) []string {
 	product := strings.TrimSuffix(keyringLabel(browser), " Safe Storage")
 	for _, entry := range []string{keyringLabel(browser), "Chrome Safe Storage"} {
-		out, err := exec.Command("kwallet-query", "-f", product+" Keys", "-r", entry, "kwallet").Output()
+		out, err := keyringCommand("kwallet-query", "-f", product+" Keys", "-r", entry, "kwallet")
 		if err != nil {
 			continue
 		}
