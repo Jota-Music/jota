@@ -161,7 +161,7 @@ export function Tooltip() {
 			ref={tipRef}
 			role="tooltip"
 			style={{ left: `${shown.x}px`, top: `${shown.y}px` }}
-			class="pointer-events-none fixed z-400 max-w-60 -translate-x-1/2 rounded-md bg-zinc-800 px-2 py-1 text-center text-xs text-balance text-zinc-100 shadow-lg ring-1 ring-zinc-700"
+			class="pointer-events-none fixed z-400 max-w-60 -translate-x-1/2 rounded bg-black px-2 py-1 text-center text-xs text-balance text-zinc-100 shadow-lg ring-1 ring-zinc-700"
 		>
 			{shown.label}
 		</div>,
