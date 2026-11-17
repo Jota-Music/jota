@@ -10,9 +10,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Jota-Music/jota/internal/state"
@@ -58,6 +60,35 @@ func Start() {
 	for dir, limit := range limits {
 		Trim(dir, limit)
 	}
+}
+
+// trimInterval is how often one directory may pay for a listing. A session that
+// runs for days writes far more entries than the ceiling allows, so the trim
+// cannot wait for the next launch; a listing per write would cost more than the
+// write itself.
+const trimInterval = 10 * time.Minute
+
+var (
+	trimMu  sync.Mutex
+	trimmed = map[string]time.Time{}
+)
+
+// maybeTrim keeps a directory under its ceiling from the write path.
+func maybeTrim(name string) {
+	dir := path.Dir(name)
+	limit, ok := limits[dir]
+	if !ok {
+		return
+	}
+	trimMu.Lock()
+	last, seen := trimmed[dir]
+	if seen && time.Since(last) < trimInterval {
+		trimMu.Unlock()
+		return
+	}
+	trimmed[dir] = time.Now()
+	trimMu.Unlock()
+	Trim(dir, limit)
 }
 
 // sweep removes the temporary files a crash left behind. A write that died
@@ -188,6 +219,7 @@ func writeEntry(name string, data []byte) error {
 		_ = os.Remove(tmp)
 		return err
 	}
+	maybeTrim(name)
 	return nil
 }
 
