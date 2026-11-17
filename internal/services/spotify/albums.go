@@ -70,6 +70,11 @@ func bestImageURL(images []*metadatapb.Image) string {
 		}
 	}
 	if over == "" {
+		if best == "" {
+			// No image at all: an empty answer, not a URL that 404s through the
+			// cover proxy on every render.
+			return ""
+		}
 		return "https://i.scdn.co/image/" + best
 	}
 	return "https://i.scdn.co/image/" + over
