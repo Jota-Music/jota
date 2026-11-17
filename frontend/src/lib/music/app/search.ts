@@ -52,6 +52,7 @@ export async function searchYouTubeChannels(
 export function youtubeVideoToSong(video: Video): Song {
 	const id = `youtube:${video.id}`;
 	const author = video.author || "YouTube";
+	const channel = video.channelId ? `youtube:channel:${video.channelId}` : "";
 	const thumbnailUrl = `https://img.youtube.com/vi/${video.id}/default.jpg`;
 	return {
 		id,
@@ -68,7 +69,7 @@ export function youtubeVideoToSong(video: Video): Song {
 			url: "",
 			covers: [thumbnailUrl],
 		},
-		artists: [{ id: video.channelId, name: author, source: "youtube" }],
+		artists: [{ id: channel, name: author, source: "youtube" }],
 		youtubeId: video.id,
 	};
 }

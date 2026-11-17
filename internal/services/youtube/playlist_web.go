@@ -100,9 +100,18 @@ func lockupSong(m map[string]any, playlist string) (music.Song, bool) {
 		Duration:  lockupDuration(m),
 		Share:     music.Share{Id: music.YouTubePrefix + "track:" + id, Url: "https://www.youtube.com/watch?v=" + id},
 		Album:     music.Album{Title: album, Covers: []string{lockupCover(m)}},
-		Artists:   []music.Artist{{Id: artistID, Name: artist, Source: "youtube"}},
+		Artists:   []music.Artist{{Id: channelID(artistID), Name: artist, Source: "youtube"}},
 		YoutubeId: id,
 	}, true
+}
+
+// channelID names a channel the way the app stores it everywhere else, so a
+// bare id the lockup answered with is completed and an empty one stays empty.
+func channelID(id string) string {
+	if id == "" {
+		return ""
+	}
+	return music.YouTubePrefix + "channel:" + id
 }
 
 // lockupArtist reads the byline of a lockup: the first part of its first

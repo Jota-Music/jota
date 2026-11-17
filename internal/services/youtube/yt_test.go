@@ -303,3 +303,36 @@ func TestThePlaylistFolderTellsBothKindsApart(t *testing.T) {
 		t.Fatal("the playlist id is taken for a channel id")
 	}
 }
+
+// An artist link carries the app's own form of the id, so the channel resolver
+// reads it as the bare id YouTube answers with instead of trying to resolve the
+// prefix as a URL.
+func TestTheChannelResolverReadsTheAppsPrefix(t *testing.T) {
+	const channel = "UC" + "abcdefghijklmnopqrstuv"
+
+	for _, name := range []string{
+		"youtube:channel:" + channel,
+		"channel:" + channel,
+		channel,
+	} {
+		got, err := resolveChannelID(name)
+		if err != nil {
+			t.Fatalf("resolve %q: %v", name, err)
+		}
+		if got != channel {
+			t.Fatalf("resolve %q = %q", name, got)
+		}
+	}
+}
+
+// A lockup answers the channel bare; the app names it with its own prefix
+// everywhere else, so the row is completed before it is stored.
+func TestTheLockupCompletesABareChannelID(t *testing.T) {
+	const bare = "UC" + "abcdefghijklmnopqrstuv"
+	if got := channelID(bare); got != "youtube:channel:"+bare {
+		t.Fatalf("channelID = %q", got)
+	}
+	if got := channelID(""); got != "" {
+		t.Fatalf("empty channelID = %q", got)
+	}
+}

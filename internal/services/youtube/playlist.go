@@ -155,8 +155,13 @@ var channelIDPattern = regexp.MustCompile(`^UC[A-Za-z0-9_-]{22}$`)
 // resolveChannelID turns a channel URL, @handle, or bare channel ID into the
 // channel ID the browse endpoint expects. Non-ID inputs are resolved through
 // innertube and cached.
+// resolveChannelID turns whatever names a channel — an id, a handle or a URL —
+// into the bare id YouTube answers with. An artist link carries the app's own
+// `youtube:channel:` form, so both prefixes are understood here.
 func resolveChannelID(channel string) (string, error) {
 	channel = strings.TrimSpace(channel)
+	channel = strings.TrimPrefix(channel, music.YouTubePrefix)
+	channel = strings.TrimPrefix(channel, "channel:")
 	if channel == "" {
 		return "", errors.New("empty channel")
 	}

@@ -30,7 +30,11 @@ export function UserHeader({
 		enabled: spotify && !!identifier,
 	});
 
-	const followKey = spotify ? identifier : `youtube:${identifier}`;
+	// The follow key names the channel the way the store does, whatever form of
+	// the id the page was opened with.
+	const followKey = spotify
+		? identifier
+		: `youtube:${identifier.replace(/^(youtube:)?(channel:)?/, "")}`;
 	const loading = pending || profile.isLoading;
 
 	const name = profile.data?.displayName || fallbackName || identifier;
