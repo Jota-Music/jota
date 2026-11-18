@@ -162,7 +162,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	}()
 	go func() {
 		importLegacy()
-		verifyYouTubeSession()
+		refreshYouTubeSession()
 	}()
 
 	a.syncTicker()

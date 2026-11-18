@@ -354,15 +354,33 @@ UI warns before storing it: Google can ban an account used this way.
   `PersistWebviewCookies` before it opens, pointing the default web context's cookie
   manager at the same path `WebviewCookies` reads back; without that the jar stays in
   memory and only the visible half of the session can be handed over.
-- A session is verified against YouTube (`Verify`) before it is kept. A partial one
-  still signs requests but cannot open private playlists or the account's own lists,
-  which is what `SessionFull` reports to the panel and `youtube.Full` reports in Go.
-- **Startup checks the session.** `verifyYouTubeSession` runs in the background
-  after `ServiceStartup` and drops a stored session YouTube answers with
-  `ErrSession`, so the panel stops claiming it is signed in. The same verdict from
-  `GetMyYouTubePlaylists` drops it too. The drop is local: a session this device
-  cannot use may still work on another one, and only the user clearing it
-  deletes it everywhere (`tombstoneSession`).
+- A session is not verified against YouTube when it is kept: the next signed
+  request is the judge, and only the sign-in window logs what `Verify` answered
+  (`youtube_login.go`). A partial one still signs requests but cannot open private
+  playlists or the account's own lists, which is what `SessionFull` reports to the
+  panel and `youtube.Full` reports in Go, and `ErrPartialSession` keeps it from
+  replacing a full one.
+- **A verdict never costs the session.** The same rules in Jondo, adapted to each
+  app's language and to when each one asks the network:
+  * A verdict only marks it (`state.YouTube.Expired`, read by `youtube.SignedIn`
+    and the panel): the cookies stay, and only the user's clear drops them, a
+    deletion that travels (`tombstoneSession`).
+  * The evidence is a real signed request: the account's own lists, which load
+    once every `refresh.Interval`, or a signed stream. A load that answers clears
+    the mark (`MarkExpired(false)`). There is no homepage probe: a transport
+    failure proves nothing, and a partial set reads as signed out there.
+  * The jar the session came from is remembered (`SessionBrowser`, written only by
+    a browser import) and a launch refreshes from it (`refreshYouTubeSession`,
+    local, no network). A rejected request asks that jar first
+    (`recoverYouTubeSession`, no account check: Google rotates the cookies there),
+    then any jar that continues the same account (`youtube.SameAccount`), and
+    never another account's.
+  * The document is the last net: the merge only applies a section that changed,
+    so a launch with no cookies applies the staged blob itself
+    (`storeYouTubeSession`).
+  * An import is judged locally, never remotely: a set without SAPISID or one
+    that would replace a full session with a partial one is refused
+    (`ErrPartialSession`).
 - **Playback asks anonymously first.** `playerRequest` sends the player call as a
 guest and only retries it signed when the answer is `LOGIN_REQUIRED` and cookies
 are stored, so the account is spent only where it is needed. `audioURL` then
@@ -416,7 +434,7 @@ source (`youtube`, `spotify`), as an encrypted blob that merges exactly like a
 setting: `internal/backup/settings.go` aliases `Sessions` to `Settings`, so
 `mergeSettings` is the one merge and the moment it was written still dates it. Both are
 staged into `session:<source>` when they change (`syncYouTubeCookies`,
-`syncSpotifySession`) and applied on a pass (`applyYouTubeCookies`,
+`syncSpotifySession`) and applied on a pass (`storeYouTubeSession`,
 `applySpotifySession`), which reconnects or re-signs the source on the spot.
 - **The sessions only travel behind a pass.** `encryptWithPass` derives a 32-byte
 key with PBKDF2-SHA256 (100k iterations, random 16-byte salt) and seals the blob
@@ -431,7 +449,7 @@ identical to what they were about to stage: re-encrypting the same cookies under
 fresh salt would change the blob, mark the store dirty and send a pass for nothing.
 Only a blob this pass can open and that matches counts as proof; a blob it cannot
 open, or a tombstone, stages as before, so a pass set later still seals the session.
-- A partial session never overwrites a full one: `applyYouTubeCookies` compares
+- A partial session never overwrites a full one: `storeYouTubeSession` compares
 `youtube.Full` on both sides and leaves the local cookies alone when the incoming
 blob cannot open the account's own lists. The local full session is re-staged at
 startup, so it wins the next pass instead. The Spotify copy is applied only when

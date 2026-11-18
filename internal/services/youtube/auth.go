@@ -28,6 +28,14 @@ import (
 type session struct {
 	Cookies string `json:"cookies,omitempty"`
 	Account string `json:"account,omitempty"`
+	// Browser names the browser the cookies were imported from, empty when they
+	// were pasted or brought by another device. It is what lets a refresh ask
+	// the jar that keeps the session alive instead of guessing.
+	Browser string `json:"browser,omitempty"`
+	// Expired is this device's verdict on the cookies, never a reason to drop
+	// them: a rejected answer can be one sample, and the copy the document and
+	// the browser hold is what it is refreshed from.
+	Expired bool `json:"expired,omitempty"`
 	// Links are the videos the user pinned by hand: an order, kept in the
 	// state and carried in the backup. The videos a search settled on are not
 	// here, they have a file each.
@@ -103,6 +111,13 @@ func cookies() string {
 // what the request signature is derived from. Accepts either a raw Cookie header
 // ("a=1; b=2") or a Netscape cookies.txt export.
 func SetCookies(raw string) error {
+	return SetCookiesFrom(raw, "")
+}
+
+// SetCookiesFrom stores the account cookie string and the browser it came from.
+// Naming the browser is what lets a rejected session be refreshed from the jar
+// that keeps it alive; an empty name forgets the one that was remembered.
+func SetCookiesFrom(raw, browser string) error {
 	normalized := normalizeCookies(raw)
 	if normalized == "" {
 		return errors.New("empty cookies")
@@ -110,10 +125,15 @@ func SetCookies(raw string) error {
 	if sidValue(normalized) == "" {
 		return errors.New("cookies missing SAPISID")
 	}
-	// The name belongs to the cookies that answered it.
+	if sessionValue(normalized) == "" && sessionValue(readSession().Cookies) != "" {
+		return ErrPartialSession
+	}
+	// The name belongs to the cookies that answered it, and so does the browser.
 	if err := updateSession(func(stored *session) {
 		stored.Cookies = normalized
 		stored.Account = ""
+		stored.Browser = browser
+		stored.Expired = false
 	}); err != nil {
 		return err
 	}
@@ -126,6 +146,39 @@ func SetCookies(raw string) error {
 	// The cached list belongs to the account that was signed in before.
 	_ = cache.Forget(myPlaylistsKey)
 	return nil
+}
+
+// ErrPartialSession reports a set that only signs requests, offered where one
+// that opens the account's own lists is already stored.
+var ErrPartialSession = errors.New("that session only signs requests; keeping the one that opens your lists")
+
+// SessionBrowser names the browser the stored session was imported from, empty
+// when it was pasted or brought by another device.
+func SessionBrowser() string {
+	return readSession().Browser
+}
+
+// Expired reports a session YouTube answered as signed out. The cookies are kept
+// either way: a rejected verdict can be one sample, and the copy in the document
+// and the browser's own jar are what it is refreshed from.
+func Expired() bool {
+	return readSession().Expired
+}
+
+// MarkExpired records or clears the verdict, so the panel stops claiming the
+// session works and starts again when it does. A verdict that did not move writes
+// nothing: every signed request that succeeds reports it.
+func MarkExpired(expired bool) error {
+	if Expired() == expired {
+		return nil
+	}
+	return updateSession(func(stored *session) { stored.Expired = expired })
+}
+
+// SignedIn reports a stored session the panel can act on: the cookies are there
+// and YouTube has not answered them as signed out.
+func SignedIn() bool {
+	return HasAuth() && !Expired()
 }
 
 // normalizeCookies turns a raw Cookie header or a Netscape cookies.txt export
@@ -218,6 +271,8 @@ func ClearCookies() error {
 	return updateSession(func(stored *session) {
 		stored.Account = ""
 		stored.Cookies = ""
+		stored.Browser = ""
+		stored.Expired = false
 	})
 }
 
@@ -272,6 +327,14 @@ func cookieValue(raw, name string) string {
 		}
 	}
 	return ""
+}
+
+// SameAccount reports whether two cookie strings name the same Google session,
+// judged by the secret the request signature is derived from. The cookies
+// Google rotates change often; the account behind them does not.
+func SameAccount(a, b string) bool {
+	sid := sidValue(a)
+	return sid != "" && sid == sidValue(b)
 }
 
 // Full reports whether a raw cookie string carries the private session ones.

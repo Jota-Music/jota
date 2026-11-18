@@ -51,7 +51,7 @@ func (a *App) SetSessionPass(pass string) error {
 		a.syncInBackground()
 		return nil
 	}
-	applyYouTubeCookies(stagedSession("youtube"))
+	storeYouTubeSession(stagedSession("youtube"))
 	applySpotifySession(stagedSession("spotify"))
 	markSealed()
 	a.syncYouTubeCookies()

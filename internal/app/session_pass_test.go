@@ -115,11 +115,3 @@ func TestSyncSessionsAreNotStagedWhenUnchanged(t *testing.T) {
 	a.syncSpotifySession()
 	unchanged("spotify", blob, at)
 }
-
-func init() {
-	// Applying a session verifies it in the background and clears it when YouTube
-	// rejects it. Without a network every session is rejected, so the test would
-	// race the clear it just applied. The stub answers a healthy session; the
-	// package has no test that needs a rejected one.
-	verifyCookies = func() error { return nil }
-}

@@ -53,6 +53,59 @@ func TestSetCookiesValidatesSapisid(t *testing.T) {
 	}
 }
 
+// The browser is remembered with the cookies that came from it, and forgotten by
+// any other way in: a pasted session may belong to another account, and the jar
+// would be asked to refresh the wrong one.
+func TestSetCookiesRemembersTheBrowser(t *testing.T) {
+	resetAuth(t)
+
+	if err := SetCookiesFrom("SAPISID=one; __Secure-3PSID=full", "Chrome"); err != nil {
+		t.Fatalf("SetCookiesFrom: %v", err)
+	}
+	if got := SessionBrowser(); got != "Chrome" {
+		t.Fatalf("browser = %q, want Chrome", got)
+	}
+	if err := MarkExpired(true); err != nil {
+		t.Fatalf("MarkExpired: %v", err)
+	}
+	if !Expired() || SignedIn() {
+		t.Fatal("a marked session still reports as signed in")
+	}
+
+	if err := SetCookies("SAPISID=two; __Secure-3PSID=full"); err != nil {
+		t.Fatalf("SetCookies: %v", err)
+	}
+	if got := SessionBrowser(); got != "" {
+		t.Fatalf("a pasted session kept %q as its browser", got)
+	}
+	if Expired() || !SignedIn() {
+		t.Fatal("a fresh session kept the expired verdict")
+	}
+
+	if err := ClearCookies(); err != nil {
+		t.Fatalf("ClearCookies: %v", err)
+	}
+	if SignedIn() || Expired() {
+		t.Fatal("a cleared session still reports a verdict")
+	}
+}
+
+// A set that only signs requests never replaces one that opens the account's own
+// lists, and the rule is local: no request is needed to know it.
+func TestPartialSessionDoesNotReplaceFull(t *testing.T) {
+	resetAuth(t)
+
+	if err := SetCookies("SAPISID=one; __Secure-3PSID=full"); err != nil {
+		t.Fatalf("SetCookies: %v", err)
+	}
+	if err := SetCookies("SAPISID=two"); !errors.Is(err, ErrPartialSession) {
+		t.Fatalf("partial over full = %v, want ErrPartialSession", err)
+	}
+	if got := Cookies(); !Full(got) {
+		t.Fatalf("the full session was replaced by %q", got)
+	}
+}
+
 func TestNormalizeCookies(t *testing.T) {
 	header := "SID=a; SAPISID=b; HSID=c"
 	if got := normalizeCookies(header); got != header {

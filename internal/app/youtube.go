@@ -19,10 +19,10 @@ func (a *App) ResolveAudio(song music.Song) (music.Audio, error) {
 			song.Id, song.YoutubeId, song.Name, err)
 
 		// A sign-in would fix it, so nudge the UI to offer one.
-		if errors.Is(err, youtube.ErrLoginRequired) && !youtube.HasAuth() {
+		if errors.Is(err, youtube.ErrLoginRequired) && !youtube.SignedIn() {
 			application.Get().Event.Emit("youtube:signin-required", song.Name)
 		}
-		if errors.Is(err, youtube.ErrMembersOnly) && !youtube.HasAuth() {
+		if errors.Is(err, youtube.ErrMembersOnly) && !youtube.SignedIn() {
 			application.Get().Event.Emit("youtube:signin-required", song.Name)
 		}
 	}
@@ -66,14 +66,25 @@ func (a *App) GetMyYouTubePlaylists() ([]music.PlaylistSummary, error) {
 	list, err := a.YouTube.GetMyYouTubePlaylists()
 	if err != nil {
 		log.Printf("youtube: account playlists: %v", err)
-		// A session YouTube rejects can never open the account's lists, so
-		// drop it instead of leaving the panel saying it is signed in.
-		if errors.Is(err, youtube.ErrSession) {
-			log.Printf("youtube: clearing session YouTube rejected")
-			clearYouTubeSession()
+		// A session YouTube rejects can never open the account's lists, so the
+		// panel stops claiming it is signed in. A partial set is answered as a
+		// rejected session by design (it only signs requests), and its verdict
+		// would cost playback for nothing.
+		if errors.Is(err, youtube.ErrSession) && youtube.SessionFull() {
+			// The jar is where Google refreshes the session, and this is the
+			// moment the user is looking at the shelf: asking for it here is
+			// what keeps a working session from waiting for the next launch.
+			if recoverYouTubeSession() {
+				return []music.PlaylistSummary{}, nil
+			}
+			log.Printf("youtube: session YouTube rejected")
+			expireYouTubeSession()
 		}
 		return []music.PlaylistSummary{}, nil
 	}
+	// The account's own lists answered, which is the evidence that the stored
+	// session works: a mark from an earlier verdict stops applying.
+	_ = youtube.MarkExpired(false)
 	return list, nil
 }
 
@@ -98,24 +109,26 @@ func (a *App) GetYouTubeChannelInfo(channel string) (music.ChannelInfo, error) {
 
 // SetYouTubeCookies stores the Google account cookies used to sign innertube
 // requests. Playing age-restricted videos and avoiding the bot check requires
-// it; using an account this way can get it banned by Google. The session is
-// checked against YouTube before it is kept, because a partial export signs
-// requests yet is still anonymous, which only shows up later on a private
-// playlist.
+// it; using an account this way can get it banned by Google. The verdict is the
+// next signed request's, so an import is never refused for one bad answer; a set
+// that only signs requests is refused locally (`ErrPartialSession`).
 func (a *App) SetYouTubeCookies(cookies string) error {
-	if err := youtube.SetCookies(cookies); err != nil {
+	return a.storeYouTube(cookies, "")
+}
+
+// storeYouTube keeps a session and remembers which browser it came from: that is
+// the jar a rejection is refreshed from. Nothing is asked of the network here: an
+// import is never refused for an answer that could be one bad sample, and the next
+// signed request is what tells whether the cookies work.
+func (a *App) storeYouTube(cookies, browser string) error {
+	if err := youtube.SetCookiesFrom(cookies, browser); err != nil {
 		return err
 	}
-	if err := youtube.Verify(); err != nil {
-		// Only a session YouTube rejects is dropped. A transport failure says
-		// nothing about the cookies, and clearing them on a flaky connection
-		// would sign the device out for a network hiccup.
-		if errors.Is(err, youtube.ErrSession) {
-			_ = youtube.ClearCookies()
-		}
-		return err
+	if gaps := youtube.SessionGaps(youtube.Cookies()); len(gaps) > 0 {
+		log.Printf("youtube: stored session signs requests only, missing %s", strings.Join(gaps, ", "))
 	}
 	a.syncYouTubeCookies()
+	emitYouTubeSession()
 	return nil
 }
 
@@ -141,107 +154,167 @@ func (a *App) ImportYouTubeCookies(data, pass string) error {
 	return a.SetYouTubeCookies(pt)
 }
 
-// applyYouTubeCookies decrypts a synced cookie blob with the local pass and
-// stores it as the account session. It is a no-op when there is no pass or
-// the blob cannot be opened.
-func applyYouTubeCookies(blob string) {
+// storeYouTubeSession decrypts a synced cookie blob with the local pass and
+// keeps it as the account session, answering whether the stored session changed.
+// A blob this device cannot open, and one that carries the cookies it already
+// holds, are no-ops.
+func storeYouTubeSession(blob string) bool {
 	blob = strings.TrimSpace(blob)
 	if blob == "" {
-		return
+		return false
 	}
 	pass := storedPass()
 	if pass == "" {
-		return
+		return false
 	}
 	pt, err := decryptWithPass(pass, blob)
-	if err != nil {
-		return
+	if err != nil || pt == "" {
+		return false
+	}
+	if youtube.Cookies() == pt {
+		return false
 	}
 	localFull, incomingFull := youtube.Full(youtube.Cookies()), youtube.Full(pt)
 	// A partial session must not overwrite a full one: the account's own
 	// playlists stay closed with the partial set. Startup staging pushes the
 	// full local session back to the document.
 	if localFull && !incomingFull {
-		return
+		return false
 	}
 	if err := youtube.SetCookies(pt); err != nil {
-		return
+		return false
 	}
 	if gaps := youtube.SessionGaps(pt); len(gaps) > 0 {
 		log.Printf("youtube: synced session applied but partial, missing %s", strings.Join(gaps, ", "))
 	} else {
 		log.Printf("youtube: synced session applied")
 	}
+	emitYouTubeSession()
+	return true
+}
+
+// expireYouTubeSession marks the stored session as one YouTube answered signed
+// out, so the panel stops claiming it works. The cookies stay: a rejected verdict
+// can be one sample, and the copy in the document and in the browser's own jar is
+// what it is refreshed from.
+func expireYouTubeSession() {
+	_ = youtube.MarkExpired(true)
+	emitYouTubeSession()
+}
+
+// emitYouTubeSession tells the page the stored session changed, so the panel and
+// the shelf read it again.
+func emitYouTubeSession() {
 	if app := application.Get(); app != nil {
 		app.Event.Emit("youtube:session-updated")
 	}
-	go func() {
-		if !errors.Is(verifyCookies(), youtube.ErrSession) {
-			return
+}
+
+// The browser jar readers are variables so a test answers a session without this
+// machine's browsers.
+var (
+	cookiesFromBrowsers = youtube.CookiesBrowsers
+	browserCookies      = youtube.CookiesFromBrowser
+)
+
+// recoverYouTubeSession takes the session a browser on this machine holds, for a
+// stored session YouTube answered as expired. It asks the network nothing: the
+// request that failed is the evidence, and the copy is judged by the next one.
+func recoverYouTubeSession() bool {
+	stored := youtube.Cookies()
+	remembered := youtube.SessionBrowser()
+	// The jar the session came from is refreshed by the browser itself, so it is
+	// asked first and without an account check: Google rotates these cookies, and
+	// the one it hands back may well name another secret.
+	if remembered != "" {
+		if raw, err := browserCookies(remembered); err == nil && adoptYouTubeSession(remembered, raw, stored) {
+			return true
 		}
-		log.Printf("youtube: clearing synced session YouTube rejected")
-		clearYouTubeSession()
-	}()
-}
-
-// clearYouTubeSession forgets a session YouTube rejected on this device alone, so
-// the panel stops claiming it is signed in. It leaves the synced copy in place: a
-// session this device cannot use may still work on another one, and only the user
-// clearing it may delete it everywhere.
-func clearYouTubeSession() {
-	_ = youtube.ClearCookies()
-	if app := application.Get(); app != nil {
-		app.Event.Emit("youtube:session-updated")
 	}
+	// Another browser continues the same session or it is not considered: signing
+	// the device in as someone else costs more than asking for an import.
+	for _, browser := range cookiesFromBrowsers() {
+		if browser == remembered {
+			continue
+		}
+		raw, err := browserCookies(browser)
+		if err != nil || !youtube.SameAccount(stored, raw) {
+			continue
+		}
+		if adoptYouTubeSession(browser, raw, stored) {
+			return true
+		}
+	}
+	return false
 }
 
-// verifyCookies is youtube.Verify. It is a variable so a test can answer a
-// session without the network round trip and without the clear a rejected one
-// triggers behind the caller's back.
-var verifyCookies = youtube.Verify
+// adoptYouTubeSession keeps a jar's cookies over a rejected copy. A set this
+// device already gave up on is not taken again, so a dead jar cannot keep the
+// panel cycling between the same two answers.
+func adoptYouTubeSession(browser, raw, dropped string) bool {
+	if raw == "" || raw == dropped {
+		return false
+	}
+	if err := youtube.SetCookiesFrom(raw, browser); err != nil {
+		return false
+	}
+	log.Printf("youtube: session refreshed from %s", browser)
+	stageYouTubeCookies()
+	emitYouTubeSession()
+	return true
+}
 
-// verifyYouTubeSession clears a stored session YouTube no longer accepts, so
-// the panel stops claiming it is signed in and offers a fresh sign-in.
-func verifyYouTubeSession() {
+// refreshYouTubeSession is the launch trigger, and it touches no network: the
+// staged copy stands in when this device has none, and the browser's jar — the one
+// the session came from, or one that continues the same account — keeps what it
+// holds current. Evidence about a dead session comes from a real request, never
+// from a probe here.
+func refreshYouTubeSession() {
 	if !youtube.HasAuth() {
+		// The merge only applies a section that changed, so the copy the document
+		// still holds is never asked for on its own: this is what brings back one
+		// a previous launch dropped.
+		storeYouTubeSession(stagedSession("youtube"))
 		return
 	}
-	if !errors.Is(verifyCookies(), youtube.ErrSession) {
-		return
-	}
-	log.Printf("youtube: clearing stored session YouTube rejected")
-	clearYouTubeSession()
+	recoverYouTubeSession()
 }
 
-// syncYouTubeCookies encrypts the stored cookies with the local pass and stages
-// them for the next sync pass. It does nothing when there is no pass or no
-// session.
-func (a *App) syncYouTubeCookies() {
-	pass := a.SessionPass()
+// stageYouTubeCookies seals the stored cookies for the next pass and answers
+// whether it staged anything.
+func stageYouTubeCookies() bool {
+	pass := storedPass()
 	if pass == "" {
-		return
+		return false
 	}
 	raw := youtube.Cookies()
 	if raw == "" {
-		return
+		return false
 	}
 	// Staging the same plaintext again would re-encrypt it under a fresh salt
 	// and mark the pass dirty for nothing. Only a blob this pass can open and
 	// that matches is proof of identity; anything else stages as before.
 	if stored := stagedSession("youtube"); stored != "" {
 		if pt, err := decryptWithPass(pass, stored); err == nil && pt == raw {
-			return
+			return false
 		}
 	}
 	enc, err := encryptWithPass(pass, raw)
 	if err != nil {
-		return
+		return false
 	}
 	if err := stageBlob("youtube", enc); err != nil {
-		return
+		return false
 	}
 	sessionsSync.dirty.Store(true)
-	a.syncInBackground()
+	return true
+}
+
+// syncYouTubeCookies stages the stored cookies and asks for a pass when it did.
+func (a *App) syncYouTubeCookies() {
+	if stageYouTubeCookies() {
+		a.syncInBackground()
+	}
 }
 
 func (a *App) ClearYouTubeCookies() error {
@@ -277,7 +350,7 @@ func (a *App) YouTubeCookiesFromBrowser(browser string) error {
 	if err != nil {
 		return err
 	}
-	if err := a.SetYouTubeCookies(raw); err != nil {
+	if err := a.storeYouTube(raw, browser); err != nil {
 		return err
 	}
 	return a.YouTube.RevalidateMyYouTubePlaylists()
@@ -292,7 +365,7 @@ func (a *App) YouTubeAccount() string {
 }
 
 func (a *App) YouTubeSignedIn() bool {
-	return youtube.HasAuth()
+	return youtube.SignedIn()
 }
 
 // YouTubeStatus is everything the panel and the shelf need about the stored
@@ -313,7 +386,7 @@ func (a *App) YouTubeStatus() YouTubeStatus {
 	// first launch after the upgrade from answering "signed out".
 	importLegacy()
 	return YouTubeStatus{
-		SignedIn: youtube.HasAuth(),
+		SignedIn: youtube.SignedIn(),
 		Full:     youtube.SessionFull(),
 		Browser:  runtime.GOOS != "android",
 		Account:  youtube.Account(),

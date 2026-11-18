@@ -50,7 +50,7 @@ func (s *sessionsStore) Apply(part backup.Settings) error {
 		}
 		switch key {
 		case "youtube":
-			applyYouTubeCookies(blob)
+			storeYouTubeSession(blob)
 		case "spotify":
 			applySpotifySession(blob)
 		}

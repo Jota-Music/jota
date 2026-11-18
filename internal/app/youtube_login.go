@@ -219,6 +219,11 @@ func (a *App) YouTubeBrowserLogin() error {
 						}
 					}()
 					return true
+				} else if errors.Is(err, youtube.ErrPartialSession) {
+					// The store holds the full set this device already had; the
+					// window's partial one is not news, so stop polling for it.
+					log.Printf("youtube: the sign-in window's store adds nothing to the stored session")
+					return false
 				}
 			}
 			time.Sleep(500 * time.Millisecond)
