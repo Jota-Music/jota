@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Disc3, ListMusic, Loader } from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import { useParams } from "wouter-preact";
+import { artistFollow } from "@/lib/music/app/follows";
 import { getArtist, getArtistDiscography } from "@/lib/music/app/get-artist";
 import { pageLink } from "@/lib/music/app/share";
 import type { AlbumSummary, Song } from "@/lib/music/model";
@@ -16,7 +17,6 @@ import {
 import { playList } from "@/lib/music/views/stores/player";
 import { queueSource } from "@/lib/music/views/stores/queue";
 import { clearSelection, selectAll } from "@/lib/music/views/stores/selection";
-import { artistFollow } from "@/lib/music/app/follows";
 import { FollowButton } from "@/lib/music/views/ui/follow";
 import { Virtualization } from "@/lib/music/views/ui/playlist/virtualization";
 import { shareLink } from "@/lib/music/views/ui/share";

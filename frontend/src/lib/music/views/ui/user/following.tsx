@@ -1,11 +1,7 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/preact-query";
 import { Mic2, User as UserIcon } from "lucide-preact";
 import { spotifyReady } from "@/lib/auth/views/stores/session";
-import {
-	artistFollow,
-	parseFollow,
-	userFollow,
-} from "@/lib/music/app/follows";
+import { artistFollow, parseFollow, userFollow } from "@/lib/music/app/follows";
 import { getArtist } from "@/lib/music/app/get-artist";
 import { getChannelInfo } from "@/lib/music/app/get-channel";
 import getFollowing from "@/lib/music/app/get-following";

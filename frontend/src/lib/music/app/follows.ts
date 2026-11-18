@@ -12,7 +12,10 @@ export function channelFollow(id: string): string {
 }
 
 export function userFollow(handle: string): string {
-	return `spotify:user:${handle.trim().replace(/^spotify:user:/, "").replace(/^@/, "")}`;
+	return `spotify:user:${handle
+		.trim()
+		.replace(/^spotify:user:/, "")
+		.replace(/^@/, "")}`;
 }
 
 export type FollowTarget = {
