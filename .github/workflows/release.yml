@@ -58,10 +58,13 @@ jobs:
       - name: Install Linux (GTK3 / WebKit2GTK 4.1) build deps
         # Plain apt, not a cached install: the cache action saves its entry even
         # when the download failed, so the next run restores no packages and the
-        # build dies on pkg-config instead of on the download that broke.
+        # build dies on pkg-config instead of on the download that broke. The
+        # timeouts are the other half: a stalled mirror once held this step for
+        # the whole job budget.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+          apt="sudo apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=3"
+          $apt update
+          $apt install -y libgtk-3-dev libwebkit2gtk-4.1-dev
       - name: Install wails3
         run: |
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
@@ -145,8 +148,9 @@ jobs:
           cp squashfs-root/usr/bin/jota bin/jota
       - name: Install flatpak-builder
         run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder dbus-x11
+          apt="sudo apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=3"
+          $apt update
+          $apt install -y flatpak flatpak-builder dbus-x11
           flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
       - name: Build the Flatpak bundle
         run: |
@@ -260,8 +264,9 @@ jobs:
         # Plain apt for the same reason as the Linux deps: a cached install that
         # fails still writes its entry, and the next run then builds with nothing.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y nsis
+          apt="sudo apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=3"
+          $apt update
+          $apt install -y nsis
       - name: Install wails3
         run: |
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
