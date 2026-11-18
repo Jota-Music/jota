@@ -30,7 +30,10 @@ env:
 jobs:
   linux:
     if: ${{ !github.event.inputs.jobs || github.event.inputs.jobs == 'all' || contains(github.event.inputs.jobs, 'linux') }}
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: the label moved to 26.04, whose archive already
+    # served a package it does not host (a 404 on gstreamer1.0-x amd64v3 broke
+    # the GTK install). 24.04 is also the base the AppImage is smoked on.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -53,12 +56,12 @@ jobs:
         with:
           bun-version: 1.4.2
       - name: Install Linux (GTK3 / WebKit2GTK 4.1) build deps
-        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1
-        with:
-          packages: libgtk-3-dev libwebkit2gtk-4.1-dev
-          # Bumped to drop a cache entry a cancelled run saved empty: a hit
-          # restored no packages and the build failed on pkg-config.
-          version: 2.0
+        # Plain apt, not a cached install: the cache action saves its entry even
+        # when the download failed, so the next run restores no packages and the
+        # build dies on pkg-config instead of on the download that broke.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
       - name: Install wails3
         run: |
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
@@ -254,10 +257,11 @@ jobs:
         with:
           bun-version: 1.4.2
       - name: Install NSIS
-        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1
-        with:
-          packages: nsis
-          version: 1.0
+        # Plain apt for the same reason as the Linux deps: a cached install that
+        # fails still writes its entry, and the next run then builds with nothing.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nsis
       - name: Install wails3
         run: |
           version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
