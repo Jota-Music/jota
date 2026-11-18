@@ -192,8 +192,9 @@ export function Shelf({
 		<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md md:border border-zinc-800">
 			{/* One padding and one gap for the whole shelf: the bar and the items sit
 			on the same 8px, so the first row lines up with the filters and nothing
-			has to guess where the content starts. */}
-			<section class="flex min-h-0 flex-1 flex-col gap-2 p-3">
+			has to guess where the content starts. On a phone the bottom edge is
+			the player bar, so the shelf ends on it instead of leaving a strip. */}
+			<section class="flex min-h-0 flex-1 flex-col gap-2 p-3 pb-0 md:pb-3">
 				{/* The bar keeps its room while loading, so the shelf does not drop
 				below it once the items arrive. A title needs it too: a search page
 				has no other place for the query, and the layout switch needs it
@@ -242,7 +243,10 @@ export function Shelf({
 					<div class="relative -mr-1 min-h-0 flex-1">
 						<div
 							ref={listRef}
-							class="h-full overflow-y-auto pr-5 md:pr-4"
+							// The last row keeps its air inside the scroll pane: the shelf
+							// still ends on the player bar, and only the end of the
+							// content has a strip below it.
+							class="h-full overflow-y-auto pr-5 pb-3 md:pr-4 md:pb-0"
 							onClickCapture={captureClick}
 						>
 							{filteredItems.length === 0 ? (
