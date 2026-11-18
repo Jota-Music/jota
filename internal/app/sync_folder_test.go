@@ -137,6 +137,101 @@ func TestSyncSkipsUnchangedFolder(t *testing.T) {
 	}
 }
 
+// A provider can hand back a different stamp for the bytes this device just
+// wrote: Drive rounds the mtime to the second. That is not another device's
+// copy, so the watcher answers with a stat and not a full pass.
+func TestSyncSettlesARoundedStamp(t *testing.T) {
+	a := syncApp(t)
+	folder := t.TempDir()
+	if err := a.SetSyncFolder(folder); err != nil {
+		t.Fatalf("set folder: %v", err)
+	}
+	if _, err := a.Playlists.Create("Mix"); err != nil {
+		t.Fatalf("create playlist: %v", err)
+	}
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+
+	path := filepath.Join(folder, backup.BackupFile)
+	rounded := time.UnixMilli(a.SyncStatus().WriteAt - 1000)
+	if err := os.Chtimes(path, rounded, rounded); err != nil {
+		t.Fatalf("stamp: %v", err)
+	}
+
+	counted := &passes{}
+	a.Backup.Settings = counted
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if got := counted.count.Load(); got != 0 {
+		t.Fatalf("a rounded stamp ran %d passes, want 0", got)
+	}
+}
+
+// A copy stamped after the last read is another device's. The window the
+// rounded stamp opened covers our own file coming back, not a real write.
+func TestSyncPassesANewerCopy(t *testing.T) {
+	a := syncApp(t)
+	folder := t.TempDir()
+	if err := a.SetSyncFolder(folder); err != nil {
+		t.Fatalf("set folder: %v", err)
+	}
+	if _, err := a.Playlists.Create("Mix"); err != nil {
+		t.Fatalf("create playlist: %v", err)
+	}
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+
+	path := filepath.Join(folder, backup.BackupFile)
+	later := time.UnixMilli(a.SyncStatus().ReadAt).Add(2 * time.Second)
+	if err := os.Chtimes(path, later, later); err != nil {
+		t.Fatalf("stamp: %v", err)
+	}
+
+	counted := &passes{}
+	a.Backup.Settings = counted
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if got := counted.count.Load(); got != 1 {
+		t.Fatalf("a newer copy ran %d passes, want 1", got)
+	}
+}
+
+// A settled pass moves At alone, so the interval is counted from the copy this
+// device read: counting from At would keep it from ever coming due.
+func TestSyncDueCountsFromTheCopyRead(t *testing.T) {
+	a := syncApp(t)
+	if err := a.SetSyncFolder(t.TempDir()); err != nil {
+		t.Fatalf("set folder: %v", err)
+	}
+	if _, err := a.Playlists.Create("Mix"); err != nil {
+		t.Fatalf("create playlist: %v", err)
+	}
+	if err := a.SyncPlaylists(); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+
+	writeStatus := func(at, read int64) {
+		current := readSettings()
+		status := current.Sync.Status
+		status.At, status.ReadAt = at, read
+		current.Sync.Status = status
+		writeSettings(current)
+	}
+	now := time.Now()
+	writeStatus(now.UnixMilli(), now.Add(-time.Duration(a.SyncInterval()+1)*time.Minute).UnixMilli())
+	if !a.syncDue() {
+		t.Fatal("a copy read past the interval was not due")
+	}
+	writeStatus(now.UnixMilli(), now.UnixMilli())
+	if a.syncDue() {
+		t.Fatal("a copy just read was due")
+	}
+}
+
 // The save button is an explicit ask: an unchanged folder still runs a pass and
 // records it, or the panel keeps the previous pass as the last save.
 func TestSyncSaveRunsOnUnchangedFolder(t *testing.T) {

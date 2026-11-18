@@ -430,7 +430,17 @@ func (a *App) syncSettled(folder string) bool {
 		return false
 	}
 	status := a.SyncStatus()
-	return info.ModTime().UnixNano() == status.MTime && info.Size() == status.FileSize
+	if info.Size() != status.FileSize {
+		return false
+	}
+	if info.ModTime().UnixNano() == status.MTime {
+		return true
+	}
+	// A provider can hand back a different stamp for the very bytes this device
+	// last reconciled: Drive rounds the mtime to the second. Only a copy stamped
+	// after that read is another device's write, so the watcher must not pay a
+	// full pass for its own file coming back with a rounded stamp.
+	return info.ModTime().UnixMilli() <= status.ReadAt
 }
 
 // SyncDocument reconciles the copy the platform staged in incoming.json and
@@ -716,13 +726,15 @@ func (a *App) syncTicker() {
 	}()
 }
 
-// syncDue reports whether the interval has passed since the last pass, or work
-// is waiting for one. A location never reconciled counts as due.
+// syncDue reports whether the interval has passed since this device last read a
+// copy, or work is waiting for one. A location never reconciled counts as due.
+// The age is measured from ReadAt, not At: a settled pass moves At alone, so
+// counting from it would keep the interval from ever coming due.
 func (a *App) syncDue() bool {
 	if a.SyncPending() {
 		return true
 	}
-	return time.Since(time.UnixMilli(a.SyncStatus().At)) >= time.Duration(a.SyncInterval())*time.Minute
+	return time.Since(time.UnixMilli(a.SyncStatus().ReadAt)) >= time.Duration(a.SyncInterval())*time.Minute
 }
 
 func (a *App) syncLoop() {
