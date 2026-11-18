@@ -73,6 +73,7 @@ export function AppShell({
 	mainClass?: string;
 }) {
 	const overlayLayer = useRef<HTMLDivElement>(null);
+	const chromeRef = useRef<HTMLDivElement>(null);
 	const [location] = useLocation();
 	const route = page(location);
 	// The app paints at full opacity; only an arriving page fades in.
@@ -82,17 +83,22 @@ export function AppShell({
 	const [hidden, setHidden] = useState(document.hidden);
 	const dockRef = useRef<HTMLDivElement>(null);
 
-	// A sheet is 100dvh minus the dock, so it stops above the player bar. The
-	// height of that row is measured here and kept in sync by the row itself: the
-	// safe area and a track starting both move it.
+	// A sheet is 100dvh minus the dock, so it stops above the player bar, and
+	// minus the chrome row, so it never climbs over the header. Both heights are
+	// measured here and kept in sync by the rows themselves: the safe area and a
+	// track starting move the dock, an open search field moves the header.
 	useEffect(() => {
+		const chrome = chromeRef.current;
 		const dock = dockRef.current;
-		if (!dock) return;
 		const root = document.documentElement.style;
-		const sync = () => root.setProperty("--dock-h", `${dock.offsetHeight}px`);
+		const sync = () => {
+			if (chrome) root.setProperty("--chrome-h", `${chrome.offsetHeight}px`);
+			if (dock) root.setProperty("--dock-h", `${dock.offsetHeight}px`);
+		};
 		sync();
 		const sizes = new ResizeObserver(sync);
-		sizes.observe(dock);
+		if (chrome) sizes.observe(chrome);
+		if (dock) sizes.observe(dock);
 		return () => sizes.disconnect();
 	}, []);
 
@@ -121,7 +127,7 @@ export function AppShell({
 	return (
 		<OverlayHost.Provider value={overlayLayer}>
 			<div class="relative grid h-screen min-h-0 grid-rows-[max-content_1fr_max-content]">
-				<div class="flex max-w-dvw flex-col bg-stone-950">
+				<div ref={chromeRef} class="flex max-w-dvw flex-col bg-stone-950">
 					<Header />
 					<UpdateBanner />
 					<ClipboardBanner />

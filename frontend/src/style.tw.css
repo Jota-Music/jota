@@ -69,6 +69,9 @@ body {
 	   100dvh minus this, so it stops above the player bar, and `dvh` is what
 	   shrinks it when the keyboard opens. */
 	--dock-h: 0px;
+	/* Height of the header row on a phone, banners included. A sheet is also
+	   minus this, so it stops below the header instead of climbing over it. */
+	--chrome-h: 0px;
 }
 
 /* Over the ambient glow a near-black bar disappears into the tint, so the thumb

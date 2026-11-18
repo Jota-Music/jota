@@ -167,6 +167,10 @@ export function Sheet({
 					// where the last actions cannot be reached. Without a host (a
 					// stray sheet at body level) the viewport is all there is.
 					host ? "max-h-full" : "max-h-[70dvh] sm:max-h-[85dvh]",
+					// A phone sheet is pinned to the viewport instead of the content
+					// box, so the chrome row is no longer a boundary: without this cap
+					// a long queue climbs over the header.
+					"max-sm:max-h-[calc(100dvh-var(--chrome-h,0px)-var(--dock-h,0px))]",
 					shown.value
 						? centered
 							? "translate-y-0 opacity-100 sm:scale-100"
