@@ -327,9 +327,11 @@ jobs:
 
   publish:
     needs: [linux, android, windows, flatpak, macos]
-    # Runs even when only a subset of jobs was selected, so a manual
-    # macos-only run can still (re)create the release.
-    if: ${{ !cancelled() }}
+    # A manual run can select a subset (jobs=macos), so the skipped jobs are
+    # expected and do not block publishing. A build that failed does: an asset
+    # left out is a release the updater answers with "no asset for <channel>",
+    # and the version it took cannot be published again.
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(needs.*.result, 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
