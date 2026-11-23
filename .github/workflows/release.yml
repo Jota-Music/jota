@@ -345,6 +345,24 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           path: dist
+      - name: Refuse to publish an incomplete release
+        # The `if` above reads `needs.*.result`, and a macOS job the runner never
+        # acquired was cancelled while the release still went out without a .dmg
+        # or a jota-macos.zip (v0.3.2). A missing artifact is the failure that
+        # matters, so it is read here instead of trusting the graph. Only a tag
+        # push builds everything; a manual run may select a subset on purpose.
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          missing=""
+          for f in jota-x86_64.AppImage jota.deb jota.rpm jota.pkg.tar.zst \
+                   jota.flatpak jota.apk jota-windows-amd64.exe jota.dmg \
+                   jota-macos.zip; do
+            [ -n "$(find dist -name "$f" -print -quit)" ] || missing="$missing $f"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::a tag push must carry every asset; missing:$missing"
+            exit 1
+          fi
       - name: Checksums
         run: |
           find dist -type f -print0 | sort -z | xargs -0 sha256sum \
