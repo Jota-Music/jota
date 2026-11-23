@@ -21,7 +21,6 @@ import {
 } from "@/lib/music/views/stores/player";
 import {
 	canNext,
-	canPrev,
 	cycleRepeat,
 	repeat,
 	showQueue,
@@ -139,7 +138,7 @@ const Disc = memo(function Disc({
 				>
 					<button
 						type="button"
-						disabled={disabled || !canPrev.value}
+						disabled={disabled}
 						onClick={() => void prevSong()}
 						class="p-1 rounded-full transition drop-shadow-lg drop-shadow-black disabled:cursor-not-allowed cursor-pointer"
 					>
@@ -650,7 +649,7 @@ export function PlayerBar() {
 
 							<button
 								type="button"
-								disabled={!hasSong || !canPrev.value}
+								disabled={!hasSong}
 								onClick={() => void player?.prevSong()}
 								class="p-1.5 rounded-full transition disabled:cursor-not-allowed cursor-pointer text-neutral-300"
 							>

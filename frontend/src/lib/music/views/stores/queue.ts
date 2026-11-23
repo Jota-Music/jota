@@ -97,19 +97,13 @@ export const currentIndex = signal<number>(
 	clampIndex(loadIndex(), queue.value.length),
 );
 
-// Skip availability as computeds, so the skip buttons can subscribe to it
+// Skip forward availability as a computed, so the button can subscribe to it
 // directly. Reading queue.value for the length instead would subscribe the whole
 // player to every queue edit (an added song re-renders it entirely).
-// Repeat on: skipping always has a target (next/prev wrap to the other end), so
-// the buttons stay enabled even at the queue boundaries and match what
-// nextSong/prevSong actually do.
-export const canPrev = computed(() => {
-	const i = currentIndex.value;
-	const n = queue.value.length;
-	if (i < 0 || i >= n) return false;
-	return repeat.value !== "off" || i > 0;
-});
-
+// Repeat on: skipping always has a target (next wraps to the other end), so the
+// button stays enabled even at the queue boundary and matches what nextSong
+// actually does. There is no matching computed for back: a press restarts the
+// track, which is available wherever one is loaded.
 export const canNext = computed(() => {
 	const i = currentIndex.value;
 	const n = queue.value.length;

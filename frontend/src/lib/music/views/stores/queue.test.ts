@@ -4,7 +4,6 @@ import type { Song } from "@/lib/music/model";
 import {
 	applyShuffle,
 	canNext,
-	canPrev,
 	clampIndex,
 	clearHeard,
 	currentIndex,
@@ -160,39 +159,33 @@ test("replaceQueue follows the playing track when it shifts", () => {
 	expect(queue.value[currentIndex.value].id).toBe("c");
 });
 
-test("skip availability follows the position in the queue", () => {
+test("skip forward availability follows the position in the queue", () => {
 	setRepeat("off");
 	queue.value = [song("a"), song("b"), song("c")];
 	currentIndex.value = 0;
-	expect(canPrev.value).toBe(false);
 	expect(canNext.value).toBe(true);
 
 	currentIndex.value = 2;
-	expect(canPrev.value).toBe(true);
 	expect(canNext.value).toBe(false);
 
 	currentIndex.value = -1;
-	expect(canPrev.value).toBe(false);
 	expect(canNext.value).toBe(false);
 });
 
-test("repeat keeps the skip buttons enabled at the queue boundaries", () => {
+test("repeat keeps the skip button enabled at the queue boundary", () => {
 	queue.value = [song("a"), song("b"), song("c")];
 	setRepeat("all");
 
 	currentIndex.value = 2;
 	expect(canNext.value).toBe(true);
-	expect(canPrev.value).toBe(true);
 
 	currentIndex.value = 0;
-	expect(canPrev.value).toBe(true);
 	expect(canNext.value).toBe(true);
 });
 
-test("skip buttons stay off when there is nothing to play", () => {
+test("skip forward stays off when there is nothing to play", () => {
 	queue.value = [];
 	setRepeat("all");
 	currentIndex.value = -1;
-	expect(canPrev.value).toBe(false);
 	expect(canNext.value).toBe(false);
 });

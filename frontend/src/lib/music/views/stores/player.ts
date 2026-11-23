@@ -383,9 +383,21 @@ export async function nextSong() {
 	await playAtIndex(next);
 }
 
+// Two presses walk back, one restarts. The restart lands at once, so the button
+// never reads as dead while it waits for a second press; the window is the
+// system's double click, not a history of presses.
+const BACK_WINDOW = 500;
+let backAt = 0;
+
 export async function prevSong() {
 	const q = queue.value;
 	if (q.length === 0) return;
+
+	const now = Date.now();
+	const twice = now - backAt <= BACK_WINDOW;
+	backAt = twice ? 0 : now;
+
+	if (!twice) return restart();
 
 	// A shuffled queue is not a history: the songs before the playhead may never
 	// have been played, so walking back one slot lands on a random one. Go back
