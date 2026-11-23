@@ -54,7 +54,7 @@ missing-library message) via podman. `act` is installed but the workflow runs co
 
 ```bash
 go fmt ./...
-cd frontend && bun run typecheck && bun run lint
+cd frontend && bun run typecheck && bun run lint && bun test
 ```
 
 ## Startup budget
