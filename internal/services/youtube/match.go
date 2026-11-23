@@ -27,6 +27,15 @@ const (
 	keywordPenaltyMax   = 90
 )
 
+// What YouTube's own order is worth. Its first row is what a person running the
+// same search by hand would pick, so a later result has to be better by one
+// step per place to overtake it. The cap keeps a clearly better match six rows
+// down alive: the prior breaks ties and never argues with a missing title word.
+const (
+	positionWeight     = 5
+	positionPenaltyMax = 25
+)
+
 // Uploader tiers, best first. The artist posting their own release is the
 // master; a "- Topic" channel restates the record with no editor's cuts and no
 // filler; a random channel is nothing in particular; a karaoke or subtitled
@@ -107,12 +116,22 @@ var coverWords = map[string]bool{
 // like a perfect duration match.
 var lyricChannels = []string{"lyric", "lyrics", "letra", "letras", "lirik", "paroles"}
 
-// accented folds the accented vowels Jota actually meets (Spanish and English
-// titles) onto ASCII, so "químicamente" and "quimicamente" compare equal
-// without pulling in golang.org/x/text. It also folds the "lo-fi" spellings onto
-// one token, so the quality marker matches whatever separator the uploader used.
+// accented folds the Latin vowels and the cedilla onto ASCII, so an accented
+// spelling compares equal to the plain one — "químicamente" with
+// "quimicamente", and "Karaokê" with the "karaoke" the version words are
+// written in — without pulling in golang.org/x/text. Spanish, Portuguese,
+// French and English titles are what Jota meets; a letter this misses only
+// costs a mismatch, never a wrong match. It also folds the "lo-fi" spellings
+// onto one token, so the quality marker matches whatever separator the uploader
+// used.
 var accented = strings.NewReplacer(
-	"á", "a", "é", "e", "í", "i", "ó", "o", "ú", "u", "ü", "u", "ñ", "n",
+	"á", "a", "à", "a", "â", "a", "ã", "a", "ä", "a", "å", "a",
+	"ç", "c",
+	"é", "e", "è", "e", "ê", "e", "ë", "e",
+	"í", "i", "ì", "i", "î", "i", "ï", "i",
+	"ñ", "n",
+	"ó", "o", "ò", "o", "ô", "o", "õ", "o", "ö", "o",
+	"ú", "u", "ù", "u", "û", "u", "ü", "u",
 	"lo-fi", "lofi", "lo fi", "lofi",
 )
 
@@ -145,15 +164,69 @@ var stopwords = map[string]bool{
 	"que": true, "se": true, "su": true, "sus": true, "le": true, "les": true,
 }
 
-// rank orders search results by how well each video matches the song, best
-// first. It only reorders: the caller still takes the first candidate that
-// plays, so a poor match stays a fallback instead of becoming a failure. The
-// sort is stable, so videos that score the same keep YouTube's own order.
+// rank orders one search result list by how well each video matches the song,
+// YouTube's own order included. It only reorders: the caller still takes the
+// first candidate that plays, so a poor match stays a fallback instead of
+// becoming a failure.
 func rank(videos []Video, song music.Song) []Video {
-	sort.SliceStable(videos, func(i, j int) bool {
-		return penalty(videos[i], song) < penalty(videos[j], song)
+	scored := scoredVideos(videos, song)
+	sort.SliceStable(scored, func(i, j int) bool {
+		return scored[i].score < scored[j].score
 	})
-	return videos
+
+	out := make([]Video, len(scored))
+	for i := range scored {
+		out[i] = scored[i].video
+	}
+	return out
+}
+
+// scoredVideo carries the score so it is computed once per video: inside the
+// comparator it would be computed again on every comparison, and each one
+// tokenizes the title.
+type scoredVideo struct {
+	score float64
+	video Video
+}
+
+// scoredVideos scores every video in one search result list. The position is
+// the one the list carries, so a video found by both queries keeps its own
+// place in each.
+func scoredVideos(videos []Video, song music.Song) []scoredVideo {
+	out := make([]scoredVideo, len(videos))
+	for position, video := range videos {
+		out[position] = scoredVideo{
+			score: penalty(video, song) + positionPenalty(position),
+			video: video,
+		}
+	}
+	return out
+}
+
+// mergeScored orders the scored lists best first and keeps one row per video,
+// the one with the lowest score. Ties keep the query order, and the artist
+// query is first.
+func mergeScored(videos []scoredVideo) []Video {
+	sort.SliceStable(videos, func(i, j int) bool {
+		return videos[i].score < videos[j].score
+	})
+
+	out := make([]Video, 0, len(videos))
+	seen := map[string]bool{}
+	for _, entry := range videos {
+		if entry.video.ID == "" || seen[entry.video.ID] {
+			continue
+		}
+		seen[entry.video.ID] = true
+		out = append(out, entry.video)
+	}
+	return out
+}
+
+// positionPenalty is what a lower place on YouTube's shelf costs, capped so the
+// top of the list is a prior and not a rule.
+func positionPenalty(position int) float64 {
+	return math.Min(float64(position)*positionWeight, positionPenaltyMax)
 }
 
 func penalty(v Video, song music.Song) float64 {

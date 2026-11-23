@@ -243,13 +243,14 @@ func extractPlaylists(res searchResponse) []music.PlaylistSummary {
 	return out
 }
 
-// candidates returns the videos to try for a song, best match first. Both the
-// album-first and artist-first queries are searched in parallel and merged: an
-// album whose name matches another track buries the song it belongs to, and the
-// artist-first query still surfaces its official upload, which ranking then
-// places first. A cached id stays pinned at the front — the user either picked
-// it by hand or an earlier resolve settled on it, and ranking must not demote it
-// behind a fresh pick.
+// candidates returns the videos to try for a song, best match first. The
+// artist-first query, the one a person would type, and the album query are
+// searched in parallel and merged: an album whose name matches another track
+// buries the song it belongs to, and the artist query still surfaces its
+// official upload. Each result list keeps YouTube's own order as a small
+// penalty, so the first row a person would see wins unless a later match is
+// clearly better. A cached id stays pinned at the front — the user picked it by
+// hand — and ranking must not demote it.
 func (s *Service) candidates(cacheKey string, song music.Song) ([]Video, error) {
 	wanted := queries(song)
 	if len(wanted) == 0 {
@@ -259,7 +260,7 @@ func (s *Service) candidates(cacheKey string, song music.Song) ([]Video, error) 
 		return []Video{{ID: cacheKey}}, nil
 	}
 
-	found, err := s.searchAll(wanted)
+	results, err := s.searchAll(wanted)
 	if err != nil {
 		return nil, err
 	}
@@ -275,11 +276,17 @@ func (s *Service) candidates(cacheKey string, song music.Song) ([]Video, error) 
 		ordered = append(ordered, Video{ID: linked})
 		seen[linked] = true
 	}
+
+	var found []scoredVideo
+	for _, videos := range results {
+		found = append(found, scoredVideos(videos, song)...)
+	}
+
 	unique := make([]Video, 0, len(found))
-	for _, v := range found {
-		if v.ID != "" && !seen[v.ID] {
-			unique = append(unique, v)
-			seen[v.ID] = true
+	for _, video := range mergeScored(found) {
+		if !seen[video.ID] {
+			unique = append(unique, video)
+			seen[video.ID] = true
 		}
 	}
 
@@ -287,13 +294,14 @@ func (s *Service) candidates(cacheKey string, song music.Song) ([]Video, error) 
 		return nil, fmt.Errorf("no results for: %s", strings.Join(wanted, " / "))
 	}
 
-	return append(ordered, rank(unique, song)...), nil
+	return append(ordered, unique...), nil
 }
 
-// searchAll runs every query against YouTube concurrently and merges the
-// results. One query failing does not sink the resolve while another returns
-// videos; the error is only reported when nothing came back at all.
-func (s *Service) searchAll(queries []string) ([]Video, error) {
+// searchAll runs every query against YouTube concurrently and returns each
+// query's own result list, in the order the queries were given. One query
+// failing does not sink the resolve while another returns videos; the error is
+// only reported when nothing came back at all.
+func (s *Service) searchAll(queries []string) ([][]Video, error) {
 	results := make([][]Video, len(queries))
 	errs := make([]error, len(queries))
 	var wg sync.WaitGroup
@@ -306,19 +314,19 @@ func (s *Service) searchAll(queries []string) ([]Video, error) {
 	}
 	wg.Wait()
 
-	var (
-		videos []Video
-		failed []error
-	)
+	var failed []error
+	empty := true
 	for i := range results {
 		if errs[i] != nil {
 			failed = append(failed, errs[i])
 			continue
 		}
-		videos = append(videos, results[i]...)
+		if len(results[i]) > 0 {
+			empty = false
+		}
 	}
-	if len(videos) == 0 && len(failed) > 0 {
+	if empty && len(failed) > 0 {
 		return nil, fmt.Errorf("search failed: %w", errors.Join(failed...))
 	}
-	return videos, nil
+	return results, nil
 }

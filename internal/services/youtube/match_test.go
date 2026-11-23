@@ -200,9 +200,11 @@ func TestRankRejectsAMismatchedLength(t *testing.T) {
 }
 
 // Searching SULTANESSA returns only other Freya Ridings songs. The correct track
-// is not in the results, so ranking cannot fix the pick, but it must not hand
-// back a confident same-artist mismatch while a title shares no word at all.
-func TestRankDemotesADifferentSong(t *testing.T) {
+// is not in the results, so ranking cannot fix the pick. With no title word in
+// common, every candidate is equally wrong and the duration says nothing; the
+// prior then hands back YouTube's first row instead of inventing a better match
+// out of a lower one.
+func TestRankKeepsYoutubesFirstWhenNoTitleMatches(t *testing.T) {
 	song := music.Song{Name: "SULTANESSA", Duration: 178}
 	candidates := []Video{
 		video("Freya Ridings - Castles", 209),
@@ -213,7 +215,10 @@ func TestRankDemotesADifferentSong(t *testing.T) {
 		video("Freya Ridings - Euphoria (Official Lyric Video)", 172),
 	}
 
-	assertNotFirst(t, candidates, song, "Freya Ridings - Castles")
+	got := first(t, candidates, song)
+	if got.Title != "Freya Ridings - Castles" {
+		t.Fatalf("picked %q, want YouTube's first row", got.Title)
+	}
 }
 
 func TestDurationGapNeedsBothLengths(t *testing.T) {
@@ -403,6 +408,92 @@ func TestTokens(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("tokens = %v, want %v", got, want)
 		}
+	}
+}
+
+func TestTokensFoldPortugueseAccents(t *testing.T) {
+	if got := tokens("Karaokê"); len(got) != 1 || got[0] != "karaoke" {
+		t.Fatalf("tokens = %v, want [karaoke]", got)
+	}
+	if got := versionPenalty("Gloria Groove - A Tua Voz (Ao Vivo) - Karaokê"); got != 2*keywordPenalty {
+		t.Fatalf("karaoke version penalty = %v, want %v", got, 2*keywordPenalty)
+	}
+	want := []string{"voce", "sempre", "sera", "nao", "da", "pra", "resistir"}
+	got := tokens("Você Sempre Será / Não Dá Pra Resistir")
+	if len(got) != len(want) {
+		t.Fatalf("tokens = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("tokens = %v, want %v", got, want)
+		}
+	}
+}
+
+// YouTube's first row is what a person would pick by hand, so a later result
+// that scores the same must not overtake it.
+func TestPositionKeepsYoutubesFirstOnATie(t *testing.T) {
+	song := music.Song{Name: "Song", Duration: 200}
+	candidates := []Video{
+		{ID: "first", Title: "Artist - Song", Duration: 200},
+		{ID: "second", Title: "Artist - Song", Duration: 200},
+	}
+
+	if got := first(t, candidates, song); got.ID != "first" {
+		t.Fatalf("picked %q, want YouTube's first row", got.ID)
+	}
+}
+
+// The prior only breaks ties: a different song stays a different song however
+// high YouTube placed it.
+func TestPositionDoesNotHideAMissingWord(t *testing.T) {
+	song := music.Song{Name: "Song", Duration: 200}
+	candidates := []Video{
+		{ID: "wrong", Title: "Artist - Another Track", Duration: 200},
+		{ID: "right", Title: "Artist - Song", Duration: 200},
+	}
+
+	if got := first(t, candidates, song); got.ID != "right" {
+		t.Fatalf("picked %q, want the title match", got.ID)
+	}
+}
+
+// The reported bug: Gloria Groove uploaded a karaoke to her own channel, with
+// the live track's title and its exact running time, so the artist tier and the
+// length both worked for it. "Karaokê" only escaped the version penalty because
+// the tokenizer did not fold "ê", so the karaoke can even sit first on YouTube's
+// shelf and still has to lose.
+func TestRankDemotesTheArtistsOwnKaraoke(t *testing.T) {
+	song := music.Song{
+		Name:     "A Tua Voz - Ao Vivo",
+		Duration: 235,
+		Artists:  []music.Artist{{Name: "Gloria Groove"}},
+	}
+	candidates := []Video{
+		{ID: "karaoke", Title: "Gloria Groove - A Tua Voz (Ao Vivo) - Karaokê", Author: "Gloria Groove", Duration: 235},
+		{ID: "live", Title: "Gloria Groove - A Tua Voz (Ao Vivo)", Author: "Gloria Groove", Duration: 237},
+		{ID: "studio", Title: "GLORIA GROOVE - A TUA VOZ", Author: "Gloria Groove", Duration: 195},
+	}
+
+	if got := first(t, candidates, song); got.ID != "live" {
+		t.Fatalf("picked %q by %q, want the live take", got.Title, got.Author)
+	}
+}
+
+func TestRankDemotesTheArtistsOwnKaraokeOfAMedley(t *testing.T) {
+	song := music.Song{
+		Name:     "Você Sempre Será / Não Dá Pra Resistir - Ao Vivo",
+		Duration: 235,
+		Artists:  []music.Artist{{Name: "Gloria Groove"}},
+	}
+	candidates := []Video{
+		{ID: "karaoke", Title: "Gloria Groove - Você Sempre Será/ Não Dá Pra Resistir (Ao Vivo) - Karaokê", Author: "Gloria Groove", Duration: 236},
+		{ID: "live", Title: "Gloria Groove - Você Sempre Será/Não Dá Pra Resistir (Ao Vivo)", Author: "Gloria Groove", Duration: 240},
+		{ID: "pocket", Title: "Gloria Groove - Você Sempre Será & Não Dá Pra Resistir (Ao Vivo / Pocket Show)", Author: "Gloria Groove TEAM", Duration: 234},
+	}
+
+	if got := first(t, candidates, song); got.ID != "live" {
+		t.Fatalf("picked %q by %q, want the live take", got.Title, got.Author)
 	}
 }
 

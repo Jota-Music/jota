@@ -178,8 +178,9 @@ func audioQueryArtistFirst(song music.Song) string {
 	return strings.TrimSpace(names + " " + song.Name)
 }
 
-// queries returns the distinct searches to run for a song, album-first then
-// artist-first. They collapse to one when the song carries no album.
+// queries returns the distinct searches to run for a song, artist-first then
+// album. The artist-first one is what a person would type, so it wins the ties
+// the scores leave behind. They collapse to one when the song carries no album.
 func queries(song music.Song) []string {
 	album, artist := audioQuery(song), audioQueryArtistFirst(song)
 	if album == "" {
@@ -188,7 +189,7 @@ func queries(song music.Song) []string {
 	if artist == "" || artist == album {
 		return []string{album}
 	}
-	return []string{album, artist}
+	return []string{artist, album}
 }
 
 func artistNames(song music.Song) string {
