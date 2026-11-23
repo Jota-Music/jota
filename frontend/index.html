@@ -139,6 +139,11 @@
       </div>
     </div>
     <script>
+      // Where the page's clock stands once its markup is up: main.tsx reads it
+      // for the boot line in the log, so a slow launch names the phase that cost
+      // the wait instead of only being felt.
+      window.__jotaBoot = performance.now();
+
       // The window bar before the shell exists. Wails' own draggable hook is a
       // no-op on Linux (its message channel is native-only), so the drag is done
       // here over the same transport the runtime uses: Window methods, posted to

@@ -50,6 +50,8 @@ window.addEventListener("unhandledrejection", (e) =>
 declare global {
 	interface Window {
 		__jotaBack?: () => boolean;
+		// When the page's markup was up, set by the inline script in index.html.
+		__jotaBoot?: number;
 	}
 }
 
@@ -90,10 +92,12 @@ if (System.IsDesktop()) {
 const appRoot = document.getElementById("app");
 if (!appRoot) throw new Error("Missing #app root");
 
-// How long the first render may wait on a source's own list. Long enough for a
-// cache to answer on this machine, short enough that a source which has to fetch
-// never holds the window.
-const sourceWait = 120;
+// How long the first render may wait on the store and the sources' cached lists.
+// A read of this device answers well inside it; anything slower is a fetch, and a
+// launch never waits on the network. Past the wait the shelf paints what this
+// device holds and the answer lands late, so the window is never left with
+// nothing to click.
+const bootWait = 120;
 
 function deadline(ms: number): Promise<void> {
 	return new Promise((resolve) => {
@@ -101,11 +105,14 @@ function deadline(ms: number): Promise<void> {
 	});
 }
 
-// The library's own records are read before the first render, so the shelf
-// paints them together: asking after the paint filled the grid in one source at
-// a time. The reads are the store in memory, and the boot mark in index.html
-// covers the wait when it outlives the mount.
-await Promise.all([warm(), syncSpotifyStatus()]);
+// One line per launch, the same shape as the backend's "window ready in": the
+// phase each mark names, read from the page's own clock. A launch that gets slow
+// again then points at the wait instead of only being felt.
+const marks = [`page=${Math.round(window.__jotaBoot ?? 0)}`];
+function mark(name: string): void {
+	marks.push(`${name}=${Math.round(performance.now())}`);
+}
+mark("module");
 
 // The YouTube status is where a launch used to reach the network: the account's
 // own name is a request the first time it is asked, and a launch never waits on
@@ -113,17 +120,25 @@ await Promise.all([warm(), syncSpotifyStatus()]);
 // panel fills in when the answer lands.
 const youtubeStatus = syncYouTubeStatus();
 
-// The saved order is keyed by the account those readings name, and a shelf that
-// reorders once it lands is a shelf that jumps. The sources' own lists are asked
-// next: one first paint without them shows the library growing a tile at a time,
-// so they get a short wait and no more. That wait is a cache answering; a source
-// that has to fetch is a request, and a launch never waits on the network, so
-// past the wait the shelf paints what this device holds.
-await warmOrder(spotifyUser.value);
+// The library's own records are read before the first render, so the shelf
+// paints them together: asking after the paint filled the grid in one source at
+// a time. The saved order is keyed by the account those readings name, and the
+// sources' own lists are asked last, so the shelf never reorders under the
+// pointer. The reads are the store in memory, but the whole wait is bounded: a
+// read that never answers is a window that never becomes interactive.
+let warmed = false;
 await Promise.race([
-	warmSources(spotifyUser.value, youtubeSignedIn.value),
-	deadline(sourceWait),
+	(async () => {
+		await Promise.all([warm(), syncSpotifyStatus()]);
+		mark("library");
+		await warmOrder(spotifyUser.value);
+		await warmSources(spotifyUser.value, youtubeSignedIn.value);
+		mark("sources");
+		warmed = true;
+	})(),
+	deadline(bootWait),
 ]);
+if (!warmed) marks.push("warm=miss");
 
 // The session the first ask carried was the one this device had before the
 // answer: a status that lands late is worth asking the sources' lists again for.
@@ -138,3 +153,15 @@ render(
 	</Boundary>,
 	appRoot,
 );
+mark("render");
+
+// The first frame is where the app is on screen and the tick after it is where
+// the main thread is free to answer input: the line separates a slow read from a
+// slow first paint.
+requestAnimationFrame(() => {
+	mark("frame");
+	setTimeout(() => {
+		mark("idle");
+		logError(marks.join(" "), "boot");
+	}, 0);
+});
