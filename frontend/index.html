@@ -145,11 +145,12 @@
       window.__jotaBoot = performance.now();
 
       // The window bar before the shell exists. Wails' own draggable hook is a
-      // no-op on Linux (its message channel is native-only), so the drag is done
-      // here over the same transport the runtime uses: Window methods, posted to
-      // /wails/runtime (minimise 17, toggle maximise 39, close 2, set position 24,
-      // args are named: {x, y}). A phone has no window to move: there the bar is
-      // removed and the splash keeps its mark alone.
+      // no-op until the runtime loads, so this is what answers the bar while the
+      // page boots: the buttons go over the same transport the runtime uses
+      // (Window methods posted to /wails/runtime: minimise 17, toggle maximise
+      // 39, close 2), and the drag asks the host for its own move drag on the
+      // native channel. A phone has no window to move: there the bar is removed
+      // and the splash keeps its mark alone.
       (() => {
         const bar = document.querySelector(".boot-bar");
         if (!bar) return;
@@ -182,49 +183,19 @@
           });
         }
 
-        // Drag over the host's own numbers: the window's position comes from the
-        // host (method 0) and only the pointer's *movement* is added to it, so a
-        // scale or origin mismatch between screenX and the host's coordinates
-        // cannot teleport the window.
-        let drag = null;
-        let frame = 0;
-        let next = null;
-
+        // A press on the bar asks the host for its own move drag: one message on
+        // the native channel and the window follows the pointer. The per-frame
+        // position calls this used to make queued behind the page's own requests,
+        // so the window stood still exactly while it was loading.
+        const host =
+          window.webkit?.messageHandlers?.external ?? window.chrome?.webview;
         bar.addEventListener("mousedown", (event) => {
           if (event.button !== 0) return;
           if (event.target.closest(".boot-controls")) return;
-          const sx = event.screenX;
-          const sy = event.screenY;
+          if (!host) return;
           event.preventDefault();
-          drag = null;
-          void send(0)
-            .then((response) => response.json())
-            .then((position) => {
-              drag = { x: position.x, y: position.y, sx, sy };
-            })
-            .catch(() => {});
+          host.postMessage("wails:drag");
         });
-
-        window.addEventListener("mousemove", (event) => {
-          if (!drag) return;
-          next = {
-            x: drag.x + (event.screenX - drag.sx),
-            y: drag.y + (event.screenY - drag.sy),
-          };
-          if (frame) return;
-          frame = requestAnimationFrame(() => {
-            frame = 0;
-            if (!next) return;
-            void send(24, next).catch(() => {});
-          });
-        });
-
-        const stop = () => {
-          drag = null;
-          next = null;
-        };
-        window.addEventListener("mouseup", stop);
-        window.addEventListener("blur", stop);
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
