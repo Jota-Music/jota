@@ -1,45 +1,56 @@
-import { X } from "lucide-preact";
-import { useRef } from "preact/hooks";
+import { CircleAlert, CircleCheck, X } from "lucide-preact";
+import { t } from "@/lib/shared/i18n";
 import { cn } from "@/lib/shared/utils/tw";
 import { removeError, roomErrors } from "@/lib/shared/views/stores/errors";
 
 export function NotificationBar() {
 	const errors = roomErrors;
-	const listRef = useRef<HTMLDivElement>(null);
 
 	if (errors.value.length === 0) {
 		return null;
 	}
 
 	return (
-		<div class="fixed bottom-[calc(3.5rem+var(--player-compact)+env(safe-area-inset-bottom))] left-0 right-0 z-60 md:bottom-0">
-			<div ref={listRef} class="mx-auto max-w-2xl space-y-2 px-4 py-4">
-				{errors.value.map((error) => (
-					<div
-						key={error.id}
-						class={cn(
-							"animate-[notif-in_0.2s_ease-out] flex items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-opacity duration-200",
-							error.tone === "info"
-								? "border-stone-700 bg-stone-900 text-stone-200"
-								: "border-red-900/50 bg-red-950 text-red-200",
-							error.leaving && "opacity-0",
-						)}
-					>
-						<div class="flex-1">{error.message}</div>
-						<button
-							type="button"
-							onClick={() => removeError(error.id)}
+		// One panel, the sheet's own surface, over the content column and clear of
+		// the player bar on every platform: a stack of separate cards read as a
+		// second kind of window the rest of the app does not have.
+		<div class="pointer-events-none fixed inset-x-0 bottom-[calc(var(--dock-h,0px)+0.75rem)] z-60 flex justify-center px-3">
+			<div class="pointer-events-auto max-h-[min(40dvh,18rem)] w-full max-w-2xl divide-y divide-zinc-800/60 overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950">
+				{errors.value.map((error) => {
+					const failed = error.tone === "error";
+					return (
+						<div
+							key={error.id}
+							role={failed ? "alert" : "status"}
 							class={cn(
-								"shrink-0 cursor-pointer transition-colors",
-								error.tone === "info"
-									? "text-stone-400 hover:text-stone-200"
-									: "text-red-400 hover:text-red-200",
+								"flex items-start gap-3 px-4 py-3 text-sm",
+								error.leaving
+									? "animate-[notif-out_160ms_ease-in_forwards]"
+									: "animate-[notif-in_200ms_ease-out]",
 							)}
 						>
-							<X class="size-4" />
-						</button>
-					</div>
-				))}
+							{failed ? (
+								<CircleAlert size={16} class="mt-0.5 shrink-0 text-red-400" />
+							) : (
+								<CircleCheck
+									size={16}
+									class="mt-0.5 shrink-0 text-(--dominant-color)"
+								/>
+							)}
+							<p class="min-w-0 flex-1 whitespace-pre-line text-pretty leading-snug text-zinc-300">
+								{error.message}
+							</p>
+							<button
+								type="button"
+								onClick={() => removeError(error.id)}
+								aria-label={t("common.dismiss")}
+								class="-my-1 shrink-0 cursor-pointer p-1 text-zinc-500 transition-colors hover:text-zinc-200"
+							>
+								<X size={14} />
+							</button>
+						</div>
+					);
+				})}
 			</div>
 		</div>
 	);

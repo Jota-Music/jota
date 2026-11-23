@@ -11,6 +11,21 @@ type RoomError = {
 
 export const roomErrors = signal<RoomError[]>([]);
 
+// An error is read, not noticed: it stays twice as long as a confirmation.
+const LIFETIME = { error: 8000, info: 4000 } as const;
+// Must match the notif-out keyframe: the card is gone from the store once it has
+// finished leaving, not while it is still visible.
+const EXIT = 160;
+
+const timers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function cancel(id: string): void {
+	const timer = timers.get(id);
+	if (timer === undefined) return;
+	clearTimeout(timer);
+	timers.delete(id);
+}
+
 function detail(error: unknown): string {
 	if (typeof DOMException !== "undefined" && error instanceof DOMException) {
 		return `${error.name}: ${error.message}`;
@@ -50,10 +65,12 @@ function push(entry: RoomError): void {
 		removeError(roomErrors.value[0].id);
 	}
 
-	// Auto-remove after 5 seconds
-	setTimeout(() => {
-		removeError(entry.id);
-	}, 5000);
+	timers.set(
+		entry.id,
+		setTimeout(() => {
+			removeError(entry.id);
+		}, LIFETIME[entry.tone]),
+	);
 }
 
 // Log and surface in the error bar.
@@ -75,10 +92,11 @@ export function notify(message: string): void {
 export function removeError(id: string): void {
 	const target = roomErrors.value.find((e) => e.id === id);
 	if (!target || target.leaving) return;
+	cancel(id);
 	roomErrors.value = roomErrors.value.map((e) =>
 		e.id === id ? { ...e, leaving: true } : e,
 	);
 	setTimeout(() => {
 		roomErrors.value = roomErrors.value.filter((e) => e.id !== id);
-	}, 200);
+	}, EXIT);
 }
