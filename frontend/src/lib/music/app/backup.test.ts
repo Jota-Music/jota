@@ -47,16 +47,11 @@ let picked: string | null = null;
 // The answer of both cloud pickers: a document, and whether it was just made.
 let chosen: string | null = null;
 const stages: string[] = [];
-const notices: string[] = [];
 
 mock.module("@/lib/shared/i18n", () => ({ t: (key: string) => key }));
 // The flag is computed when the module loads, and any other test file may have
 // loaded it first: the seam is the module, not the user agent.
 mock.module("@/lib/shared/utils/platform", () => ({ isAndroid: true }));
-mock.module("@/lib/shared/views/stores/errors", () => ({
-	logError: () => {},
-	notify: (message: string) => notices.push(message),
-}));
 // The real exports stay: the mock is process-wide, and a partial one makes any
 // other test that imports a different binding fail to load.
 mock.module("@bindings/app", () => ({
@@ -154,6 +149,9 @@ Object.defineProperty(globalThis, "window", {
 
 const { chooseFolder, openDocument, createDocument, autosave, reload } =
 	await import("@/lib/music/app/backup");
+// The real store, not a counter: mocking it is process-wide and hides the exports
+// another test file imports.
+const { roomErrors } = await import("@/lib/shared/views/stores/errors");
 
 // The window stub lives only for this file: other modules guard on
 // `typeof window` and would then reach for a document that does not exist here.
@@ -183,7 +181,7 @@ beforeEach(() => {
 	picked = null;
 	chosen = null;
 	stages.length = 0;
-	notices.length = 0;
+	roomErrors.value = [];
 	order.length = 0;
 });
 
@@ -273,7 +271,7 @@ test("a created cloud document is saved without staging it", async () => {
 	expect(await createDocument()).toBe(uri);
 	expect(stages).toEqual([]);
 	expect(saved).toEqual([uri]);
-	expect(notices).toEqual([]);
+	expect(roomErrors.value).toEqual([]);
 });
 
 // A provider that already held the document answers a duplicate name instead of
@@ -284,7 +282,9 @@ test("a duplicate name is reported", async () => {
 	meta = { lastModified: 1, size: 0, displayName: "jota.backup.json (1)" };
 
 	expect(await createDocument()).toBe(uri);
-	expect(notices).toEqual(["settings.autosave.duplicate"]);
+	expect(roomErrors.value.map((e) => e.message)).toEqual([
+		"settings.autosave.duplicate",
+	]);
 });
 
 // A document read here whose merge produced local news is committed back to the
