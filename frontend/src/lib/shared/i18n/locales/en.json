@@ -490,7 +490,6 @@
 			"password": "Room password",
 			"join": "Join",
 			"stop": "Stop session",
-			"leave": "Leave session",
 			"waiting": "Waiting for the room to load…",
 			"relay": "Relay: {url}",
 			"settings": "Settings"

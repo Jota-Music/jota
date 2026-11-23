@@ -490,7 +490,6 @@
 			"password": "Contraseña de la sala",
 			"join": "Unirse",
 			"stop": "Detener sesión",
-			"leave": "Salir de la sesión",
 			"waiting": "Esperando a que cargue la sala…",
 			"relay": "Relay: {url}",
 			"settings": "Ajustes"

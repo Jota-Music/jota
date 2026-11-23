@@ -206,8 +206,10 @@ export function RoomsShelf() {
 	const hosting = role === "host";
 	// A session belongs to the shelf while it lasts: the way out sits in the bar
 	// next to the rooms it is playing to, not inside the panel that only sets it.
+	// Both roles end their own session, so the label does not change with the
+	// seat: only the icon says whether this device is hosting or listening.
 	const session = {
-		label: hosting ? t("sync.session.stop") : t("sync.session.leave"),
+		label: t("sync.session.stop"),
 		icon: hosting ? Unplug : LogOut,
 	};
 
