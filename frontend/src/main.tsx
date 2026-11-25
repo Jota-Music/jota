@@ -1,3 +1,4 @@
+import { Beat } from "@bindings/app";
 import { effect } from "@preact/signals";
 import { System, Window as WailsWindow } from "@wailsio/runtime";
 import { render } from "preact";
@@ -50,10 +51,17 @@ window.addEventListener("unhandledrejection", (e) =>
 declare global {
 	interface Window {
 		__jotaBack?: () => boolean;
+		// Asked by the backend when the app comes back to the foreground: a
+		// renderer macOS killed cannot answer, and the window stays white.
+		__jotaBeat?: () => void;
 		// When the page's markup was up, set by the inline script in index.html.
 		__jotaBoot?: number;
 	}
 }
+
+const beat = () => void Beat().catch(() => {});
+window.__jotaBeat = beat;
+beat();
 
 // The Android back button would otherwise walk WebView history and swap the
 // route out from under an open sheet; it asks the page first and only goes

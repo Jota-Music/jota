@@ -38,6 +38,14 @@ export function AddSongsToPlaylist(id: string, refs: string[] | null): $Cancella
     return $Call.ByID(2712034592, id, refs);
 }
 
+/**
+ * Beat is the page answering a probe. It reports nothing by itself: the answer
+ * is the beat.
+ */
+export function Beat(): $CancellablePromise<void> {
+    return $Call.ByID(740518356);
+}
+
 export function CheckUpdate(): $CancellablePromise<update$0.Info> {
     return $Call.ByID(1914456057);
 }

@@ -133,6 +133,7 @@ func New(version string) *App {
 
 func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
+	a.watchRenderer()
 
 	// An upgrade may have left the store of the previous version behind. It is
 	// imported here, first, so the library the page asks for is already there;

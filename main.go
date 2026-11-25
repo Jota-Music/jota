@@ -564,6 +564,9 @@ func main() {
 	}
 
 	opts := application.WebviewWindowOptions{
+		// Named because the YouTube sign-in opens a second window: the renderer
+		// watchdog and the idle reload reach this one by name, never the other.
+		Name:             app.MainWindowName,
 		Title:            "Jota",
 		Width:            1100,
 		Height:           720,
