@@ -292,7 +292,9 @@ export function RelayOverride(): $CancellablePromise<$models.Relay> {
 
 /**
  * ReloadWindow reloads the webview. The queue and preferences live in
- * localStorage, so they survive; only in-memory caches are dropped.
+ * localStorage, so they survive; only in-memory caches are dropped. It runs
+ * while the window is hidden or minimised, when Current() can answer nil, and
+ * the YouTube sign-in opens a second window, so the app's own is named.
  */
 export function ReloadWindow(): $CancellablePromise<void> {
     return $Call.ByID(3515900797);

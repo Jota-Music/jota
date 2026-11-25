@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // IdleReload reports whether the app may reload the webview after sitting idle
@@ -28,9 +26,11 @@ func (a *App) SetIdleReload(enabled bool) {
 }
 
 // ReloadWindow reloads the webview. The queue and preferences live in
-// localStorage, so they survive; only in-memory caches are dropped.
+// localStorage, so they survive; only in-memory caches are dropped. It runs
+// while the window is hidden or minimised, when Current() can answer nil, and
+// the YouTube sign-in opens a second window, so the app's own is named.
 func (a *App) ReloadWindow() {
-	if window := application.Get().Window.Current(); window != nil {
+	if window := mainWindow(); window != nil {
 		window.Reload()
 	}
 }
