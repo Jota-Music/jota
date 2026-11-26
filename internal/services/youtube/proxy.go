@@ -2,6 +2,7 @@ package youtube
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -107,7 +108,29 @@ func relay(w http.ResponseWriter, r *http.Request) {
 	start := int64(0)
 	end := int64(-1)
 	hasRange := false
-	if rs, re, ok := parseRange(r.Header.Get("Range")); ok {
+	rs, re, suffix, ranged := parseRange(r.Header.Get("Range"))
+	if ranged {
+		// A suffix range asks for the last N bytes, which is how a player reads
+		// the index at the end of an MP4. Its start depends on the stream's size
+		// and googlevideo refuses the suffix form, so it is turned into the range
+		// it means here: answering the whole stream instead made the player read
+		// megabytes it never asked for, at the one moment it wanted a few bytes.
+		if suffix > 0 {
+			total, err := streamSize(r.Context(), s.url)
+			if err != nil {
+				if r.Context().Err() != nil {
+					return
+				}
+				log.Printf("youtube: proxy %s size err=%v", id, err)
+				http.Error(w, "upstream unavailable", 502)
+				return
+			}
+			rs = total - suffix
+			if rs < 0 {
+				rs = 0
+			}
+			re = total - 1
+		}
 		hasRange, start, end = true, rs, re
 	}
 
@@ -328,6 +351,29 @@ func slice(ctx context.Context, raw string, start, end int64) (*http.Response, e
 	return proxyClient.Do(req)
 }
 
+// streamSize learns the stream's length. googlevideo refuses a suffix range
+// ("bytes=-N", answered 416), so a request for the last bytes has to know the
+// size first: a one-byte range is the probe every googlevideo URL answers, and
+// its Content-Range carries the whole length.
+func streamSize(ctx context.Context, raw string) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+	resp, err := slice(ctx, raw, 0, 0)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		return 0, fmt.Errorf("upstream status %d", resp.StatusCode)
+	}
+	total := size(resp)
+	if total <= 0 {
+		return 0, errors.New("upstream answered no size")
+	}
+	return total, nil
+}
+
 // size is the whole stream's length, as the answer to a slice advertises it: a
 // 206 carries it in Content-Range, and a 200 in Content-Length.
 func size(resp *http.Response) int64 {
@@ -410,10 +456,13 @@ func streamMime(raw string) string {
 	return mime
 }
 
-func parseRange(s string) (int64, int64, bool) {
+// parseRange reads the range a player asked for: start and end, a suffix of the
+// last N bytes ("bytes=-N", suffix > 0), or neither when the header asks for
+// something this relay does not slice.
+func parseRange(s string) (start, end, suffix int64, ok bool) {
 	s = strings.TrimSpace(s)
 	if !strings.HasPrefix(s, "bytes=") {
-		return 0, 0, false
+		return 0, 0, 0, false
 	}
 	spec := strings.TrimPrefix(s, "bytes=")
 	if i := strings.IndexByte(spec, ','); i >= 0 {
@@ -421,26 +470,30 @@ func parseRange(s string) (int64, int64, bool) {
 	}
 	parts := strings.SplitN(spec, "-", 2)
 	if len(parts) != 2 {
-		return 0, 0, false
+		return 0, 0, 0, false
 	}
-	var start int64
+	var from int64
 	if parts[0] != "" {
 		v, err := strconv.ParseInt(strings.TrimSpace(parts[0]), 10, 64)
 		if err != nil || v < 0 {
-			return 0, 0, false
+			return 0, 0, 0, false
 		}
-		start = v
+		from = v
 	} else {
-		// Suffix ranges are not supported here.
-		return 0, 0, false
+		// A suffix: the last N bytes, which needs the stream's size to resolve.
+		n, err := strconv.ParseInt(strings.TrimSpace(parts[1]), 10, 64)
+		if err != nil || n <= 0 {
+			return 0, 0, 0, false
+		}
+		return 0, 0, n, true
 	}
-	end := int64(-1)
+	end = -1
 	if parts[1] != "" {
 		v, err := strconv.ParseInt(strings.TrimSpace(parts[1]), 10, 64)
-		if err != nil || v < start {
-			return 0, 0, false
+		if err != nil || v < from {
+			return 0, 0, 0, false
 		}
 		end = v
 	}
-	return start, end, true
+	return from, end, 0, true
 }

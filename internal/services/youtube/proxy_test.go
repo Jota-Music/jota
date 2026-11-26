@@ -34,7 +34,7 @@ func TestRelayForwardsRange(t *testing.T) {
 	var gotRange string
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotRange = r.Header.Get("Range")
-		start, end, ok := parseRange(gotRange)
+		start, end, _, ok := parseRange(gotRange)
 		if !ok {
 			t.Errorf("upstream got no range: %q", gotRange)
 			http.Error(w, "range required", http.StatusBadRequest)
@@ -58,7 +58,7 @@ func TestRelayForwardsRange(t *testing.T) {
 	rec := httptest.NewRecorder()
 	relay(rec, req)
 
-	if start, _, _ := parseRange(gotRange); start != 400 {
+	if start, _, _, _ := parseRange(gotRange); start != 400 {
 		t.Fatalf("upstream got range %q, want it to start at 400", gotRange)
 	}
 	if rec.Code != http.StatusPartialContent {
@@ -79,7 +79,7 @@ func TestRelayAsksTheUpstreamOnce(t *testing.T) {
 	var calls int32
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt32(&calls, 1)
-		start, end, _ := parseRange(r.Header.Get("Range"))
+		start, end, _, _ := parseRange(r.Header.Get("Range"))
 		if end > 999 {
 			end = 999
 		}
@@ -116,7 +116,7 @@ func TestRelayChainsChunks(t *testing.T) {
 	var calls int32
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt32(&calls, 1)
-		start, end, _ := parseRange(r.Header.Get("Range"))
+		start, end, _, _ := parseRange(r.Header.Get("Range"))
 		if end > int64(size)-1 {
 			end = int64(size) - 1
 		}
@@ -200,6 +200,60 @@ func TestRelayWithoutRange(t *testing.T) {
 	}
 	if rec.Header().Get("Content-Range") != "" {
 		t.Fatalf("content-range set on a whole answer")
+	}
+}
+
+// A player reads the index at the end of an MP4 with a suffix range, and
+// googlevideo refuses that form (416). The relay has to learn the size and ask
+// for the bytes the suffix means: answering the whole stream instead made the
+// player read megabytes it did not ask for, then re-fetch what it needed, which
+// is the track stopping and loading again right after it started.
+func TestRelayResolvesSuffixRange(t *testing.T) {
+	body := strings.Repeat("0123456789", 100)
+	var first string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotRange := r.Header.Get("Range")
+		if first == "" {
+			first = gotRange
+		}
+		if strings.HasPrefix(gotRange, "bytes=-") {
+			http.Error(w, "suffix unsupported", http.StatusRequestedRangeNotSatisfiable)
+			return
+		}
+		start, end, _, ok := parseRange(gotRange)
+		if !ok || start < 0 || end < start {
+			t.Errorf("upstream got range %q", gotRange)
+			http.Error(w, "range required", http.StatusBadRequest)
+			return
+		}
+		if end > int64(len(body))-1 {
+			end = int64(len(body)) - 1
+		}
+		w.Header().Set("Content-Type", "audio/mp4")
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(body)))
+		w.Header().Set("Content-Length", strconv.FormatInt(end-start+1, 10))
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = io.WriteString(w, body[start:end+1])
+	}))
+	defer upstream.Close()
+	register(t, "suffix", upstream.URL, "audio/mp4")
+
+	req := httptest.NewRequest(http.MethodGet, "/stream/suffix", nil)
+	req.Header.Set("Range", "bytes=-100")
+	rec := httptest.NewRecorder()
+	relay(rec, req)
+
+	if first != "bytes=0-0" {
+		t.Fatalf("upstream was asked %q first, want the one-byte size probe", first)
+	}
+	if rec.Code != http.StatusPartialContent {
+		t.Fatalf("status = %d, want 206", rec.Code)
+	}
+	if cr := rec.Header().Get("Content-Range"); cr != "bytes 900-999/1000" {
+		t.Fatalf("content-range = %q, want the last 100 bytes", cr)
+	}
+	if got := rec.Body.String(); got != body[900:] {
+		t.Fatalf("body carried %d bytes, want the last 100", len(got))
 	}
 }
 
