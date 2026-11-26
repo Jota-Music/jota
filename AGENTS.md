@@ -577,6 +577,92 @@ only on a device.
   desktop, a local SAF folder on Android), not a Drive document behind the SAF
   cache.
 
+## Android media notification
+
+`navigator.mediaSession` is disabled in the WebView, so the notification, the
+lockscreen and the media keys are a native foreground service
+(`MediaPlaybackService`). The page drives it through `window.wails.mediaUpdate`
+and gets the transport actions back as `media:action`.
+
+**A paused element keeps the stream URL it resolved, and that URL expires.** A
+phone left paused is an idle page, not a dead one: measured on a Redmi that sat
+paused for three minutes, the media key reached the session, the page ran its
+`media:action` handler, and `play()` was accepted with `paused=false` and
+`readyState=4` — buffer full, no error — while the clock stood still and nothing
+reached the speakers. The stall watchdogs cannot help (they are stopped while
+paused), so `resume()` has to notice, and the two ways it does are both in
+`lib/music/views/stores/audio.ts`:
+
+- Every resume tries the element first and is held to it: `playing()` (in
+  `lib/music/app/recovery`) only counts the position moving at least a second and
+  keeping up with the wall clock, because a dying stream hands over its last
+  buffered tenth of a second and stops. A stream that fails that goes to the
+  recovery ladder, which clears the cached entry, re-resolves and resumes at the
+  same position.
+- That window is `RESUME_MS` (1.8 s), not the full `START_MS`: the stream is
+  usually alive, and an eager rebuild on every pause older than 30 s made the
+  commonest interaction (pause, come back a minute later, play) take the resolve
+  instead of instant. Measured after the change: 3 of 3 resumes at the samples
+  250 ms after the key were already playing. A pause longer than
+  `LONG_PAUSE_MS` (5 s) turns the loader on while it proves itself, so the button
+  never looks dead.
+
+**The card offers what actually exists.** A transport button that answers with
+silence reads as a broken card, so the page says whether there is anywhere to
+skip to (`next` in the media payload, wired from `canNext` in `audio.ts` through
+`wireSkipNext` — `media-session` keeps no dependency on the queue). When there is
+not, the service drops `ACTION_SKIP_TO_NEXT` from the `PlaybackState` and the
+Next action from the notification, and the card shows two buttons instead of
+three. Previous always stays: with nothing behind the playhead it restarts the
+track, which is a real action.
+
+**A timer created while the page is hidden never fires.** Measured: a 6 s timeout
+and a 500 ms poll created from a paused app stayed silent for twenty-five minutes,
+while an interval created before the app left the foreground kept ticking on
+schedule. That is why `playing()` schedules nothing: `audio.ts` starts one ticker
+at load (`setInterval(tick, 1000)`) and every wait rides it, and why a `play()`
+promise is never awaited on its own — an element in that state can leave it
+pending for good.
+
+**Past five minutes hidden, the page stops running altogether**, and none of the
+above can help: `fetch` never begins, so the stream cannot even be re-resolved.
+(Measured at 5.5 min: the action arrived, the page pushed the state it was
+leaving, and nothing else happened.) The host is what gets it back.
+
+`emitMediaAction` (`WailsBridge`) asks two questions at once. First, whether the
+page can run anything: the `media:action` handler schedules a zero-delay timer
+that calls `mediaTick`, and if it does not arrive in 800 ms the page's task queue
+is dead (the injected handler runs, nothing it schedules does) and the reload
+starts right there — measured, that took the frozen case from 5.1 s to 1.7 s.
+Second, whether the action took effect: a 3 s watchdog accepts it only when the
+page reports the state it asked for — `playing` for play, `paused` for pause,
+anything for the rest, because the page pushes the state it is leaving and would
+otherwise answer itself. A silent action reloads the page either way. The
+fresh page then **asks** for where it was (`takeMediaResume` in `WailsJSBridge`,
+read by `restorePlayback` in `audio.ts`) instead of being told on a timer: only
+the page knows when it is ready, and two timings here are traps — injecting too
+early finds no page, and `onPageFinished` is far too late for a `restorePlayback`
+that runs while the page loads. Three details keep the card steady:
+
+- The host writes the resume in `revive()`, before the reload, because the page
+  asks during its own load.
+- A recovery reload does not push the track it restored: the resumed position is
+  loaded with `prepareSong(song, seconds)` rather than published at zero.
+- A push that reports position 0 inside the revive window is dropped, which is
+  what the remaining "prepare the element" push would show.
+
+Measured end to end on the phone (card tapped, app untouched): 5.5 minutes
+paused, key pressed, playing at the same position in 1.7 s, no 00:00 in between.
+MIUI's card does not draw `STATE_BUFFERING` (it keeps the play triangle), but it
+**does** draw the notification's own actions: while a recovery runs the middle
+action becomes a loading icon (`ic_popup_sync`), which is the feedback the user
+sees in the first 300 ms. The state is published as buffering anyway, and a
+15 s timeout takes the loader away if the recovery never lands, so the card
+cannot promise sound forever. In the app the same rebuild shows the loader instead of a
+dead button. `resumePosition` takes the later of the element's clock and the UI's
+progress, because the autoplay prime swaps a silent clip into the shared element
+on the first gesture and leaves the element at zero.
+
 ## Spotify
 
 The session is a go-librespot client of Jota's own, restored from the `spotify-global`
