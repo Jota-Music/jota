@@ -111,6 +111,7 @@ function owns(a: HTMLAudioElement): boolean {
 }
 
 function endPlayback(a: HTMLAudioElement) {
+	trace("ended", a);
 	if (!owns(a)) return;
 	// A player that gives up mid-file (a range request it cut short) reports the
 	// end early: the position is well short of the duration, so the track is not
@@ -470,6 +471,11 @@ async function loadSongIntoPlayer(
 	quiet = false,
 ): Promise<LoadStatus> {
 	const token = ++loadToken;
+	trace(
+		`load ${songLabel(song)} token=${token} autostart=${autostart}`,
+		audio,
+		true,
+	);
 
 	// A recovery reload hides its transient state; any other load is the normal
 	// path and must clear a leftover quiet window from a failed recovery.
@@ -886,6 +892,7 @@ export async function resume(): Promise<boolean> {
 
 export function seek(time: number) {
 	if (!Number.isFinite(time)) return;
+	trace(`seek ${time.toFixed(2)}`, audio, true);
 	// Clamp against the element's own duration: the resolved metadata rounds up,
 	// and a target past the end parks the element at the very end, which the
 	// player reports as a finished track.
@@ -990,6 +997,22 @@ export function stopPlayer() {
 	pendingStart.value = false;
 }
 
+// Dev-only trace of the element's own state machine. A track that stops with no
+// error and no recovery leaves nothing in the log, so the events are what tell a
+// buffering stall from a paused element (or from one that was loaded again).
+const trace =
+	import.meta.env.DEV && typeof window !== "undefined"
+		? (what: string, a: HTMLAudioElement | null, stack = false) => {
+				const end = a?.buffered.length
+					? a.buffered.end(a.buffered.length - 1)
+					: 0;
+				const line = `trace ${what} ${songLabel(currentSong.value)} t=${(a?.currentTime ?? 0).toFixed(2)} buf=${end.toFixed(1)} ready=${a?.readyState ?? -1} net=${a?.networkState ?? -1} paused=${a?.paused ?? true} quiet=${quietReload} loading=${isLoading.value}`;
+				// A stack is what names the caller: an event handler can only say
+				// what happened, not who asked for it.
+				logError(stack ? new Error(line) : line);
+			}
+		: () => {};
+
 function bindEvents(a: HTMLAudioElement) {
 	const syncDuration = () => {
 		if (!owns(a)) return;
@@ -1000,7 +1023,16 @@ function bindEvents(a: HTMLAudioElement) {
 	a.onloadedmetadata = syncDuration;
 	a.ondurationchange = syncDuration;
 
+	a.onloadstart = () => trace("loadstart", a);
+	a.onemptied = () => trace("emptied", a);
+	a.onstalled = () => trace("stalled", a);
+	a.onsuspend = () => trace("suspend", a);
+	a.onseeking = () => trace("seeking", a);
+	a.onseeked = () => trace("seeked", a);
+	a.onratechange = () => trace("ratechange", a);
+
 	a.onplay = () => {
+		trace("play", a);
 		if (!owns(a)) return;
 		endQuietReload();
 		clearBufferTimer();
@@ -1016,6 +1048,7 @@ function bindEvents(a: HTMLAudioElement) {
 	// stream reaches the speakers. Only `playing` means audio is actually out, so
 	// the loader stays until then instead of vanishing into a silent gap.
 	a.onplaying = () => {
+		trace("playing", a);
 		if (!owns(a)) return;
 		clearBufferTimer();
 		isLoading.value = false;
@@ -1025,6 +1058,7 @@ function bindEvents(a: HTMLAudioElement) {
 	// so the loader belongs on. A quiet recovery reloads behind the scenes and
 	// must show it just the same.
 	a.onwaiting = () => {
+		trace("waiting", a);
 		if (!owns(a)) return;
 		// Delay the spinner so a seek that resolves in a few hundred ms does not
 		// flash it. A real stall still shows it after the grace window.
@@ -1039,6 +1073,7 @@ function bindEvents(a: HTMLAudioElement) {
 	};
 
 	a.onpause = () => {
+		trace("pause", a);
 		if (!owns(a)) return;
 		pausedAt = Date.now();
 		// A reload pauses the element behind the scenes; keep the UI stable and let
