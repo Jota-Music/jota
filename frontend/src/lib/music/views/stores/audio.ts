@@ -75,6 +75,9 @@ let quietTimer: ReturnType<typeof setTimeout> | null = null;
 let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
 let recoveryInFlight = false;
 let recoveryAttempt = 0;
+// What asked for the recovery on screen. A rebuild pauses the track for a
+// moment, so the log has to say which watchdog judged it dead.
+let recoveryWhy = "";
 
 let onTrackEndedCallback: (() => void) | null = null;
 let endedElement: HTMLAudioElement | null = null;
@@ -126,7 +129,7 @@ function endPlayback(a: HTMLAudioElement) {
 		const resumeAt = a.currentTime;
 		const playback = a.play();
 		a.currentTime = resumeAt;
-		void playback.catch(() => requestRecovery());
+		void playback.catch(() => requestRecovery("restart rejected"));
 		return;
 	}
 	endedElement = a;
@@ -187,7 +190,7 @@ function watchEnd(a: HTMLAudioElement) {
 		if (stalled(still) && (still >= 8000 || !isLoading.value)) {
 			still = 0;
 			last = time;
-			requestRecovery();
+			requestRecovery("stall");
 		}
 	}, 250);
 }
@@ -243,11 +246,13 @@ function scheduleRecovery(song: Song) {
 }
 
 // Entry point for the watchdogs: a no-op while a retry is already pending, so a
-// stall that keeps firing every tick cannot bypass the backoff.
-function requestRecovery() {
+// stall that keeps firing every tick cannot bypass the backoff. The reason is
+// carried into the log, so a rebuild names what asked for it.
+function requestRecovery(reason: string) {
 	if (recoveryTimer !== null || recoveryInFlight) {
 		return;
 	}
+	recoveryWhy = reason;
 	void recover();
 }
 
@@ -268,6 +273,11 @@ async function recover(): Promise<void> {
 
 	recoveryInFlight = true;
 	const at = resumePosition();
+	// A rebuild is a real pause in the sound, so every one says why it ran.
+	logError(
+		new Error(`recovering (${recoveryWhy || "unknown"})`),
+		`recover ${songLabel(song)} | ${mediaState(audio)}`,
+	);
 	try {
 		AudioCache.remove(song.id);
 		const loaded = await prepareSong(song, undefined, true);
@@ -850,7 +860,7 @@ export async function resume(): Promise<boolean> {
 			`resume ${songLabel(currentSong.value)} | ${mediaState(el)}`,
 		);
 		isLoading.value = true;
-		requestRecovery();
+		requestRecovery("resume went silent");
 		return false;
 	}
 	// The restored element may no longer hold the track (the silent autoplay
@@ -860,7 +870,7 @@ export async function resume(): Promise<boolean> {
 	if (!song) return false;
 	if (stale && currentSong.value) {
 		isLoading.value = true;
-		requestRecovery();
+		requestRecovery("long pause");
 		return false;
 	}
 	const result = await play(song);
@@ -868,7 +878,9 @@ export async function resume(): Promise<boolean> {
 	// would reach us: the ladder is the only thing that retries it. A blocked
 	// policy is not a dead stream -- `blocked` already armed the gesture retry,
 	// and a recovery here would fight it forever.
-	if (result === "failed" && !blockedByPolicy) requestRecovery();
+	if (result === "failed" && !blockedByPolicy) {
+		requestRecovery("resume failed");
+	}
 	return result === "ok";
 }
 
@@ -1091,7 +1103,7 @@ function bindEvents(a: HTMLAudioElement) {
 			// A mid-track error is usually the stream dying with the connection, not
 			// a broken song: recover it instead of reporting and leaving it stopped.
 			logError(new Error(`media error code ${code}`), detail);
-			requestRecovery();
+			requestRecovery("media error");
 		}
 	};
 }
@@ -1123,7 +1135,7 @@ if (typeof window !== "undefined") {
 	// The network came back: retry immediately instead of waiting out the backoff.
 	window.addEventListener("online", () => {
 		cancelRecovery();
-		requestRecovery();
+		requestRecovery("online");
 	});
 	window.addEventListener("storage", (e: StorageEvent) => {
 		if (e.storageArea !== localStorage) return;
