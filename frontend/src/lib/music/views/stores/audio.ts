@@ -1009,8 +1009,12 @@ function bindEvents(a: HTMLAudioElement) {
 		// Delay the spinner so a seek that resolves in a few hundred ms does not
 		// flash it. A real stall still shows it after the grace window.
 		clearBufferTimer();
+		const at = a.currentTime;
 		bufferTimer = setTimeout(() => {
-			if (owns(a)) isLoading.value = true;
+			// A clock that moved meanwhile is sound that never stopped: a `waiting`
+			// under it is the decoder asking for the next chunk, not a stall. The
+			// spinner there reads as a load happening out of nowhere.
+			if (owns(a) && a.currentTime === at) isLoading.value = true;
 		}, 200);
 	};
 
