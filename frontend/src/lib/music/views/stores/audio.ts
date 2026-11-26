@@ -520,7 +520,10 @@ async function loadSongIntoPlayer(
 
 	instance.volume = gain(volume.value);
 	instance.muted = muted.value;
-	if (!quietReload) instance.currentTime = 0;
+	// The position is not zeroed here on purpose: a fresh src starts at zero by
+	// itself, and an element that already holds this song (the same URL, so
+	// getAudioElement did not reload it) must keep where it is. `startSeconds`
+	// is what asks for a position, and it is seeked to below.
 
 	bindEvents(instance);
 
@@ -773,6 +776,11 @@ export async function prepareSong(
 	startSeconds?: number | (() => number),
 	quiet = false,
 ): Promise<boolean> {
+	// Already loaded: preparing it again has nothing to do. Rebuilding it would
+	// only drop the position of a track that is playing -- a load pauses the
+	// element, raises the loader and puts it back at zero, which reads as the
+	// song stopping on its own.
+	if (startSeconds == null && hasLoaded(song.id)) return true;
 	return (await loadSongIntoPlayer(song, false, startSeconds, quiet)) === "ok";
 }
 
