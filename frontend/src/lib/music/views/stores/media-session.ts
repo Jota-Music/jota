@@ -1,6 +1,8 @@
 import { ClearDiscordPresence, UpdateDiscordPresence } from "@bindings/app";
 import { Events } from "@wailsio/runtime";
 import type { Song } from "@/lib/music/model";
+import { t } from "@/lib/shared/i18n";
+import { logError } from "@/lib/shared/views/stores/errors";
 
 type Controls = {
 	play: () => void;
@@ -13,6 +15,7 @@ type Controls = {
 type NativeBridge = {
 	mediaUpdate?: (json: string) => void;
 	mediaClear?: () => void;
+	mediaTick?: () => void;
 };
 
 let next = () => {};
@@ -50,6 +53,10 @@ function pushNative(force = false) {
 		album: current.album.title,
 		artwork: current.album.covers?.[0] ?? "",
 		playing,
+		// The card offers what can actually be done: a next button with nothing
+		// behind it is an interaction that answers with silence.
+		next: canSkipNext(),
+		loading: t("music.player.loading"),
 		duration: storedDuration,
 		position: storedPosition,
 	});
@@ -63,6 +70,14 @@ function pushNative(force = false) {
 
 export function refresh() {
 	pushNative(true);
+}
+
+// What the app can skip to, asked at push time. The store wires it up, so this
+// module keeps no dependency on the queue.
+let canSkipNext: () => boolean = () => true;
+
+export function wireSkipNext(ask: () => boolean) {
+	canSkipNext = ask;
 }
 
 export function setup(controls: Controls) {
@@ -100,7 +115,16 @@ export function setup(controls: Controls) {
 	}
 
 	if (native()) {
+		// The host had to reload the page to get an action through. It reaches
+		// the app's own log so the phone can report it without a cable.
+		Events.On("media:recover", (ev) => {
+			logError(new Error("media page rescued"), JSON.stringify(ev.data ?? {}));
+		});
 		Events.On("media:action", (ev) => {
+			// A zero-delay timer proves this page can still run its own tasks: a
+			// hidden page Chromium stopped answers the injected handler and nothing
+			// else, and the host reloads it as soon as this does not arrive.
+			setTimeout(() => native()?.mediaTick?.(), 0);
 			const data = ev.data as { action?: string; value?: number } | undefined;
 			switch (data?.action) {
 				case "play":

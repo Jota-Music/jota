@@ -1,11 +1,18 @@
 import { effect, signal } from "@preact/signals";
 import { shouldEnd } from "@/lib/music/app/end";
-import { retryDelay, stalled } from "@/lib/music/app/recovery";
+import {
+	playing,
+	RESUME_MS,
+	retryDelay,
+	stalled,
+	tick,
+} from "@/lib/music/app/recovery";
 import { gain } from "@/lib/music/app/volume";
 import type { Song } from "@/lib/music/model";
 import { AudioCache } from "@/lib/music/views/stores/cache";
 import * as media from "@/lib/music/views/stores/media-session";
 import {
+	canNext,
 	currentIndex,
 	queue,
 	setSongYoutubeId,
@@ -46,6 +53,15 @@ let recovering = 0;
 // gates every track the same way, so it must stop the queue instead of failing
 // each song in turn.
 let blockedByPolicy = false;
+// Bumped every time playback is asked to stop. A resume holds the element to
+// actually starting for a few seconds, and a pause that lands inside that window
+// must not leave a recovery behind that starts the track anyway.
+let stops = 0;
+// When the element was last paused. A stream that sat paused is the one that
+// comes back silent, and a pause long enough to feel it is worth a loader while
+// the resume proves itself.
+let pausedAt = 0;
+const LONG_PAUSE_MS = 5000;
 // Set while a stream recovery reloads the shared element, so the transient
 // load/pause it causes does not overwrite the stable UI. Cleared by the next
 // `play` event or a timeout.
@@ -200,7 +216,11 @@ function cancelRecovery() {
 // song, otherwise the last position the UI reported.
 function resumePosition(): number {
 	if (audio && loadedSongId === currentSong.value?.id && !audio.error) {
-		return audio.currentTime;
+		// The element can be sitting at zero while the UI still knows better: the
+		// autoplay prime swaps a silent clip into the shared element on the first
+		// gesture, and restoring the real stream lands a moment later. Taking the
+		// later of the two keeps the position the user was at.
+		return Math.max(audio.currentTime, progress.value);
 	}
 	return progress.value;
 }
@@ -221,7 +241,9 @@ function scheduleRecovery(song: Song) {
 // Entry point for the watchdogs: a no-op while a retry is already pending, so a
 // stall that keeps firing every tick cannot bypass the backoff.
 function requestRecovery() {
-	if (recoveryTimer !== null || recoveryInFlight) return;
+	if (recoveryTimer !== null || recoveryInFlight) {
+		return;
+	}
 	void recover();
 }
 
@@ -245,15 +267,27 @@ async function recover(): Promise<void> {
 	try {
 		AudioCache.remove(song.id);
 		const loaded = await prepareSong(song, undefined, true);
-		if (!loaded || !audio) {
+		const el = audio;
+		if (!loaded || !el) {
 			scheduleRecovery(song);
 			return;
 		}
-		seek(clampSeconds(at, knownDurationOr(audio.duration)));
-		await audio.play();
+		seek(clampSeconds(at, knownDurationOr(el.duration)));
+		const attempt = el.play();
+		attempt.catch(() => {});
+		// The same trap the resume path guards: a rebuilt stream that accepted
+		// the play and never started is not a recovery, and counting it as one
+		// stops the ladder with the session paused and nothing left to retry.
+		if (!(await playing(el))) {
+			throw new Error("recovery never started");
+		}
 		recoveryAttempt = 0;
 		markFailed(song.id, false);
-	} catch {
+	} catch (err) {
+		if (isNotAllowedError(err)) {
+			blockedByPolicy = true;
+			return;
+		}
 		scheduleRecovery(song);
 	} finally {
 		recoveryInFlight = false;
@@ -759,28 +793,70 @@ export function hasLoaded(songId: string): boolean {
 	return loadedSongId === songId && hasLoadedAudio();
 }
 
-// Recover playback after a failed stream: reload the current song from a
-// freshly resolved URL instead of reusing the dead element/URL.
+// Start the track that is loaded, or rebuild the stream behind it when it no
+// longer plays. This is what the media session's play control runs, so it must
+// end in sound or in a recovery -- never in a silent "ok".
 export async function resume(): Promise<boolean> {
 	const el = audio;
 	if (el && hasLoadedAudio()) {
-		try {
-			await el.play();
-			return true;
-		} catch (err) {
-			if (isAbortError(err)) return false;
-			logError(
-				err,
-				`resume ${songLabel(currentSong.value)} | ${mediaState(el)}`,
-			);
+		// The stream may be dead (its URL expired while paused) and the element
+		// still accepts the play without a sound, so this waits for actual audio
+		// -- but only for a moment: a resume the user asked for cannot feel slow
+		// for a recovery it usually does not need.
+		const stopsAt = stops;
+		// Only the loader this resume raises is this resume's to take down: a
+		// track that starts loading while it waits owns its own.
+		const waiting = pausedAt > 0 && Date.now() - pausedAt > LONG_PAUSE_MS;
+		if (waiting) isLoading.value = true;
+		const forSong = currentSong.value?.id;
+		// The promise is watched, not awaited: an element whose stream died can
+		// leave play() pending for good, and this is the one control that must
+		// never hang on it. `playing` answers on the speakers or on the clock.
+		const attempt = el.play();
+		let failure: unknown = null;
+		attempt.catch((err: unknown) => {
+			failure = err;
+		});
+		if (await playing(el, RESUME_MS)) return true;
+		// A pause landed inside the window: the loader this resume raised has
+		// nothing left to wait for.
+		if (stops !== stopsAt) {
+			if (waiting) isLoading.value = false;
+			return false;
 		}
+		// Another track landed: its own load owns the loader and the recovery, so
+		// leave both alone -- turning the spinner off here is what made a song
+		// tapped during a stale resume look loaded before it played.
+		if (currentSong.value?.id !== forSong) return false;
+		if (failure && isAbortError(failure)) return false;
+		if (failure && isNotAllowedError(failure)) {
+			blockedByPolicy = true;
+			if (waiting) isLoading.value = false;
+			return false;
+		}
+		// Accepted and silent, or rejected outright: the URL this element resolved
+		// has expired (a paused stream keeps it for hours), and nothing else would
+		// retry it -- the stall watchdogs are stopped while paused. Rebuild the
+		// stream instead of leaving the session paused for good.
+		logError(
+			failure ?? new Error("resume never started"),
+			`resume ${songLabel(currentSong.value)} | ${mediaState(el)}`,
+		);
+		requestRecovery();
+		return false;
 	}
 	// The restored element may no longer hold the track (the silent autoplay
 	// prime swaps it), so fall back to the queued current track instead of
 	// leaving a fresh session's play control mute.
 	const song = currentSong.value ?? queue.value[currentIndex.value] ?? null;
 	if (!song) return false;
-	return (await play(song)) === "ok";
+	const result = await play(song);
+	// A failed load here never bound events to a fresh element, so no `error`
+	// would reach us: the ladder is the only thing that retries it. A blocked
+	// policy is not a dead stream -- `blocked` already armed the gesture retry,
+	// and a recovery here would fight it forever.
+	if (result === "failed" && !blockedByPolicy) requestRecovery();
+	return result === "ok";
 }
 
 export function seek(time: number) {
@@ -841,6 +917,8 @@ function setMuted(value: boolean) {
 }
 
 export function pause(): boolean {
+	stops += 1;
+	pausedAt = Date.now();
 	cancelRecovery();
 	endQuietReload();
 	const el = audio;
@@ -863,6 +941,8 @@ export async function togglePlayPause(): Promise<boolean> {
 }
 
 export function stopPlayer() {
+	stops += 1;
+	pausedAt = Date.now();
 	cancelRecovery();
 	endQuietReload();
 	loadToken++;
@@ -900,6 +980,7 @@ function bindEvents(a: HTMLAudioElement) {
 		endQuietReload();
 		clearBufferTimer();
 		endedElement = null;
+		pausedAt = 0;
 		isPlaying.value = true;
 		pendingStart.value = false;
 		media.update(currentSong.value, true);
@@ -930,6 +1011,7 @@ function bindEvents(a: HTMLAudioElement) {
 
 	a.onpause = () => {
 		if (!owns(a)) return;
+		pausedAt = Date.now();
 		// A reload pauses the element behind the scenes; keep the UI stable and let
 		// the following `play` decide the state.
 		if (quietReload) {
@@ -994,7 +1076,20 @@ effect(() => {
 	if (audio) audio.muted = muted.value;
 });
 
+// The card offers what can actually be done, so its next button follows the
+// queue and not only track changes: an edit that removes the last song has to
+// take the button with it.
+media.wireSkipNext(() => canNext.value);
+effect(() => {
+	canNext.value;
+	media.refresh();
+});
+
 if (typeof window !== "undefined") {
+	// Started while the page is on screen, which is the only way a timer here
+	// keeps running once the app goes to the background.
+	setInterval(tick, 1000);
+
 	primeAutoplayOnGesture();
 	// The network came back: retry immediately instead of waiting out the backoff.
 	window.addEventListener("online", () => {
@@ -1034,6 +1129,28 @@ media.setup({
 	position: getPlaybackSeconds,
 });
 
+// A page the host reloaded carries on where the card was, and it asks rather
+// than being told: only this side knows when it is ready, and a page that
+// publishes the track it restored on the way in makes the card flicker.
+function takeResume(): { seconds: number; play: boolean } | null {
+	if (typeof window === "undefined") return null;
+	const wails = (
+		window as unknown as { wails?: { takeMediaResume?: () => string } }
+	).wails;
+	if (!wails || typeof wails.takeMediaResume !== "function") return null;
+	try {
+		const raw = wails.takeMediaResume();
+		if (!raw) return null;
+		const data = JSON.parse(raw) as { seconds?: unknown; play?: unknown };
+		if (typeof data.seconds !== "number" || !Number.isFinite(data.seconds)) {
+			return null;
+		}
+		return { seconds: Math.max(0, data.seconds), play: data.play === true };
+	} catch {
+		return null;
+	}
+}
+
 function restorePlayback(): void {
 	const song = queue.value[currentIndex.value] ?? null;
 	if (!song) return;
@@ -1041,12 +1158,18 @@ function restorePlayback(): void {
 	// before the first play, the loader reports the stream on its way, and the
 	// first play does not have to resolve anything. The shared element is what
 	// gets loaded, so a stale element must never pass for loaded (hasLoadedAudio).
+	const pending = takeResume();
 	currentSong.value = song;
-	progress.value = 0;
+	progress.value = pending?.seconds ?? 0;
 	audioDuration.value = 0;
 	isPlaying.value = false;
-	media.update(song, false);
-	void prepareSong(song);
+	// The card already shows the pause this page is recovering: pushing the
+	// restored track at zero would make it jump to 00:00 and back.
+	if (pending) isLoading.value = true;
+	else media.update(song, false);
+	void prepareSong(song, pending?.seconds).then((loaded) => {
+		if (loaded && pending?.play) void resume();
+	});
 }
 
 if (typeof window !== "undefined") {
