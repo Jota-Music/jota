@@ -61,7 +61,11 @@ let stops = 0;
 // comes back silent, and a pause long enough to feel it is worth a loader while
 // the resume proves itself.
 let pausedAt = 0;
-const LONG_PAUSE_MS = 5000;
+// Past this, a paused element's stream is more likely dead than not, and trying
+// it plays the last buffered frames and nothing else: a blip of sound, then the
+// rebuild. Measured on the phone, a pause of 45 s still resumed cleanly and one
+// of a few minutes did not.
+const TRUST_MS = 90_000;
 // Set while a stream recovery reloads the shared element, so the transient
 // load/pause it causes does not overwrite the stable UI. Cleared by the next
 // `play` event or a timeout.
@@ -798,16 +802,15 @@ export function hasLoaded(songId: string): boolean {
 // end in sound or in a recovery -- never in a silent "ok".
 export async function resume(): Promise<boolean> {
 	const el = audio;
-	if (el && hasLoadedAudio()) {
-		// The stream may be dead (its URL expired while paused) and the element
-		// still accepts the play without a sound, so this waits for actual audio
-		// -- but only for a moment: a resume the user asked for cannot feel slow
-		// for a recovery it usually does not need.
+	// A stream left paused for long enough is rebuilt instead of played: trying it
+	// hands over the last frames it buffered -- a blip of sound -- and then needs
+	// the rebuild anyway.
+	const stale = pausedAt > 0 && Date.now() - pausedAt > TRUST_MS;
+	if (el && hasLoadedAudio() && !stale) {
+		// The stream may still be dead and the element accepts the play without a
+		// sound, so this waits for actual audio -- but only for a moment: a resume
+		// the user asked for cannot feel slow for a recovery it rarely needs.
 		const stopsAt = stops;
-		// Only the loader this resume raises is this resume's to take down: a
-		// track that starts loading while it waits owns its own.
-		const waiting = pausedAt > 0 && Date.now() - pausedAt > LONG_PAUSE_MS;
-		if (waiting) isLoading.value = true;
 		const forSong = currentSong.value?.id;
 		// The promise is watched, not awaited: an element whose stream died can
 		// leave play() pending for good, and this is the one control that must
@@ -818,12 +821,9 @@ export async function resume(): Promise<boolean> {
 			failure = err;
 		});
 		if (await playing(el, RESUME_MS)) return true;
-		// A pause landed inside the window: the loader this resume raised has
-		// nothing left to wait for.
-		if (stops !== stopsAt) {
-			if (waiting) isLoading.value = false;
-			return false;
-		}
+		// A pause landed inside the window: this resume has nothing left to wait
+		// for, and the loader belongs to whoever raised it.
+		if (stops !== stopsAt) return false;
 		// Another track landed: its own load owns the loader and the recovery, so
 		// leave both alone -- turning the spinner off here is what made a song
 		// tapped during a stale resume look loaded before it played.
@@ -831,7 +831,6 @@ export async function resume(): Promise<boolean> {
 		if (failure && isAbortError(failure)) return false;
 		if (failure && isNotAllowedError(failure)) {
 			blockedByPolicy = true;
-			if (waiting) isLoading.value = false;
 			return false;
 		}
 		// Accepted and silent, or rejected outright: the URL this element resolved
@@ -842,6 +841,7 @@ export async function resume(): Promise<boolean> {
 			failure ?? new Error("resume never started"),
 			`resume ${songLabel(currentSong.value)} | ${mediaState(el)}`,
 		);
+		isLoading.value = true;
 		requestRecovery();
 		return false;
 	}
@@ -850,6 +850,11 @@ export async function resume(): Promise<boolean> {
 	// leaving a fresh session's play control mute.
 	const song = currentSong.value ?? queue.value[currentIndex.value] ?? null;
 	if (!song) return false;
+	if (stale && currentSong.value) {
+		isLoading.value = true;
+		requestRecovery();
+		return false;
+	}
 	const result = await play(song);
 	// A failed load here never bound events to a fresh element, so no `error`
 	// would reach us: the ladder is the only thing that retries it. A blocked
