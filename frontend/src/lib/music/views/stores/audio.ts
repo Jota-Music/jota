@@ -1060,7 +1060,19 @@ function bindEvents(a: HTMLAudioElement) {
 
 	a.onerror = () => {
 		if (!owns(a)) return;
-		const code = a.error?.code ?? 0;
+		const err = a.error;
+		// Swapping the stream on the shared element aborts the one it was holding,
+		// and an `error` from that load can land after the new one took over: it
+		// carries no media error, or MEDIA_ERR_ABORTED(1). Nothing failed, so
+		// tearing the element down here stopped a track that had just started.
+		if (!err || err.code === 1) {
+			logError(
+				new Error(`aborted load ${err ? `code ${err.code}` : "no error"}`),
+				`ignored error ${songLabel(currentSong.value)} | ${mediaState(a)}`,
+			);
+			return;
+		}
+		const code = err.code;
 		const label = songLabel(currentSong.value);
 		a.onerror = null;
 		stopEndWatch();
