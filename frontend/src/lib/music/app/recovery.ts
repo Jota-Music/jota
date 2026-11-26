@@ -34,8 +34,13 @@ export const RESUME_MS = 1800;
 
 // How much audio has to come out before the stream counts as playing. A dying
 // stream hands over the frames it still had buffered -- about a tenth of a
-// second -- and then stops, so anything that short is not sound.
-const MOVED_S = 1;
+// second -- and then stops, so anything that short is not sound. A full second
+// was the first threshold, and it judged healthy streams dead: the tick lands a
+// second apart, so a start that took a moment left the sample under it and a
+// good stream was torn down and rebuilt. A start carries no wall-clock
+// condition either: it is slow or it is silent, and `watchEnd` is what catches a
+// stream that began and then stopped.
+const BLIP_S = 0.3;
 
 // The slice of HTMLMediaElement a wait touches, so it can be exercised without a
 // DOM (the real element is structurally compatible).
@@ -48,7 +53,6 @@ type Surface = {
 type Wait = {
 	el: Surface;
 	from: number;
-	wall: number;
 	until: number;
 	done: (started: boolean) => void;
 };
@@ -61,9 +65,7 @@ type Wait = {
 const waits = new Set<Wait>();
 
 function playingNow(w: Wait): boolean {
-	const moved = w.el.currentTime - w.from;
-	const wall = (Date.now() - w.wall) / 1000;
-	return moved >= MOVED_S && moved >= wall * 0.5;
+	return w.el.currentTime - w.from >= BLIP_S;
 }
 
 // Called once a second by the store. Settles every wait that either produced
@@ -92,7 +94,6 @@ export function playing(el: Surface, timeoutMs = START_MS): Promise<boolean> {
 		const wait: Wait = {
 			el,
 			from: el.currentTime,
-			wall: Date.now(),
 			until: Date.now() + timeoutMs,
 			done,
 		};

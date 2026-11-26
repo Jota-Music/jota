@@ -47,6 +47,17 @@ test("a stream that plays real audio is playing", async () => {
 	expect(await started).toBe(true);
 });
 
+test("a start that took a moment is still playing", async () => {
+	// The sample lands a second apart: a healthy stream that needed 0.3 s to
+	// begin had moved half a second at the first tick, and demanding a whole one
+	// had it torn down and rebuilt right after it started.
+	const el = fake(10);
+	const started = playing(el, 1800);
+	el.currentTime = 10.5;
+	tick();
+	expect(await started).toBe(true);
+});
+
 test("the last buffered frames of a dead stream are not playing", async () => {
 	// Measured on the phone: paused=false, buffer full, no error, the clock moved
 	// a tenth of a second and stopped. Taking that for playback left the session
