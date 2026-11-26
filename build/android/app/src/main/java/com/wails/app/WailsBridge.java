@@ -34,6 +34,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.StatFs;
+import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
@@ -260,6 +261,7 @@ public class WailsBridge {
      */
     public void onPageFinished(String url) {
         if (initialized) nativeOnPageFinished(url);
+
     }
 
     /**
@@ -1495,6 +1497,11 @@ public class WailsBridge {
     public void updateMediaSession(final String json) {
         mainHandler.post(() -> {
             try {
+                // Kept for the reload's resume hook: it is the moment the card is
+                // showing, which is where the user left the track.
+                long pos = (long) (new JSONObject(json).optDouble("position", positionMs / 1000.0) * 1000);
+                if (pos == 0 && SystemClock.elapsedRealtime() < zeroSilentUntil) return;
+                positionMs = pos;
                 if (Build.VERSION.SDK_INT >= 33
                         && !mediaNotificationPermissionRequested
                         && activity.checkSelfPermission("android.permission.POST_NOTIFICATIONS")
@@ -1519,11 +1526,193 @@ public class WailsBridge {
                     ContextCompat.startForegroundService(activity, i);
                 }
                 mediaServiceRunning = true;
+                // The page did what the last transport action asked for, so it
+                // did not need rescuing from.
+                answered(json);
             } catch (Exception e) {
                 mediaServiceRunning = false;
                 Log.e(TAG, "updateMediaSession failed", e);
             }
         });
+    }
+
+    /**
+     * How long the page has to report a new state after a transport action. It
+     * pushes one as soon as the action takes effect, so silence means the action
+     * did not happen -- not that it was slow.
+     */
+    private static final long ANSWER_MS = 3000;
+
+    /** A reload that did not help must not become a loop. */
+    private static final long REVIVE_GAP_MS = 30000;
+
+    /**
+     * How long a zero-delay timer the page schedules while handling an action
+     * may take to fire. Chromium stops running a hidden page's tasks altogether:
+     * the handler still executes (it is injected) but nothing it schedules does,
+     * so this answers "can this page run anything" within a second instead of
+     * waiting out the state watchdog.
+     */
+    private static final long TICK_MS = 600;
+
+    private Runnable answerCheck;
+    private Runnable tickCheck;
+    private boolean pageTicked;
+    private String unanswered;
+    // What the page has to report for the action to count as carried out: play
+    // must report playing, pause paused, anything else just has to report. The
+    // page pushes the state it is leaving, so "any push" would answer itself.
+    private Boolean expectsPlaying;
+    private long positionMs;
+    // Where the card was when the action arrived. The page pushes position 0 as
+    // soon as it starts rebuilding, so this cannot be read after the fact.
+    private long resumeAt;
+    // Whether the action that forced the reload wanted sound: a pause must come
+    // back paused, or the recovery turns the user's pause into playback.
+    private boolean resumePlaying;
+    private long revivedAt;
+    // What the reloaded page should carry on with. It is handed over when the
+    // page asks for it, not injected on a timer: only the page knows when it is
+    // ready, and a page that publishes the track it restored -- paused, at zero --
+    // on the way in makes the card flicker through 00:00.
+    private String pendingResume;
+    // While a reload is settling, the fresh page publishes the track it restored
+    // at zero. The card is already showing the pause being recovered, so that
+    // push only makes it flicker through 00:00.
+    private long zeroSilentUntil;
+
+    /**
+     * Forward a transport action to the page and make sure it did something.
+     *
+     * Chromium stops running a page that has been hidden for a while, and the
+     * whole page goes with it: the media key still arrives (it is executed from
+     * the host, not from the page's task queue), the handler runs, and the
+     * playback it starts never happens -- `fetch` does not even begin, so the
+     * stream it needs to resolve never arrives. Nothing inside the page can dig
+     * itself out of that, so the host reloads it, which is what opening the app
+     * was doing by hand.
+     */
+    /**
+     * Turns the card into "working" before the page has answered. The recovery
+     * of a stream that died takes seconds, and leaving the card on the paused
+     * state it is leaving is what makes a working button look like a dead one.
+     */
+    private void showWorking() {
+        if (!MediaPlaybackService.isAlive()) return;
+        try {
+            Intent i = new Intent(activity, MediaPlaybackService.class);
+            i.setAction(MediaPlaybackService.ACTION_BUFFERING);
+            activity.startService(i);
+        } catch (Exception e) {
+            Log.w(TAG, "buffering update failed", e);
+        }
+    }
+
+    public void emitMediaAction(String json) {
+        Log.i(TAG, "emitMediaAction " + json + " page=" + (webView != null));
+        unanswered = json;
+        resumeAt = positionMs;
+        pageTicked = false;
+        if (tickCheck != null) mainHandler.removeCallbacks(tickCheck);
+        tickCheck =
+                () -> {
+                    tickCheck = null;
+                    if (pageTicked) return;
+                    Log.w(TAG, "page cannot run its own tasks: reloading");
+                    emitEvent("media:recover", "{\"reason\":\"frozen\"}");
+                    revive();
+                };
+        mainHandler.postDelayed(tickCheck, TICK_MS);
+        expectsPlaying = null;
+        resumePlaying = true;
+        try {
+            String action = new JSONObject(json).optString("action");
+            if ("pause".equals(action)) {
+                expectsPlaying = false;
+                resumePlaying = false;
+            } else {
+                if ("play".equals(action)) expectsPlaying = true;
+                // Whatever it was, the card should say it is working on it.
+                showWorking();
+            }
+        } catch (Exception ignored) {
+        }
+        if (initialized) nativeEmitEvent("media:action", json);
+        if (answerCheck != null) mainHandler.removeCallbacks(answerCheck);
+        answerCheck =
+                () -> {
+                    answerCheck = null;
+                    if (unanswered == null) return;
+                    Log.w(TAG, "media action unanswered: reloading the page");
+                    // Also into the app's own log: the report is "it stops
+                    // answering", and the phone has to be able to show what it
+                    // did about it without a cable.
+                    emitEvent("media:recover", "{\"reason\":\"unanswered\"}");
+                    unanswered = null;
+                    revive();
+                };
+        mainHandler.postDelayed(answerCheck, ANSWER_MS);
+    }
+
+    /**
+     * The position a reloaded page has to carry on from, claimed once when the
+     * page is ready for it. Empty when there is nothing to resume.
+     */
+    public String takeMediaResume() {
+        String resume = pendingResume;
+        pendingResume = null;
+        return resume == null ? "" : resume;
+    }
+
+    /** The page's own task queue is alive. */
+    public void mediaTick() {
+        mainHandler.post(
+                () -> {
+                    pageTicked = true;
+                    if (tickCheck != null) {
+                        mainHandler.removeCallbacks(tickCheck);
+                        tickCheck = null;
+                    }
+                });
+    }
+
+    /** The page reported the state the action was asking for. */
+    private void answered(String json) {
+        if (expectsPlaying != null) {
+            boolean playing = false;
+            try {
+                playing = new JSONObject(json).optBoolean("playing");
+            } catch (Exception ignored) {
+            }
+            if (expectsPlaying != playing) return;
+            expectsPlaying = null;
+        }
+        unanswered = null;
+        if (answerCheck != null) {
+            mainHandler.removeCallbacks(answerCheck);
+            answerCheck = null;
+        }
+    }
+
+    private void revive() {
+        if (!(activity instanceof MainActivity)) return;
+        long now = SystemClock.elapsedRealtime();
+        if (now - revivedAt < REVIVE_GAP_MS) {
+            Log.w(TAG, "page still silent: not reloading again yet");
+            emitEvent("media:recover", "{\"reason\":\"cooldown\"}");
+            return;
+        }
+        revivedAt = now;
+        zeroSilentUntil = now + 5000;
+        // Written before the reload: the page asks for it while it is loading,
+        // long before the host would hear that the page finished.
+        pendingResume =
+                "{\"seconds\":"
+                        + (resumeAt / 1000.0)
+                        + ",\"play\":"
+                        + resumePlaying
+                        + "}";
+        ((MainActivity) activity).reloadPage();
     }
 
     /** Remove the media notification and tear down the playback service. */

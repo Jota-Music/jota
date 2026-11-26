@@ -7,6 +7,7 @@ import android.content.ComponentCallbacks2;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
@@ -23,6 +24,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
@@ -118,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
                         JSONObject o = new JSONObject();
                         o.put("action", action);
                         if (seekMs != null) o.put("value", seekMs);
-                        bridge.emitEvent("media:action", o.toString());
+                        bridge.emitMediaAction(o.toString());
                     } catch (Exception ignored) {
                     }
                 });
@@ -348,6 +350,15 @@ public class MainActivity extends AppCompatActivity {
         String url = WAILS_SCHEME + "://" + WAILS_HOST + "/";
         if (DEBUG) Log.d(TAG, "Loading URL: " + url);
         webView.loadUrl(url);
+    }
+
+    /**
+     * Reload the page over the running Go runtime. The media watchdog is the
+     * caller: a page Chromium stopped running cannot come back by itself.
+     */
+    public void reloadPage() {
+        if (webView == null || isFinishing() || isDestroyed()) return;
+        loadApplication();
     }
 
     // The old WebView is unusable once its renderer is gone: detach it before
@@ -1055,6 +1066,30 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (bridge != null) {
             bridge.onResume();
+        }
+        if (MediaPlaybackService.isAlive()) requestBatteryExemption();
+    }
+
+    // MIUI and HyperOS kill or freeze the app once it stops playing, foreground
+    // media service or not: the card stays, its controls answer nothing, and the
+    // only way back is opening the app. That is exactly when this asks -- the user
+    // is here because playback died -- and once, for the device-idle whitelist
+    // their battery manager honours. Nothing in the app can override that
+    // manager; this is the switch it listens to.
+    public void requestBatteryExemption() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
+        SharedPreferences prefs = getSharedPreferences("jota", MODE_PRIVATE);
+        if (prefs.getBoolean("battery-exemption-asked", false)) return;
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (pm == null || pm.isIgnoringBatteryOptimizations(getPackageName())) return;
+        try {
+            startActivity(
+                    new Intent(
+                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            Uri.parse("package:" + getPackageName())));
+            prefs.edit().putBoolean("battery-exemption-asked", true).apply();
+        } catch (Exception e) {
+            Log.w(TAG, "battery exemption prompt failed", e);
         }
     }
 

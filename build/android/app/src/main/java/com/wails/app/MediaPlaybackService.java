@@ -44,6 +44,7 @@ public class MediaPlaybackService extends Service {
     private static final int NOTIFICATION_ID = 0x4A07; // "JO"
 
     public static final String ACTION_UPDATE = "com.wails.app.MEDIA_UPDATE";
+    public static final String ACTION_BUFFERING = "com.wails.app.MEDIA_BUFFERING";
     public static final String ACTION_CLEAR = "com.wails.app.MEDIA_CLEAR";
     private static final String ACTION_PLAY = "com.wails.app.MEDIA_PLAY";
     private static final String ACTION_PAUSE = "com.wails.app.MEDIA_PAUSE";
@@ -90,8 +91,26 @@ public class MediaPlaybackService extends Service {
     private String artworkUrl = "";
     private volatile String pendingArtworkUrl = "";
     private boolean playing = false;
+    // Whether there is anywhere to skip to. The card and the session only offer
+    // what exists: a next button that answers with silence reads as broken.
+    private boolean hasNext = true;
+    // A transport action was received and the sound is on its way. The card reads
+    // this as "working", which is what the several seconds a recovery takes look
+    // like when they are shown as the paused state they are leaving.
+    private boolean buffering = false;
+    // The loader belongs to a recovery, not to the card: one that never lands
+    // (no network, a stream that will not resolve) must go back to paused
+    // instead of promising sound forever.
+    private final Runnable loadingTimeout =
+            () -> {
+                if (!buffering) return;
+                buffering = false;
+                updateSession();
+            };
     private String title = "";
     private String artist = "";
+    // The app's own wording for "on its way", in its own language.
+    private String loadingLabel = "Loading";
     private String album = "";
     private long durationMs = 0;
     private long positionMs = 0;
@@ -150,6 +169,13 @@ public class MediaPlaybackService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : null;
 
+        if (ACTION_BUFFERING.equals(action)) {
+            buffering = true;
+            main.removeCallbacks(loadingTimeout);
+            main.postDelayed(loadingTimeout, 15000);
+            updateSession();
+            return START_STICKY;
+        }
         if (ACTION_CLEAR.equals(action)) {
             stopSelf();
             return START_NOT_STICKY;
@@ -181,12 +207,16 @@ public class MediaPlaybackService extends Service {
     }
 
     private void apply(String json) {
+        buffering = false;
+        main.removeCallbacks(loadingTimeout);
         try {
             JSONObject o = new JSONObject(json);
             title = o.optString("title", title);
             artist = o.optString("artist", artist);
             album = o.optString("album", album);
             playing = o.optBoolean("playing", playing);
+            hasNext = o.optBoolean("next", hasNext);
+            loadingLabel = o.optString("loading", loadingLabel);
             durationMs = (long) (o.optDouble("duration", durationMs / 1000.0) * 1000);
             positionMs = (long) (o.optDouble("position", positionMs / 1000.0) * 1000);
             String art = o.optString("artwork", "");
@@ -212,6 +242,10 @@ public class MediaPlaybackService extends Service {
         // re-binds the seek bar under the finger, so only content does.
         String content =
                 playing
+                        + "\n"
+                        + buffering
+                        + "\n"
+                        + hasNext
                         + "\n"
                         + title
                         + "\n"
@@ -262,16 +296,16 @@ public class MediaPlaybackService extends Service {
                         | PlaybackState.ACTION_PAUSE
                         | PlaybackState.ACTION_PLAY_PAUSE
                         | PlaybackState.ACTION_STOP
-                        | PlaybackState.ACTION_SKIP_TO_NEXT
                         | PlaybackState.ACTION_SKIP_TO_PREVIOUS
-                        | PlaybackState.ACTION_SEEK_TO;
+                        | PlaybackState.ACTION_SEEK_TO
+                        | (hasNext ? PlaybackState.ACTION_SKIP_TO_NEXT : 0);
+        int playbackState = buffering
+                ? PlaybackState.STATE_BUFFERING
+                : playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
         PlaybackState state =
                 new PlaybackState.Builder()
                         .setActions(actions)
-                        .setState(
-                                playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED,
-                                positionMs,
-                                playing ? 1f : 0f)
+                        .setState(playbackState, positionMs, playing ? 1f : 0f)
                         .build();
         session.setPlaybackState(state);
     }
@@ -323,9 +357,7 @@ public class MediaPlaybackService extends Service {
 
     private Notification build() {
         Notification.MediaStyle style =
-                new Notification.MediaStyle()
-                        .setMediaSession(session.getSessionToken())
-                        .setShowActionsInCompactView(0, 1, 2);
+                new Notification.MediaStyle().setMediaSession(session.getSessionToken());
 
         Notification.Builder b =
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
@@ -334,7 +366,7 @@ public class MediaPlaybackService extends Service {
 
         b.setSmallIcon(android.R.drawable.ic_media_play)
                 .setContentTitle(title.isEmpty() ? "Jota" : title)
-                .setContentText(artist)
+                .setContentText(buffering ? loadingLabel : artist)
                 .setShowWhen(false)
                 .setOnlyAlertOnce(true)
                 .setStyle(style)
@@ -345,8 +377,13 @@ public class MediaPlaybackService extends Service {
                 .addAction(
                         playing
                                 ? action(android.R.drawable.ic_media_pause, "Pause", ACTION_PAUSE)
-                                : action(android.R.drawable.ic_media_play, "Play", ACTION_PLAY))
-                .addAction(action(android.R.drawable.ic_media_next, "Next", ACTION_NEXT));
+                                : action(android.R.drawable.ic_media_play, "Play", ACTION_PLAY));
+        // Nothing to skip to: the button is not offered, because one that answers
+        // with silence is what reads as a broken card.
+        if (hasNext) {
+            b.addAction(action(android.R.drawable.ic_media_next, "Next", ACTION_NEXT));
+        }
+        style.setShowActionsInCompactView(hasNext ? new int[] {0, 1, 2} : new int[] {0, 1});
         if (artwork != null) {
             b.setLargeIcon(artwork);
         }
@@ -383,8 +420,20 @@ public class MediaPlaybackService extends Service {
     }
 
     private void forward(String action, Long seekMs) {
+        Log.i(TAG, "forward " + action + " listener=" + (listener != null));
         Listener l = listener;
-        if (l != null) l.onAction(action, seekMs);
+        if (l != null) {
+            l.onAction(action, seekMs);
+            return;
+        }
+        // Nothing can play: the page lives in the activity, and this service was
+        // rebuilt without one (the system restarted it, or the activity went
+        // away with its task). The card on screen answers a tap with silence
+        // forever, which is the "I have to open the app to unlock it" report.
+        // Taking it down is the honest answer -- tapping the card itself opens
+        // the app, and a card that cannot do anything must not pretend.
+        Log.w(TAG, "no page to play: dropping the card");
+        stopSelf();
     }
 
     @Override

@@ -77,6 +77,24 @@ public class WailsJSBridge {
     }
 
     /**
+     * The page's task queue answering: a zero-delay timer it scheduled after a
+     * transport action actually ran. Called from JavaScript: wails.mediaTick()
+     */
+    @JavascriptInterface
+    public void mediaTick() {
+        bridge.mediaTick();
+    }
+
+    /**
+     * The position a reloaded page has to carry on from, claimed on load.
+     * Called from JavaScript: wails.takeMediaResume()
+     */
+    @JavascriptInterface
+    public String takeMediaResume() {
+        return bridge.takeMediaResume();
+    }
+
+    /**
      * Remove the media notification. Called from JavaScript: wails.mediaClear()
      */
     @JavascriptInterface
