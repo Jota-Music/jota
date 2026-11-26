@@ -443,10 +443,9 @@ export function SetSyncInterval(minutes: number): $CancellablePromise<void> {
 /**
  * SetYouTubeCookies stores the Google account cookies used to sign innertube
  * requests. Playing age-restricted videos and avoiding the bot check requires
- * it; using an account this way can get it banned by Google. The session is
- * checked against YouTube before it is kept, because a partial export signs
- * requests yet is still anonymous, which only shows up later on a private
- * playlist.
+ * it; using an account this way can get it banned by Google. The verdict is the
+ * next signed request's, so an import is never refused for one bad answer; a set
+ * that only signs requests is refused locally (`ErrPartialSession`).
  */
 export function SetYouTubeCookies(cookies: string): $CancellablePromise<void> {
     return $Call.ByID(2898265424, cookies);
