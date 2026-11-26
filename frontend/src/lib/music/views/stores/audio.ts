@@ -71,6 +71,15 @@ const TRUST_MS = 90_000;
 // `play` event or a timeout.
 let quietReload = false;
 let quietTimer: ReturnType<typeof setTimeout> | null = null;
+// A track's first second can hiccup -- the demuxer reads the end of the stream,
+// the decoder re-prerolls -- so WebKit reports `playing`, then `waiting` a
+// moment later, then `playing` again. Turning the loader off at the first
+// `playing` and back on at that `waiting` is the flicker that reads as the song
+// stopping twice. The loader therefore stays on from the track change until the
+// element has played without a break for SETTLE_MS.
+const SETTLE_MS = 900;
+let settling = false;
+let settleTimer: ReturnType<typeof setTimeout> | null = null;
 // Stream recovery: re-resolve the dead stream and resume at the same position.
 let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
 let recoveryInFlight = false;
@@ -202,6 +211,37 @@ function endQuietReload() {
 		clearTimeout(quietTimer);
 		quietTimer = null;
 	}
+}
+
+// Start of a track: the loader is on until the element proves it is playing,
+// and one short break in the first second is part of the start, not a stall. The
+// window only runs from the first sound: a resolve that takes seconds must keep
+// the loader up, not clear it before the track has started.
+function beginSettle() {
+	settling = true;
+	stopSettle();
+}
+
+function startSettle() {
+	stopSettle();
+	settleTimer = setTimeout(() => {
+		settleTimer = null;
+		settling = false;
+		isLoading.value = false;
+		trace("settled", audio);
+	}, SETTLE_MS);
+}
+
+function stopSettle() {
+	if (settleTimer !== null) {
+		clearTimeout(settleTimer);
+		settleTimer = null;
+	}
+}
+
+function endSettle() {
+	stopSettle();
+	settling = false;
 }
 
 function beginQuietReload() {
@@ -451,6 +491,7 @@ function isNotAllowedError(err: unknown): boolean {
 // Reflect a stopped load in the UI unless a quiet recovery owns the element and
 // must keep the previous state visible while it rebuilds the stream.
 function markStopped(): void {
+	endSettle();
 	if (quietReload) return;
 	isLoading.value = false;
 	isPlaying.value = false;
@@ -498,6 +539,12 @@ async function loadSongIntoPlayer(
 		knownDuration = 0;
 	}
 
+	// A normal load is a start: the loader belongs on until the element has played
+	// without a break for SETTLE_MS, so the little hiccup WebKit makes in the
+	// first second never shows as the track stopping. A quiet recovery keeps the
+	// old behaviour, because its rebuild has to show the loader.
+	if (quiet) endSettle();
+	else beginSettle();
 	if (!quietReload) {
 		progress.value = 0;
 		audioDuration.value = 0;
@@ -953,6 +1000,9 @@ export function pause(): boolean {
 	pausedAt = Date.now();
 	cancelRecovery();
 	endQuietReload();
+	// The user stopped it: there is no sound on its way, so no loader either.
+	endSettle();
+	isLoading.value = false;
 	const el = audio;
 	if (el && hasLoadedAudio() && !el.paused) {
 		el.pause();
@@ -977,6 +1027,7 @@ export function stopPlayer() {
 	pausedAt = Date.now();
 	cancelRecovery();
 	endQuietReload();
+	endSettle();
 	loadToken++;
 	stopEndWatch();
 	endedElement = null;
@@ -1003,10 +1054,13 @@ export function stopPlayer() {
 const trace =
 	import.meta.env.DEV && typeof window !== "undefined"
 		? (what: string, a: HTMLAudioElement | null, stack = false) => {
-				const end = a?.buffered.length
-					? a.buffered.end(a.buffered.length - 1)
-					: 0;
-				const line = `trace ${what} ${songLabel(currentSong.value)} t=${(a?.currentTime ?? 0).toFixed(2)} buf=${end.toFixed(1)} ready=${a?.readyState ?? -1} net=${a?.networkState ?? -1} paused=${a?.paused ?? true} quiet=${quietReload} loading=${isLoading.value}`;
+				const ranges: string[] = [];
+				for (let i = 0; a && i < a.buffered.length; i++) {
+					ranges.push(
+						`${a.buffered.start(i).toFixed(1)}-${a.buffered.end(i).toFixed(1)}`,
+					);
+				}
+				const line = `trace ${what} ${songLabel(currentSong.value)} t=${(a?.currentTime ?? 0).toFixed(2)} buf=[${ranges.join(" ")}] dur=${(a?.duration ?? 0).toFixed(1)} ready=${a?.readyState ?? -1} net=${a?.networkState ?? -1} paused=${a?.paused ?? true} quiet=${quietReload} loading=${isLoading.value}`;
 				// A stack is what names the caller: an event handler can only say
 				// what happened, not who asked for it.
 				logError(stack ? new Error(line) : line);
@@ -1046,12 +1100,15 @@ function bindEvents(a: HTMLAudioElement) {
 
 	// `play` fires once the browser accepts playback, which is still before the
 	// stream reaches the speakers. Only `playing` means audio is actually out, so
-	// the loader stays until then instead of vanishing into a silent gap.
+	// the loader stays until then instead of vanishing into a silent gap -- and
+	// it stays SETTLE_MS longer, because the first second of a track can break
+	// once without the track having stopped.
 	a.onplaying = () => {
 		trace("playing", a);
 		if (!owns(a)) return;
 		clearBufferTimer();
-		isLoading.value = false;
+		if (settling) startSettle();
+		else isLoading.value = false;
 	};
 
 	// Re-buffering, at the start or mid-track: the element is not producing sound,
@@ -1060,6 +1117,12 @@ function bindEvents(a: HTMLAudioElement) {
 	a.onwaiting = () => {
 		trace("waiting", a);
 		if (!owns(a)) return;
+		// Still starting: this break is the start's, not a new stall. The loader
+		// is already on and must not be turned off and on around it.
+		if (settling) {
+			stopSettle();
+			return;
+		}
 		// Delay the spinner so a seek that resolves in a few hundred ms does not
 		// flash it. A real stall still shows it after the grace window.
 		clearBufferTimer();
@@ -1096,7 +1159,13 @@ function bindEvents(a: HTMLAudioElement) {
 		// Belt and braces: a frame advancing means the wait is over, even if a
 		// WebKit quirk swallowed the `playing` event.
 		clearBufferTimer();
-		isLoading.value = false;
+		if (settling) {
+			// A frame is out, so the settle window keeps counting; a `playing` the
+			// browser swallowed must not leave the loader on forever.
+			if (settleTimer === null && !a.paused) startSettle();
+		} else {
+			isLoading.value = false;
+		}
 		if (!dragSeeking.value) progress.value = a.currentTime;
 		media.position(a, knownDuration);
 	};
@@ -1123,6 +1192,7 @@ function bindEvents(a: HTMLAudioElement) {
 		const label = songLabel(currentSong.value);
 		a.onerror = null;
 		stopEndWatch();
+		endSettle();
 		isPlaying.value = false;
 		isLoading.value = false;
 		pendingStart.value = false;

@@ -608,6 +608,19 @@ paused), so `resume()` has to notice, and the two ways it does are both in
   `LONG_PAUSE_MS` (5 s) turns the loader on while it proves itself, so the button
   never looks dead.
 
+**The loader covers a track's start, not each of its hiccups.** WebKit reports
+`playing`, and a moment later `waiting` and `playing` again while the demuxer and
+the decoder settle the first second of a fresh stream (measured on the desktop:
+between 0.02 s and 0.71 s in, for about a second of silence). Taking the loader
+down at the first `playing` and raising it at that `waiting` is the spinner that
+blinks, and it makes a track that is starting read as one that stopped.
+`audio.ts` keeps it on from the track change until the element has played without
+a break for `SETTLE_MS` (0.9 s): a `waiting` inside that window cancels the count
+and leaves the loader where it is. The window only runs from the first sound, so
+a resolve that takes seconds keeps the loader up instead of clearing it before
+the track has started. A quiet recovery is not a start and keeps the old rule,
+because its rebuild has to show the loader.
+
 **The card offers what actually exists.** A transport button that answers with
 silence reads as a broken card, so the page says whether there is anywhere to
 skip to (`next` in the media payload, wired from `canNext` in `audio.ts` through
