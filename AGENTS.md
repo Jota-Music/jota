@@ -594,11 +594,12 @@ paused), so `resume()` has to notice, and the two ways it does are both in
 `lib/music/views/stores/audio.ts`:
 
 - Every resume tries the element first and is held to it: `playing()` (in
-  `lib/music/app/recovery`) only counts the position moving at least a second and
-  keeping up with the wall clock, because a dying stream hands over its last
-  buffered tenth of a second and stops. A stream that fails that goes to the
-  recovery ladder, which clears the cached entry, re-resolves and resumes at the
-  same position.
+  `lib/music/app/recovery`) only counts the position moving past a blip (0.3 s),
+  because a dying stream hands over its last buffered tenth of a second and
+  stops. The tick samples once a second and a resume gives it 1.8 s, so a full
+  second of movement judged healthy starts dead and rebuilt them right after
+  they began. A stream that fails that goes to the recovery ladder, which clears
+  the cached entry, re-resolves and resumes at the same position.
 - That window is `RESUME_MS` (1.8 s), not the full `START_MS`: the stream is
   usually alive, and an eager rebuild on every pause older than 30 s made the
   commonest interaction (pause, come back a minute later, play) take the resolve
