@@ -581,6 +581,10 @@ async function loadSongIntoPlayer(
 	audio = instance;
 	loadedSongId = song.id;
 
+	// An MSE source is ready as soon as it is attached: there is no WebKit
+	// hiccup to hide, so the loader must not outlive the first sound.
+	if (!quiet && AudioCache.streamed(song.id)) endSettle();
+
 	instance.volume = gain(volume.value);
 	instance.muted = muted.value;
 	// The position is not zeroed here on purpose: a fresh src starts at zero by

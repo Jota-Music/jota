@@ -7,7 +7,24 @@ type CachedAudio = {
 	lastUsed: number;
 	youtube: string;
 	expireAt: number;
+	mime: string;
 };
+
+// The stream is fed to the player through a MediaSource instead of its URL.
+// WebKit buffers a URL stream on disk and only calls the buffering done once the
+// whole file is there, so playback pauses about a second in; MSE buffers in
+// memory and starts as soon as the bytes are appended. Bounded so a long track
+// does not sit in memory and a stuck fetch falls back to streaming.
+const MSE_LIMIT = 32 * 1024 * 1024;
+const MSE_TIMEOUT_MS = 15000;
+
+function streamMime(url: string): string {
+	try {
+		return new URL(url).searchParams.get("mime") ?? "";
+	} catch {
+		return "";
+	}
+}
 
 // A 45-byte silent 8kHz WAV: played inside the first user gesture to grant the
 // shared player element autoplay for the whole session.
@@ -52,6 +69,9 @@ export class AudioCache {
 
 	private static player: HTMLAudioElement | null = null;
 	private static playerUrl: string | null = null;
+	private static mediaUrl: string | null = null;
+	private static mediaFor: string | null = null;
+	private static mediaGen = 0;
 
 	// Stream URLs carry a YouTube expiry; a cached URL past it must be re-resolved.
 	private static isExpired(item: CachedAudio): boolean {
@@ -111,6 +131,7 @@ export class AudioCache {
 					lastUsed: Date.now(),
 					youtube: data.youtube,
 					expireAt: data.expireAt ?? 0,
+					mime: streamMime(data.url),
 				};
 
 				AudioCache.cache.set(song.id, value);
@@ -171,11 +192,103 @@ export class AudioCache {
 		if (AudioCache.playerUrl !== cached.url || player.error || player.ended) {
 			AudioCache.playerUrl = cached.url;
 			if (preload) player.preload = preload;
-			player.src = cached.url;
-			player.load();
+			await AudioCache.attach(player, cached);
 		}
 
 		return player;
+	}
+
+	private static async attach(
+		player: HTMLAudioElement,
+		cached: CachedAudio,
+	): Promise<void> {
+		// The autoplay prime swaps its silent clip into the element, and the
+		// source this track already appended is still open: reattach it instead
+		// of downloading the whole track again.
+		if (AudioCache.mediaFor === cached.url && AudioCache.mediaUrl) {
+			player.src = AudioCache.mediaUrl;
+			player.load();
+			return;
+		}
+		if (!(await AudioCache.attachMedia(player, cached))) {
+			AudioCache.revokeMedia();
+			player.src = cached.url;
+			player.load();
+		}
+	}
+
+	private static async attachMedia(
+		player: HTMLAudioElement,
+		cached: CachedAudio,
+	): Promise<boolean> {
+		if (
+			!cached.mime ||
+			typeof MediaSource === "undefined" ||
+			!MediaSource.isTypeSupported(cached.mime)
+		) {
+			return false;
+		}
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), MSE_TIMEOUT_MS);
+		try {
+			const response = await fetch(cached.url, { signal: controller.signal });
+			const length = Number(response.headers.get("Content-Length") ?? 0);
+			if (!response.ok || length > MSE_LIMIT) return false;
+			const reader = response.body?.getReader();
+			if (!reader) return false;
+			const first = await reader.read();
+			if (first.done || !first.value) return false;
+			const media = new MediaSource();
+			AudioCache.revokeMedia();
+			AudioCache.mediaUrl = URL.createObjectURL(media);
+			AudioCache.mediaFor = cached.url;
+			player.src = AudioCache.mediaUrl;
+			player.load();
+			await openMedia(media);
+			const buffer = media.addSourceBuffer(cached.mime);
+			await append(buffer, first.value.slice().buffer);
+			// The rest keeps landing while the track plays: the first piece is
+			// enough to start, so a slow link does not wait for the whole file.
+			void AudioCache.fill(AudioCache.mediaGen, reader, buffer);
+			return true;
+		} catch {
+			return false;
+		} finally {
+			clearTimeout(timer);
+		}
+	}
+
+	private static async fill(
+		gen: number,
+		reader: ReadableStreamDefaultReader<Uint8Array>,
+		buffer: SourceBuffer,
+	): Promise<void> {
+		try {
+			while (gen === AudioCache.mediaGen) {
+				const next = await reader.read();
+				if (next.done || !next.value) break;
+				await append(buffer, next.value.slice().buffer);
+			}
+			if (gen !== AudioCache.mediaGen) void reader.cancel();
+		} catch {}
+	}
+
+	private static revokeMedia(): void {
+		AudioCache.mediaGen += 1;
+		if (AudioCache.mediaUrl) URL.revokeObjectURL(AudioCache.mediaUrl);
+		AudioCache.mediaUrl = null;
+		AudioCache.mediaFor = null;
+	}
+
+	// Whether this song is playing from an attached MediaSource rather than the
+	// element's URL. The start of an MSE source has no WebKit hiccup to hide.
+	static streamed(id: string): boolean {
+		const cached = AudioCache.cache.get(id);
+		return (
+			!!cached &&
+			AudioCache.mediaFor === cached.url &&
+			AudioCache.mediaUrl !== null
+		);
 	}
 
 	// Whether the shared element still holds the stream resolved for this song.
@@ -190,6 +303,7 @@ export class AudioCache {
 	static releaseElement(_id: string): void {
 		AudioCache.player?.pause();
 		AudioCache.playerUrl = null;
+		AudioCache.revokeMedia();
 	}
 
 	// Detach the stream currently loaded in the shared element so WebKit can
@@ -201,11 +315,54 @@ export class AudioCache {
 		player.removeAttribute("src");
 		player.load();
 		AudioCache.playerUrl = null;
+		AudioCache.revokeMedia();
 	}
 
 	static remove(id: string): void {
 		AudioCache.cache.delete(id);
 		AudioCache.pending.delete(id);
 		AudioCache.playerUrl = null;
+		AudioCache.revokeMedia();
 	}
+}
+
+function openMedia(media: MediaSource): Promise<void> {
+	if (media.readyState === "open") return Promise.resolve();
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(
+			() => reject(new Error("media source never opened")),
+			MSE_TIMEOUT_MS,
+		);
+		media.addEventListener(
+			"sourceopen",
+			() => {
+				clearTimeout(timer);
+				resolve();
+			},
+			{ once: true },
+		);
+	});
+}
+
+function append(buffer: SourceBuffer, data: ArrayBuffer): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(
+			() => reject(new Error("append never finished")),
+			MSE_TIMEOUT_MS,
+		);
+		const done = (err?: Error) => {
+			clearTimeout(timer);
+			if (err) reject(err);
+			else resolve();
+		};
+		buffer.addEventListener("updateend", () => done(), { once: true });
+		buffer.addEventListener("error", () => done(new Error("append failed")), {
+			once: true,
+		});
+		try {
+			buffer.appendBuffer(data);
+		} catch (err) {
+			done(err instanceof Error ? err : new Error("append failed"));
+		}
+	});
 }

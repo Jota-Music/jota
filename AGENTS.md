@@ -619,7 +619,23 @@ a break for `SETTLE_MS` (0.9 s): a `waiting` inside that window cancels the coun
 and leaves the loader where it is. The window only runs from the first sound, so
 a resolve that takes seconds keeps the loader up instead of clearing it before
 the track has started. A quiet recovery is not a start and keeps the old rule,
-because its rebuild has to show the loader.
+because its rebuild has to show the loader. An MSE source is ready as soon as its
+first piece is appended, so it has no break to hide: the loader comes off on the
+first `playing` instead of holding for `SETTLE_MS`.
+
+**A track is fed through MSE, not a URL.** The same hiccup is WebKit's on-disk
+download buffer: it sizes itself to the whole file and only calls the buffering
+complete once all of it is there, so playback paused about a second in with the
+stream already fully buffered. Waiting for `buffered` does not help (WebKit
+reports it complete before its own buffer is), and a blob URL of the raw
+fragmented MP4 does not play at all. `AudioCache` therefore fetches the stream
+through the relay and appends it to a `MediaSource`, which buffers in memory and
+starts with no pause. The first piece that lands is enough to play, and the rest
+is appended while the track runs, so a slow link starts as soon as the old path
+did. The relay URL carries `?mime=<codec>` so the page knows the `SourceBuffer`
+type, and the relay answers the page's cross-origin fetch for the app's own
+origins only. A track over 32 MB, an unsupported codec or a first piece that
+fails or outlives 15 s falls back to the URL, where the old pause can return.
 
 **The card offers what actually exists.** A transport button that answers with
 silence reads as a broken card, so the page says whether there is anywhere to
