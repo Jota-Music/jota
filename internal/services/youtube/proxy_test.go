@@ -291,3 +291,22 @@ func TestStreamMime(t *testing.T) {
 		}
 	}
 }
+
+func TestFullMimeCarriesTheCodec(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"https://x/?mime=audio%2Fmp4", `audio/mp4; codecs="mp4a.40.2"`},
+		{"https://x/?mime=audio%2Fwebm", `audio/webm; codecs="opus"`},
+		{
+			"https://x/?mime=audio%2Fmp4%3B%20codecs%3D%22mp4a.40.2%22",
+			`audio/mp4; codecs="mp4a.40.2"`,
+		},
+	}
+	for _, c := range cases {
+		if got := fullMime(c.in); got != c.want {
+			t.Errorf("fullMime(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}

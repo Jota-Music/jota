@@ -98,6 +98,13 @@ func relay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The page reads the stream itself (into a MediaSource), and that fetch is
+	// cross-origin to this local relay: only the app's own pages may read it.
+	if origin := allowedOrigin(r); origin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Add("Vary", "Origin")
+	}
+
 	if r.Method == http.MethodHead {
 		head(w, r, s)
 		return
@@ -416,7 +423,64 @@ func ProxyURL(videoID, googlevideoURL string) string {
 		delete(proxyStreams, oldest)
 	}
 	proxyMu.Unlock()
-	return fmt.Sprintf("http://127.0.0.1:%d/stream/%s", port, videoID)
+	return fmt.Sprintf(
+		"http://127.0.0.1:%d/stream/%s?mime=%s",
+		port,
+		videoID,
+		url.QueryEscape(fullMime(googlevideoURL)),
+	)
+}
+
+// fullMime is the stream's type with its codec, which is what MediaSource needs:
+// "audio/mp4; codecs=..." tells the player how to open the fragments, while the
+// header's type alone is only good for a progressive read.
+func fullMime(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return streamMime(raw)
+	}
+	mime := u.Query().Get("mime")
+	if !strings.HasPrefix(mime, "audio/") {
+		mime = streamMime(raw)
+	}
+	if strings.Contains(mime, "codecs") {
+		return mime
+	}
+	// The signed URLs carry the container alone, and MediaSource needs the codec
+	// to open its fragments. The picker only hands out two: AAC in MP4 and Opus.
+	switch {
+	case strings.HasPrefix(mime, "audio/mp4"):
+		return mime + `; codecs="mp4a.40.2"`
+	case strings.HasPrefix(mime, "audio/webm"):
+		return mime + `; codecs="opus"`
+	}
+	return mime
+}
+
+// allowedOrigin names the page that may read a stream: the app's own webview
+// and the dev server it is served from. The player fetches the bytes itself, so
+// that read is cross-origin to this local relay.
+func allowedOrigin(r *http.Request) string {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return ""
+	}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return ""
+	}
+	// The app's own scheme, and the localhost page the dev server (or the Android
+	// WebView) serves it from.
+	if u.Scheme == "wails" {
+		return origin
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return ""
+	}
+	if u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" {
+		return ""
+	}
+	return origin
 }
 
 // unpinned drops the `range` query param YouTube signs into some stream URLs.
